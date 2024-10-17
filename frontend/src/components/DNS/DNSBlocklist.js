@@ -27,7 +27,7 @@ import {
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
-import { CircleIcon, TagIcon, FolderPenIcon } from 'lucide-react-native'
+import { CircleIcon, TagIcon, FolderPenIcon, ShieldCheckIcon, ShieldXIcon } from 'lucide-react-native'
 
 const DNSBlocklist = ({ config, ...props }) => {
   const context = useContext(AlertContext)
@@ -45,47 +45,47 @@ const DNSBlocklist = ({ config, ...props }) => {
     {
       Info: "Steven Black's Adware & Malware block list",
       URI: 'https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts',
-      Categories: ['ads']
+      Category: 'ads'
     },
     {
       Info: 'BlockList Project Ads',
       URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/ads.txt',
-      Categories: ['ads']
+      Category: 'ads'
     },
     {
       Info: 'BlockList Project Facebook and related services',
       URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/facebook.txt',
-      Categories: ['social']
+      Category: 'social'
     },
     {
       Info: 'BlockList Project Twitter and related services',
       URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/twitter.txt',
-      Categories: ['social']
+      Category: 'social'
     },
     {
       Info: 'BlockList Project Malware List',
       URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/malware.txt',
-      Categories: ['social']
+      Category: 'social'
     },
     {
       Info: 'BlockList Project Pornography List',
       URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/porn.txt',
-      Categories: ['adult']
+      Category: 'adult'
     },
     {
       Info: 'BlockList Project Redirect List, often used with spam',
       URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/redirect.txt',
-      Categories: ['ads']
+      Category: 'ads'
     },
     {
       Info: 'BlockList Project Tracker List for sites that track and gather visitor information',
       URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/tracking.txt',
-      Categories: ['ads']
+      Category: 'ads'
     },
     {
       Info: 'BlockList Project Youtube domains',
       URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/youtube.txt',
-      Categories: ['social']
+      Category: 'social'
     },
     {
       Info: 'BlockList Project Everything list',
@@ -118,8 +118,8 @@ const DNSBlocklist = ({ config, ...props }) => {
           for (let rec of recommendedListDefault) {
             if (entry.URI == rec.URI) {
               entry.Info = rec.Info
-              if (!entry.Categories) {
-                entry.Categories = rec.Categories
+              if (!entry.Category) {
+                entry.Category = rec.Catgeory
               }
             }
           }
@@ -223,13 +223,9 @@ const DNSBlocklist = ({ config, ...props }) => {
       })
   }
 
-  const handleCategories = (item, categories) => {
-    if (categories != null) {
-      categories = categories.filter((v) => typeof v === 'string')
-      categories = [...new Set(categories)]
-    }
+  const handleCategories = (item, category) => {
 
-    item.Categories = categories
+    item.Category = category
 
     blockAPI
       .putBlocklist(item)
@@ -269,8 +265,7 @@ const DNSBlocklist = ({ config, ...props }) => {
 
       handleTags(item, tags)
     } else if (modalType == 'Category') {
-      let categories = [value]
-      handleCategories(item, categories)
+      handleCategories(item, value.toLowerCase())
     }
   }
 
@@ -374,7 +369,7 @@ const DNSBlocklist = ({ config, ...props }) => {
             >
               {item.Enabled ? (
                 <Badge size="sm" action="success" variant="outline">
-                  <BadgeText>Enabled</BadgeText>
+                  <BadgeText>{item.DontBlock ? "Enabled" : "Block Enabled"}</BadgeText>
                 </Badge>
               ) : null}
 
@@ -393,18 +388,18 @@ const DNSBlocklist = ({ config, ...props }) => {
                 : null}
 
 
-              {item.Categories
-                ? item.Categories.map((entry) => (
+              {item.Category && item.Category != ""
+                ? (
                     <Badge
-                      key={item.URI + entry}
+                      key={item.Category}
                       action="muted"
                       variant="outline"
                       size="sm"
                     >
-                      <BadgeText>{entry}</BadgeText>
+                      <BadgeText>{item.Category}</BadgeText>
                       <BadgeIcon as={FolderPenIcon} ml="$1" />
                     </Badge>
-                  ))
+                  )
                 : null}
 
             </HStack>
@@ -473,9 +468,9 @@ const DNSBlocklist = ({ config, ...props }) => {
               </MenuItem>
 
               <MenuItem key="dontblock" textValue="dontblock">
-                <Icon as={item.Enabled ? CircleIcon : CircleIcon} mr="$2" />
+                <Icon as={item.DontBlock ? ShieldXIcon : ShieldCheckIcon} mr="$2" />
                 <MenuItemLabel size="sm">
-                  {item.Enabled ? 'Categorize Only, No Blocking' : 'Blocking Enabled'}
+                  {item.DontBlock ? 'Enable Blocking' : 'Categorize Only'}
                 </MenuItemLabel>
               </MenuItem>
 

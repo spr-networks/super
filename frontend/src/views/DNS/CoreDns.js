@@ -194,38 +194,34 @@ const CoreDns = (props) => {
         p="$4"
       >
         <VStack space="lg">
-          {!contextType.isPlusDisabled && (
-            <>
-            <Text bold>Family Filter: DNS IP</Text>
-            <InputSelect
-              options={options_family}
-              value={ip_fam}
-              onChange={(v) => onChangeText('ip_fam', v)}
-              onChangeText={(v) => onChangeText('ip_fam', v)}
+          <Text bold>Family Filter: DNS IP</Text>
+          <InputSelect
+            options={options_family}
+            value={ip_fam}
+            onChange={(v) => onChangeText('ip_fam', v)}
+            onChangeText={(v) => onChangeText('ip_fam', v)}
+          />
+          <Text bold>Family Filter: DNS Hostname (for encrypted DNS)</Text>
+          <Input variant="underlined">
+            <InputField
+              value={host_fam}
+              onChangeText={(v) => onChangeText('host_fam', v)}
             />
-            <Text bold>Family Filter: DNS Hostname (for encrypted DNS)</Text>
-            <Input variant="underlined">
-              <InputField
-                value={host_fam}
-                onChangeText={(v) => onChangeText('host_fam', v)}
-              />
-            </Input>
-            <Text bold>
-              Encrypt Outbound DNS Requests with DNS over HTTPS (DoH)
-            </Text>
+          </Input>
+          <Text bold>
+            Encrypt Outbound DNS Requests with DNS over HTTPS (DoH)
+          </Text>
 
-            <Checkbox
-              value={enableFamilyTls}
-              defaultIsChecked={enableFamilyTls}
-              onChange={setEnableFamilyTls}
-            >
-              <CheckboxIndicator mr="$2">
-                <CheckboxIcon />
-              </CheckboxIndicator>
-              <CheckboxLabel>Enabled</CheckboxLabel>
-            </Checkbox>
-            </>
-          )}
+          <Checkbox
+            value={enableFamilyTls}
+            defaultIsChecked={enableFamilyTls}
+            onChange={setEnableFamilyTls}
+          >
+            <CheckboxIndicator mr="$2">
+              <CheckboxIcon />
+            </CheckboxIndicator>
+            <CheckboxLabel>Enabled</CheckboxLabel>
+          </Checkbox>
 
           <HStack>
             <Button action="primary" onPress={submitSettings}>
