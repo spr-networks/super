@@ -348,7 +348,7 @@ table inet filter {
     # block lan ranges from uplink interfaces
     # uplinks can not NAT FROM @supernetworks source addresses
     iifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGFWD
-    # uplinks can not receive @supernewtorks destination addresses
+    # uplinks can not receive @supernetworks destination addresses
     oifname @uplink_interfaces ip daddr @supernetworks goto DROPLOGFWD
 
     # Verify MAC addresses for LANIF/WIPHYs
