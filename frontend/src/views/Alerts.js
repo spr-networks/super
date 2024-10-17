@@ -231,6 +231,10 @@ const Alerts = (props) => {
   }
 
   const resolveAll = () => {
+    if (!logs || logs.length == 0) {
+      return
+    }
+
     let logsResolved = logs
       .filter((l) => l.State != 'Resolved')
       .map((l) => {

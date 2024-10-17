@@ -2605,6 +2605,8 @@ func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
 			log.Println("Unexpected disabled here. Should have aborted earlier")
 		case "lan_upstream":
 			continue //handled in applyPrivateNetworkUpstreamDevice below
+		case "quarantine":
+		case "dns:family":
 		default:
 			log.Println("Unknown policy: " + policy_name)
 		}
@@ -2689,9 +2691,6 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 
 	//3. Update the route interface
 	exec.Command("ip", "route", "flush", routeIP).Run()
-
-	//remove route form conntrack
-	clearConntrackSrcIP(routeIP)
 
 	// no interface set. abort now
 	if new_iface == "" {
@@ -2972,6 +2971,24 @@ func updateFirewallSubnets(DNSIP string, TinyNets []string) {
 	_, err := cmd.Output()
 	if err != nil {
 		log.Println("failed to flush chain", err)
+		return
+	}
+
+	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
+		"ip", "saddr", "@custom_dns_devices", "meta", "l4proto",
+		"udp", "dnat", "to", "ip", "saddr", "map", "@custom_dns_devices:53")
+	_, err = cmd.Output()
+	if err != nil {
+		log.Println("failed to add udp custom_dns_devices", err)
+		return
+	}
+
+	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
+		"ip", "saddr", "@custom_dns_devices", "meta", "l4proto",
+		"tcp", "dnat", "to", "ip", "saddr", "map", "@custom_dns_devices:53")
+	_, err = cmd.Output()
+	if err != nil {
+		log.Println("failed to add tcp custom_dns_devices", err)
 		return
 	}
 

@@ -26,6 +26,7 @@ import Pagination from 'components/Pagination'
 
 import {
   Badge,
+  BadgeIcon,
   BadgeText,
   Box,
   Button,
@@ -58,7 +59,8 @@ import {
   BarChartIcon,
   FilterIcon,
   RefreshCwIcon,
-  Settings2Icon
+  Settings2Icon,
+  TagIcon
 } from 'lucide-react-native'
 
 const filterTypes = ['BLOCKED', 'NOERROR', 'NODATA', 'OTHERERROR', 'NXDOMAIN']
@@ -162,7 +164,40 @@ const ListItem = ({
                 {item.FirstAnswer || ''}
               </Text>
             </HStack>
+
           </VStack>
+
+          <HStack
+            flex={2}
+            space="md"
+            alignSelf="center"
+            sx={{
+              '@base': {
+                flexDirection: 'column',
+                alignItems: 'flex-end'
+              },
+              '@md': {
+                flexDirection: 'row',
+                alignItems: 'center'
+              }
+            }}
+          >
+            {item.Categories
+              ? item.Categories.map((entry) => (
+                  <Badge
+                    key={entry}
+                    action="muted"
+                    variant="outline"
+                    size="sm"
+                  >
+                    <BadgeText>{entry}</BadgeText>
+                    <BadgeIcon as={TagIcon} ml="$1" />
+                  </Badge>
+                ))
+              : null}
+          </HStack>
+
+
 
           <VStack sx={{ '@md': { justifyContent: 'center' } }}>
             <Tooltip label={timeAgo(new Date(item.Timestamp))}>

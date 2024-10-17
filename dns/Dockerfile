@@ -6,8 +6,8 @@ RUN mkdir /code
 WORKDIR /code
 
 ARG TARGETARCH
-RUN curl -O https://dl.google.com/go/go1.21.8.linux-${TARGETARCH}.tar.gz
-RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.21.8.linux-${TARGETARCH}.tar.gz
+RUN curl -O https://dl.google.com/go/go1.23.2.linux-${TARGETARCH}.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.23.2.linux-${TARGETARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
 
 # Use a ram disk for golang src
@@ -23,12 +23,15 @@ RUN --mount=type=tmpfs,target=/tmpfs \
    [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
    go generate && \
    go get github.com/spr-networks/coredns-jsonlog && \
-   go get github.com/spr-networks/coredns-block@rebinding-merge && \
-   go get github.com/spr-networks/coredns-rebinding_protection@rebinding-merge && \
-   go get github.com/spr-networks/coredns-spr_cache && \
+   go get github.com/spr-networks/coredns-block@policy_tag && \
+   go get github.com/spr-networks/coredns-spr_cache@policy_tag && \
+   go get github.com/spr-networks/coredns-spr_forward && \
    sed -i 's/metadata:metadata/metadata:metadata\njsonlog:github.com\/spr-networks\/coredns-jsonlog/g' plugin.cfg && \
-   sed -i 's/etcd:etcd/etcd:etcd\nblock:github.com\/spr-networks\/coredns-block\nrebinding_protection:github.com\/spr-networks\/coredns-rebinding_protection/g' plugin.cfg && \
-   sed -i 's/cache:cache/cache:github.com\/spr-networks\/coredns-spr_cache/g' plugin.cfg && \
+   sed -i 's/etcd:etcd/etcd:etcd\nrebinding_protection:github.com\/spr-networks\/coredns-rebinding_protection/g' plugin.cfg && \
+   sed -i 's/hosts:hosts//g' plugin.cfg && \
+   sed -i 's/cache:cache/hosts:hosts\nblock:github.com\/spr-networks\/coredns-block\ncache:github.com\/spr-networks\/coredns-spr_cache/g' plugin.cfg && \
+   sed -i 's/forward:forward/forward:github.com\/spr-networks\/coredns-spr_forward/g' plugin.cfg && \
+   sed -i 's/on:github.com\/coredns\/caddy\/onevent//g' plugin.cfg && \
    go generate && \
    go mod tidy && \
    go build -o /coredns

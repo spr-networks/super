@@ -12,6 +12,7 @@ import {
   CableIcon,
   RouteIcon,
   FileSearch,
+  UserIcon,
   TagIcon,
   NetworkIcon,
   GlobeIcon,
@@ -43,7 +44,7 @@ const TagItem = React.memo(({ name, size, ...props }) => {
       rounded="$lg"
     >
       <BadgeText color={fg}>{name}</BadgeText>
-      <BadgeIcon color={fg} as={TagIcon} ml="$1" />
+      <BadgeIcon color={fg} as={name.startsWith('person:') ? UserIcon : TagIcon} ml="$1" />
     </Badge>
   )
 })

@@ -71,20 +71,29 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   const [modalType, setModalType] = useState('')
 
   // for adding
-  const defaultPolicies = ['wan', 'dns', 'lan', 'lan_upstream', 'disabled']
+  let defaultPolicies = ['wan', 'dns', 'dns_family', 'lan']
+
+  if (!isSimpleMode) {
+    defaultPolicies.push(...['lan_upstream', 'disabled', 'quarantine'])
+  }
+
   const policyName = {
     wan: 'Internet Access',
     dns: 'DNS Resolution',
     lan: 'Local Network',
     lan_upstream: 'Upstream Private Networks',
-    disabled: 'Disabled'
+    quarantine: 'Quarantine',
+    disabled: 'Disabled',
+    dns_family: "Use Family DNS"
   }
   const policyTips = {
     wan: 'Allow Internet Access',
     dns: 'Allow DNS Queries',
     lan: 'Allow access to ALL other devices on the network',
     lan_upstream: 'Allow device to reach private LANs upstream',
-    disabled: 'Override all policies and groups, to disconnect device'
+    quarantine: 'Send all Traffic, DNS, to Quarantine Host if set else drop traffic',
+    disabled: 'Override all policies and groups, to disconnect device',
+    dns_family: 'Use family friendly DNS resolver'
   }
   const defaultGroups = props.groups || []
   const defaultTags = props.tags || []
@@ -135,7 +144,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
       .updateGroups(device.MAC || device.WGPubKey, groups)
       .then(notifyChange)
       .catch((error) =>
-        this.context.error('[API] updateDevice error: ' + error.message)
+        context.error('[API] updateDevice error: ' + error.message)
       )
   }
 
@@ -150,7 +159,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
       .updatePolicies(device.MAC || device.WGPubKey, policies)
       .then(notifyChange)
       .catch((error) =>
-        this.context.error('[API] updateDevice error: ' + error.message)
+        context.error('[API] updateDevice error: ' + error.message)
       )
   }
 
@@ -474,7 +483,9 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         </FormControl>
       </HStack>
 
-      <FormControl flex={4}>
+      <FormControl flex={4}
+        sx={{ maxWidth: '$2/3' }}
+      >
         <FormControlLabel>
           <FormControlLabelText>Policies</FormControlLabelText>
         </FormControlLabel>

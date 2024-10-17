@@ -132,6 +132,7 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 
 		// DecodingLayerParser takes about 10% of the time as NewPacket to decode packet data, but only for known packet stacks.
 		parser := gopacket.NewDecodingLayerParser(layers.LayerTypeIPv4, &ip4, &tcp, &udp, &dns, &dhcp)
+		parser.IgnoreUnsupported = true
 		decoded := []gopacket.LayerType{}
 		packetData := *attrs.Payload
 		if err := parser.DecodeLayers(packetData, &decoded); err != nil {
