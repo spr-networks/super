@@ -105,7 +105,6 @@ const DeviceView = () => {
       }}
       {...swipeHandlers}
     >
-      <ListHeader title="Edit Device" />
       {device ? (
         <EditDevice
           key={device.MAC || device.WGPubKey}

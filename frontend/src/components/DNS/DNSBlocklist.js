@@ -27,7 +27,7 @@ import {
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
-import { CircleIcon, TagIcon } from 'lucide-react-native'
+import { CircleIcon, TagIcon, FolderPenIcon } from 'lucide-react-native'
 
 const DNSBlocklist = ({ config, ...props }) => {
   const context = useContext(AlertContext)
@@ -44,39 +44,48 @@ const DNSBlocklist = ({ config, ...props }) => {
   let recommendedListDefault = [
     {
       Info: "Steven Black's Adware & Malware block list",
-      URI: 'https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts'
+      URI: 'https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts',
+      Categories: ['ads']
     },
     {
       Info: 'BlockList Project Ads',
-      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/ads.txt'
+      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/ads.txt',
+      Categories: ['ads']
     },
     {
       Info: 'BlockList Project Facebook and related services',
-      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/facebook.txt'
+      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/facebook.txt',
+      Categories: ['social']
     },
     {
       Info: 'BlockList Project Twitter and related services',
-      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/twitter.txt'
+      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/twitter.txt',
+      Categories: ['social']
     },
     {
       Info: 'BlockList Project Malware List',
-      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/malware.txt'
+      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/malware.txt',
+      Categories: ['social']
     },
     {
       Info: 'BlockList Project Pornography List',
-      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/porn.txt'
+      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/porn.txt',
+      Categories: ['adult']
     },
     {
       Info: 'BlockList Project Redirect List, often used with spam',
-      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/redirect.txt'
+      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/redirect.txt',
+      Categories: ['ads']
     },
     {
       Info: 'BlockList Project Tracker List for sites that track and gather visitor information',
-      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/tracking.txt'
+      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/tracking.txt',
+      Categories: ['ads']
     },
     {
       Info: 'BlockList Project Youtube domains',
-      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/youtube.txt'
+      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/youtube.txt',
+      Categories: ['social']
     },
     {
       Info: 'BlockList Project Everything list',
@@ -109,6 +118,9 @@ const DNSBlocklist = ({ config, ...props }) => {
           for (let rec of recommendedListDefault) {
             if (entry.URI == rec.URI) {
               entry.Info = rec.Info
+              if (!entry.Categories) {
+                entry.Categories = rec.Categories
+              }
             }
           }
         }
@@ -132,6 +144,31 @@ const DNSBlocklist = ({ config, ...props }) => {
     const newList = list.map((_item) => {
       if (_item.URI == item.URI) {
         _item.Enabled = item.Enabled
+      }
+
+      return _item
+    })
+
+    // only update the ui
+    setList(newList)
+    setPending(true)
+
+    blockAPI
+      .putBlocklist(item)
+      .then((res) => {
+        notifyChange('blocklists')
+      })
+      .catch((error) => {
+        context.error('API Failure: ' + error.message)
+      })
+  }
+
+  const handleItemSwitchDontBlock = (item, value) => {
+    item.DontBlock = value
+
+    const newList = list.map((_item) => {
+      if (_item.URI == item.URI) {
+        _item.DontBlock = item.DontBlock
       }
 
       return _item
@@ -186,6 +223,26 @@ const DNSBlocklist = ({ config, ...props }) => {
       })
   }
 
+  const handleCategories = (item, categories) => {
+    if (categories != null) {
+      categories = categories.filter((v) => typeof v === 'string')
+      categories = [...new Set(categories)]
+    }
+
+    item.Categories = categories
+
+    blockAPI
+      .putBlocklist(item)
+      .then((res) => {
+        notifyChange('blocklists')
+      })
+      .catch((error) => {
+        context.error('API Failure: ' + error.message)
+      })
+  }
+
+
+
   useEffect(() => {
     refreshBlocklists()
     refreshMetrics()
@@ -201,14 +258,20 @@ const DNSBlocklist = ({ config, ...props }) => {
   }
 
   const handleSubmitNew = (item, value) => {
-    let tags = []
-    if (item.Tags) {
-      tags = item.Tags.concat(value)
-    } else {
-      tags = [value]
-    }
 
-    handleTags(item, tags)
+    if (modalType == 'Tag') {
+      let tags = []
+      if (item.Tags) {
+        tags = item.Tags.concat(value)
+      } else {
+        tags = [value]
+      }
+
+      handleTags(item, tags)
+    } else if (modalType == 'Category') {
+      let categories = [value]
+      handleCategories(item, categories)
+    }
   }
 
   const defaultTags = props.tags || []
@@ -328,6 +391,22 @@ const DNSBlocklist = ({ config, ...props }) => {
                     </Badge>
                   ))
                 : null}
+
+
+              {item.Categories
+                ? item.Categories.map((entry) => (
+                    <Badge
+                      key={item.URI + entry}
+                      action="muted"
+                      variant="outline"
+                      size="sm"
+                    >
+                      <BadgeText>{entry}</BadgeText>
+                      <BadgeIcon as={FolderPenIcon} ml="$1" />
+                    </Badge>
+                  ))
+                : null}
+
             </HStack>
 
             <Menu
@@ -337,10 +416,17 @@ const DNSBlocklist = ({ config, ...props }) => {
                 let key = e.currentKey
                 if (key == 'onoff') {
                   handleItemSwitch(item, !item.Enabled)
+                }
+                else if (key == 'dontblock') {
+                  handleItemSwitchDontBlock(item, !item.DontBlock)
                 } else if (key == 'deleteItem') {
                   deleteListItem(item)
                 } else if (key == 'newTag') {
                   setModalType('Tag')
+                  setPendingItem(item)
+                  setShowModal(true)
+                } else if (key == 'newCategory') {
+                  setModalType('Category')
                   setPendingItem(item)
                   setShowModal(true)
                 } else {
@@ -380,6 +466,19 @@ const DNSBlocklist = ({ config, ...props }) => {
                 <Icon as={TagIcon} mr="$2" />
                 <MenuItemLabel size="sm">New Tag...</MenuItemLabel>
               </MenuItem>
+
+              <MenuItem key="newCategory" textValue="newCategory">
+                <Icon as={FolderPenIcon} mr="$2" />
+                <MenuItemLabel size="sm">Set Category...</MenuItemLabel>
+              </MenuItem>
+
+              <MenuItem key="dontblock" textValue="dontblock">
+                <Icon as={item.Enabled ? CircleIcon : CircleIcon} mr="$2" />
+                <MenuItemLabel size="sm">
+                  {item.Enabled ? 'Categorize Only, No Blocking' : 'Blocking Enabled'}
+                </MenuItemLabel>
+              </MenuItem>
+
             </Menu>
           </ListItem>
         )}

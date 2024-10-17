@@ -58,6 +58,7 @@ describe('DNS Blocklist', () => {
     expect(screen.getByText('Disable')).toBeTruthy()
     expect(screen.getByText('Delete')).toBeTruthy()
     expect(screen.getByText('New Tag...')).toBeTruthy()
+    expect(screen.getByText('New Category...')).toBeTruthy()
 
     let numEnabled = screen.getAllByText('Enabled').length
 
