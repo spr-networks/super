@@ -31,8 +31,10 @@ import {
 export default class DNSAddOverride extends React.Component {
   state = {
     Type: '',
+    ReturnType: 'IP',
     Domain: '',
-    ResultIP: '0.0.0.0',
+    ResultIP: '',
+    ResultCNAME: '',
     ClientIP: '*',
     Expiration: 0,
     check: {}
@@ -53,11 +55,13 @@ export default class DNSAddOverride extends React.Component {
     this.state.Type = props.type
     this.state.Domain = props.domain || ''
     this.state.ResultIP = props.ResultIP || ''
+    this.state.ResultCNAME = props.ResultCNAME || ''
     this.state.ClientIP = props.clientip || '*'
     this.state.check = {
       Type: '',
       Domain: '',
       ResultIP: '',
+      ResultCNAME: '',
       ClientIP: ''
     }
 
@@ -67,7 +71,7 @@ export default class DNSAddOverride extends React.Component {
   }
 
   validateField(name, value) {
-    let check = { Type: '', Domain: '', ResultIP: '', ClientIP: '' }
+    let check = { Type: '', Domain: '', ResultIP: '', ResultCNAME: '', ClientIP: '' }
 
     if (name == 'Type' && !['block', 'permit'].includes(value)) {
       check.Type = 'has-danger'
@@ -103,10 +107,16 @@ export default class DNSAddOverride extends React.Component {
       return
     }
 
+
+    if (!this.state.ResultCNAME.endsWith('.')) {
+      this.state.ResultCNAME += '.'
+    }
+
     let override = {
       Type: this.state.Type,
       Domain: this.state.Domain,
       ResultIP: this.state.ResultIP,
+      ResultCNAME: this.state.ResultCNAME,
       ClientIP: this.state.ClientIP,
       Expiration: this.state.Expiration
     }
@@ -203,35 +213,65 @@ export default class DNSAddOverride extends React.Component {
           )}
         </FormControl>
 
-        <FormControl isInvalid={this.state.check.ResultIP == 'has-danger'}>
+
+        <FormControl
+          isInvalid={this.state.check.ResultIP == 'has-danger' || this.state.check.ReturnCNAME == 'has-danger'}
+        >
           <FormControlLabel>
-            <FormControlLabelText>Result IP</FormControlLabelText>
+            <FormControlLabelText>Result Type</FormControlLabelText>
           </FormControlLabel>
 
-          <Input>
+          <RadioGroup
+            flex={1}
+            defaultValue={this.state.ReturnType}
+            accessibilityLabel="Select Return Type"
+            onChange={(type) => {
+              this.handleChange('ReturnType', type)
+            }}
+          >
+            <HStack py="1" space="md">
+              <Radio key="block" value="IP" size="md">
+                <RadioIndicator mr="$2">
+                  <RadioIcon as={CircleIcon} strokeWidth={1} />
+                </RadioIndicator>
+                <RadioLabel>IP</RadioLabel>
+              </Radio>
+
+              <Radio key="permit" value="CNAME" size="md">
+                <RadioIndicator mr="$2">
+                  <RadioIcon as={CircleIcon} strokeWidth={1} />
+                </RadioIndicator>
+                <RadioLabel>CNAME</RadioLabel>
+              </Radio>
+            </HStack>
+          </RadioGroup>
+
+
+          <Input py="1">
             <InputField
               type="text"
               name="ResultIP"
-              value={this.state.ResultIP}
-              onChangeText={(value) => this.handleChange('ResultIP', value)}
+              value={this.state.ReturnType == 'IP' ? this.state.ResultIP : this.state.ResultCNAME}
+              onChangeText={(value) => this.handleChange('Result' + this.state.ReturnType, value)}
             />
           </Input>
 
-          {this.state.check.ResultIP == 'has-danger' ? (
+          {(this.state.check.ResultIP == 'has-danger' || this.state.check.ResultCNAME == 'has-danger') ? (
             <FormControlError>
               <FormControlErrorText>
-                Please enter a valid IP or leave empty
+                Please enter a valid {this.state.ReturnType} or leave empty
               </FormControlErrorText>
             </FormControlError>
           ) : (
             <FormControlHelper>
               <FormControlHelperText>
-                Optional. Set a custom IP address to return for domain name
+                Optional. Set a custom {this.state.ReturnType} address to return for domain name
                 lookup
               </FormControlHelperText>
             </FormControlHelper>
           )}
         </FormControl>
+
 
         <FormControl isInvalid={this.state.check.ClientIP == 'has-danger'}>
           <FormControlLabel>

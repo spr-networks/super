@@ -36,7 +36,7 @@ const DNSOverrideListItem = ({ item, deleteListItem, ...props }) => {
             >
               =
             </Text>
-            <Text>{item.ResultIP || '0.0.0.0'}</Text>
+            <Text>{item.ResultIP || item.ResultCNAME || '0.0.0.0'}</Text>
           </HStack>
         </VStack>
 
