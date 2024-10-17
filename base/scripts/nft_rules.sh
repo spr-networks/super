@@ -350,6 +350,7 @@ table inet filter {
     # block lan ranges from uplink interfaces
     iifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGFWD
     oifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGFWD
+    oifname @uplink_interfaces ip daddr @supernetworks goto DROPLOGFWD
 
     # Verify MAC addresses for LANIF/WIPHYs
     iifname @lan_interfaces jump DROP_MAC_SPOOF
