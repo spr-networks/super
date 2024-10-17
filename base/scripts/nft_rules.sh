@@ -248,7 +248,6 @@ table inet filter {
 
     # block lan ranges from uplink interfaces
     iifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGINP
-    iifname @uplink_interfaces ip daddr @supernetworks goto DROPLOGINP
 
     # Drop input from the site to site output interfaces. They are only a sink,
     # Not a source that can connect into SPR services
@@ -349,8 +348,8 @@ table inet filter {
     counter ct status dnat accept
 
     # block lan ranges from uplink interfaces
-    iifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGINP
-    iifname @uplink_interfaces ip daddr @supernetworks goto DROPLOGINP
+    iifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGFWD
+    oifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGFWD
 
     # Verify MAC addresses for LANIF/WIPHYs
     iifname @lan_interfaces jump DROP_MAC_SPOOF
@@ -442,6 +441,8 @@ table inet filter {
 
   chain OUTPUT {
     type filter hook output priority 0; policy accept
+    oifname @uplink_interfaces ip daddr @supernetworks goto DROPLOGOUTP
+    oifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGOUTP
   }
 
   chain DROPLOGFWD {
@@ -451,6 +452,11 @@ table inet filter {
 
   chain DROPLOGINP {
     counter log prefix "drop:input " group 1
+    counter drop
+  }
+
+  chain DROPLOGOUTP {
+    counter log prefix "drop:output " group 1
     counter drop
   }
 
