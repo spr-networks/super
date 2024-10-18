@@ -71,7 +71,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   const [modalType, setModalType] = useState('')
 
   // for adding
-  let defaultPolicies = ['wan', 'dns', 'dns_family', 'lan']
+  let defaultPolicies = ['wan', 'dns', 'dns:family', 'lan']
 
   if (!isSimpleMode) {
     defaultPolicies.push(...['lan_upstream', 'disabled', 'quarantine'])
@@ -84,7 +84,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     lan_upstream: 'Upstream Private Networks',
     quarantine: 'Quarantine',
     disabled: 'Disabled',
-    dns_family: "Use Family DNS"
+    "dns:family": "Use Family DNS"
   }
   const policyTips = {
     wan: 'Allow Internet Access',
@@ -93,7 +93,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     lan_upstream: 'Allow device to reach private LANs upstream',
     quarantine: 'Send all Traffic, DNS, to Quarantine Host if set else drop traffic',
     disabled: 'Override all policies and groups, to disconnect device',
-    dns_family: 'Use family friendly DNS resolver'
+    "dns:family": 'Use family friendly DNS resolver'
   }
   const defaultGroups = props.groups || []
   const defaultTags = props.tags || []
