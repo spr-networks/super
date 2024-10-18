@@ -1,5 +1,11 @@
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.0.2
+**Improvements**
+- Introduces CNAME Support for DNS Overrides
+**Fixes**
+- dns:family policy fix in UI
+
 ## v1.0.1
 **Improvements**
 - Emoji support for ssids in wifi uplink, dashboard
