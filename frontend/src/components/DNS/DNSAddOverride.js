@@ -107,10 +107,15 @@ export default class DNSAddOverride extends React.Component {
       return
     }
 
-
-    if (!this.state.ResultCNAME.endsWith('.')) {
-      this.state.ResultCNAME += '.'
+    if (this.state.ReturnType == 'CNAME') {
+      if (this.state.ResultCNAME != '' && !this.state.ResultCNAME.endsWith('.')) {
+        this.state.ResultCNAME += '.'
+      }
+      this.state.ResultIP = ''
+    } else if (this.state.ReturnType == 'IP') {
+      this.state.ResultCNAME = ''
     }
+
 
     let override = {
       Type: this.state.Type,
