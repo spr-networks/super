@@ -2681,7 +2681,7 @@ func main() {
 	migrateMDNS()
 	//v0.3.7 migration of groups into policies
 	migrateDevicePolicies()
-
+	
 	loadConfig()
 
 	migrateDNSSettings()
