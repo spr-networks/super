@@ -1,5 +1,9 @@
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.0.3
+**Fixes**
+- Support for DNS Configuration Updates incorrectly cleared plugin settings
+
 ## v1.0.2
 **Improvements**
 - Introduces CNAME Support for DNS Overrides

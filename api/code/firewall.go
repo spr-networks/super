@@ -1132,6 +1132,7 @@ func refreshDeviceGroupsAndPolicy(dev DeviceEntry) {
 	if dev.WGPubKey != "" {
 		//refresh wg based on WGPubKey
 		refreshWireguardDevice(dev.MAC, dev.RecentIP, dev.WGPubKey, "wg0", "", true)
+
 	}
 
 	ifname := ""
@@ -1170,7 +1171,7 @@ func refreshDeviceGroupsAndPolicy(dev DeviceEntry) {
 
 	device_disabled := slices.Contains(dev.Policies, "disabled") || dev.DeviceDisabled == true
 	if !device_disabled {
-		//add this MAC and IP to the ethernet filter
+		//add this MAC and IP to the ethernet filter. wg is a no-op
 		addVerdictMac(ipv4, dev.MAC, ifname, "ethernet_filter", "return")
 
 		//and re-add
@@ -2244,6 +2245,11 @@ func flushRouteFromArp(MAC string) {
 }
 
 func addVerdictMac(IP string, MAC string, Iface string, Table string, Verdict string) {
+
+	if Iface == "wg0" || MAC == "" {
+		return
+	}
+
 	err := exec.Command("nft", "add", "element", "inet", "filter", Table, "{", IP, ".", Iface, ".", MAC, ":", Verdict, "}").Run()
 	if err != nil {
 		log.Println("addVerdictMac Failed", MAC, Iface, Table, err)
@@ -2711,10 +2717,8 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 	}
 
 	//6. add entry to appropriate verdict maps
-	if new_iface != "wg0" && entry.MAC != "" {
-		//add this MAC and IP to the ethernet filter
-		addVerdictMac(entry.RecentIP, entry.MAC, new_iface, "ethernet_filter", "return")
-	}
+	//add this MAC and IP to the ethernet filter. wg will be a no-op
+	addVerdictMac(entry.RecentIP, entry.MAC, new_iface, "ethernet_filter", "return")
 
 	Devicesmtx.Lock()
 	defer Devicesmtx.Unlock()
@@ -2975,12 +2979,17 @@ func updateFirewallSubnets(DNSIP string, TinyNets []string) {
 	}
 
 	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
-		"ip", "saddr", "@custom_dns_devices", "meta", "l4proto",
-		"udp", "dnat", "to", "ip", "saddr", "map", "@custom_dns_devices:53")
+		"tcp", "dport", "53", "counter", "dnat", "ip", "to", DNSIP+":53")
 	_, err = cmd.Output()
 	if err != nil {
-		log.Println("failed to add udp custom_dns_devices", err)
-		return
+		log.Println("failed to insert rule", cmd, err)
+	}
+
+	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
+		"udp", "dport", "53", "counter", "dnat", "ip", "to", DNSIP+":53")
+	_, err = cmd.Output()
+	if err != nil {
+		log.Println("failed to insert rule", cmd, err)
 	}
 
 	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
@@ -2992,19 +3001,13 @@ func updateFirewallSubnets(DNSIP string, TinyNets []string) {
 		return
 	}
 
-	//#    $(if [ "$VLANSIF" ]; then echo "counter iifname eq "$VLANSIF*" jump DROP_MAC_SPOOF"; fi)
 	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
-		"udp", "dport", "53", "counter", "dnat", "ip", "to", DNSIP+":53")
+		"ip", "saddr", "@custom_dns_devices", "meta", "l4proto",
+		"udp", "dnat", "to", "ip", "saddr", "map", "@custom_dns_devices:53")
 	_, err = cmd.Output()
 	if err != nil {
-		log.Println("failed to insert rule", cmd, err)
-	}
-
-	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
-		"tcp", "dport", "53", "counter", "dnat", "ip", "to", DNSIP+":53")
-	_, err = cmd.Output()
-	if err != nil {
-		log.Println("failed to insert rule", cmd, err)
+		log.Println("failed to add udp custom_dns_devices", err)
+		return
 	}
 
 }
