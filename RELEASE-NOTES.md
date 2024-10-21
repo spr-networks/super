@@ -1,8 +1,13 @@
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.0.4
+**Fixes**
+- Fix operating class for 5ghz channel selection
+
 ## v1.0.3
 **Fixes**
 - Support for DNS Configuration Updates incorrectly cleared plugin settings
+- Fix Virtual nft rules bug
 
 ## v1.0.2
 **Improvements**
