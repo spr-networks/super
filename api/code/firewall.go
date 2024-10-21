@@ -1132,6 +1132,7 @@ func refreshDeviceGroupsAndPolicy(dev DeviceEntry) {
 	if dev.WGPubKey != "" {
 		//refresh wg based on WGPubKey
 		refreshWireguardDevice(dev.MAC, dev.RecentIP, dev.WGPubKey, "wg0", "", true)
+
 	}
 
 	ifname := ""
@@ -2245,7 +2246,7 @@ func flushRouteFromArp(MAC string) {
 
 func addVerdictMac(IP string, MAC string, Iface string, Table string, Verdict string) {
 
-	if Iface == "wg0" || entry.MAC == "" {
+	if Iface == "wg0" || MAC == "" {
 		return
 	}
 
@@ -2978,12 +2979,17 @@ func updateFirewallSubnets(DNSIP string, TinyNets []string) {
 	}
 
 	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
-		"ip", "saddr", "@custom_dns_devices", "meta", "l4proto",
-		"udp", "dnat", "to", "ip", "saddr", "map", "@custom_dns_devices:53")
+		"tcp", "dport", "53", "counter", "dnat", "ip", "to", DNSIP+":53")
 	_, err = cmd.Output()
 	if err != nil {
-		log.Println("failed to add udp custom_dns_devices", err)
-		return
+		log.Println("failed to insert rule", cmd, err)
+	}
+
+	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
+		"udp", "dport", "53", "counter", "dnat", "ip", "to", DNSIP+":53")
+	_, err = cmd.Output()
+	if err != nil {
+		log.Println("failed to insert rule", cmd, err)
 	}
 
 	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
@@ -2995,19 +3001,13 @@ func updateFirewallSubnets(DNSIP string, TinyNets []string) {
 		return
 	}
 
-	//#    $(if [ "$VLANSIF" ]; then echo "counter iifname eq "$VLANSIF*" jump DROP_MAC_SPOOF"; fi)
 	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
-		"udp", "dport", "53", "counter", "dnat", "ip", "to", DNSIP+":53")
+		"ip", "saddr", "@custom_dns_devices", "meta", "l4proto",
+		"udp", "dnat", "to", "ip", "saddr", "map", "@custom_dns_devices:53")
 	_, err = cmd.Output()
 	if err != nil {
-		log.Println("failed to insert rule", cmd, err)
-	}
-
-	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
-		"tcp", "dport", "53", "counter", "dnat", "ip", "to", DNSIP+":53")
-	_, err = cmd.Output()
-	if err != nil {
-		log.Println("failed to insert rule", cmd, err)
+		log.Println("failed to add udp custom_dns_devices", err)
+		return
 	}
 
 }
