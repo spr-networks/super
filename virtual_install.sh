@@ -94,6 +94,7 @@ if [ ${#EXTERNAL_IP} -eq 0 ]; then
         fi
 fi
 
+
 # check spr is running
 
 SPR_DIR=$(docker inspect --format='{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$CONTAINER_CHECK")
@@ -173,6 +174,11 @@ do
      echo "... Waiting for wireguard service to start and initialize"
      sleep 5
 done
+
+
+# set External IP for SPR for later, so users do not present
+# with the internal endpoint IP.
+curl 'http://localhost:8000/plugins/wireguard/endpoints' -X 'PUT' -H "Authorization: Bearer ${TOKEN}" --data-raw "[\"${EXTERNAL_IP}\"]"
 
 #only show confirm if its the first one
 NUM_PEERS=$(grep '^\[Peer\]' $SPR_DIR/configs/wireguard/wg0.conf 2>/dev/null | wc -l)
