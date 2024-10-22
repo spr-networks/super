@@ -1,16 +1,28 @@
 import React, { useContext, useEffect, useState } from 'react'
-
+import { Platform } from 'react-native'
 import DNSOverrideList from 'components/DNS/DNSOverrideList'
 import { AlertContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 import PluginDisabled from 'views/PluginDisabled'
+import InputSelect from 'components/InputSelect'
+import { TagItem } from 'components/TagItem'
+import { TagMenu } from 'components/TagMenu'
 
 import {
+  Button,
+  ButtonIcon,
+  CloseIcon,
   ScrollView,
+  FormControl,
+  FormControlLabel,
+  FormControlLabelText,
+  HStack,
   Fab,
   FabIcon,
   FabLabel,
+  Heading,
   AddIcon,
+  Text,
   View,
   VStack
 } from '@gluestack-ui/themed'
@@ -24,12 +36,24 @@ const DNSBlock = (props) => {
   const [PermitDomains, setPermitDomains] = useState([])
   const [BlockDomains, setBlockDomains] = useState([])
 
+  const [OverrideLists, setOverrideLists] = useState([])
+  const [listOptions, setListOptions] = useState([])
+  const [curList, setCurList] = useState({Tags: []})
+
   const refreshConfig = async () => {
     try {
       let config = await blockAPI.config()
+      setOverrideLists(config.OverrideLists)
+      setListOptions(config.OverrideLists.map(e => ({ label: e.Name, value: e.Name}) ))
 
-      setBlockDomains(config.BlockDomains)
-      setPermitDomains(config.PermitDomains)
+      for (let entry of config.OverrideLists) {
+        if (entry.Name == (curList.Name || "Default") ) {
+          setPermitDomains(entry.PermitDomains)
+          setBlockDomains(entry.BlockDomains)
+          setCurList(entry)
+          break
+        }
+      }
     } catch (error) {
       if ([404, 502].includes(error.message)) {
         setEnabled(false)
@@ -54,13 +78,17 @@ const DNSBlock = (props) => {
       refModalAddBlock.current()
     } else if (type == 'permit') {
       refModalAddPermit.current()
+    } else if (type == 'deletelist') {
+      onChangeList("Default")
+      await refreshConfig()
+      return
     }
     refreshConfig()
   }
 
-  const deleteListItem = async (item) => {
+  const deleteListItem = async (listName, item) => {
     blockAPI
-      .deleteOverride(item)
+      .deleteOverride(listName, item)
       .then((res) => {
         notifyChange('config')
       })
@@ -73,17 +101,115 @@ const DNSBlock = (props) => {
     return <PluginDisabled plugin="dns" />
   }
 
-  /*let items = [
-    {type: "block", title: 'Block Custom Domain', list: BlockDomains, modal: refModalAddBlock}
-  ]*/
+  const onChangeList = (v) => {
+    for (let entry of OverrideLists) {
+      if (entry.Name == v) {
+        setPermitDomains(entry.PermitDomains)
+        setBlockDomains(entry.BlockDomains)
+        setCurList(entry)
+        return
+      }
+    }
+    //failed to find, clear
+    setBlockDomains([])
+    setPermitDomains([])
+  }
+
+  const onChangeText = (v) => {
+    for (let entry of OverrideLists) {
+      if (entry.Name == v) {
+        setPermitDomains(entry.PermitDomains)
+        setBlockDomains(entry.BlockDomains)
+        setCurList(entry)
+        return
+      }
+    }
+
+    setCurList({Name: v, Tags: [], Enabled: true})
+    //failed to find, clear
+    setBlockDomains([])
+    setPermitDomains([])
+  }
+
+
+  const handleTags = (tags) => {
+    let newTags = [
+      ...new Set(tags.filter((x) => typeof x == 'string' && x.length > 0))
+    ]
+
+    newTags = newTags.map((tag) => tag.toLowerCase())
+    curList.Tags = newTags
+
+    blockAPI
+      .putOverrideList(curList.Name, curList)
+      .then((res) => {
+        notifyChange('config')
+      })
+      .catch((error) => {
+        context.error('API Failure: ' + error.message)
+      })
+
+  }
+
+  let defaultTags = []
 
   return (
     <View h="$full">
       <ScrollView h="$full">
         <VStack space="sm" pb="$16">
+
+          <Heading>Select Override List</Heading>
+          <InputSelect options={listOptions} value={curList.Name} onChange={onChangeList} onChangeText={onChangeText} />
+
+          {
+            curList && curList.Name != "" && curList.Name != 'Default' && (
+              <Button
+                display={Platform.OS == 'web' ? 'flex' : 'none'}
+                variant="link"
+                onPress={async () => {
+                  try {
+                    await blockAPI.deleteOverrideList(curList.Name, curList);
+                    notifyChange('deletelist');
+                  } catch (e) {
+                    notifyChange('deletelist');
+                  }
+                }}
+              >
+                <ButtonIcon as={CloseIcon} color="$red700" />
+              </Button>
+            )
+          }
+          <Text>Enabled: {JSON.stringify(curList.Enabled)}</Text>
+
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText>Tags</FormControlLabelText>
+            </FormControlLabel>
+
+            <HStack flexWrap="wrap" w="$full" space="md">
+              <HStack
+                space="md"
+                flexWrap="wrap"
+                alignItems="center"
+                display={curList.Tags?.length ? 'flex' : 'none'}
+              >
+                {curList.Tags.map((tag) => (
+                  <TagItem key={tag} name={tag} size="sm" />
+                ))}
+              </HStack>
+              <TagMenu
+                items={[...new Set(defaultTags.concat(curList.Tags))]}
+                selectedKeys={curList.Tags}
+                onSelectionChange={handleTags}
+              />
+            </HStack>
+          </FormControl>
+
+
           <DNSOverrideList
             list={BlockDomains}
-            title="Block Custom Domain"
+            listName={curList.Name}
+            title="Block Domain"
             notifyChange={notifyChange}
             deleteListItem={deleteListItem}
             renderHeader={() => (
@@ -98,7 +224,8 @@ const DNSBlock = (props) => {
                 }}
                 modalRef={refModalAddBlock}
               >
-                <DNSAddOverride type={'block'} notifyChange={notifyChange} />
+                <DNSAddOverride listName={curList.Name} type={'block'} notifyChange={notifyChange} />
+
               </ModalForm>
             )}
           />
@@ -106,7 +233,8 @@ const DNSBlock = (props) => {
           <DNSOverrideList
             key="allowdomain"
             list={PermitDomains}
-            title="Permit Domain Override"
+            listName={curList.Name}
+            title="Permit Domain"
             notifyChange={notifyChange}
             deleteListItem={deleteListItem}
             renderHeader={() => (
@@ -121,7 +249,7 @@ const DNSBlock = (props) => {
                 }}
                 modalRef={refModalAddPermit}
               >
-                <DNSAddOverride type={'permit'} notifyChange={notifyChange} />
+                <DNSAddOverride listName={curList.Name} type={'permit'} notifyChange={notifyChange} />
               </ModalForm>
             )}
           />

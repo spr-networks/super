@@ -15,7 +15,7 @@ import {
 
 import { ListItem } from 'components/List'
 
-const DNSOverrideListItem = ({ item, deleteListItem, ...props }) => {
+const DNSOverrideListItem = ({ item, listName, deleteListItem, ...props }) => {
   return (
     <ListItem>
       <VStack
@@ -65,7 +65,7 @@ const DNSOverrideListItem = ({ item, deleteListItem, ...props }) => {
       <Button
         display={Platform.OS == 'web' ? 'flex' : 'none'}
         variant="link"
-        onPress={() => deleteListItem(item)}
+        onPress={() => deleteListItem(listName, item)}
       >
         <ButtonIcon as={CloseIcon} color="$red700" />
       </Button>
@@ -75,6 +75,7 @@ const DNSOverrideListItem = ({ item, deleteListItem, ...props }) => {
 
 DNSOverrideListItem.propTypes = {
   item: PropTypes.object.isRequired,
+  listName: PropTypes.string.isRequired, 
   deleteListItem: PropTypes.func
 }
 

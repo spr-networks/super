@@ -55,7 +55,7 @@ const DNSOverrideList = ({ title, list, deleteListItem, ...props }) => {
       <SwipeListView
         data={list}
         renderItem={({ item }) => (
-          <DNSOverrideListItem item={item} deleteListItem={deleteListItem} />
+          <DNSOverrideListItem listName={listName} item={item} deleteListItem={deleteListItem} />
         )}
         renderHiddenItem={renderHiddenItem}
         keyExtractor={(item, index) => item.Domain}
@@ -72,6 +72,7 @@ const DNSOverrideList = ({ title, list, deleteListItem, ...props }) => {
 DNSOverrideList.propTypes = {
   title: PropTypes.string.isRequired,
   list: PropTypes.array,
+  listName: PropTypes.string,
   notifyChange: PropTypes.func,
   deleteListItem: PropTypes.func
 }

@@ -37,7 +37,7 @@ export const getApiURL = () => {
     return '/'
   }
 
-  if (Platform.OS == 'ios' || Platform.OS == 'macos') {
+  if (Platform.OS == 'ios' || Platform.OS == 'macos' || Platform.OS == 'android') {
     return gApiURL || 'http://192.168.2.1/'
   }
 

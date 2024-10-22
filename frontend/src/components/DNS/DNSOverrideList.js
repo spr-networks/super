@@ -6,10 +6,10 @@ import { FlatList, Text } from '@gluestack-ui/themed'
 import ListHeader from 'components/List/ListHeader'
 import DNSOverrideListItem from './DNSOverrideListItem'
 
-const DNSOverrideList = ({ title, list, deleteListItem, ...props }) => {
+const DNSOverrideList = ({ title, listName, list, deleteListItem, ...props }) => {
   return (
     <>
-      <ListHeader title={title} description="Set rules for DNS queries">
+      <ListHeader title={title} description="">
         {props.renderHeader ? props.renderHeader() : null}
       </ListHeader>
 
@@ -19,7 +19,7 @@ const DNSOverrideList = ({ title, list, deleteListItem, ...props }) => {
       <FlatList
         data={list}
         renderItem={({ item }) => (
-          <DNSOverrideListItem item={item} deleteListItem={deleteListItem} />
+          <DNSOverrideListItem listName={listName} item={item} deleteListItem={deleteListItem} />
         )}
         keyExtractor={(item) => item.Domain}
       />
@@ -29,6 +29,7 @@ const DNSOverrideList = ({ title, list, deleteListItem, ...props }) => {
 
 DNSOverrideList.propTypes = {
   title: PropTypes.string.isRequired,
+  listName: PropTypes.string.isRequired,
   list: PropTypes.array,
   notifyChange: PropTypes.func,
   deleteListItem: PropTypes.func

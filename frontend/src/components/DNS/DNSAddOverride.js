@@ -52,6 +52,7 @@ export default class DNSAddOverride extends React.Component {
   constructor(props) {
     super(props)
 
+    this.state.listName = props.listName || 'Default'
     this.state.Type = props.type
     this.state.Domain = props.domain || ''
     this.state.ResultIP = props.ResultIP || ''
@@ -131,7 +132,7 @@ export default class DNSAddOverride extends React.Component {
     }
 
     blockAPI
-      .putOverride(override)
+      .putOverride(this.state.listName, override)
       .then(() => {
         this.props.notifyChange(this.state.Type)
       })
@@ -143,6 +144,7 @@ export default class DNSAddOverride extends React.Component {
   render() {
     return (
       <VStack space="md">
+        <FormControlLabel>{JSON.stringify(this.state.listName)}</FormControlLabel>
         <FormControl isInvalid={this.state.check.Type == 'has-danger'}>
           <FormControlLabel>
             <FormControlLabelText>Type of override</FormControlLabelText>
@@ -336,6 +338,7 @@ export default class DNSAddOverride extends React.Component {
 
 DNSAddOverride.propTypes = {
   type: PropTypes.string,
+  listName: PropTypes.string,
   domain: PropTypes.string,
   clientip: PropTypes.string,
   notifyChange: PropTypes.func

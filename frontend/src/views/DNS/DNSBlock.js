@@ -1,5 +1,4 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { Platform } from 'react-native'
 import DNSBlocklist from 'components/DNS/DNSBlocklist'
 import DNSAddBlocklist from 'components/DNS/DNSAddBlocklist'
 import DNSBlocklistSettings from 'components/DNS/DNSBlocklistSettings'
