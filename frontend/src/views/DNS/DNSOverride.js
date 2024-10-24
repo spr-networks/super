@@ -38,20 +38,25 @@ const DNSBlock = (props) => {
 
   const [OverrideLists, setOverrideLists] = useState([])
   const [listOptions, setListOptions] = useState([])
-  const [curList, setCurList] = useState({Tags: []})
+  const [curList, setCurList] = useState({ Tags: [] })
 
   const refreshConfig = async () => {
     try {
       let config = await blockAPI.config()
-      setOverrideLists(config.OverrideLists)
-      setListOptions(config.OverrideLists.map(e => ({ label: e.Name, value: e.Name}) ))
 
-      for (let entry of config.OverrideLists) {
-        if (entry.Name == (curList.Name || "Default") ) {
-          setPermitDomains(entry.PermitDomains)
-          setBlockDomains(entry.BlockDomains)
-          setCurList(entry)
-          break
+      if (config.OverrideLists?.length) {
+        setOverrideLists(config.OverrideLists)
+        setListOptions(
+          config.OverrideLists?.map((e) => ({ label: e.Name, value: e.Name }))
+        )
+
+        for (let entry of config.OverrideLists) {
+          if (entry.Name == (curList.Name || 'Default')) {
+            setPermitDomains(entry.PermitDomains)
+            setBlockDomains(entry.BlockDomains)
+            setCurList(entry)
+            break
+          }
         }
       }
     } catch (error) {
@@ -79,7 +84,7 @@ const DNSBlock = (props) => {
     } else if (type == 'permit') {
       refModalAddPermit.current()
     } else if (type == 'deletelist') {
-      onChangeList("Default")
+      onChangeList('Default')
       await refreshConfig()
       return
     }
@@ -125,12 +130,11 @@ const DNSBlock = (props) => {
       }
     }
 
-    setCurList({Name: v, Tags: [], Enabled: true})
+    setCurList({ Name: v, Tags: [], Enabled: true })
     //failed to find, clear
     setBlockDomains([])
     setPermitDomains([])
   }
-
 
   const handleTags = (tags) => {
     let newTags = [
@@ -148,7 +152,6 @@ const DNSBlock = (props) => {
       .catch((error) => {
         context.error('API Failure: ' + error.message)
       })
-
   }
 
   let defaultTags = []
@@ -157,28 +160,30 @@ const DNSBlock = (props) => {
     <View h="$full">
       <ScrollView h="$full">
         <VStack space="sm" pb="$16">
-
           <Heading>Select Override List</Heading>
-          <InputSelect options={listOptions} value={curList.Name} onChange={onChangeList} onChangeText={onChangeText} />
+          <InputSelect
+            options={listOptions}
+            value={curList.Name}
+            onChange={onChangeList}
+            onChangeText={onChangeText}
+          />
 
-          {
-            curList && curList.Name != "" && curList.Name != 'Default' && (
-              <Button
-                display={Platform.OS == 'web' ? 'flex' : 'none'}
-                variant="link"
-                onPress={async () => {
-                  try {
-                    await blockAPI.deleteOverrideList(curList.Name, curList);
-                    notifyChange('deletelist');
-                  } catch (e) {
-                    notifyChange('deletelist');
-                  }
-                }}
-              >
-                <ButtonIcon as={CloseIcon} color="$red700" />
-              </Button>
-            )
-          }
+          {curList && curList.Name != '' && curList.Name != 'Default' && (
+            <Button
+              display={Platform.OS == 'web' ? 'flex' : 'none'}
+              variant="link"
+              onPress={async () => {
+                try {
+                  await blockAPI.deleteOverrideList(curList.Name, curList)
+                  notifyChange('deletelist')
+                } catch (e) {
+                  notifyChange('deletelist')
+                }
+              }}
+            >
+              <ButtonIcon as={CloseIcon} color="$red700" />
+            </Button>
+          )}
           <Text>Enabled: {JSON.stringify(curList.Enabled)}</Text>
 
           <FormControl>
@@ -205,7 +210,6 @@ const DNSBlock = (props) => {
             </HStack>
           </FormControl>
 
-
           <DNSOverrideList
             list={BlockDomains}
             listName={curList.Name}
@@ -224,8 +228,11 @@ const DNSBlock = (props) => {
                 }}
                 modalRef={refModalAddBlock}
               >
-                <DNSAddOverride listName={curList.Name} type={'block'} notifyChange={notifyChange} />
-
+                <DNSAddOverride
+                  listName={curList.Name}
+                  type={'block'}
+                  notifyChange={notifyChange}
+                />
               </ModalForm>
             )}
           />
@@ -249,7 +256,11 @@ const DNSBlock = (props) => {
                 }}
                 modalRef={refModalAddPermit}
               >
-                <DNSAddOverride listName={curList.Name} type={'permit'} notifyChange={notifyChange} />
+                <DNSAddOverride
+                  listName={curList.Name}
+                  type={'permit'}
+                  notifyChange={notifyChange}
+                />
               </ModalForm>
             )}
           />
