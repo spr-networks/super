@@ -3,7 +3,7 @@ import { Platform } from 'react-native'
 import PropTypes from 'prop-types'
 
 import { blockAPI } from 'api/DNS'
-import { AlertContext } from 'layouts/Admin'
+import { AlertContext, AppContext } from 'AppContext'
 import ModalConfirm from 'components/ModalConfirm'
 
 import {
@@ -11,10 +11,15 @@ import {
   BadgeIcon,
   Button,
   ButtonIcon,
+  ButtonText,
   FlatList,
   HStack,
   Icon,
+  Link,
+  LinkIcon,
   Spinner,
+  SectionList,
+  Switch,
   Text,
   VStack,
   BadgeText,
@@ -23,14 +28,32 @@ import {
   MenuItemLabel,
   ThreeDotsIcon,
   useColorMode,
-  CloseIcon
+  CloseIcon,
+  ButtonGroup,
+  ScrollView
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
-import { CircleIcon, TagIcon, FolderPenIcon, ShieldCheckIcon, ShieldXIcon } from 'lucide-react-native'
+import { Tooltip } from 'components/Tooltip'
+import {
+  CircleIcon,
+  TagIcon,
+  ExternalLinkIcon,
+  FolderPenIcon,
+  ShieldIcon,
+  ShieldEllipsisIcon,
+  ShieldAlertIcon,
+  ShieldOffIcon,
+  ShieldCheckIcon,
+  ShieldXIcon,
+  ShieldOff
+} from 'lucide-react-native'
+import { Title } from 'chart.js'
 
 const DNSBlocklist = ({ config, ...props }) => {
   const context = useContext(AlertContext)
+  const appContext = useContext(AppContext)
+  const isSimpleMode = appContext.isSimpleMode
 
   const [list, setList] = useState([])
   const [recommendedList, setRecommendedList] = useState([])
@@ -53,24 +76,49 @@ const DNSBlocklist = ({ config, ...props }) => {
       Category: 'ads'
     },
     {
-      Info: 'BlockList Project Facebook and related services',
+      Info: 'BlockList Project Facebook',
       URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/facebook.txt',
       Category: 'social'
     },
     {
-      Info: 'BlockList Project Twitter and related services',
+      Info: 'BlockList Project Twitter, X',
       URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/twitter.txt',
       Category: 'social'
     },
     {
-      Info: 'BlockList Project Malware List',
-      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/malware.txt',
+      Info: 'BlockList Project TikTok',
+      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/tiktok.txt',
       Category: 'social'
+    },
+    {
+      Info: 'BlockList Project WhatsApp',
+      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/whatsapp.txt',
+      Category: 'social'
+    },
+    {
+      Info: 'BlockList Project Youtube',
+      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/youtube.txt',
+      Category: 'social'
+    },
+    {
+      Info: 'BlockList Project Fortnite',
+      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/fortnite.txt',
+      Category: 'gaming'
+    },
+    {
+      Info: 'BlockList Project Malware',
+      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/malware.txt',
+      Category: 'malware'
     },
     {
       Info: 'BlockList Project Pornography List',
       URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/porn.txt',
       Category: 'adult'
+    },
+    {
+      Info: 'BlockList Project Gambling',
+      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/gambling.txt',
+      Category: 'gambling'
     },
     {
       Info: 'BlockList Project Redirect List, often used with spam',
@@ -81,11 +129,6 @@ const DNSBlocklist = ({ config, ...props }) => {
       Info: 'BlockList Project Tracker List for sites that track and gather visitor information',
       URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/tracking.txt',
       Category: 'ads'
-    },
-    {
-      Info: 'BlockList Project Youtube domains',
-      URI: 'https://raw.githubusercontent.com/blocklistproject/Lists/master/youtube.txt',
-      Category: 'social'
     },
     {
       Info: 'BlockList Project Everything list',
@@ -164,11 +207,17 @@ const DNSBlocklist = ({ config, ...props }) => {
   }
 
   const handleItemSwitchDontBlock = (item, value) => {
+    //if enabled - also enable this list
+    if (value && !item.DontBlock && !item.Enabled) {
+      item.Enabled = true
+    }
+
     item.DontBlock = value
 
     const newList = list.map((_item) => {
       if (_item.URI == item.URI) {
         _item.DontBlock = item.DontBlock
+        _item.Enabled = item.Enabled
       }
 
       return _item
@@ -224,7 +273,6 @@ const DNSBlocklist = ({ config, ...props }) => {
   }
 
   const handleCategories = (item, category) => {
-
     item.Category = category
 
     blockAPI
@@ -236,8 +284,6 @@ const DNSBlocklist = ({ config, ...props }) => {
         context.error('API Failure: ' + error.message)
       })
   }
-
-
 
   useEffect(() => {
     refreshBlocklists()
@@ -254,7 +300,6 @@ const DNSBlocklist = ({ config, ...props }) => {
   }
 
   const handleSubmitNew = (item, value) => {
-
     if (modalType == 'Tag') {
       let tags = []
       if (item.Tags) {
@@ -295,6 +340,19 @@ const DNSBlocklist = ({ config, ...props }) => {
       .replace(/\.txt$/, '')
   }
 
+  const niceSource = (uri) => {
+    let m = uri.match(/https:\/\/raw\.githubusercontent\.com\/([A-Za-z]+)/)
+    return m[1].replace('blocklistproject', 'BlockList Project') || 'Unknown'
+  }
+
+  const niceTitle = (title) => {
+    if (title == 'BlockList Project Ads') {
+      return title
+    }
+
+    return title.replace('BlockList Project ', '')
+  }
+
   const toggleShowURI = (e) => {
     setShowURI(!showURI)
   }
@@ -307,6 +365,237 @@ const DNSBlocklist = ({ config, ...props }) => {
               <Text color="$muted500">Update running...</Text>
             </HStack>
    */
+
+  const ListItemIcon = ({ item, ...props }) => {
+    let label = 'Block disabled'
+
+    if (item.Enabled) {
+      label = item.DontBlock ? 'Only categorize traffic' : 'Blocked'
+    }
+
+    return (
+      <Tooltip label={label}>
+        {!item.Enabled ? (
+          <Icon size="xl" as={ShieldOffIcon} mr="$2" color={'$muted400'} />
+        ) : (
+          <Icon
+            size="xl"
+            as={item.DontBlock ? ShieldEllipsisIcon : ShieldCheckIcon}
+            mr="$2"
+            color={item.DontBlock ? '$amber500' : '$green500'}
+          />
+        )}
+      </Tooltip>
+    )
+  }
+
+  const ListItemCategory = ({ item }) => {
+    if (!item.Category) {
+      return <></>
+    }
+
+    return (
+      <Badge key={item.Category} action="muted" variant="outline" size="sm">
+        {/*<BadgeIcon as={FolderPenIcon} mr="$2" />*/}
+        <BadgeText textTransform="capitalize">{item.Category}</BadgeText>
+      </Badge>
+    )
+  }
+
+  const sortListItems = (a, b) => {
+    let x = a.Enabled * 100 - a.DontBlock * 10
+    let y = b.Enabled * 100 - b.DontBlock * 10
+
+    if (x == y) {
+      return a.Category - b.Category
+    }
+
+    return y - x
+  }
+
+  let listAll = [...list, ...recommendedList].sort(sortListItems)
+
+  if (isSimpleMode) {
+    let categories = [
+      ...new Set(listAll.map((l) => l.Category).filter((c) => c?.length))
+    ]
+
+    const listsByCategory = (category) => {
+      return listAll.filter((l) => l.Category == category)
+    }
+
+    const handleCategorySwitch = (category) => {
+      let lists = listsByCategory(category)
+      if (!lists?.length) {
+        return
+      }
+
+      let haveEnabled = lists.filter((item) => item.Enabled)?.length > 0
+      let Enabled = true
+      if (haveEnabled) {
+        Enabled = false
+      }
+
+      lists.map((item) => {
+        //make sure its blocking when blocking
+        item.DontBlock = false
+        handleItemSwitch(item, Enabled)
+      })
+    }
+
+    const handleCategorySwitchDontBlock = (category) => {
+      let lists = listsByCategory(category)
+      if (!lists?.length) {
+        return
+      }
+
+      let haveDontBlock = lists.filter((item) => item.DontBlock)?.length > 0
+      let DontBlock = true
+      if (haveDontBlock) {
+        DontBlock = false
+      }
+
+      lists.map((item) => {
+        if (!DontBlock) {
+          item.Enabled = false
+        }
+        handleItemSwitchDontBlock(item, DontBlock)
+      })
+    }
+
+    let sections = []
+    categories.map((name) => {
+      let data = listsByCategory(name)
+      sections.push({ name, data })
+    })
+
+    const isCategoryBlocked = (name) => {
+      return (
+        listsByCategory(name).filter((item) => item.Enabled).length ==
+        listsByCategory(name).length
+      )
+    }
+
+    return (
+      <ScrollView pb="$20">
+        <VStack
+          space="md"
+          p="$2"
+          flexWrap="wrap"
+          sx={{
+            '@md': { flexDirection: 'row' }
+          }}
+        >
+          {sections.map(({ name, data }) => (
+            <VStack
+              sx={{
+                '@md': { width: 360 }
+              }}
+              p="$4"
+              space="md"
+              bg={'$backgroundCardLight'}
+              borderRadius={10}
+            >
+              <HStack space="md">
+                <HStack space="xs" flex={1}>
+                  <ListItemIcon item={listsByCategory(name)[0]} />
+                  <Text bold textTransform="capitalize">
+                    {name || 'Other'}
+                  </Text>
+                </HStack>
+                <Switch
+                  value={isCategoryBlocked(name)}
+                  onToggle={() => handleCategorySwitch(name)}
+                />
+              </HStack>
+              <HStack
+                space="md"
+                alignItems="center"
+                justifyContent="space-between"
+              >
+                {listsByCategory(name)[0].Enabled &&
+                listsByCategory(name)[0].DontBlock ? (
+                  <Text size="sm" italic>
+                    Categorize only
+                  </Text>
+                ) : (
+                  <>
+                    {listsByCategory(name)[0].Enabled ? (
+                      <Text size="sm">Blocked</Text>
+                    ) : (
+                      <Text size="sm">Allowed</Text>
+                    )}
+                  </>
+                )}
+
+                <Tooltip label="This will not block the traffic but log it by category">
+                  <Button
+                    size="xs"
+                    action="secondary"
+                    variant="link"
+                    onPress={() => handleCategorySwitchDontBlock(name)}
+                  >
+                    <ButtonIcon as={ShieldEllipsisIcon} mr="$2" />
+                    <ButtonText>
+                      {listsByCategory(name)[0].DontBlock
+                        ? 'Disable'
+                        : 'Categorize only'}
+                    </ButtonText>
+                  </Button>
+                </Tooltip>
+              </HStack>
+            </VStack>
+          ))}
+        </VStack>
+      </ScrollView>
+    )
+
+    //NOTE this is to also render the lists, wont need this - can flip to advanced view
+    /*
+    return (
+      <>
+        <SectionList
+          sections={sections}
+          renderSectionHeader={({ section: { name } }) => (
+            <HStack space="md" alignItems="center">
+              <ListItemIcon item={listsByCategory(name)[0]} />
+              <Text bold textTransform="capitalize">
+                {name || 'Other'}
+              </Text>
+
+              <Switch
+                value={
+                  listsByCategory(name).filter((item) => item.Enabled).length ==
+                  listsByCategory(name).length
+                }
+                onToggle={() => handleCategorySwitch(name)}
+              />
+
+              <Tooltip label="This will not block the traffic but log it by category">
+                <Button
+                  size="xs"
+                  action="secondary"
+                  variant="outline"
+                  onPress={() => handleCategorySwitchDontBlock(name)}
+                >
+                  <ButtonIcon as={ShieldEllipsisIcon} mr="$2" />
+                  <ButtonText>Categorize</ButtonText>
+                </Button>
+              </Tooltip>
+            </HStack>
+          )}
+          renderItem={({ item, section }) => (
+            <HStack space="md">
+              <ListItemIcon item={item} />
+              <Text>{niceTitle(item.Info)}</Text>
+            </HStack>
+          )}
+          keyExtractor={(item, index) => `${index}`}
+        />
+      </>
+    )
+    */
+  }
 
   return (
     <>
@@ -323,33 +612,32 @@ const DNSBlocklist = ({ config, ...props }) => {
       </ListHeader>
 
       <FlatList
-        data={[...list, ...recommendedList]}
+        data={listAll}
         contentContainerStyle={{ paddingBottom: 64 }}
         renderItem={({ item }) => (
           <ListItem>
+            <ListItemIcon item={item} />
+
             <VStack
               w="$4/6"
               _sx={{
                 '@md': { width: '$3/4' }
               }}
               onPress={toggleShowURI}
+              opacity={isOnlyRecommended(item) ? 0.6 : 1}
             >
               <Text size="sm" bold flexWrap="wrap">
-                {item.Info}
+                {niceTitle(item.Info)}
               </Text>
-              <Text
-                size="sm"
-                color={
-                  isOnlyRecommended(item)
-                    ? '$muted500'
-                    : colorMode == 'light'
-                    ? '$black'
-                    : '$white'
-                }
-                isTruncated
-              >
-                {niceURI(item.URI)}
-              </Text>
+              <Link isExternal href={item.URI}>
+                <HStack space="xs" alignItems="center">
+                  <Text size="sm" isTruncated>
+                    {niceSource(item.URI)}
+                  </Text>
+
+                  <Icon as={ExternalLinkIcon} color="$muted500" size="xs" />
+                </HStack>
+              </Link>
             </VStack>
 
             <HStack
@@ -367,12 +655,6 @@ const DNSBlocklist = ({ config, ...props }) => {
                 }
               }}
             >
-              {item.Enabled ? (
-                <Badge size="sm" action="success" variant="outline">
-                  <BadgeText>{item.DontBlock ? "Enabled" : "Block Enabled"}</BadgeText>
-                </Badge>
-              ) : null}
-
               {item.Tags
                 ? item.Tags.map((entry) => (
                     <Badge
@@ -387,21 +669,7 @@ const DNSBlocklist = ({ config, ...props }) => {
                   ))
                 : null}
 
-
-              {item.Category && item.Category != ""
-                ? (
-                    <Badge
-                      key={item.Category}
-                      action="muted"
-                      variant="outline"
-                      size="sm"
-                    >
-                      <BadgeText>{item.Category}</BadgeText>
-                      <BadgeIcon as={FolderPenIcon} ml="$1" />
-                    </Badge>
-                  )
-                : null}
-
+              <ListItemCategory item={item} />
             </HStack>
 
             <Menu
@@ -411,8 +679,7 @@ const DNSBlocklist = ({ config, ...props }) => {
                 let key = e.currentKey
                 if (key == 'onoff') {
                   handleItemSwitch(item, !item.Enabled)
-                }
-                else if (key == 'dontblock') {
+                } else if (key == 'dontblock') {
                   handleItemSwitchDontBlock(item, !item.DontBlock)
                 } else if (key == 'deleteItem') {
                   deleteListItem(item)
@@ -468,12 +735,14 @@ const DNSBlocklist = ({ config, ...props }) => {
               </MenuItem>
 
               <MenuItem key="dontblock" textValue="dontblock">
-                <Icon as={item.DontBlock ? ShieldXIcon : ShieldCheckIcon} mr="$2" />
+                <Icon
+                  as={item.DontBlock ? ShieldXIcon : ShieldCheckIcon}
+                  mr="$2"
+                />
                 <MenuItemLabel size="sm">
                   {item.DontBlock ? 'Enable Blocking' : 'Categorize Only'}
                 </MenuItemLabel>
               </MenuItem>
-
             </Menu>
           </ListItem>
         )}
