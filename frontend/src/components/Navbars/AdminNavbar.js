@@ -100,7 +100,7 @@ const AdminNavbar = ({
         }
       })
       .catch((err) => {})
-  }, [version, checkUpdate])
+  }, [version])
 
   return (
     <>
