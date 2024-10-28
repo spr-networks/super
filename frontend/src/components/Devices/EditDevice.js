@@ -328,7 +328,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         )
     }
 
-    if (psk !== '**') {
+    if (psk !== '**' ) {
       let pskType = device.PSKEntry?.Type
 
       if (pskType == 'sae' || pskType == 'wpa2') {
@@ -338,7 +338,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
           .catch((error) =>
             context.error('[API] update PSK error: ' + error.message)
           )
-      } else {
+      } else if (pskType != '') {
         context.error('[API] Unexpected PSK Type: ' + pskType)
       }
     }
