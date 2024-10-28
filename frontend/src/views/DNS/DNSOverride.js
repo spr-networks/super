@@ -9,6 +9,11 @@ import { TagItem } from 'components/TagItem'
 import { TagMenu } from 'components/TagMenu'
 
 import {
+  Box,
+  Switch,
+  Badge,
+  BadgeText,
+  TrashIcon,
   Button,
   ButtonIcon,
   CloseIcon,
@@ -161,54 +166,86 @@ const DNSBlock = (props) => {
       <ScrollView h="$full">
         <VStack space="sm" pb="$16">
           <Heading>Select Override List</Heading>
-          <InputSelect
-            options={listOptions}
-            value={curList.Name}
-            onChange={onChangeList}
-            onChangeText={onChangeText}
-          />
 
-          {curList && curList.Name != '' && curList.Name != 'Default' && (
-            <Button
-              display={Platform.OS == 'web' ? 'flex' : 'none'}
-              variant="link"
-              onPress={async () => {
-                try {
-                  await blockAPI.deleteOverrideList(curList.Name, curList)
-                  notifyChange('deletelist')
-                } catch (e) {
-                  notifyChange('deletelist')
-                }
-              }}
-            >
-              <ButtonIcon as={CloseIcon} color="$red700" />
-            </Button>
-          )}
-          <Text>Enabled: {JSON.stringify(curList.Enabled)}</Text>
-
-          <FormControl>
-            <FormControlLabel>
-              <FormControlLabelText>Tags</FormControlLabelText>
-            </FormControlLabel>
-
-            <HStack flexWrap="wrap" w="$full" space="md">
-              <HStack
-                space="md"
-                flexWrap="wrap"
-                alignItems="center"
-                display={curList.Tags?.length ? 'flex' : 'none'}
-              >
-                {curList.Tags.map((tag) => (
-                  <TagItem key={tag} name={tag} size="sm" />
-                ))}
-              </HStack>
-              <TagMenu
-                items={[...new Set(defaultTags.concat(curList.Tags))]}
-                selectedKeys={curList.Tags}
-                onSelectionChange={handleTags}
+          <VStack justifyContent="space-between" space="md">
+            <Box flex={1}>
+              <InputSelect
+                options={listOptions}
+                value={curList.Name}
+                onChange={onChangeList}
+                onChangeText={onChangeText}
               />
+            </Box>
+
+            <HStack space="sm" alignItems="center">
+              {curList.Name !== '' && curList.Name !== 'Default' && (
+
+                <>
+                <Switch
+                  size="sm"
+                  value={curList.Enabled}
+                  onValueChange={(checked) => {
+                    const updatedList = { ...curList, Enabled: checked };
+                    blockAPI.putOverrideList(curList.Name, updatedList)
+                      .then(() => notifyChange('config'))
+                      .catch(error => context.error('API Failure: ' + error.message));
+                  }}
+                />
+                <Badge
+                  variant={curList.Enabled ? "solid" : "outline"}
+                  action={curList.Enabled ? "success" : "muted"}
+                >
+                  <BadgeText>
+                    {curList.Enabled ? "Enabled" : "Disabled"}
+                  </BadgeText>
+                </Badge>
+
+                <Button
+                  variant="outline"
+                  action="negative"
+                  size="sm"
+                  onPress={async () => {
+                    try {
+                      await blockAPI.deleteOverrideList(curList.Name, curList);
+                      notifyChange('deletelist');
+                    } catch (e) {
+                      notifyChange('deletelist');
+                    }
+                  }}
+                >
+                  <ButtonIcon as={TrashIcon} />
+                </Button>
+              </>
+              )}
             </HStack>
-          </FormControl>
+          </VStack>
+
+          {curList.Name !== '' && curList.Name !== 'Default' && (
+
+            <FormControl>
+              <FormControlLabel>
+                <FormControlLabelText>Tags</FormControlLabelText>
+              </FormControlLabel>
+
+              <HStack flexWrap="wrap" w="$full" space="md">
+                <HStack
+                  space="md"
+                  flexWrap="wrap"
+                  alignItems="center"
+                  display={curList.Tags?.length ? 'flex' : 'none'}
+                >
+                  {curList.Tags.map((tag) => (
+                    <TagItem key={tag} name={tag} size="sm" />
+                  ))}
+                </HStack>
+                <TagMenu
+                  items={[...new Set(defaultTags.concat(curList.Tags))]}
+                  selectedKeys={curList.Tags}
+                  onSelectionChange={handleTags}
+                />
+              </HStack>
+            </FormControl>
+          )}
 
           <DNSOverrideList
             list={BlockDomains}
