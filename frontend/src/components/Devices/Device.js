@@ -30,10 +30,20 @@ import { TagItem, GroupItem, PolicyItem } from 'components/TagItem'
 import IconItem from 'components/IconItem'
 import { PencilIcon, WaypointsIcon, WifiIcon } from 'lucide-react-native'
 
-const DeviceIcon = ({ icon, color: _color, isConnected, isAssociatedOnly, ...props }) => {
+const DeviceIcon = ({
+  icon,
+  color: _color,
+  isConnected,
+  isAssociatedOnly,
+  ...props
+}) => {
   let color = _color ? `$${_color}400` : '$blueGray400'
   let opacity = isConnected ? 1 : 0.4
-  let borderColor = isConnected ? '$green600' : (isAssociatedOnly ? '$yellow400' : '$muted500')
+  let borderColor = isConnected
+    ? '$green600'
+    : isAssociatedOnly
+    ? '$yellow400'
+    : '$muted500'
   //return <IconItem name={icon} color={color} size={32} />
 
   return (
@@ -103,7 +113,6 @@ const DeviceInfo = ({ identity, ...props }) => {
   if (!device) {
     return <Text>....{identity}</Text>
   }
-
 
   return ssids.map((ssid) => (
     <VStack key={ssid} space="md">
@@ -371,8 +380,10 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
             alignItems="center"
           >
             <Tooltip label={wifi_type}>
-              <IconItem name={wifi_type == 'Wired' ? 'Wire' : 'Wifi'} size={32}
-                />
+              <IconItem
+                name={wifi_type == 'Wired' ? 'Wire' : 'Wifi'}
+                size={32}
+              />
             </Tooltip>
           </VStack>
 

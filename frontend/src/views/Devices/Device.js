@@ -84,9 +84,11 @@ const DeviceView = () => {
     })
   }, [params])
 
-  const refreshDevice = () => {
+  const refreshDevice = (showNotification = true) => {
     appContext.getDevices(true) // force update
-    context.success('device updated')
+    if (showNotification !== false) {
+      context.success('device updated')
+    }
   }
 
   const swipeHandlers = useSwipe({

@@ -53,13 +53,8 @@ const IconItem = ({ name, color, size: _size, ...props }) => {
     return <></>
   }
 
-  //TODO fix
-  if (Platform.OS == 'ios') {
-    return <Icon as={Laptop2} color={color} size={size} {...props} />
-  }
-
   return (
-    <Icon as={BrandIcons[name]} color={color} size={size} w={size} {...props} />
+    <Icon as={BrandIcons[name]} color={color} w={size} h={size} {...props} />
   )
 }
 
