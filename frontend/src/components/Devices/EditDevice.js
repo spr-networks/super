@@ -28,6 +28,10 @@ import {
   HStack,
   Input,
   InputField,
+  InputIcon,
+  EyeOffIcon,
+  EyeIcon,
+  InputSlot,
   VStack,
   Text,
   Tooltip,
@@ -53,6 +57,9 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(device.Name)
   const [rawIP, setRawIP] = useState(device.RecentIP)
+  const [psk, setPSK] = useState(device.PSKEntry.Psk)
+  const [pskType, setPSKType] = useState(device.PSKEntry.Type)
+  const [showPassword, setShowPassword] = useState(false)
   const [ip, setIP] = useState(device.RecentIP)
   const [vlantag, setVlanTag] = useState(device.VLANTag)
   const [policies, setPolicies] = useState(device.Policies?.sort() || [])
@@ -250,6 +257,10 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     setRawIP(value)
   }
 
+  const handleWifiPsk = (value) => {
+    setPSK(value)
+  }
+
   let protocolAuth = { sae: 'WPA3', wpa2: 'WPA2' }
   let wifi_type = protocolAuth[device.PSKEntry.Type] || 'N/A'
 
@@ -316,6 +327,21 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
           context.error('[API] update VLAN Tag error: ' + error.message)
         )
     }
+
+    if (psk !== '**' ) {
+      let pskType = device.PSKEntry?.Type
+
+      if (pskType == 'sae' || pskType == 'wpa2') {
+        deviceAPI
+          .update(id, {PSKEntry: {Psk: psk, Type: pskType}})
+          .then(notifyChange)
+          .catch((error) =>
+            context.error('[API] update PSK error: ' + error.message)
+          )
+      } else if (pskType != '') {
+        context.error('[API] Unexpected PSK Type: ' + pskType)
+      }
+    }
   }
 
 
@@ -371,6 +397,24 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
       }
 
       setExpiration(value)
+    }
+  }
+
+  const toggleShowPassword = () => {
+    let identity = device.MAC || device.WGPubKey
+
+    if (!showPassword) {
+      deviceAPI
+        .getDevice(identity)
+        .then((device) => {
+          setPSK(device.PSKEntry.Psk)
+          setShowPassword(!showPassword)
+        })
+        .catch((err) => {
+          console.error('API Error:', err)
+        })
+    } else {
+      setShowPassword(false)
     }
   }
 
@@ -435,6 +479,46 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
           />
         </Input>
       </FormControl>
+
+      <FormControl display={isSimpleMode || pskType=='' ? 'none' : 'flex'}>
+        <Tooltip
+          placement="bottom"
+          trigger={(triggerProps) => {
+            return (
+              <FormControlLabel {...triggerProps}>
+                <FormControlLabelText>WiFi Password</FormControlLabelText>
+              </FormControlLabel>
+            )
+          }}
+        >
+          <TooltipContent>
+            <TooltipText>
+              Assign WiFi Password
+            </TooltipText>
+          </TooltipContent>
+        </Tooltip>
+
+        <Input variant="solid">
+          <InputField
+            type={showPassword ? "text" : "password"}
+            value={psk}
+            autoFocus={false}
+            onChangeText={(value) => handleWifiPsk(value)}
+            onSubmitEditing={handleSubmit}
+          />
+          <InputSlot pr="$4" onPress={toggleShowPassword}>
+            <InputIcon>
+              {showPassword ? (
+                <EyeIcon size="sm" />
+              ) : (
+                <EyeOffIcon size="sm" />
+              )}
+            </InputIcon>
+          </InputSlot>
+        </Input>
+      </FormControl>
+
+
 
       <FormControl display={isSimpleMode ? 'none' : 'flex'}>
         <Tooltip

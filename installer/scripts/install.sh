@@ -3,6 +3,9 @@
 # do not use systemd-resolvd, we will use our own container later
 systemctl disable systemd-resolved
 
+systemctl disable systemd-networkd-wait-online.service
+systemctl mask systemd-networkd-wait-online.service
+
 rm -f /etc/resolv.conf
 echo nameserver 1.1.1.1 > /etc/resolv.conf
 

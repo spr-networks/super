@@ -30,7 +30,9 @@ import {
   useColorMode,
   CloseIcon,
   ButtonGroup,
-  ScrollView
+  ScrollView,
+  Pressable,
+  Box,
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
@@ -49,6 +51,96 @@ import {
   ShieldOff
 } from 'lucide-react-native'
 import { Title } from 'chart.js'
+
+const ThreePointSlider = ({ value, onChange }) => {
+  const [position, setPosition] = useState(value);
+
+  const handlePress = () => {
+    const nextPosition = (position == 2 ? 1 : (position == 1 ? 0 : 2))
+    setPosition(nextPosition);
+    if (onChange) {
+      onChange(nextPosition);
+    }
+  };
+
+  const knobColor = () => {
+    switch(position) {
+      case 0:
+        return "$primary400"
+      case 1:
+        return "$amber500"
+      case 2:
+        return "$blue500"
+      default:
+        return "$blue500"
+    }
+  }
+
+  const getKnobPosition = () => {
+    switch(position) {
+      case 0:
+        return { left: 8 };
+      case 1:
+        return { left: 28 };
+      case 2:
+        return { left: 48 };
+      default:
+        return { left: 48 };
+    }
+  };
+
+  return (
+    <Pressable onPress={handlePress}>
+      <Box
+        width={80}
+        height={32}
+        backgroundColor="$primary200" // Lighter blue background for the track
+        borderColor="$primary300" // Subtle border for definition
+        borderRadius={16}
+        position="relative"
+        justifyContent="center"
+      >
+        {/* Track points */}
+        <Box flexDirection="row" justifyContent="space-between" paddingHorizontal={12}>
+          <Box
+            width={8}
+            height={8}
+            borderRadius={4}
+            backgroundColor="$gray400"
+          />
+          <Box
+            width={8}
+            height={8}
+            borderRadius={4}
+            backgroundColor="$gray400"
+          />
+          <Box
+            width={8}
+            height={8}
+            borderRadius={4}
+            backgroundColor="$gray400"
+          />
+        </Box>
+
+        {/* Knob */}
+        <Box
+          position="absolute"
+          {...getKnobPosition()}
+          width={24}
+          height={24}
+          borderRadius={12}
+          backgroundColor={knobColor()}
+          shadowColor="$gray900"
+          shadowOffset={{ width: 0, height: 2 }}
+          shadowOpacity={0.25}
+          shadowRadius={2}
+          elevation={2}
+        />
+      </Box>
+    </Pressable>
+  );
+};
+
 
 const DNSBlocklist = ({ config, ...props }) => {
   const context = useContext(AlertContext)
@@ -213,6 +305,31 @@ const DNSBlocklist = ({ config, ...props }) => {
     }
 
     item.DontBlock = value
+
+    const newList = list.map((_item) => {
+      if (_item.URI == item.URI) {
+        _item.DontBlock = item.DontBlock
+        _item.Enabled = item.Enabled
+      }
+
+      return _item
+    })
+
+    // only update the ui
+    setList(newList)
+    setPending(true)
+
+    blockAPI
+      .putBlocklist(item)
+      .then((res) => {
+        notifyChange('blocklists')
+      })
+      .catch((error) => {
+        context.error('API Failure: ' + error.message)
+      })
+  }
+
+  const updateItemState = (item) => {
 
     const newList = list.map((_item) => {
       if (_item.URI == item.URI) {
@@ -403,359 +520,314 @@ const DNSBlocklist = ({ config, ...props }) => {
   }
 
   const sortListItems = (a, b) => {
-    let x = a.Enabled * 100 - a.DontBlock * 10
-    let y = b.Enabled * 100 - b.DontBlock * 10
-
-    if (x == y) {
-      return a.Category - b.Category
-    }
-
-    return y - x
+    return a.Category - b.Category
   }
 
   let listAll = [...list, ...recommendedList].sort(sortListItems)
 
-  if (isSimpleMode) {
-    let categories = [
-      ...new Set(listAll.map((l) => l.Category).filter((c) => c?.length))
-    ]
+  let categories = [
+    ...new Set(listAll.map((l) => l.Category).filter((c) => c?.length))
+  ]
 
-    const listsByCategory = (category) => {
-      return listAll.filter((l) => l.Category == category)
+  const listsByCategory = (category) => {
+    return listAll.filter((l) => l.Category == category)
+  }
+
+  const handleCategorySwitch = (category, v) => {
+
+    let lists = listsByCategory(category)
+    if (!lists?.length) {
+      return
     }
 
-    const handleCategorySwitch = (category) => {
-      let lists = listsByCategory(category)
-      if (!lists?.length) {
-        return
-      }
+    const nextState = v
 
-      let haveEnabled = lists.filter((item) => item.Enabled)?.length > 0
-      let Enabled = true
-      if (haveEnabled) {
-        Enabled = false
-      }
+    //state 0
+    let Enabled = false
+    let DontBlock = false
 
-      lists.map((item) => {
-        //make sure its blocking when blocking
-        item.DontBlock = false
-        handleItemSwitch(item, Enabled)
-      })
+    if (nextState == 1) {
+      Enabled = true
+      DontBlock = true
+    } else if (nextState == 2) {
+      Enabled = true
+      DontBlock = false
     }
-
-    const handleCategorySwitchDontBlock = (category) => {
-      let lists = listsByCategory(category)
-      if (!lists?.length) {
-        return
-      }
-
-      let haveDontBlock = lists.filter((item) => item.DontBlock)?.length > 0
-      let DontBlock = true
-      if (haveDontBlock) {
-        DontBlock = false
-      }
-
-      lists.map((item) => {
-        if (!DontBlock) {
-          item.Enabled = false
-        }
-        handleItemSwitchDontBlock(item, DontBlock)
-      })
-    }
-
-    let sections = []
-    categories.map((name) => {
-      let data = listsByCategory(name)
-      sections.push({ name, data })
+    lists.map((item) => {
+      item.Enabled = Enabled
+      item.DontBlock = DontBlock
+      updateItemState(item)
     })
+  }
 
-    const isCategoryBlocked = (name) => {
-      return (
-        listsByCategory(name).filter((item) => item.Enabled).length ==
-        listsByCategory(name).length
-      )
+
+  const categoryBlockState = (name) => {
+    //returns 0, 1, or 2
+    // 0 -> not blocked
+    // 1 -> observed
+    // 2 -> blocked
+
+    let dontBlock = listsByCategory(name)[0].DontBlock
+
+    if (listsByCategory(name).filter((item) => item.Enabled).length ==
+    listsByCategory(name).length) {
+      if (dontBlock) {
+        return 1
+      }
+      return 2
     }
 
-    return (
-      <ScrollView pb="$20">
-        <VStack
-          space="md"
-          p="$2"
-          flexWrap="wrap"
-          sx={{
-            '@md': { flexDirection: 'row' }
-          }}
-        >
-          {sections.map(({ name, data }) => (
-            <VStack
-              sx={{
-                '@md': { width: 360 }
-              }}
-              p="$4"
-              space="md"
-              bg={'$backgroundCardLight'}
-              borderRadius={10}
-            >
-              <HStack space="md">
-                <HStack space="xs" flex={1}>
-                  <ListItemIcon item={listsByCategory(name)[0]} />
-                  <Text bold textTransform="capitalize">
-                    {name || 'Other'}
-                  </Text>
-                </HStack>
-                <Switch
-                  value={isCategoryBlocked(name)}
-                  onToggle={() => handleCategorySwitch(name)}
-                />
+    return 0
+  }
+
+  const textFromCategory = (name) => {
+    let state = categoryBlockState(name)
+    return (state == 0 ? 'Allowed' : (state == 1 ? 'Observe Only' : 'Blocked'))
+  }
+
+  const tooltipFromCategory = (name) => {
+    let state = categoryBlockState(name)
+    if (state == 0) {
+      return "DNS Domains Allowed"
+    } else if (state == 1) {
+      return "Observe and log the DNS Category, Allow Traffic"
+    } else if (state == 2){
+      return "DNS Domains Blocked"
+    }
+
+  }
+
+
+  let sections = []
+  categories.map((name) => {
+    let data = listsByCategory(name)
+    sections.push({ name, data })
+  })
+
+
+  const simpleView = (
+      <VStack
+        space="md"
+        p="$2"
+        flexWrap="wrap"
+        sx={{
+          '@md': { flexDirection: 'row' }
+        }}
+      >
+        {sections.map(({ name, data }) => (
+          <VStack
+            sx={{
+              '@md': { width: 360 }
+            }}
+            p="$4"
+            space="md"
+            bg={
+              colorMode == 'light'
+                ? '$backgroundCardLight'
+                : '$backgroundCardDark'}
+            borderRadius={10}
+          >
+            <HStack space="md">
+              <HStack space="xs" flex={1}>
+                <ListItemIcon item={listsByCategory(name)[0]} />
+                <Text bold textTransform="capitalize">
+                  {name || 'Other'}
+                </Text>
               </HStack>
-              <HStack
-                space="md"
-                alignItems="center"
-                justifyContent="space-between"
-              >
-                {listsByCategory(name)[0].Enabled &&
-                listsByCategory(name)[0].DontBlock ? (
-                  <Text size="sm" italic>
-                    Categorize only
-                  </Text>
-                ) : (
-                  <>
-                    {listsByCategory(name)[0].Enabled ? (
-                      <Text size="sm">Blocked</Text>
-                    ) : (
-                      <Text size="sm">Allowed</Text>
-                    )}
-                  </>
-                )}
-
-                <Tooltip label="This will not block the traffic but log it by category">
-                  <Button
-                    size="xs"
-                    action="secondary"
-                    variant="link"
-                    onPress={() => handleCategorySwitchDontBlock(name)}
-                  >
-                    <ButtonIcon as={ShieldEllipsisIcon} mr="$2" />
-                    <ButtonText>
-                      {listsByCategory(name)[0].DontBlock
-                        ? 'Disable'
-                        : 'Categorize only'}
-                    </ButtonText>
-                  </Button>
-                </Tooltip>
-              </HStack>
-            </VStack>
-          ))}
-        </VStack>
-      </ScrollView>
-    )
-
-    //NOTE this is to also render the lists, wont need this - can flip to advanced view
-    /*
-    return (
-      <>
-        <SectionList
-          sections={sections}
-          renderSectionHeader={({ section: { name } }) => (
-            <HStack space="md" alignItems="center">
-              <ListItemIcon item={listsByCategory(name)[0]} />
-              <Text bold textTransform="capitalize">
-                {name || 'Other'}
-              </Text>
-
-              <Switch
-                value={
-                  listsByCategory(name).filter((item) => item.Enabled).length ==
-                  listsByCategory(name).length
-                }
-                onToggle={() => handleCategorySwitch(name)}
+              <ThreePointSlider
+                value={categoryBlockState(name)}
+                onChange={(v) => handleCategorySwitch(name, v)}
               />
-
-              <Tooltip label="This will not block the traffic but log it by category">
+            </HStack>
+            <HStack
+              space="md"
+              alignItems="center"
+              justifyContent="space-between"
+            >
+              <Text size="sm" italic>
+              </Text>
+              <Tooltip label={tooltipFromCategory(name)}>
                 <Button
                   size="xs"
                   action="secondary"
-                  variant="outline"
-                  onPress={() => handleCategorySwitchDontBlock(name)}
+                  variant="link"
                 >
                   <ButtonIcon as={ShieldEllipsisIcon} mr="$2" />
-                  <ButtonText>Categorize</ButtonText>
+                  <ButtonText>
+                    {textFromCategory(name)}
+                  </ButtonText>
                 </Button>
               </Tooltip>
             </HStack>
-          )}
-          renderItem={({ item, section }) => (
-            <HStack space="md">
-              <ListItemIcon item={item} />
-              <Text>{niceTitle(item.Info)}</Text>
-            </HStack>
-          )}
-          keyExtractor={(item, index) => `${index}`}
-        />
-      </>
+          </VStack>
+        ))}
+      </VStack>
     )
-    */
-  }
 
   return (
-    <>
-      <ListHeader
-        title="DNS Blocklists"
-        description={
-          !pending
-            ? `${blockedDomains.toLocaleString()} blocked domains`
-            : 'Update running...'
-        }
-        info="Use tags to apply blocks to specific devices"
-      >
-        {props.renderHeader ? props.renderHeader() : null}
-      </ListHeader>
+    <ScrollView pb="$20">
+      {simpleView}
+      {!isSimpleMode && (
+        <>
+        <ListHeader
+          title="DNS Blocklists"
+          description={
+            !pending
+              ? `${blockedDomains.toLocaleString()} blocked domains`
+              : 'Update running...'
+          }
+          info="Use tags to apply blocks to specific devices"
+        >
+          {props.renderHeader ? props.renderHeader() : null}
+        </ListHeader>
 
-      <FlatList
-        data={listAll}
-        contentContainerStyle={{ paddingBottom: 64 }}
-        renderItem={({ item }) => (
-          <ListItem>
-            <ListItemIcon item={item} />
+        <FlatList
+          data={listAll}
+          contentContainerStyle={{ paddingBottom: 64 }}
+          renderItem={({ item }) => (
+            <ListItem>
+              <ListItemIcon item={item} />
 
-            <VStack
-              w="$4/6"
-              _sx={{
-                '@md': { width: '$3/4' }
-              }}
-              onPress={toggleShowURI}
-              opacity={isOnlyRecommended(item) ? 0.6 : 1}
-            >
-              <Text size="sm" bold flexWrap="wrap">
-                {niceTitle(item.Info)}
-              </Text>
-              <Link isExternal href={item.URI}>
-                <HStack space="xs" alignItems="center">
-                  <Text size="sm" isTruncated>
-                    {niceSource(item.URI)}
-                  </Text>
-
-                  <Icon as={ExternalLinkIcon} color="$muted500" size="xs" />
-                </HStack>
-              </Link>
-            </VStack>
-
-            <HStack
-              flex={2}
-              space="md"
-              alignSelf="center"
-              sx={{
-                '@base': {
-                  flexDirection: 'column',
-                  alignItems: 'flex-end'
-                },
-                '@md': {
-                  flexDirection: 'row',
-                  alignItems: 'center'
-                }
-              }}
-            >
-              {item.Tags
-                ? item.Tags.map((entry) => (
-                    <Badge
-                      key={item.URI + entry}
-                      action="muted"
-                      variant="outline"
-                      size="sm"
-                    >
-                      <BadgeText>{entry}</BadgeText>
-                      <BadgeIcon as={TagIcon} ml="$1" />
-                    </Badge>
-                  ))
-                : null}
-
-              <ListItemCategory item={item} />
-            </HStack>
-
-            <Menu
-              trigger={trigger}
-              selectionMode="single"
-              onSelectionChange={(e) => {
-                let key = e.currentKey
-                if (key == 'onoff') {
-                  handleItemSwitch(item, !item.Enabled)
-                } else if (key == 'dontblock') {
-                  handleItemSwitchDontBlock(item, !item.DontBlock)
-                } else if (key == 'deleteItem') {
-                  deleteListItem(item)
-                } else if (key == 'newTag') {
-                  setModalType('Tag')
-                  setPendingItem(item)
-                  setShowModal(true)
-                } else if (key == 'newCategory') {
-                  setModalType('Category')
-                  setPendingItem(item)
-                  setShowModal(true)
-                } else {
-                  let tags = item.Tags.filter((t) => t != key)
-                  handleChangeTags(item, tags)
-                }
-              }}
-            >
-              <MenuItem key="onoff" textValue="onoff">
-                <Icon as={item.Enabled ? CircleIcon : CircleIcon} mr="$2" />
-                <MenuItemLabel size="sm">
-                  {item.Enabled ? 'Disable' : 'Enable'}
-                </MenuItemLabel>
-              </MenuItem>
-
-              <MenuItem
-                key="deleteItem"
-                textValue="deleteItem"
-                display={isOnlyRecommended(item) ? 'none' : 'flex'}
+              <VStack
+                w="$4/6"
+                _sx={{
+                  '@md': { width: '$3/4' }
+                }}
+                onPress={toggleShowURI}
+                opacity={isOnlyRecommended(item) ? 0.6 : 1}
               >
-                <CloseIcon color="$red700" mr="$2" />
-                <MenuItemLabel size="sm" color="$red700">
-                  Delete
-                </MenuItemLabel>
-              </MenuItem>
+                <Text size="sm" bold flexWrap="wrap">
+                  {niceTitle(item.Info)}
+                </Text>
+                <Link isExternal href={item.URI}>
+                  <HStack space="xs" alignItems="center">
+                    <Text size="sm" isTruncated>
+                      {niceSource(item.URI)}
+                    </Text>
 
-              {[...new Set(defaultTags.concat(item.Tags ? item.Tags : []))].map(
-                (tag) => (
-                  <MenuItem key={tag} textValue={tag}>
-                    <CloseIcon mr="$2" />
-                    <MenuItemLabel size="sm">{tag}</MenuItemLabel>
-                  </MenuItem>
-                )
-              )}
+                    <Icon as={ExternalLinkIcon} color="$muted500" size="xs" />
+                  </HStack>
+                </Link>
+              </VStack>
 
-              <MenuItem key="newTag" textValue="newTag">
-                <Icon as={TagIcon} mr="$2" />
-                <MenuItemLabel size="sm">New Tag...</MenuItemLabel>
-              </MenuItem>
+              <HStack
+                flex={2}
+                space="md"
+                alignSelf="center"
+                sx={{
+                  '@base': {
+                    flexDirection: 'column',
+                    alignItems: 'flex-end'
+                  },
+                  '@md': {
+                    flexDirection: 'row',
+                    alignItems: 'center'
+                  }
+                }}
+              >
+                {item.Tags
+                  ? item.Tags.map((entry) => (
+                      <Badge
+                        key={item.URI + entry}
+                        action="muted"
+                        variant="outline"
+                        size="sm"
+                      >
+                        <BadgeText>{entry}</BadgeText>
+                        <BadgeIcon as={TagIcon} ml="$1" />
+                      </Badge>
+                    ))
+                  : null}
 
-              <MenuItem key="newCategory" textValue="newCategory">
-                <Icon as={FolderPenIcon} mr="$2" />
-                <MenuItemLabel size="sm">Set Category...</MenuItemLabel>
-              </MenuItem>
+                <ListItemCategory item={item} />
+              </HStack>
 
-              <MenuItem key="dontblock" textValue="dontblock">
-                <Icon
-                  as={item.DontBlock ? ShieldXIcon : ShieldCheckIcon}
-                  mr="$2"
-                />
-                <MenuItemLabel size="sm">
-                  {item.DontBlock ? 'Enable Blocking' : 'Categorize Only'}
-                </MenuItemLabel>
-              </MenuItem>
-            </Menu>
-          </ListItem>
-        )}
-        keyExtractor={(item) => item.URI}
-      />
+              <Menu
+                trigger={trigger}
+                selectionMode="single"
+                onSelectionChange={(e) => {
+                  let key = e.currentKey
+                  if (key == 'onoff') {
+                    handleItemSwitch(item, !item.Enabled)
+                  } else if (key == 'dontblock') {
+                    handleItemSwitchDontBlock(item, !item.DontBlock)
+                  } else if (key == 'deleteItem') {
+                    deleteListItem(item)
+                  } else if (key == 'newTag') {
+                    setModalType('Tag')
+                    setPendingItem(item)
+                    setShowModal(true)
+                  } else if (key == 'newCategory') {
+                    setModalType('Category')
+                    setPendingItem(item)
+                    setShowModal(true)
+                  } else {
+                    let tags = item.Tags.filter((t) => t != key)
+                    handleChangeTags(item, tags)
+                  }
+                }}
+              >
+                <MenuItem key="onoff" textValue="onoff">
+                  <Icon as={item.Enabled ? CircleIcon : CircleIcon} mr="$2" />
+                  <MenuItemLabel size="sm">
+                    {item.Enabled ? 'Disable' : 'Enable'}
+                  </MenuItemLabel>
+                </MenuItem>
 
-      <ModalConfirm
-        type={modalType}
-        onSubmit={(v) => handleSubmitNew(pendingItem, v)}
-        onClose={() => setShowModal(false)}
-        isOpen={showModal}
-      />
-    </>
+                <MenuItem
+                  key="deleteItem"
+                  textValue="deleteItem"
+                  display={isOnlyRecommended(item) ? 'none' : 'flex'}
+                >
+                  <CloseIcon color="$red700" mr="$2" />
+                  <MenuItemLabel size="sm" color="$red700">
+                    Delete
+                  </MenuItemLabel>
+                </MenuItem>
+
+                {[...new Set(defaultTags.concat(item.Tags ? item.Tags : []))].map(
+                  (tag) => (
+                    <MenuItem key={tag} textValue={tag}>
+                      <CloseIcon mr="$2" />
+                      <MenuItemLabel size="sm">{tag}</MenuItemLabel>
+                    </MenuItem>
+                  )
+                )}
+
+                <MenuItem key="newTag" textValue="newTag">
+                  <Icon as={TagIcon} mr="$2" />
+                  <MenuItemLabel size="sm">New Tag...</MenuItemLabel>
+                </MenuItem>
+
+                <MenuItem key="newCategory" textValue="newCategory">
+                  <Icon as={FolderPenIcon} mr="$2" />
+                  <MenuItemLabel size="sm">Set Category...</MenuItemLabel>
+                </MenuItem>
+
+                <MenuItem key="dontblock" textValue="dontblock">
+                  <Icon
+                    as={item.DontBlock ? ShieldXIcon : ShieldCheckIcon}
+                    mr="$2"
+                  />
+                  <MenuItemLabel size="sm">
+                    {item.DontBlock ? 'Enable Blocking' : 'Observe Only'}
+                  </MenuItemLabel>
+                </MenuItem>
+              </Menu>
+            </ListItem>
+          )}
+          keyExtractor={(item) => item.URI}
+        />
+
+        <ModalConfirm
+          type={modalType}
+          onSubmit={(v) => handleSubmitNew(pendingItem, v)}
+          onClose={() => setShowModal(false)}
+          isOpen={showModal}
+        />
+        </>)}
+      </ScrollView>
+
   )
 }
 

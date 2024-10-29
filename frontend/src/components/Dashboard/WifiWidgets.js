@@ -212,14 +212,6 @@ const WifiWidget = ({
   )
 }
 
-function decodeUTF8(str) {
-  const x = str.replace(/\\x([0-9A-Fa-f]{2})/g, (_, p1) =>
-    String.fromCharCode(parseInt(p1, 16))
-  );
-
-  return decodeURIComponent(escape(x))
-}
-
 export const WifiInfo = (props) => {
   const [ssid, setSsid] = useState('')
   const [channel, setChannel] = useState(0)
@@ -232,7 +224,7 @@ export const WifiInfo = (props) => {
     return wifiAPI
       .status(props.iface)
       .then((status) => {
-        setSsid(decodeUTF8(status['ssid[0]']))
+        setSsid(status['ssid[0]'])
         setChannel(status['channel'])
         setFreq(status['freq'])
       })

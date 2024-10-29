@@ -104,6 +104,7 @@ const DeviceInfo = ({ identity, ...props }) => {
     return <Text>....{identity}</Text>
   }
 
+
   return ssids.map((ssid) => (
     <VStack key={ssid} space="md">
       <VStack space="xs" alignItems="center">
