@@ -513,15 +513,22 @@ const DNSBlocklist = ({ config, ...props }) => {
     )
   }
 
-  const ListItemCategory = ({ item }) => {
+  const ListItemCategory = ({ item, ...props }) => {
     if (!item.Category) {
       return <></>
     }
 
     return (
-      <Badge key={item.Category} action="muted" variant="outline" size="sm">
-        {/*<BadgeIcon as={FolderPenIcon} mr="$2" />*/}
-        <BadgeText textTransform="capitalize">{item.Category}</BadgeText>
+      <Badge
+        key={item.Category}
+        action="muted"
+        variant="outline"
+        size="sm"
+        {...props}
+      >
+        <BadgeText textTransform="capitalize" isTruncated>
+          {item.Category}
+        </BadgeText>
       </Badge>
     )
   }
@@ -611,15 +618,20 @@ const DNSBlocklist = ({ config, ...props }) => {
 
   const simpleView = (
     <VStack
-      space="md"
       p="$2"
       flexWrap="wrap"
       sx={{
-        '@md': { px: 0, flexDirection: 'row', justifyContent: 'space-evenly' }
+        '@md': {
+          px: 0,
+          flexDirection: 'row',
+          justifyContent: 'space-evenly',
+          gap: '$4'
+        }
       }}
     >
       {sections.map(({ name, data }) => (
         <VStack
+          w="$full"
           sx={{
             '@md': { width: 360 }
           }}
