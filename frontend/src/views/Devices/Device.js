@@ -86,7 +86,7 @@ const DeviceView = () => {
 
   const refreshDevice = (showNotification = true) => {
     appContext.getDevices(true) // force update
-    if (showNotification !== false) {
+    if (showNotification) {
       context.success('device updated')
     }
   }
