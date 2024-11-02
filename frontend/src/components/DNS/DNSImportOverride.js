@@ -324,6 +324,7 @@ export default class DNSImportOverride extends React.Component {
           check.jsonContent = 'has-danger'
         } else {
           const parsed = JSON.parse(value)
+
           if (!Array.isArray(parsed)) {
             check.jsonContent = 'has-danger'
           } else {
@@ -332,7 +333,9 @@ export default class DNSImportOverride extends React.Component {
               typeof entry.Type === 'string' &&
               ['block', 'permit'].includes(entry.Type) &&
               typeof entry.Domain === 'string' &&
-              entry.Domain.length > 0
+              entry.Domain.endsWith('.') &&
+              entry.Domain.length > 0 &&
+              (entry.ResultCNAME == '' || entry.ResultCNAME.endsWith('.'))
             )
             check.jsonContent = isValid ? '' : 'has-danger'
           }
@@ -466,7 +469,7 @@ export default class DNSImportOverride extends React.Component {
           ) : (
             <FormControlHelper>
               <FormControlHelperText>
-                Expected format is an array of entries. Each entry should have Type (block/permit), Domain, and optional ResultIP, ResultCNAME, ClientIP, and Expiration fields.
+                Expected format is an array of entries. Domain/CNAME ends with '.', each entry should have Type (block/permit), Domain, and optional ResultIP, ResultCNAME, ClientIP, and Expiration fields.
               </FormControlHelperText>
             </FormControlHelper>
           )}
