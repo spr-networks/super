@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import DNSOverrideList from 'components/DNS/DNSOverrideList'
+import DNSImportOverride from 'components/DNS/DNSImportOverride'
 import { AlertContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 import PluginDisabled from 'views/PluginDisabled'
@@ -79,6 +80,7 @@ const DNSBlock = (props) => {
 
   let refModalAddBlock = React.createRef()
   let refModalAddPermit = React.createRef()
+  let refModalImportList = React.createRef()
 
   const notifyChange = async (type) => {
     if (type == 'config') {
@@ -88,6 +90,8 @@ const DNSBlock = (props) => {
       refModalAddBlock.current()
     } else if (type == 'permit') {
       refModalAddPermit.current()
+    } else if (type == 'listimport') {
+      refModalImportList.current()
     } else if (type == 'deletelist') {
       onChangeList('Default')
       await refreshConfig()
@@ -175,6 +179,22 @@ const DNSBlock = (props) => {
                 onChange={onChangeList}
                 onChangeText={onChangeText}
               />
+              <ModalForm
+                title="Import Override List"
+                triggerText="Import List"
+                triggerProps={{
+                  sx: {
+                    '@base': { display: 'none' },
+                    '@md': { display: 'flex' }
+                  }
+                }}
+                modalRef={refModalImportList}
+              >
+                <DNSImportOverride
+                  listName={curList.Name}
+                  notifyChange={notifyChange}
+                />
+              </ModalForm>
             </Box>
 
             <HStack space="sm" alignItems="center">
@@ -304,6 +324,8 @@ const DNSBlock = (props) => {
         </VStack>
       </ScrollView>
 
+
+
       <Fab
         renderInPortal={false}
         shadow={1}
@@ -324,6 +346,17 @@ const DNSBlock = (props) => {
       >
         <FabIcon as={AddIcon} mr="$1" />
         <FabLabel>Add Permit</FabLabel>
+      </Fab>
+      <Fab
+        renderInPortal={false}
+        shadow={1}
+        size="sm"
+        onPress={() => refModalImportList.current()}
+        bg="$primary600"
+        mr="$64"
+      >
+        <FabIcon as={AddIcon} mr="$1" />
+        <FabLabel>Import List</FabLabel>
       </Fab>
     </View>
   )

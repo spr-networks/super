@@ -1,6 +1,11 @@
 # Secure Programmable Router (SPR) Release Notes
 
 ## v1.0.4
+**Improvements**
+- New Blocklist View
+- Support for Override Lists
+- Can now use blocklists to categorize domains
+- Can now update wifi passwords on the edit device view
 **Fixes**
 - Fix operating class for 5ghz channel selection
 

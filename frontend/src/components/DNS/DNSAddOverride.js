@@ -144,7 +144,7 @@ export default class DNSAddOverride extends React.Component {
   render() {
     return (
       <VStack space="md">
-        <FormControlLabel>{JSON.stringify(this.state.listName)}</FormControlLabel>
+        <FormControlLabel>List name: {this.state.listName}</FormControlLabel>
         <FormControl isInvalid={this.state.check.Type == 'has-danger'}>
           <FormControlLabel>
             <FormControlLabelText>Type of override</FormControlLabelText>

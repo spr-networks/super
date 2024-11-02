@@ -10,7 +10,7 @@ const DNSOverrideList = ({ title, listName, list, deleteListItem, ...props }) =>
   return (
     <>
       <ListHeader title={title} description="">
-        {props.renderHeader ? props.renderHeader() : null}
+        {props.renderHeader ? props.renderHeader()  : null}
       </ListHeader>
 
       {!list || !list.length ? (
