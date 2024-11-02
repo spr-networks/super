@@ -28,6 +28,10 @@ import {
   HStack,
   Input,
   InputField,
+  InputIcon,
+  EyeOffIcon,
+  EyeIcon,
+  InputSlot,
   VStack,
   Text,
   Tooltip,
@@ -53,6 +57,9 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(device.Name)
   const [rawIP, setRawIP] = useState(device.RecentIP)
+  const [psk, setPSK] = useState(device.PSKEntry.Psk)
+  const [pskType, setPSKType] = useState(device.PSKEntry.Type)
+  const [showPassword, setShowPassword] = useState(false)
   const [ip, setIP] = useState(device.RecentIP)
   const [vlantag, setVlanTag] = useState(device.VLANTag)
   const [policies, setPolicies] = useState(device.Policies?.sort() || [])
@@ -84,16 +91,17 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     lan_upstream: 'Upstream Private Networks',
     quarantine: 'Quarantine',
     disabled: 'Disabled',
-    "dns:family": "Use Family DNS"
+    'dns:family': 'Use Family DNS'
   }
   const policyTips = {
     wan: 'Allow Internet Access',
     dns: 'Allow DNS Queries',
     lan: 'Allow access to ALL other devices on the network',
     lan_upstream: 'Allow device to reach private LANs upstream',
-    quarantine: 'Send all Traffic, DNS, to Quarantine Host if set else drop traffic',
+    quarantine:
+      'Send all Traffic, DNS, to Quarantine Host if set else drop traffic',
     disabled: 'Override all policies and groups, to disconnect device',
-    "dns:family": 'Use family friendly DNS resolver'
+    'dns:family': 'Use family friendly DNS resolver'
   }
   const defaultGroups = props.groups || []
   const defaultTags = props.tags || []
@@ -126,7 +134,10 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
           Icon: icon,
           Color: color
         })
-        .then(notifyChange)
+        .then(() => {
+          //skip update notification
+          notifyChange(false)
+        })
         .catch((error) => {
           context.error(`[API] updateStyle error: ${error.message}`)
         })
@@ -250,6 +261,10 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     setRawIP(value)
   }
 
+  const handleWifiPsk = (value) => {
+    setPSK(value)
+  }
+
   let protocolAuth = { sae: 'WPA3', wpa2: 'WPA2' }
   let wifi_type = protocolAuth[device.PSKEntry.Type] || 'N/A'
 
@@ -304,7 +319,9 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
       if (vlantag != '' && vlantag != '0') {
         let result = await isMeshNode(device)
         if (result == true) {
-          context.error('This device is SPR Mesh Node, VLAN Assignment not supported')
+          context.error(
+            'This device is SPR Mesh Node, VLAN Assignment not supported'
+          )
           setVlanTag('')
         }
       }
@@ -316,9 +333,22 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
           context.error('[API] update VLAN Tag error: ' + error.message)
         )
     }
+
+    if (psk !== '**') {
+      let pskType = device.PSKEntry?.Type
+
+      if (pskType == 'sae' || pskType == 'wpa2') {
+        deviceAPI
+          .update(id, { PSKEntry: { Psk: psk, Type: pskType } })
+          .then(notifyChange)
+          .catch((error) =>
+            context.error('[API] update PSK error: ' + error.message)
+          )
+      } else if (pskType != '') {
+        context.error('[API] Unexpected PSK Type: ' + pskType)
+      }
+    }
   }
-
-
 
   const handleSubmit = () => {
     setEditing(false)
@@ -371,6 +401,24 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
       }
 
       setExpiration(value)
+    }
+  }
+
+  const toggleShowPassword = () => {
+    let identity = device.MAC || device.WGPubKey
+
+    if (!showPassword) {
+      deviceAPI
+        .getDevice(identity)
+        .then((device) => {
+          setPSK(device.PSKEntry.Psk)
+          setShowPassword(!showPassword)
+        })
+        .catch((err) => {
+          console.error('API Error:', err)
+        })
+    } else {
+      setShowPassword(false)
     }
   }
 
@@ -436,6 +484,38 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         </Input>
       </FormControl>
 
+      <FormControl display={isSimpleMode || pskType == '' ? 'none' : 'flex'}>
+        <Tooltip
+          placement="bottom"
+          trigger={(triggerProps) => {
+            return (
+              <FormControlLabel {...triggerProps}>
+                <FormControlLabelText>WiFi Password</FormControlLabelText>
+              </FormControlLabel>
+            )
+          }}
+        >
+          <TooltipContent>
+            <TooltipText>Assign WiFi Password</TooltipText>
+          </TooltipContent>
+        </Tooltip>
+
+        <Input variant="solid">
+          <InputField
+            type={showPassword ? 'text' : 'password'}
+            value={showPassword ? psk : ''}
+            autoFocus={false}
+            onChangeText={(value) => handleWifiPsk(value)}
+            onSubmitEditing={handleSubmit}
+          />
+          <InputSlot pr="$4" onPress={toggleShowPassword}>
+            <InputIcon>
+              {showPassword ? <EyeIcon size="sm" /> : <EyeOffIcon size="sm" />}
+            </InputIcon>
+          </InputSlot>
+        </Input>
+      </FormControl>
+
       <FormControl display={isSimpleMode ? 'none' : 'flex'}>
         <Tooltip
           placement="bottom"
@@ -483,9 +563,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         </FormControl>
       </HStack>
 
-      <FormControl flex={4}
-        sx={{ maxWidth: '$2/3' }}
-      >
+      <FormControl flex={4} sx={{ maxWidth: '$3/4' }}>
         <FormControlLabel>
           <FormControlLabelText>Policies</FormControlLabelText>
         </FormControlLabel>
@@ -538,62 +616,73 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         </FormControlHelper>
       </FormControl>
 
-      <FormControl>
-        <FormControlLabel>
-          <FormControlLabelText>Groups</FormControlLabelText>
-        </FormControlLabel>
-        <HStack flexWrap="wrap" w="$full" space="md">
-          <HStack
-            space="md"
-            flexWrap="wrap"
-            alignItems="center"
-            display={groups?.length ? 'flex' : 'none'}
-          >
-            {groups.map((group) => (
-              <GroupItem key={group} name={group} size="sm" />
-            ))}
+      <VStack space="lg" sx={{ '@md': { flexDirection: 'row' } }}>
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Groups</FormControlLabelText>
+          </FormControlLabel>
+          <HStack flexWrap="wrap" w="$full" space="md">
+            <HStack
+              space="md"
+              flexWrap="wrap"
+              alignItems="center"
+              display={groups?.length ? 'flex' : 'none'}
+            >
+              {groups.map((group) => (
+                <GroupItem key={group} name={group} size="sm" />
+              ))}
+            </HStack>
+
+            <GroupMenu
+              items={[...new Set(defaultGroups.concat(groups))]}
+              selectedKeys={groups}
+              onSelectionChange={handleGroups}
+            />
           </HStack>
 
-          <GroupMenu
-            items={[...new Set(defaultGroups.concat(groups))]}
-            selectedKeys={groups}
-            onSelectionChange={handleGroups}
-          />
-        </HStack>
+          <FormControlHelper>
+            <FormControlHelperText>
+              Assign to network access group
+            </FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
 
-        <FormControlHelper>
-          <FormControlHelperText>
-            Assign to network access group
-          </FormControlHelperText>
-        </FormControlHelper>
-      </FormControl>
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Tags</FormControlLabelText>
+          </FormControlLabel>
 
-      <FormControl>
-        <FormControlLabel>
-          <FormControlLabelText>Tags</FormControlLabelText>
-        </FormControlLabel>
-
-        <HStack flexWrap="wrap" w="$full" space="md">
-          <HStack
-            space="md"
-            flexWrap="wrap"
-            alignItems="center"
-            display={tags?.length ? 'flex' : 'none'}
-          >
-            {tags.map((tag) => (
-              <TagItem key={tag} name={tag} size="sm" />
-            ))}
+          <HStack flexWrap="wrap" w="$full" space="md">
+            <HStack
+              space="md"
+              flexWrap="wrap"
+              alignItems="center"
+              display={tags?.length ? 'flex' : 'none'}
+            >
+              {tags.map((tag) => (
+                <TagItem key={tag} name={tag} size="sm" />
+              ))}
+            </HStack>
+            <TagMenu
+              items={[...new Set(defaultTags.concat(tags))]}
+              selectedKeys={tags}
+              onSelectionChange={handleTags}
+            />
           </HStack>
-          <TagMenu
-            items={[...new Set(defaultTags.concat(tags))]}
-            selectedKeys={tags}
-            onSelectionChange={handleTags}
-          />
-        </HStack>
-      </FormControl>
+        </FormControl>
+      </VStack>
 
-      <VStack space="lg">
-        <FormControl flex={1}>
+      <VStack
+        space="lg"
+        sx={{
+          '@md': {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            maxWidth: '$3/4'
+          }
+        }}
+      >
+        <FormControl>
           <FormControlLabel>
             <FormControlLabelText>Icon</FormControlLabelText>
           </FormControlLabel>
@@ -610,7 +699,9 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
             <FormControlLabelText>Color</FormControlLabelText>
           </FormControlLabel>
 
-          <ColorPicker value={color} onChange={(color) => setColor(color)} />
+          <HStack sx={{ '@md': { h: '$full', alignItems: 'center' } }}>
+            <ColorPicker value={color} onChange={(color) => setColor(color)} />
+          </HStack>
         </FormControl>
       </VStack>
 
@@ -661,6 +752,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         <ButtonText>Back</ButtonText>
       </Button>
 
+      {/* modal for new groups/tags/policies */}
       <ModalConfirm
         type={modalType}
         onSubmit={handleSubmitNew}

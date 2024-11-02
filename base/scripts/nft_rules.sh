@@ -578,8 +578,6 @@ table inet nat {
   }
 
   chain DNS_DNAT {
-    ip saddr @custom_dns_devices meta l4proto udp dnat to ip saddr map @custom_dns_devices:53
-    ip saddr @custom_dns_devices meta l4proto tcp dnat to ip saddr map @custom_dns_devices:53
     udp dport 53 counter dnat ip to $LANIP:53
     tcp dport 53 counter dnat ip to $LANIP:53
   }

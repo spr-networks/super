@@ -42,7 +42,7 @@ export default ({ value, onChange, ...props }) => {
             flex={1}
             bg={`$${c}400`}
             opacity={value == c ? 1 : 0.25}
-            sx={{ '@base': { p: '$7' }, '@md': { p: '$4' } }}
+            sx={{ '@base': { p: '$6' }, '@md': { p: '$4' } }}
             borderWidth={1}
             borderColor="$muted500"
             onPress={() => onPress(c)}

@@ -1997,7 +1997,7 @@ func modifyEndpoint(w http.ResponseWriter, r *http.Request) {
 
 		re := regexp.MustCompile("^([0-9]+)$")
 
-		if endpoint.Port != "any" && (endpoint.Port == "" || !re.MatchString(endpoint.Port)) {
+		if endpoint.Port != "0-65535" && endpoint.Port != "any" && (endpoint.Port == "" || !re.MatchString(endpoint.Port)) {
 			http.Error(w, "Invalid Port", 400)
 			return
 		}

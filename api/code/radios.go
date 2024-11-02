@@ -258,7 +258,12 @@ func ChanCalc(mode string, channel int, bw int, ht_enabled bool, vht_enabled boo
 		freq1 = base + channel*5
 
 		if channel%2 == 1 {
-			is_6e = true
+
+			if channel != 149 && channel != 165 {
+				//this needs to be  fixed later with https://github.com/spr-networks/super/issues/381
+				//	case 128: /* center freqs 42, 58, 106, 122, 138, 155, 171; 80 MHz */
+				is_6e = true
+			}
 			freq1 = 5950 + channel*5
 		} else if channel == 2 {
 			is_6e = true

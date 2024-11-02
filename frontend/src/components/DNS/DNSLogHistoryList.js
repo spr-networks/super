@@ -164,7 +164,6 @@ const ListItem = ({
                 {item.FirstAnswer || ''}
               </Text>
             </HStack>
-
           </VStack>
 
           <HStack
@@ -184,20 +183,13 @@ const ListItem = ({
           >
             {item.Categories
               ? item.Categories.map((entry) => (
-                  <Badge
-                    key={entry}
-                    action="muted"
-                    variant="outline"
-                    size="sm"
-                  >
+                  <Badge key={entry} action="muted" variant="outline" size="sm">
                     <BadgeText>{entry}</BadgeText>
                     <BadgeIcon as={TagIcon} ml="$1" />
                   </Badge>
                 ))
               : null}
           </HStack>
-
-
 
           <VStack sx={{ '@md': { justifyContent: 'center' } }}>
             <Tooltip label={timeAgo(new Date(item.Timestamp))}>
@@ -344,7 +336,13 @@ const DNSLogHistoryList = (props) => {
             item.Q.filter((r) =>
               r.Name.toLowerCase().includes(filterText.toLowerCase())
             ).length
+
           match = match || item.Type.match(filterText.toUpperCase())
+          match =
+            match ||
+            item.Categories?.filter((r) =>
+              r.toLowerCase().includes(filterText.toLowerCase())
+            ).length
         } catch (err) {
           match = false
         }
@@ -363,7 +361,7 @@ const DNSLogHistoryList = (props) => {
         return match
       })
     } else {
-      listFiltered = list.filter(i => i.Type != "NODATA" || i.FirstAnswer)
+      listFiltered = list.filter((i) => i.Type != 'NODATA' || i.FirstAnswer)
     }
 
     if (filterText.length) {

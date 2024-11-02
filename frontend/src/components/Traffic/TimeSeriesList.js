@@ -82,6 +82,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
       MICROSOFT: <BrandIcons.MicrosoftAzure />,
       ALIBABA: <BrandIcons.AlibabaCloud />,
       TAOBAO: <BrandIcons.Taobao />,
+      TELEGRAM: <BrandIcons.Telegram />,
       TWITTER: <BrandIcons.Twitter />,
       STACKPATH: <BrandIcons.StackPath />
     }

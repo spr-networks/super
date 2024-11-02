@@ -499,6 +499,15 @@ const canEditInt = [
 ]
 const canEdit = canEditInt.concat(canEditString)
 
+
+const decodeUTF8 = (str) => {
+  const x = str.replace(/\\x([0-9A-Fa-f]{2})/g, (_, p1) =>
+    String.fromCharCode(parseInt(p1, 16))
+  );
+
+  return decodeURIComponent(escape(x))
+}
+
 export const sortConf = (conf) => {
   // put the ones we can change at the top
   //force ssid at the top
@@ -548,7 +557,12 @@ export default class APIWifi extends API {
   }
 
   status(iface) {
-    return this.get(`hostapd/${iface}/status`);
+    return this.get(`hostapd/${iface}/status`).then((status) => {
+      if (status['ssid[0]']) {
+        status['ssid[0]'] = decodeUTF8(status['ssid[0]'])
+      }
+      return status;
+    });
   }
 
   checkFailsafe(iface) {

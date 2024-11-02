@@ -102,7 +102,7 @@ const EndpointList = (props) => {
         refreshList()
       })
       .catch((err) => {
-        this.props.alertContext.error('Firewall API Failure', err.message)
+        context.error('Firewall API Failure', err.message)
       })
   }
 
