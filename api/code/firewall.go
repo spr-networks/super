@@ -54,6 +54,14 @@ type ForwardingBlockRule struct {
 	SrcIP    string
 }
 
+type OutputBlockRule struct {
+	BaseRule
+	Protocol string
+	DstIP    string
+	DstPort  string
+	SrcIP    string
+}
+
 type CustomInterfaceRule struct {
 	BaseRule
 	Interface string
@@ -122,6 +130,7 @@ type MulticastPort struct {
 type FirewallConfig struct {
 	ForwardingRules      []ForwardingRule
 	BlockRules           []BlockRule
+	OutputBlockRules     []OutputBlockRule
 	ForwardingBlockRules []ForwardingBlockRule
 	CustomInterfaceRules []CustomInterfaceRule
 	ServicePorts         []ServicePort
@@ -132,7 +141,7 @@ type FirewallConfig struct {
 }
 
 var FirewallConfigFile = TEST_PREFIX + "/configs/base/firewall.json"
-var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{},
+var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}, []OutputBlockRule{},
 	[]ForwardingBlockRule{}, []CustomInterfaceRule{}, []ServicePort{},
 	[]Endpoint{}, []MulticastPort{}, false, false}
 
@@ -733,6 +742,20 @@ func deleteBlock(br BlockRule) error {
 	return err
 }
 
+func deleteOutputBlock(br OutputBlockRule) error {
+	cmd := exec.Command("nft", "delete", "element", "inet", "filter", "output_block", "{",
+		br.SrcIP, ".", br.DstIP, ".", br.Protocol, ":", "drop", "}")
+
+	_, err := cmd.Output()
+
+	if err != nil {
+		log.Println("failed to delete element", err)
+		log.Println(cmd)
+	}
+
+	return err
+}
+
 func deleteForwarding(f ForwardingRule) error {
 	var cmd *exec.Cmd
 	if f.DstPort == "any" {
@@ -787,6 +810,22 @@ func applyForwarding(forwarding []ForwardingRule) error {
 func applyBlocking(blockRules []BlockRule) error {
 	for _, br := range blockRules {
 		cmd := exec.Command("nft", "add", "element", "inet", "nat", "block", "{",
+			br.SrcIP, ".", br.DstIP, ".", br.Protocol, ":", "drop", "}")
+
+		_, err := cmd.Output()
+
+		if err != nil {
+			log.Println("failed to add element", err)
+			log.Println(cmd)
+		}
+	}
+
+	return nil
+}
+
+func applyOutputBlocking(blockRules []OutputBlockRule) error {
+	for _, br := range blockRules {
+		cmd := exec.Command("nft", "add", "element", "inet", "filter", "output_block", "{",
 			br.SrcIP, ".", br.DstIP, ".", br.Protocol, ":", "drop", "}")
 
 		_, err := cmd.Output()
@@ -1547,6 +1586,8 @@ func applyFirewallRulesLocked() {
 
 	applyBlocking(gFirewallConfig.BlockRules)
 
+	applyOutputBlocking(gFirewallConfig.OutputBlockRules)
+
 	applyForwardBlocking(gFirewallConfig.ForwardingBlockRules)
 
 	applyServicePorts(gFirewallConfig.ServicePorts)
@@ -1753,6 +1794,51 @@ func blockIP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	gFirewallConfig.BlockRules = append(gFirewallConfig.BlockRules, br)
+	saveFirewallRulesLocked()
+	applyFirewallRulesLocked()
+}
+
+func blockOutputIP(w http.ResponseWriter, r *http.Request) {
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
+
+	br := OutputBlockRule{}
+	err := json.NewDecoder(r.Body).Decode(&br)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if br.Protocol != "tcp" && br.Protocol != "udp" {
+		http.Error(w, "Invalid protocol", 400)
+		return
+	}
+
+	if CIDRorIP(br.SrcIP) != nil {
+		http.Error(w, "Invalid SrcIP", 400)
+		return
+	}
+
+	if CIDRorIP(br.DstIP) != nil {
+		http.Error(w, "Invalid DstIP", 400)
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		for i := range gFirewallConfig.OutputBlockRules {
+			a := gFirewallConfig.OutputBlockRules[i]
+			if br == a {
+				gFirewallConfig.OutputBlockRules = append(gFirewallConfig.OutputBlockRules[:i], gFirewallConfig.OutputBlockRules[i+1:]...)
+				saveFirewallRulesLocked()
+				deleteOutputBlock(a)
+				return
+			}
+		}
+		http.Error(w, "Not found", 404)
+		return
+	}
+
+	gFirewallConfig.OutputBlockRules = append(gFirewallConfig.OutputBlockRules, br)
 	saveFirewallRulesLocked()
 	applyFirewallRulesLocked()
 }

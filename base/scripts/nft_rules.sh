@@ -219,6 +219,12 @@ table inet filter {
     flags interval;
   }
 
+  # Block IP output from router.
+  map output_block {
+    type ipv4_addr . ipv4_addr . inet_proto : verdict
+    flags interval;
+  }
+
   chain PFWDROPLOG {
     counter log prefix "drop:pfw " group 1
     counter drop
@@ -441,6 +447,8 @@ table inet filter {
 
   chain OUTPUT {
     type filter hook output priority 0; policy accept
+    # Output Block rules
+    counter ip saddr . ip daddr . ip protocol  vmap @block
     oifname @uplink_interfaces ip daddr @supernetworks goto DROPLOGOUTP
     oifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGOUTP
   }
