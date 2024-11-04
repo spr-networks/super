@@ -448,7 +448,7 @@ table inet filter {
   chain OUTPUT {
     type filter hook output priority 0; policy accept
     # Output Block rules
-    counter ip saddr . ip daddr . ip protocol  vmap @block
+    counter ip saddr . ip daddr . ip protocol  vmap @output_block
     oifname @uplink_interfaces ip daddr @supernetworks goto DROPLOGOUTP
     oifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGOUTP
   }
