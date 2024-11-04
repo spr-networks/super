@@ -1167,7 +1167,7 @@ func refreshDeviceTags(dev DeviceEntry) {
 	}()
 }
 
-func refreshDeviceGroupsAndPolicy(dev DeviceEntry) {
+func refreshDeviceGroupsAndPolicy(devices map[string]DeviceEntry, groups []GroupEntry, dev DeviceEntry) {
 	if dev.WGPubKey != "" {
 		//refresh wg based on WGPubKey
 		refreshWireguardDevice(dev.MAC, dev.RecentIP, dev.WGPubKey, "wg0", "", true)
@@ -1214,7 +1214,7 @@ func refreshDeviceGroupsAndPolicy(dev DeviceEntry) {
 		addVerdictMac(ipv4, dev.MAC, ifname, "ethernet_filter", "return")
 
 		//and re-add
-		populateVmapEntries(ipv4, dev.MAC, ifname, "")
+		populateVmapEntries(devices, groups, ipv4, dev.MAC, ifname, "", dev.DNSCustom)
 	}
 
 }
@@ -2145,8 +2145,30 @@ func hasVerdict(IP string, Iface string, Table string) bool {
 	return err == nil
 }
 
-func addDNSVerdict(IP string, Iface string) {
+func addCustomDNSElement(IP, DNSCustom string) {
+	err := exec.Command("nft", "add", "element", "inet", "nat", "custom_dns_devices",
+		"{", IP, ":", DNSCustom, "}").Run()
+
+	if err != nil {
+		log.Println("add custom dns server failed", IP, DNSCustom, err)
+	}
+}
+
+func delCustomDNSElement(IP, DNSCustom string) {
+	err := exec.Command("nft", "delete", "element", "inet", "nat", "custom_dns_devices",
+		"{", IP, ":", DNSCustom, "}").Run()
+
+	if err != nil {
+		log.Println("remove custom dns server failed", IP, DNSCustom, err)
+	}
+}
+
+func addDNSVerdict(IP, Iface, DNSCustom string) {
 	addVerdict(IP, Iface, "dns_access")
+
+	if DNSCustom != "" {
+		addCustomDNSElement(IP, DNSCustom)
+	}
 }
 
 func addLANVerdict(IP string, Iface string) {
@@ -2268,6 +2290,14 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 	mesh_downlink := ""
 	if is_mesh {
 		mesh_downlink = meshPluginDownlink()
+	}
+
+	//check for IP in custom dns entries, and remove from there
+	entries := getCustomDNSVerdictMap()
+	for _, entry := range entries {
+		if entry.srcip == IP {
+			delCustomDNSElement(entry.srcip, entry.dstip)
+		}
 	}
 
 	for _, name := range vmap_names {
@@ -2626,9 +2656,8 @@ func getRouteGatewayForTable(Table string) string {
 	return ""
 }
 
-func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
+func populateVmapEntries(devices map[string]DeviceEntry, groups []GroupEntry, IP, MAC, Iface, WGPubKey, DNSCustom string) {
 
-	groups := getGroupsJson()
 	groupsDisabled := map[string]bool{}
 	serviceGroups := map[string][]string{}
 
@@ -2639,7 +2668,6 @@ func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
 		}
 	}
 
-	devices := getDevicesJson()
 	val, exists := devices[MAC]
 
 	if MAC != "" {
@@ -2686,7 +2714,7 @@ func populateVmapEntries(IP string, MAC string, Iface string, WGPubKey string) {
 	for _, policy_name := range val.Policies {
 		switch policy_name {
 		case "dns":
-			addDNSVerdict(IP, Iface)
+			addDNSVerdict(IP, Iface, DNSCustom)
 		case "lan":
 			addLANVerdict(IP, Iface)
 		case "wan":
@@ -2765,7 +2793,8 @@ func updateAddr(Router string, Ifname string) {
 	exec.Command("ip", "addr", "add", Router+"/30", "dev", Ifname).Run()
 }
 
-func establishDevice(entry DeviceEntry, new_iface string, established_route_device string, routeIP string, router string) {
+func establishDevice(devices map[string]DeviceEntry, groups []GroupEntry,
+	entry DeviceEntry, new_iface, established_route_device, routeIP, router string) {
 
 	// too noisy
 	//log.Println("flushing route and vmaps ", entry.MAC, entry.RecentIP, "`", established_route_device, "`", new_iface)
@@ -2806,10 +2835,12 @@ func establishDevice(entry DeviceEntry, new_iface string, established_route_devi
 	//add this MAC and IP to the ethernet filter. wg will be a no-op
 	addVerdictMac(entry.RecentIP, entry.MAC, new_iface, "ethernet_filter", "return")
 
+	Groupsmtx.Lock()
+	defer Groupsmtx.Unlock()
 	Devicesmtx.Lock()
 	defer Devicesmtx.Unlock()
 
-	populateVmapEntries(entry.RecentIP, entry.MAC, new_iface, entry.WGPubKey)
+	populateVmapEntries(devices, groups, entry.RecentIP, entry.MAC, new_iface, entry.WGPubKey, entry.DNSCustom)
 
 	//apply the tags
 	applyEndpointRules(entry)
@@ -2876,10 +2907,13 @@ func dynamicRouteLoop() {
 		select {
 		case <-ticker.C:
 
+			Groupsmtx.Lock()
+			groups := getGroupsJson()
 			Devicesmtx.Lock()
 			devices := getDevicesJson()
-			checkDeviceExpiries(devices)
+			checkDeviceExpiries(devices, groups)
 			Devicesmtx.Unlock()
+			Groupsmtx.Unlock()
 
 			// TBD: need to handle multiple trunk ports, lan ports
 			// that a device can arrive on.
@@ -3011,7 +3045,7 @@ func dynamicRouteLoop() {
 
 				routeIPString := routeIP + "/30"
 
-				establishDevice(entry, new_iface, established_route_device, routeIPString, routerIP)
+				establishDevice(devices, groups, entry, new_iface, established_route_device, routeIPString, routerIP)
 			}
 
 			//all devices processed, now update the iface mapping

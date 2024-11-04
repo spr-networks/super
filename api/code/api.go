@@ -113,6 +113,7 @@ type DeviceEntry struct {
 	WGPubKey         string
 	VLANTag          string
 	RecentIP         string
+	DNSCustom        string
 	PSKEntry         PSKEntry
 	Policies         []string
 	Groups           []string
@@ -1154,7 +1155,7 @@ func handleExpirations(val *DeviceEntry, req *DeviceEntry) {
 
 }
 
-func checkDeviceExpiries(devices map[string]DeviceEntry) {
+func checkDeviceExpiries(devices map[string]DeviceEntry, groups []GroupEntry) {
 	curtime := time.Now().Unix()
 	todelete := []string{}
 	updates := make(map[string]DeviceEntry)
@@ -1209,7 +1210,7 @@ func checkDeviceExpiries(devices map[string]DeviceEntry) {
 	}
 
 	for _, k := range todelete {
-		deleteDeviceLocked(devices, k)
+		deleteDeviceLocked(devices, groups, k)
 	}
 
 	//did not delete anything but a disable happened, save.
@@ -1252,12 +1253,16 @@ func syncDevices(w http.ResponseWriter, r *http.Request) {
 			processingSyncMtx.Unlock()
 		}()
 
+		Groupsmtx.Lock()
+		defer Groupsmtx.Lock()
 		Devicesmtx.Lock()
 		defer Devicesmtx.Unlock()
 
 		saveDevicesJson(devices)
+		groups := getGroupsJson()
+
 		for _, val := range devices {
-			refreshDeviceGroupsAndPolicy(val)
+			refreshDeviceGroupsAndPolicy(devices, groups, val)
 			refreshDeviceTags(val)
 		}
 		doReloadPSKFiles()
@@ -1289,11 +1294,11 @@ func addGroupsIfMissing(groups []GroupEntry, newGroups []string) {
 		saveGroupsJson(groups)
 	}
 }
-func deleteDeviceLocked(devices map[string]DeviceEntry, identity string) {
+func deleteDeviceLocked(devices map[string]DeviceEntry, groups []GroupEntry, identity string) {
 	val := devices[identity]
 	delete(devices, identity)
 	saveDevicesJson(devices)
-	refreshDeviceGroupsAndPolicy(val)
+	refreshDeviceGroupsAndPolicy(devices, groups, val)
 	doReloadPSKFiles()
 
 	//if the device had a VLAN Tag, also refresh vlans
@@ -1389,7 +1394,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 	if r.Method == http.MethodDelete {
 		//delete a device
 		if exists {
-			deleteDeviceLocked(devices, identity)
+			deleteDeviceLocked(devices, groups, identity)
 			return "", 200
 		}
 
@@ -1450,6 +1455,19 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 					return "Invalid IP assignment", 400
 				} else {
 					return "IP assignment not in configured IP ranges", 400
+				}
+			}
+		}
+
+		if dev.DNSCustom != "" {
+			if dev.DNSCustom == "0" {
+				//cleared the DNS value
+				delCustomDNSElement(val.RecentIP, val.DNSCustom)
+				dev.DNSCustom = ""
+			} else {
+				dns_ip := net.ParseIP(dev.DNSCustom)
+				if dns_ip == nil {
+					return "Invalid Custom DNS", 400
 				}
 			}
 		}
@@ -1515,7 +1533,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		}
 
 		if refreshPolicies || refreshGroups {
-			refreshDeviceGroupsAndPolicy(val)
+			refreshDeviceGroupsAndPolicy(devices, groups, val)
 			SprbusPublish("device:groups:update", scrubDevice(dev))
 		}
 
@@ -1616,7 +1634,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 	}
 
 	if refreshGroups || refreshPolicies {
-		refreshDeviceGroupsAndPolicy(val)
+		refreshDeviceGroupsAndPolicy(devices, groups, val)
 	}
 
 	if pskGenerated == false {
@@ -1854,6 +1872,76 @@ func getNFTVerdictMap(map_name string) []verdictEntry {
 			}
 		}
 	}
+	return existing
+}
+
+type dnsVerdictEntry struct {
+	srcip string
+	dstip string
+}
+
+func getCustomDNSVerdictMap() []dnsVerdictEntry {
+	existing := []dnsVerdictEntry{}
+
+	cmd := exec.Command("nft", "-j", "list", "map", "inet", "nat", "custom_dns_devices")
+	stdout, err := cmd.Output()
+	if err != nil {
+		return existing
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(stdout, &data)
+	if err != nil {
+		return existing
+	}
+
+	data2, ok := data["nftables"].([]interface{})
+	if !ok {
+		log.Println("invalid json: nftables field")
+		return existing
+	}
+
+	if len(data2) < 2 {
+		return existing
+	}
+
+	data3, ok := data2[1].(map[string]interface{})
+	if !ok {
+		log.Println("invalid json: nftables[1] field")
+		return existing
+	}
+
+	data4, ok := data3["map"].(map[string]interface{})
+	if !ok {
+		log.Println("invalid json: map field")
+		return existing
+	}
+
+	data5, ok := data4["elem"].([]interface{})
+	if !ok {
+		log.Println("invalid json: elem field")
+		return existing
+	}
+
+	for _, d := range data5 {
+		e, ok := d.([]interface{})
+		if !ok {
+			continue
+		}
+
+		if len(e) >= 2 {
+			srcIP, srcOk := e[0].(string)
+			dstIP, dstOk := e[1].(string)
+
+			if srcOk && dstOk {
+				existing = append(existing, dnsVerdictEntry{
+					srcip: srcIP,
+					dstip: dstIP,
+				})
+			}
+		}
+	}
+
 	return existing
 }
 
