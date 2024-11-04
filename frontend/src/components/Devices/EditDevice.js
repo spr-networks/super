@@ -320,10 +320,16 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     if (!(customDNS == "" && device.DNSCustom === undefined) && customDNS != device.DNSCustom) {
       //validate IP
 
+      let toSend = customDNS
       try {
-        let address = new Address4(customDNS)
+        if (customDNS == "" && device.DNSCustom != "") {
+          toSend = "0"
+        } else {
+          let address = new Address4(customDNS)
+        }
+
         deviceAPI
-          .update(id, { DNSCustom: customDNS })
+          .update(id, { DNSCustom: toSend })
           .then(notifyChange)
           .catch((error) =>
             context.error('[API] update DNS error: ' + error.message)
