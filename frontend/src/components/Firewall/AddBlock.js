@@ -23,7 +23,7 @@ import ProtocolRadio from 'components/Form/ProtocolRadio'
 
 class AddBlockImpl extends React.Component {
   state = {
-    SrcIP: '',
+    SrcIP: '0.0.0.0/0',
     DstIP: '',
     Protocol: 'tcp'
   }
