@@ -23,7 +23,7 @@ import { ListHeader, ListItem } from 'components/List'
 
 const OutputBlockList = (props) => {
   let list = props.list || []
-  let title = props.title || `BlockList:`
+  let title = props.title || `Firewall Output BlockList:`
 
   let refModal = useRef(null)
 
@@ -44,7 +44,7 @@ const OutputBlockList = (props) => {
     <VStack>
       <ListHeader
         title={title}
-        description="Block SPR outbound traffic to the internet"
+        description="Block the Router's outbound traffic to the internet"
       >
         <ModalForm
           title={`Add IP Block`}
