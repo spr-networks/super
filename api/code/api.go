@@ -1470,6 +1470,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 					return "Invalid Custom DNS", 400
 				}
 			}
+			val.DNSCustom = dev.DNSCustom
 		}
 
 		if dev.PSKEntry.Psk != "" {
