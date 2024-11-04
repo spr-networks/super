@@ -59,7 +59,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   const [rawIP, setRawIP] = useState(device.RecentIP)
   const [psk, setPSK] = useState(device.PSKEntry.Psk)
   const [pskType, setPSKType] = useState(device.PSKEntry.Type)
-  const [customDNS, setCustomDNS] = useState("")
+  const [customDNS, setCustomDNS] = useState(device.DNSCustom)
   const [showPassword, setShowPassword] = useState(false)
   const [ip, setIP] = useState(device.RecentIP)
   const [vlantag, setVlanTag] = useState(device.VLANTag)

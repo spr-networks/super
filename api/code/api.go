@@ -1920,7 +1920,7 @@ func getCustomDNSVerdictMap() []dnsVerdictEntry {
 
 	data5, ok := data4["elem"].([]interface{})
 	if !ok {
-		log.Println("invalid json: elem field")
+		//no elements. return
 		return existing
 	}
 
