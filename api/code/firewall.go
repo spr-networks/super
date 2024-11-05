@@ -138,12 +138,13 @@ type FirewallConfig struct {
 	MulticastPorts       []MulticastPort
 	PingLan              bool
 	PingWan              bool
+	SystemDNSOverride    string
 }
 
 var FirewallConfigFile = TEST_PREFIX + "/configs/base/firewall.json"
 var gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}, []OutputBlockRule{},
 	[]ForwardingBlockRule{}, []CustomInterfaceRule{}, []ServicePort{},
-	[]Endpoint{}, []MulticastPort{}, false, false}
+	[]Endpoint{}, []MulticastPort{}, false, false, ""}
 
 // IP -> Iface map
 var gIfaceMap = map[string]string{}
@@ -3132,6 +3133,48 @@ func updateFirewallSubnets(DNSIP string, TinyNets []string) {
 
 }
 
+func updateSystemDNSRedirectRule(targetIP string) error {
+	err := exec.Command("nft", "flush", "chain", "route", "DNS_OUTPUT").Run()
+	if err != nil {
+		return fmt.Errorf("failed to flush chain: %v", err)
+	}
+
+	if targetIP != "" {
+		err = exec.Command("nft", "add", "rule", "route", "DNS_OUTPUT",
+			"inet protocol { tcp, udp }", "dport 53", "ip daddr !=", targetIP, "dnat to", targetIP).Run()
+
+		if err != nil {
+			return fmt.Errorf("failed to add rule: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func systemDNSOverride(w http.ResponseWriter, r *http.Request) {
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
+
+	dns := ""
+	err := json.NewDecoder(r.Body).Decode(&dns)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if dns != "" {
+		ip := net.ParseIP(dns)
+		if ip == nil {
+			http.Error(w, "Invalid IP", 400)
+			return
+		}
+	}
+
+	gFirewallConfig.SystemDNSOverride = dns
+	updateSystemDNSRedirectRule(gFirewallConfig.SystemDNSOverride)
+	saveFirewallRulesLocked()
+}
+
 func initFirewallRules() {
 	SyncBaseContainer()
 
@@ -3145,6 +3188,8 @@ func initFirewallRules() {
 	Interfacesmtx.Lock()
 	interfaces := loadInterfacesConfigLocked()
 	Interfacesmtx.Unlock()
+
+	updateSystemDNSRedirectRule(gFirewallConfig.SystemDNSOverride)
 
 	applyRadioInterfaces(interfaces)
 
