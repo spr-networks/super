@@ -2837,7 +2837,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/firewall/icmp", modifyIcmp).Methods("PUT")
 	external_router_authenticated.HandleFunc("/firewall/custom_interface", modifyCustomInterfaceRules).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/firewall/enableTLS", enableTLS).Methods("GET", "PUT", "DELETE")
-	external_router_authenticated.HandleFunc("/firewall/dnsOverride", systemDNSOverride).Methods("PUT")
+	external_router_authenticated.HandleFunc("/firewall/systemDnsOverride", systemDNSOverride).Methods("PUT")
 
 	//traffic monitoring
 	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")

@@ -3134,13 +3134,13 @@ func updateFirewallSubnets(DNSIP string, TinyNets []string) {
 }
 
 func updateSystemDNSRedirectRule(targetIP string) error {
-	err := exec.Command("nft", "flush", "chain", "route", "DNS_OUTPUT").Run()
+	err := exec.Command("nft", "flush", "chain", "inet", "filter", "DNS_OUTPUT").Run()
 	if err != nil {
 		return fmt.Errorf("failed to flush chain: %v", err)
 	}
 
 	if targetIP != "" {
-		err = exec.Command("nft", "add", "rule", "route", "DNS_OUTPUT",
+		err = exec.Command("nft", "add", "rule", "inet", "filter", "DNS_OUTPUT",
 			"inet protocol { tcp, udp }", "dport 53", "ip daddr !=", targetIP, "dnat to", targetIP).Run()
 
 		if err != nil {
