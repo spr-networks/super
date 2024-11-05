@@ -13,7 +13,13 @@ import ListHeader from 'components/List/ListHeader'
 import { SwipeListView } from 'components/SwipeListView'
 import DNSOverrideListItem from './DNSOverrideListItem'
 
-const DNSOverrideList = ({ title, list, deleteListItem, ...props }) => {
+const DNSOverrideList = ({
+  title,
+  listName,
+  list,
+  deleteListItem,
+  ...props
+}) => {
   const closeRow = (rowMap, rowKey) => {
     if (rowMap[rowKey]) {
       rowMap[rowKey].closeRow()
@@ -55,7 +61,11 @@ const DNSOverrideList = ({ title, list, deleteListItem, ...props }) => {
       <SwipeListView
         data={list}
         renderItem={({ item }) => (
-          <DNSOverrideListItem listName={listName} item={item} deleteListItem={deleteListItem} />
+          <DNSOverrideListItem
+            listName={listName}
+            item={item}
+            deleteListItem={deleteListItem}
+          />
         )}
         renderHiddenItem={renderHiddenItem}
         keyExtractor={(item, index) => item.Domain}
