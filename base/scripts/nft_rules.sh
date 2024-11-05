@@ -451,6 +451,12 @@ table inet filter {
     counter ip saddr . ip daddr . ip protocol  vmap @output_block
     oifname @uplink_interfaces ip daddr @supernetworks goto DROPLOGOUTP
     oifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGOUTP
+    tcp dport 53 jump DNS_OUTPUT
+    udp dport 53 jump DNS_OUTPUT
+  }
+
+  chain DNS_OUTPUT {
+
   }
 
   chain DROPLOGFWD {
