@@ -43,4 +43,4 @@ COPY --from=builder /hostap_dhcp_helper /
 RUN mkdir /code/
 COPY --from=builder /code/filter_dhcp_mismatch.o /code/
 COPY scripts /scripts
-ENTRYPOINT /scripts/startup.sh
+ENTRYPOINT ["/scripts/startup.sh"]

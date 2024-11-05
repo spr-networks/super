@@ -40,4 +40,4 @@ FROM ghcr.io/spr-networks/container_template:latest
 ENV DEBIAN_FRONTEND=noninteractive
 COPY --from=builder /coredns /
 COPY scripts/ /scripts
-ENTRYPOINT /scripts/startup.sh
+ENTRYPOINT ["/scripts/startup.sh"]
