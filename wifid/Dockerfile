@@ -26,7 +26,7 @@ RUN --mount=type=tmpfs,target=/tmpfs \
     go build -ldflags="-s -w" -o /hostap_dhcp_helper main.go
 
 # Build hostapd
-ARG CACHEBUST=2
+ARG CACHEBUST=1
 RUN git clone https://github.com/spr-networks/hostap --depth 1
 COPY code/hostapd_config /code/hostap/hostapd/.config
 
@@ -40,13 +40,9 @@ RUN make install
 FROM ghcr.io/spr-networks/container_template:latest
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends libnl-genl-3-dev libnl-route-3-dev iw lshw && rm -rf /var/lib/apt/lists/*
-#RUN apt-get update && apt-get install -y --no-install-recommends libnl-genl-3-dev libnl-route-3-dev iw lshw checksec && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /code/hostap/hostapd/hostapd /usr/local/bin/
 COPY --from=builder /code/hostap/hostapd/hostapd_cli /usr/local/bin/
 COPY --from=builder /hostap_dhcp_helper /
-#COPY /code/hostap/hostapd/hostapd /usr/local/bin/
-#COPY /code/hostap/hostapd/hostapd_cli /usr/local/bin/
-#COPY /hostap_dhcp_helper /
 RUN mkdir /code/
 COPY --from=builder /code/filter_dhcp_mismatch.o /code/
 COPY scripts /scripts
