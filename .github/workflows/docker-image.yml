@@ -1,4 +1,5 @@
 name: Docker Image CI
+runs-on: self-hosted
 
 #on: [ push, pull_request ]
 on:
@@ -96,7 +97,7 @@ jobs:
           matrix=$(echo ${{ steps.extract_info.outputs.IMAGE_INFO }} | jq -R -s -c 'split(" ") | map(split("@") | {name:  (.[0] | split(":")[0]), digest: .[1] | rtrimstr("\n") }) | group_by(.name) | map(.[0]) ')
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
     outputs:
-      container_digests: ${{ steps.container_digests.outputs.matrix}}  
+      container_digests: ${{ steps.container_digests.outputs.matrix}}
 
   attest:
     permissions:
