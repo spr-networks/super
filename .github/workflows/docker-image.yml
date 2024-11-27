@@ -1,5 +1,4 @@
 name: Docker Image CI
-runs-on: self-hosted
 
 #on: [ push, pull_request ]
 on:
@@ -15,7 +14,7 @@ on:
 jobs:
   build-images:
     name: Build images
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     permissions:
       contents: read
       packages: write
