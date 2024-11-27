@@ -5,8 +5,8 @@ RUN apt-get install -y --no-install-recommends nftables iproute2 netcat-traditio
 RUN mkdir /code
 WORKDIR /code
 ARG TARGETARCH
-RUN curl -O https://dl.google.com/go/go1.20.linux-${TARGETARCH}.tar.gz
-RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.20.linux-${TARGETARCH}.tar.gz
+RUN curl --retry 3 --retry-delay 5 --retry-max-time 60 -O https://dl.google.com/go/go1.23.3.linux-${TARGETARCH}.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.23.3.linux-${TARGETARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
 COPY code/ /code/
 

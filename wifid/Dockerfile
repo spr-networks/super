@@ -16,8 +16,8 @@ WORKDIR /code
 RUN clang -O3 -target bpf -D __BPF_TRACING__ -I xdp-tools/headers/ -I xdp-tools/lib/libbpf/src/root/usr/include/ -c filter_dhcp_mismatch.c
 
 ARG TARGETARCH
-RUN curl -O https://dl.google.com/go/go1.20.linux-${TARGETARCH}.tar.gz
-RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.20.linux-${TARGETARCH}.tar.gz
+RUN curl --retry 3 --retry-delay 5 --retry-max-time 60 -O https://dl.google.com/go/go1.23.3.linux-${TARGETARCH}.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.23.3.linux-${TARGETARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
 COPY code/main.go /code/
 ARG USE_TMPFS=true
