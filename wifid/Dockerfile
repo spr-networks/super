@@ -1,7 +1,7 @@
 FROM ubuntu:24.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y --no-install-recommends nftables iproute2 netcat-traditional inetutils-ping net-tools nano ca-certificates git curl
+RUN apt-get install -y --no-install-recommends nftables iproute2 netcat-traditional inetutils-ping net-tools nano ca-certificates git curl wget
 RUN apt-get install -y --no-install-recommends clang lld
 RUN apt-get install -y --no-install-recommends pkg-config gcc llvm m4 emacs libpcap-dev libelf-dev make libnl-route-3-dev libnl-genl-3-dev libssl-dev
 RUN mkdir /code
@@ -16,7 +16,7 @@ WORKDIR /code
 RUN clang -O3 -target bpf -D __BPF_TRACING__ -I xdp-tools/headers/ -I xdp-tools/lib/libbpf/src/root/usr/include/ -c filter_dhcp_mismatch.c
 
 ARG TARGETARCH
-RUN curl --retry 3 --retry-delay 5 --retry-max-time 60 -O https://dl.google.com/go/go1.23.3.linux-${TARGETARCH}.tar.gz
+RUN wget https://dl.google.com/go/go1.23.3.linux-${TARGETARCH}.tar.gz
 RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.23.3.linux-${TARGETARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
 COPY code/main.go /code/
