@@ -7,7 +7,7 @@ RUN mkdir /code
 WORKDIR /code
 
 ARG TARGETARCH
-RUN curl -O https://dl.google.com/go/go1.20.linux-$TARGETARCH.tar.gz
+RUN wget https://dl.google.com/go/go1.20.linux-$TARGETARCH.tar.gz
 RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.20.linux-$TARGETARCH.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
 
