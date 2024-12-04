@@ -6,6 +6,7 @@ import { AlertContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
 import PluginDisabled from 'views/PluginDisabled'
 import InputSelect from 'components/InputSelect'
+import { Select } from 'components/Select'
 import { TagItem } from 'components/TagItem'
 import { TagMenu } from 'components/TagMenu'
 
@@ -17,6 +18,7 @@ import {
   TrashIcon,
   Button,
   ButtonIcon,
+  ButtonText,
   CloseIcon,
   ScrollView,
   FormControl,
@@ -35,6 +37,7 @@ import {
 
 import ModalForm from 'components/ModalForm'
 import DNSAddOverride from 'components/DNS/DNSAddOverride'
+import { ListHeader } from 'components/List'
 
 const DNSBlock = (props) => {
   const context = useContext(AlertContext)
@@ -165,107 +168,112 @@ const DNSBlock = (props) => {
 
   let defaultTags = []
 
+  let title = 'Override List'
+  if (curList.Name !== '') {
+    title = `Override List: ${curList.Name}`
+  }
+
   return (
     <View h="$full">
       <ScrollView h="$full">
         <VStack space="sm" pb="$16">
-          <Heading>Select Override List</Heading>
-
-          <VStack justifyContent="space-between" space="md">
-            <Box flex={1}>
-              <InputSelect
-                options={listOptions}
-                value={curList.Name}
-                onChange={onChangeList}
-                onChangeText={onChangeText}
+          <ListHeader title={title}>
+            <ModalForm
+              title="Import Override List"
+              triggerText="Import List"
+              triggerProps={{
+                sx: {
+                  '@base': { display: 'none' },
+                  '@md': { display: 'flex' }
+                }
+              }}
+              modalRef={refModalImportList}
+            >
+              <DNSImportOverride
+                listName={curList.Name}
+                notifyChange={notifyChange}
               />
-              <ModalForm
-                title="Import Override List"
-                triggerText="Import List"
-                triggerProps={{
-                  sx: {
-                    '@base': { display: 'none' },
-                    '@md': { display: 'flex' }
-                  }
-                }}
-                modalRef={refModalImportList}
-              >
-                <DNSImportOverride
-                  listName={curList.Name}
-                  notifyChange={notifyChange}
-                />
-              </ModalForm>
-            </Box>
+            </ModalForm>
+          </ListHeader>
+          <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }} px="$4">
+            <Select selectedValue={curList.Name} onValueChange={onChangeList}>
+              {listOptions.map((opt) => (
+                <Select.Item key={opt} label={opt.label} value={opt.value} />
+              ))}
+            </Select>
 
-            <HStack space="sm" alignItems="center">
+            <HStack space="md" alignItems="center">
               {curList.Name !== '' && curList.Name !== 'Default' && (
-
                 <>
-                <Switch
-                  size="sm"
-                  value={curList.Enabled}
-                  onValueChange={(checked) => {
-                    const updatedList = { ...curList, Enabled: checked };
-                    blockAPI.putOverrideList(curList.Name, updatedList)
-                      .then(() => notifyChange('config'))
-                      .catch(error => context.error('API Failure: ' + error.message));
-                  }}
-                />
-                <Badge
-                  variant={curList.Enabled ? "solid" : "outline"}
-                  action={curList.Enabled ? "success" : "muted"}
-                >
-                  <BadgeText>
-                    {curList.Enabled ? "Enabled" : "Disabled"}
-                  </BadgeText>
-                </Badge>
+                  <Switch
+                    size="sm"
+                    value={curList.Enabled}
+                    onValueChange={(checked) => {
+                      const updatedList = { ...curList, Enabled: checked }
+                      blockAPI
+                        .putOverrideList(curList.Name, updatedList)
+                        .then(() => notifyChange('config'))
+                        .catch((error) =>
+                          context.error('API Failure: ' + error.message)
+                        )
+                    }}
+                  />
+                  <Badge
+                    variant={curList.Enabled ? 'solid' : 'outline'}
+                    action={curList.Enabled ? 'success' : 'muted'}
+                  >
+                    <BadgeText>
+                      {curList.Enabled ? 'Enabled' : 'Disabled'}
+                    </BadgeText>
+                  </Badge>
 
-                <Button
-                  variant="outline"
-                  action="negative"
-                  size="sm"
-                  onPress={async () => {
-                    try {
-                      await blockAPI.deleteOverrideList(curList.Name, curList);
-                      notifyChange('deletelist');
-                    } catch (e) {
-                      notifyChange('deletelist');
-                    }
-                  }}
-                >
-                  <ButtonIcon as={TrashIcon} />
-                </Button>
-              </>
+                  <Button
+                    variant="outline"
+                    action="negative"
+                    size="xs"
+                    onPress={async () => {
+                      try {
+                        await blockAPI.deleteOverrideList(curList.Name, curList)
+                        notifyChange('deletelist')
+                      } catch (e) {
+                        notifyChange('deletelist')
+                      }
+                    }}
+                  >
+                    <ButtonIcon as={TrashIcon} />
+                    <ButtonText ml="$2">Delete List</ButtonText>
+                  </Button>
+                </>
               )}
             </HStack>
           </VStack>
+          <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }} px="$4">
+            {curList.Name !== '' && curList.Name !== 'Default' && (
+              <FormControl>
+                <FormControlLabel>
+                  <FormControlLabelText>Tags</FormControlLabelText>
+                </FormControlLabel>
 
-          {curList.Name !== '' && curList.Name !== 'Default' && (
-
-            <FormControl>
-              <FormControlLabel>
-                <FormControlLabelText>Tags</FormControlLabelText>
-              </FormControlLabel>
-
-              <HStack flexWrap="wrap" w="$full" space="md">
-                <HStack
-                  space="md"
-                  flexWrap="wrap"
-                  alignItems="center"
-                  display={curList.Tags?.length ? 'flex' : 'none'}
-                >
-                  {curList.Tags.map((tag) => (
-                    <TagItem key={tag} name={tag} size="sm" />
-                  ))}
+                <HStack flexWrap="wrap" w="$full" space="md">
+                  <HStack
+                    space="md"
+                    flexWrap="wrap"
+                    alignItems="center"
+                    display={curList.Tags?.length ? 'flex' : 'none'}
+                  >
+                    {curList.Tags.map((tag) => (
+                      <TagItem key={tag} name={tag} size="sm" />
+                    ))}
+                  </HStack>
+                  <TagMenu
+                    items={[...new Set(defaultTags.concat(curList.Tags))]}
+                    selectedKeys={curList.Tags}
+                    onSelectionChange={handleTags}
+                  />
                 </HStack>
-                <TagMenu
-                  items={[...new Set(defaultTags.concat(curList.Tags))]}
-                  selectedKeys={curList.Tags}
-                  onSelectionChange={handleTags}
-                />
-              </HStack>
-            </FormControl>
-          )}
+              </FormControl>
+            )}
+          </VStack>
 
           <DNSOverrideList
             list={BlockDomains}
@@ -324,8 +332,6 @@ const DNSBlock = (props) => {
         </VStack>
       </ScrollView>
 
-
-
       <Fab
         renderInPortal={false}
         shadow={1}
@@ -356,7 +362,7 @@ const DNSBlock = (props) => {
         mr="$64"
       >
         <FabIcon as={AddIcon} mr="$1" />
-        <FabLabel>Import List</FabLabel>
+        <FabLabel>Import</FabLabel>
       </Fab>
     </View>
   )

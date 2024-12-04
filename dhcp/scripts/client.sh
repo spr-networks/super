@@ -31,7 +31,8 @@ function run_dhcp() {
 
 
     # will use WANIF if configs/base/interfaces.json is not available
-    names=$(jq -r '.[] | select(.Type == "Uplink" and .Enabled and (.Subtype == null or .Subtype != "pppup") and (.DisableDHCP == null or .DisableDHCP != true)) | .Name' $JSON || echo $WANIF)
+    names=$(jq -r '.[] | select(.Type == "Uplink" and .Enabled and (.Subtype == null or .Subtype != "pppup") and (.DisableDHCP == null or .DisableDHCP != true)) | .Name' "$JSON")
+    [ -z "$names" ] && names="$WANIF"
     # Iterate over the array and run dhclient for each name
     for name in ${names[@]}; do
         echo "Running coredhcp_client for ${name}"

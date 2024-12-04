@@ -18,7 +18,7 @@ import {
   HStack,
   Icon,
   Text,
-  VStack,
+  VStack
 } from '@gluestack-ui/themed'
 
 import { ArrowUpCircleIcon, ArrowDownCircleIcon } from 'lucide-react-native'
@@ -32,44 +32,41 @@ const SiteVPN = (props) => {
 
   const refreshSites = () => {
     pfwAPI.config().then((config) => {
-      let s = [];
+      let s = []
       for (let i = 0; i < config.SiteVPNs.length; i++) {
         let extension = {
           Index: i,
-          Interface: 'site' + i,
-        };
-        let new_obj = { ...extension, ...config.SiteVPNs[i] };
-        s.push(new_obj);
+          Interface: 'site' + i
+        }
+        let new_obj = { ...extension, ...config.SiteVPNs[i] }
+        s.push(new_obj)
       }
-
 
       //wake up each site first
       const putPromises = s.map((site) => {
-        return api.put(`/ping/${site.Interface}/127.0.0.1`).catch(() => {});
-      });
+        return api.put(`/ping/${site.Interface}/127.0.0.1`).catch(() => {})
+      })
 
       Promise.all(putPromises)
         .then(() => {
           //now get wireguard status
-          wireguardAPI
-            .status()
-            .then((status) => {
-              let newStatus = {}
-              for (let entry of s) {
-                if (status[entry.Interface]) {
-                  newStatus[entry.Interface] = status[entry.Interface]
-                }
+          wireguardAPI.status().then((status) => {
+            let newStatus = {}
+            for (let entry of s) {
+              if (status[entry.Interface]) {
+                newStatus[entry.Interface] = status[entry.Interface]
               }
-              setSiteStatus(newStatus)
-              setSites(s)
-              //alert(JSON.stringify(newStatus["site0"].peers[]))
-            })
+            }
+            setSiteStatus(newStatus)
+            setSites(s)
+            //alert(JSON.stringify(newStatus["site0"].peers[]))
+          })
         })
         .catch((e) => {
-          context.error('Failed to query pfw', e);
-        });
-    });
-  };
+          context.error('Failed to query pfw', e)
+        })
+    })
+  }
   useEffect(() => {
     refreshSites()
   }, [])
@@ -89,28 +86,36 @@ const SiteVPN = (props) => {
 
   const getOnlineStatus = (item) => {
     let itemStatus = siteStatus[item.Interface]
-    if (!itemStatus) { return null }
+    if (!itemStatus) {
+      return null
+    }
     let peer = Object.keys(itemStatus.peers)[0]
-    if (!peer) { return null }
+    if (!peer) {
+      return null
+    }
     peer = itemStatus.peers[peer]
-    if (!peer) { return null }
-    const isOnlineWithinLastHour = peer.latestHandshake && Date.now() - peer.latestHandshake * 1e3 < 60 * 60 * 1000;
+    if (!peer) {
+      return null
+    }
+    const isOnlineWithinLastHour =
+      peer.latestHandshake &&
+      Date.now() - peer.latestHandshake * 1e3 < 60 * 60 * 1000
 
     return (
       <HStack>
-        {isOnlineWithinLastHour ? (
-          <HStack>
-            <Icon as={CheckCircleIcon} color="$success600" size="lg" />
-            <Text size="lg" bold> Online </Text>
-          </HStack>
-        ) :
-        (
-          <HStack>
-            <Icon as={AlertCircleIcon} color="$error600" size="lg" />
-            <Text size="lg" bold> Offline </Text>
-          </HStack>
-        )
-        }
+        <HStack space="xs" alignItems="center">
+          {isOnlineWithinLastHour ? (
+            <>
+              <Icon as={CheckCircleIcon} color="$success600" size="sm" />
+              <Text size="sm">Online</Text>
+            </>
+          ) : (
+            <>
+              <Icon as={AlertCircleIcon} color="$error600" size="sm" />
+              <Text size="sm">Offline</Text>
+            </>
+          )}
+        </HStack>
 
         {peer.transferRx ? (
           <HStack flex={1} space="sm">
@@ -124,9 +129,13 @@ const SiteVPN = (props) => {
             </HStack>
           </HStack>
         ) : null}
-
       </HStack>
     )
+  }
+
+  const notifyChange = (action) => {
+    refModal.current()
+    refreshSites()
   }
 
   return (
@@ -144,7 +153,7 @@ const SiteVPN = (props) => {
           }}
           modalRef={refModal}
         >
-          <WireguardAddSite notifyChange={refreshSites} />
+          <WireguardAddSite notifyChange={notifyChange} />
         </ModalForm>
       </ListHeader>
       {sites !== null && sites.length ? (
@@ -158,28 +167,32 @@ const SiteVPN = (props) => {
 
               {getOnlineStatus(item)}
 
-              <Text flex={1}>{item.Address}</Text>
-              <Text flex={1}>{item.Endpoint}</Text>
-              <Text
-                sx={{
-                  '@base': { display: 'none' },
-                  '@md': { display: 'flex' }
-                }}
-                size="xs"
-                isTruncated
-              >
-                {item.PeerPublicKey}
-              </Text>
-              <Text
-                sx={{
-                  '@base': { display: 'none' },
-                  '@md': { display: 'flex' }
-                }}
-                size="xs"
-                isTruncated
-              >
-                {item.PublicKey}
-              </Text>
+              <VStack space="sm" flex={2}>
+                <Text>{item.Address}</Text>
+                <Text>{item.Endpoint}</Text>
+              </VStack>
+              <VStack space="sm">
+                <Text
+                  sx={{
+                    '@base': { display: 'none' },
+                    '@md': { display: 'flex' }
+                  }}
+                  size="xs"
+                  isTruncated
+                >
+                  {item.PeerPublicKey}
+                </Text>
+                <Text
+                  sx={{
+                    '@base': { display: 'none' },
+                    '@md': { display: 'flex' }
+                  }}
+                  size="xs"
+                  isTruncated
+                >
+                  {item.PublicKey}
+                </Text>
+              </VStack>
 
               <Button
                 size="sm"

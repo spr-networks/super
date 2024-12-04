@@ -210,7 +210,13 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
   let eventFields = GrabFields?.length ? GrabFields : extractKeys(logItems)
 
   return (
-    <VStack space="md" p="$4" bg="$backgroundCardLight">
+    <VStack space="md"
+      p="$4"
+      bg="$backgroundCardLight"
+      sx={{
+        _dark: { bg: '$backgroundCardDark' }
+      }}
+    >
       <VStack
         space="md"
         sx={{

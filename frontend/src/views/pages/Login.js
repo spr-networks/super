@@ -260,7 +260,7 @@ const Login = (props) => {
                 <LinkText size="sm">Download Certificate</LinkText>
               </Link>
               <Link
-                href="https://www.supernetworks.org/pages/docs/apis/ssl_support#install-ca-certificate-on-ios"
+                href="https://www.supernetworks.org/pages/docs/development/apis/ssl_support#install-ca-certificate-on-ios"
                 isExternal
               >
                 <LinkText size="sm">How to install Certificate</LinkText>

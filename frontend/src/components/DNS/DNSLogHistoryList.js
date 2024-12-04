@@ -60,7 +60,8 @@ import {
   FilterIcon,
   RefreshCwIcon,
   Settings2Icon,
-  TagIcon
+  TagIcon,
+  ShieldEllipsisIcon
 } from 'lucide-react-native'
 
 const filterTypes = ['BLOCKED', 'NOERROR', 'NODATA', 'OTHERERROR', 'NXDOMAIN']
@@ -130,9 +131,10 @@ const ListItem = ({
         pr="$4"
         sx={{ '@md': { paddingRight: '$8' } }}
       >
-        <Box
+        <VStack
           sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }}
           w="$20"
+          space="sm"
         >
           <Badge
             variant="outline"
@@ -141,7 +143,7 @@ const ListItem = ({
           >
             <BadgeText>{item.Type}</BadgeText>
           </Badge>
-        </Box>
+        </VStack>
 
         <VStack
           flex={3}
@@ -169,11 +171,11 @@ const ListItem = ({
           <HStack
             flex={2}
             space="md"
-            alignSelf="center"
             sx={{
               '@base': {
                 flexDirection: 'column',
-                alignItems: 'flex-end'
+                alignItems: 'flex-start',
+                justifyContent: 'flex-end'
               },
               '@md': {
                 flexDirection: 'row',
@@ -181,17 +183,22 @@ const ListItem = ({
               }
             }}
           >
-            {item.Categories
-              ? item.Categories.map((entry) => (
-                  <Badge key={entry} action="muted" variant="outline" size="sm">
-                    <BadgeText>{entry}</BadgeText>
-                    <BadgeIcon as={TagIcon} ml="$1" />
-                  </Badge>
-                ))
-              : null}
+            {item.Categories?.map((entry) => (
+              <Badge
+                key={entry}
+                action="warning"
+                variant="outline"
+                justifyContent="center"
+              >
+                <BadgeIcon as={ShieldEllipsisIcon} mr="$1" />
+                <BadgeText>{entry}</BadgeText>
+              </Badge>
+            ))}
           </HStack>
 
-          <VStack sx={{ '@md': { justifyContent: 'center' } }}>
+          <VStack
+            sx={{ '@md': { justifyContent: 'center', alignItems: 'center' } }}
+          >
             <Tooltip label={timeAgo(new Date(item.Timestamp))}>
               <Text color="$muted500" size="xs">
                 {prettyDate(new Date(item.Timestamp))}

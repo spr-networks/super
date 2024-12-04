@@ -5,6 +5,7 @@ import { firewallAPI } from 'api'
 import EndpointList from 'components/Firewall/EndpointList'
 import ForwardList from 'components/Firewall/ForwardList'
 import BlockList from 'components/Firewall/BlockList'
+import OutputBlockList from 'components/Firewall/OutputBlockList'
 import ForwardBlockList from 'components/Firewall/ForwardBlockList'
 import MulticastPorts from 'components/Firewall/MulticastPorts'
 import ContainerInterfaceRulesList from 'components/Firewall/ContainerInterfaceRulesList'
@@ -17,6 +18,7 @@ import {
   ContainerIcon,
   RouteIcon,
   RouteOffIcon,
+  ShieldBan,
   SplitIcon,
   WaypointsIcon
 } from 'lucide-react-native'
@@ -44,7 +46,8 @@ const Firewall = (props) => {
       BlockRules: 'Inbound Traffic Block',
       ForwardingBlockRules: 'Forwarding Traffic Block',
       CustomInterfaceRules: 'Custom Interface Access',
-      MulticastPorts: 'Multicast Proxy'
+      MulticastPorts: 'Multicast Proxy',
+      SPROutbound: 'SPR Outbound Block'
     }
 
     let keys = Object.keys(keyLabels)
@@ -118,6 +121,17 @@ const Firewall = (props) => {
       renderItem: () => (
         <MulticastPorts
           list={config.MulticastPorts}
+          notifyChange={fetchConfig}
+        />
+      )
+    },
+    {
+      label: 'SPR Outbound Block',
+      description: 'Block SPR Traffic',
+      icon: ShieldBan,
+      renderItem: () => (
+        <OutputBlockList
+          list={config.OutputBlockRules}
           notifyChange={fetchConfig}
         />
       )
