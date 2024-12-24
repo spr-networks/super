@@ -14,7 +14,7 @@ on:
 jobs:
   build-images:
     name: Build images
-    runs-on: ubuntu-24.04
+    runs-on: self-hosted
     permissions:
       contents: read
       packages: write
