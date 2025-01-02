@@ -41,7 +41,7 @@ jobs:
         run: xcode-select -p
 
       - name: Cache node modules
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: '**/node_modules'
           key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
@@ -61,7 +61,7 @@ jobs:
           bundler-cache: true
 
       - name: Restore Pods cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             frontend/ios/Pods
