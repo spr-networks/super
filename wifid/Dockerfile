@@ -10,7 +10,7 @@ RUN git clone -b v1.2.0 --depth 1 https://github.com/xdp-project/xdp-tools.git
 WORKDIR /code/xdp-tools
 RUN ./configure
 RUN ln -s /usr/include/`uname -m`-linux-gnu/asm /usr/include/asm
-RUN make -j $(nproc)
+RUN make -j $(( $(nproc) / 4 ))
 COPY code/filter_dhcp_mismatch.c /code/
 WORKDIR /code
 RUN clang -O3 -target bpf -D __BPF_TRACING__ -I xdp-tools/headers/ -I xdp-tools/lib/libbpf/src/root/usr/include/ -c filter_dhcp_mismatch.c
