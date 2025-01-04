@@ -34,7 +34,7 @@ WORKDIR /code/hostap/hostapd
 RUN mkdir /usr/lib/llvm-18/lib/clang/18/share/
 RUN touch /usr/lib/llvm-18/lib/clang/18/share/cfi_ignorelist.txt
 RUN touch ignorelist.txt
-RUN LDFLAGS="-flto" CC=clang LD=lld EXTRA_CFLAGS="-fsanitize=cfi -fsanitize-ignorelist=ignorelist.txt  -flto -fstack-clash-protection -fstack-protector-strong -Werror=format-security -D_GLIBCXX_ASSERTIONS -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -fvisibility=default" make -j $(nproc)
+RUN LDFLAGS="-flto" CC=clang LD=lld EXTRA_CFLAGS="-fsanitize=cfi -fsanitize-ignorelist=ignorelist.txt  -flto -fstack-clash-protection -fstack-protector-strong -Werror=format-security -D_GLIBCXX_ASSERTIONS -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -fvisibility=default" make -j $(( $(nproc) / 4 ))
 RUN make install
 
 FROM ghcr.io/spr-networks/container_template:latest
