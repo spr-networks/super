@@ -1,7 +1,7 @@
 import React, { useContext } from 'react'
+import PropTypes from 'prop-types'
 
 import ClientSelect from 'components/ClientSelect'
-
 import { firewallAPI } from 'api'
 import { AlertContext } from 'AppContext'
 
@@ -21,15 +21,17 @@ import {
 
 import ProtocolRadio from 'components/Form/ProtocolRadio'
 
-class AddBlockImpl extends React.Component {
+class AddOutputBlockImpl extends React.Component {
   state = {
     SrcIP: '0.0.0.0/0',
     DstIP: '',
+    DstPort: '',
     Protocol: 'tcp'
   }
 
   constructor(props) {
     super(props)
+
     this.handleChange = this.handleChange.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
   }
@@ -45,17 +47,18 @@ class AddBlockImpl extends React.Component {
     let block = {
       SrcIP: this.state.SrcIP,
       DstIP: this.state.DstIP,
+      DstPort: this.state.DstPort,
       Protocol: this.state.Protocol
     }
 
     const done = (res) => {
       if (this.props.notifyChange) {
-        this.props.notifyChange('block')
+        this.props.notifyChange('forward_block')
       }
     }
 
     firewallAPI
-      .addBlock(block)
+      .addOutputBLock(block)
       .then(done)
       .catch((err) => {
         this.props.alertContext.error('Firewall API Failure', err)
@@ -71,7 +74,6 @@ class AddBlockImpl extends React.Component {
           <FormControlLabel>
             <FormControlLabelText>Source IP Address</FormControlLabelText>
           </FormControlLabel>
-
           <Input size="md" variant="underlined">
             <InputField
               value={this.state.SrcIP}
@@ -86,16 +88,31 @@ class AddBlockImpl extends React.Component {
           <FormControlLabel>
             <FormControlLabelText>Destination IP Address</FormControlLabelText>
           </FormControlLabel>
-          <ClientSelect
-            name="DstIP"
-            value={this.state.DstIP}
-            onSubmitEditing={(value) => this.handleChange('DstIP', value)}
-            onChangeText={(value) => this.handleChange('DstIP', value)}
-            onChange={(value) => this.handleChange('DstIP', value)}
-            show_CIDR_Defaults={true}
-          />
+          <Input size="md" variant="underlined">
+            <InputField
+              value={this.state.DstIP}
+              onChangeText={(value) => this.handleChange('DstIP', value)}
+            />
+          </Input>
           <FormControlHelper>
             <FormControlHelperText>IP address or CIDR</FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
+
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Destination Port</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              value={this.state.DstPort}
+              onChangeText={(value) => this.handleChange('DstPort', value)}
+            />
+          </Input>
+          <FormControlHelper>
+            <FormControlHelperText>
+              Optional port or port range, leave empty for all ports
+            </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
 
@@ -118,12 +135,16 @@ class AddBlockImpl extends React.Component {
   }
 }
 
-export default function AddBlock(props) {
+AddOutputBlockImpl.propTypes = {
+  notifyChange: PropTypes.func
+}
+
+export default function AddOutputBlock(props) {
   let alertContext = useContext(AlertContext)
   return (
-    <AddBlockImpl
+    <AddOutputBlockImpl
       notifyChange={props.notifyChange}
       alertContext={alertContext}
-    ></AddBlockImpl>
+    ></AddOutputBlockImpl>
   )
 }

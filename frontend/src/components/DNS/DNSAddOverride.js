@@ -72,7 +72,13 @@ export default class DNSAddOverride extends React.Component {
   }
 
   validateField(name, value) {
-    let check = { Type: '', Domain: '', ResultIP: '', ResultCNAME: '', ClientIP: '' }
+    let check = {
+      Type: '',
+      Domain: '',
+      ResultIP: '',
+      ResultCNAME: '',
+      ClientIP: ''
+    }
 
     if (name == 'Type' && !['block', 'permit'].includes(value)) {
       check.Type = 'has-danger'
@@ -109,14 +115,16 @@ export default class DNSAddOverride extends React.Component {
     }
 
     if (this.state.ReturnType == 'CNAME') {
-      if (this.state.ResultCNAME != '' && !this.state.ResultCNAME.endsWith('.')) {
+      if (
+        this.state.ResultCNAME != '' &&
+        !this.state.ResultCNAME.endsWith('.')
+      ) {
         this.state.ResultCNAME += '.'
       }
       this.state.ResultIP = ''
     } else if (this.state.ReturnType == 'IP') {
       this.state.ResultCNAME = ''
     }
-
 
     let override = {
       Type: this.state.Type,
@@ -144,7 +152,11 @@ export default class DNSAddOverride extends React.Component {
   render() {
     return (
       <VStack space="md">
-        <FormControlLabel>List name: {this.state.listName}</FormControlLabel>
+        <FormControlLabel>
+          <FormControlLabelText>
+            List name: {this.state.listName}
+          </FormControlLabelText>
+        </FormControlLabel>
         <FormControl isInvalid={this.state.check.Type == 'has-danger'}>
           <FormControlLabel>
             <FormControlLabelText>Type of override</FormControlLabelText>
@@ -220,9 +232,11 @@ export default class DNSAddOverride extends React.Component {
           )}
         </FormControl>
 
-
         <FormControl
-          isInvalid={this.state.check.ResultIP == 'has-danger' || this.state.check.ReturnCNAME == 'has-danger'}
+          isInvalid={
+            this.state.check.ResultIP == 'has-danger' ||
+            this.state.check.ReturnCNAME == 'has-danger'
+          }
         >
           <FormControlLabel>
             <FormControlLabelText>Result Type</FormControlLabelText>
@@ -253,17 +267,23 @@ export default class DNSAddOverride extends React.Component {
             </HStack>
           </RadioGroup>
 
-
           <Input py="1">
             <InputField
               type="text"
               name="ResultIP"
-              value={this.state.ReturnType == 'IP' ? this.state.ResultIP : this.state.ResultCNAME}
-              onChangeText={(value) => this.handleChange('Result' + this.state.ReturnType, value)}
+              value={
+                this.state.ReturnType == 'IP'
+                  ? this.state.ResultIP
+                  : this.state.ResultCNAME
+              }
+              onChangeText={(value) =>
+                this.handleChange('Result' + this.state.ReturnType, value)
+              }
             />
           </Input>
 
-          {(this.state.check.ResultIP == 'has-danger' || this.state.check.ResultCNAME == 'has-danger') ? (
+          {this.state.check.ResultIP == 'has-danger' ||
+          this.state.check.ResultCNAME == 'has-danger' ? (
             <FormControlError>
               <FormControlErrorText>
                 Please enter a valid {this.state.ReturnType} or leave empty
@@ -272,13 +292,12 @@ export default class DNSAddOverride extends React.Component {
           ) : (
             <FormControlHelper>
               <FormControlHelperText>
-                Optional. Set a custom {this.state.ReturnType} address to return for domain name
-                lookup
+                Optional. Set a custom {this.state.ReturnType} address to return
+                for domain name lookup
               </FormControlHelperText>
             </FormControlHelper>
           )}
         </FormControl>
-
 
         <FormControl isInvalid={this.state.check.ClientIP == 'has-danger'}>
           <FormControlLabel>

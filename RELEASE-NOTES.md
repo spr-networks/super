@@ -1,4 +1,9 @@
 # Secure Programmable Router (SPR) Release Notes
+## v1.0.5
+**Improvements**
+- Override DNS for devices
+- Outbound firewall rules
+- Users can now override System Outbound DNS with DNAT
 
 ## v1.0.4
 **Improvements**

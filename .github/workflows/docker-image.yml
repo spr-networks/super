@@ -14,7 +14,7 @@ on:
 jobs:
   build-images:
     name: Build images
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read
       packages: write
@@ -96,7 +96,7 @@ jobs:
           matrix=$(echo ${{ steps.extract_info.outputs.IMAGE_INFO }} | jq -R -s -c 'split(" ") | map(split("@") | {name:  (.[0] | split(":")[0]), digest: .[1] | rtrimstr("\n") }) | group_by(.name) | map(.[0]) ')
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
     outputs:
-      container_digests: ${{ steps.container_digests.outputs.matrix}}  
+      container_digests: ${{ steps.container_digests.outputs.matrix}}
 
   attest:
     permissions:
@@ -106,7 +106,7 @@ jobs:
       attestations: write
     needs: build-images
     if: ${{ github.event_name == 'push' || github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         image: ${{ fromJSON(needs.build-images.outputs.container_digests) }}

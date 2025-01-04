@@ -41,7 +41,7 @@ import {
   ArrowLeftIcon
 } from '@gluestack-ui/themed'
 
-import { Address4 } from 'ip-address'
+import { Address4, Address6 } from 'ip-address'
 
 import { TagItem, GroupItem, PolicyItem } from 'components/TagItem'
 import ColorPicker from 'components/ColorPicker'
@@ -59,6 +59,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   const [rawIP, setRawIP] = useState(device.RecentIP)
   const [psk, setPSK] = useState(device.PSKEntry.Psk)
   const [pskType, setPSKType] = useState(device.PSKEntry.Type)
+  const [customDNS, setCustomDNS] = useState(device.DNSCustom)
   const [showPassword, setShowPassword] = useState(false)
   const [ip, setIP] = useState(device.RecentIP)
   const [vlantag, setVlanTag] = useState(device.VLANTag)
@@ -206,6 +207,10 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     }
   }
 
+  const handlecustomDNS = (value) => {
+    setCustomDNS(value)
+  }
+
   function toLong(ipAddress) {
     return ipAddress.parsedAddress.reduce(
       (accumulator, octet) => (accumulator << 8) + Number(octet),
@@ -310,6 +315,29 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
               '. IP not in range or not a valid Supernetwork Device IP'
           )
         )
+    }
+
+    if (!(customDNS == "" && device.DNSCustom === undefined) && customDNS != device.DNSCustom) {
+      //validate IP
+
+      let toSend = customDNS
+      try {
+        if (customDNS == "" && device.DNSCustom != "") {
+          toSend = "0"
+        } else {
+          let address = new Address4(customDNS)
+        }
+
+        deviceAPI
+          .update(id, { DNSCustom: toSend })
+          .then(notifyChange)
+          .catch((error) =>
+            context.error('[API] update DNS error: ' + error.message)
+          )
+      } catch (e) {
+        context.error("Invalid Custom DNS Server")
+        return
+      }
     }
 
     if (vlantag != device.VLANTag) {
@@ -540,6 +568,35 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
             value={vlantag}
             autoFocus={false}
             onChangeText={(value) => handleVLAN(value)}
+            onSubmitEditing={handleSubmit}
+          />
+        </Input>
+      </FormControl>
+
+      <FormControl display={isSimpleMode ? 'none' : 'flex'}>
+        <Tooltip
+          placement="bottom"
+          trigger={(triggerProps) => {
+            return (
+              <FormControlLabel {...triggerProps}>
+                <FormControlLabelText>Custom DNS Server</FormControlLabelText>
+              </FormControlLabel>
+            )
+          }}
+        >
+          <TooltipContent>
+            <TooltipText>
+              Override SPR's DNS and make requests to the specified IP Address
+            </TooltipText>
+          </TooltipContent>
+        </Tooltip>
+
+        <Input variant="solid">
+          <InputField
+            type="text"
+            value={customDNS}
+            autoFocus={false}
+            onChangeText={(value) => handlecustomDNS(value)}
             onSubmitEditing={handleSubmit}
           />
         </Input>

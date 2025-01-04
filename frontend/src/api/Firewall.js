@@ -38,6 +38,14 @@ export class APIFirewall extends API {
     return this.delete('block_forward', data)
   }
 
+  addOutputBLock(data) {
+    return this.put('block_output', data)
+  }
+
+  deleteOutputBlock(data) {
+    return this.delete('block_output', data)
+  }
+
   addServicePort(data) {
     return this.put('service_port', data)
   }

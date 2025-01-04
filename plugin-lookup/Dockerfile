@@ -1,10 +1,10 @@
-FROM ubuntu:23.04 AS builder
+FROM ubuntu:24.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y --no-install-recommends git curl ca-certificates
+RUN apt-get install -y --no-install-recommends git curl ca-certificates wget
 ARG TARGETARCH
-RUN curl -O https://dl.google.com/go/go1.20.linux-${TARGETARCH}.tar.gz
-RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.20.linux-${TARGETARCH}.tar.gz
+RUN wget https://dl.google.com/go/go1.23.3.linux-${TARGETARCH}.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.23.3.linux-${TARGETARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
 RUN mkdir /code
 WORKDIR /code

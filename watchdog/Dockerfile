@@ -4,4 +4,4 @@ RUN apt-get update
 RUN apt-get install -y watchdog netbase
 COPY scripts /scripts
 
-ENTRYPOINT /scripts/startup.sh
+ENTRYPOINT ["/scripts/startup.sh"]
