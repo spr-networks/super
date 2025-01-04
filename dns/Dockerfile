@@ -19,6 +19,8 @@ ARG CACHEBUST=1
 RUN git clone --depth 1 --branch v1.11.3 https://github.com/coredns/coredns.git
 WORKDIR /code/coredns/
 
+ENV GOPROXY=https://proxy.golang.org,direct
+
 ARG USE_TMPFS=true
 RUN --mount=type=tmpfs,target=/tmpfs \
    [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
