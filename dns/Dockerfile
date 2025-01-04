@@ -14,12 +14,9 @@ ENV PATH="/usr/local/go/bin:$PATH"
 # Use a ram disk for golang src
 ARG COREDNS_VER=unknown
 ARG PLUGINS_VER=unknown
-ENV GOPRIVATE=github.com/spr-networks/*
 ARG CACHEBUST=1
 RUN git clone --depth 1 --branch v1.11.3 https://github.com/coredns/coredns.git
 WORKDIR /code/coredns/
-
-ENV GOPROXY=https://proxy.golang.org,direct
 
 ARG USE_TMPFS=true
 RUN --mount=type=tmpfs,target=/tmpfs \
