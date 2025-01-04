@@ -38,7 +38,7 @@ jobs:
         run: echo "RELEASE_VERSION == $RELEASE_VERSION  CHANNEL == $RELEASE_CHANNEL"
       -
         name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        run: apt-get install -y qemu-user-static
       -
         name: Set up Docker Buildx
         id: buildx
