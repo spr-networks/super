@@ -10,7 +10,7 @@ RUN git clone -b v1.2.0 --depth 1 https://github.com/xdp-project/xdp-tools.git
 WORKDIR /code/xdp-tools
 RUN ./configure
 RUN ln -s /usr/include/`uname -m`-linux-gnu/asm /usr/include/asm
-RUN make -j $(nproc)
+RUN make -j $(( $(nproc) / 4 ))
 COPY code/filter_dhcp_mismatch.c /code/
 WORKDIR /code
 RUN clang -O3 -target bpf -D __BPF_TRACING__ -I xdp-tools/headers/ -I xdp-tools/lib/libbpf/src/root/usr/include/ -c filter_dhcp_mismatch.c
@@ -34,7 +34,7 @@ WORKDIR /code/hostap/hostapd
 RUN mkdir /usr/lib/llvm-18/lib/clang/18/share/
 RUN touch /usr/lib/llvm-18/lib/clang/18/share/cfi_ignorelist.txt
 RUN touch ignorelist.txt
-RUN LDFLAGS="-flto" CC=clang LD=lld EXTRA_CFLAGS="-fsanitize=cfi -fsanitize-ignorelist=ignorelist.txt  -flto -fstack-clash-protection -fstack-protector-strong -Werror=format-security -D_GLIBCXX_ASSERTIONS -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -fvisibility=default" make -j $(nproc)
+RUN LDFLAGS="-flto" CC=clang LD=lld EXTRA_CFLAGS="-fsanitize=cfi -fsanitize-ignorelist=ignorelist.txt  -flto -fstack-clash-protection -fstack-protector-strong -Werror=format-security -D_GLIBCXX_ASSERTIONS -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -fvisibility=default" make -j $(( $(nproc) / 4 ))
 RUN make install
 
 FROM ghcr.io/spr-networks/container_template:latest
