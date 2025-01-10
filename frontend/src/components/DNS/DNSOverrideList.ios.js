@@ -29,7 +29,7 @@ const DNSOverrideList = ({
   const deleteRow = (rowMap, rowKey) => {
     closeRow(rowMap, rowKey)
     let item = list.find((l) => l.Domain == rowKey)
-    deleteListItem(item)
+    deleteListItem(listName, item)
   }
 
   const renderHiddenItem = (data, rowMap) => (
