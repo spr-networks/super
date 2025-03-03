@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	logStd "log"
+	"path/filepath"
 	"net/http"
 	"os"
 	"reflect"
@@ -918,7 +919,7 @@ func downloadCrash(w http.ResponseWriter, r *http.Request) {
 
 	crashFilePath := gCrashdumpDirectory + "/" + filename
 	// verify
-	absPath := filepath.Dir(filepath.Clean(backupFilePath))
+	absPath := filepath.Dir(filepath.Clean(crashFilePath))
 	_, err := os.Stat(crashFilePath)
 	if absPath != gCrashdumpDirectory || err != nil {
 		http.Error(w, "Invalid crashdump name", 400)
