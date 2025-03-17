@@ -16,7 +16,7 @@ Create an adaptive, micro-segmented network for managing WiFi devices, remote VP
 
 <img width="1218" alt="image" src="https://github.com/spr-networks/super/assets/37549748/c0ebf4fe-0a29-4087-a039-53968c87a00b">
 
-## Get Inovled 
+## Get Involved 
 
 💬 Have questions? Join the conversation in our [Discussions](https://github.com/spr-networks/super/discussions) page.
 * [Join the Discord chat](https://discord.gg/EUjTKJPPAX)
