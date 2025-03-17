@@ -16,6 +16,11 @@ Create an adaptive, micro-segmented network for managing WiFi devices, remote VP
 
 <img width="1218" alt="image" src="https://github.com/spr-networks/super/assets/37549748/c0ebf4fe-0a29-4087-a039-53968c87a00b">
 
+## Get Inovled 
+
+💬 Have questions? Join the conversation in our [Discussions](https://github.com/spr-networks/super/discussions) page.
+* [Join the Discord chat](https://discord.gg/EUjTKJPPAX)
+* [Stay in the loop](https://sendfox.com/supernetworks) with our newsletter
 
 ## How it Works
 
@@ -119,7 +124,6 @@ docker-compose up -d
 
 * [FAQ](https://www.supernetworks.org/pages/docs/faq)
 * [Get the iOS App](https://apps.apple.com/us/app/secure-programmable-router/id6443709201)
-* [Join the Discord chat](https://discord.gg/EUjTKJPPAX)
 
 
 
