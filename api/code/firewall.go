@@ -2560,6 +2560,21 @@ func isMeshPluginEnabled() bool {
 func meshPluginDownlink() string {
 	//tbd this should be a paramter in mesh setup.
 	//query config and get it
+	return getFirstDownlink()
+}
+
+func getFirstDownlink() string {
+	Interfacesmtx.Lock()
+	interfacesConfig := loadInterfacesConfigLocked()
+	Interfacesmtx.Unlock()
+
+	for _, iface := range interfacesConfig {
+		if iface.Enabled && iface.Type == "Downlink" {
+			return iface.Name
+		}
+	}
+
+	//fallback to LANIF env
 	lanif := os.Getenv("LANIF")
 	return lanif
 }
@@ -2920,7 +2935,7 @@ func dynamicRouteLoop() {
 			// that a device can arrive on.
 			// SPR currently assumes one named LANIF.
 
-			lanif := os.Getenv("LANIF")
+			lanif := getFirstDownlink()
 			lanif_vlan_trunk := false
 			meshPluginEnabled := isMeshPluginEnabled()
 			meshDownlink := ""
