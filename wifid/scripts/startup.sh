@@ -1,5 +1,7 @@
 #!/bin/bash
 
+/scripts/update_iface_names.sh
+
 IFACES=$(curl --unix-socket /state/wifi/apisock http://localhost/interfaces)
 RET=$?
 
