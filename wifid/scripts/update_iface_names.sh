@@ -97,7 +97,8 @@ for i in "${!ifs[@]}"; do
     ip link set "tmp_${original_if}" name "$desired_if"
     ip link set "$desired_if" up # Bring up the interface with its new name
 
-    mv  "/configs/wifi/hostapd_${original_if}.conf" "/configs/wifi/tmp_hostapd_${original_if}.conf"
-    replace_wlan_interface "/configs/wifi/tmp_hostapd_${original_if}.conf" "${desired_if}"
-    mv "/configs/wifi/tmp_hostapd_${original_if}.conf"  "/configs/wifi/hostapd_${desired_if}.conf"
+    # this needs to be handled under the API instead
+    #mv  "/configs/wifi/hostapd_${original_if}.conf" "/configs/wifi/tmp_hostapd_${original_if}.conf"
+    #replace_wlan_interface "/configs/wifi/tmp_hostapd_${original_if}.conf" "${desired_if}"
+    #mv "/configs/wifi/tmp_hostapd_${original_if}.conf"  "/configs/wifi/hostapd_${desired_if}.conf"
 done
