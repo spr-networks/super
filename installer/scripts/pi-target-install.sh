@@ -130,8 +130,18 @@ EOF
 mkdir /boot/firmware
 mount /dev/vda1 /boot/firmware
 # we need the pcie-32bit-dma enabled for the mediatek cards
-fdtoverlay -i /boot/firmware/bcm2712-rpi-5-b.dtb -o /boot/firmware/bcm2712-rpi-5-b.dtb /boot/firmware/overlays/pcie-32bit-dma-pi5.dtbo
-echo "dtparam=pciex1" >> /boot/firmware/config.txt
+# the other settings are to enable uart for the cm5
+cat << EOF >> /boot/firmware/config.txt
+dtparam=pciex1
+enable_uart=1
+dtparam=uart0=on
+dtoverlay=uart0
+dtparam=uart0_console
+pciex4_reset=0
+dtoverlay=pcie-32bit-dma-pi5
+EOF
+
+
 umount /boot/firmware
 rmdir /boot/firmware
 
