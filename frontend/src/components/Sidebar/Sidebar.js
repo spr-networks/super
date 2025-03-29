@@ -42,7 +42,7 @@ const ToggleViewMode = ({ isSimpleMode, setIsSimpleMode, ...props }) => {
         value={!isSimpleMode}
         onToggle={() => setIsSimpleMode(!isSimpleMode)}
       />
-      <Text size="sm">{isSimpleMode ? 'Simple View' : 'Advanced View'}</Text>
+      <Text size="sm">Advanced View</Text>
     </HStack>
   )
 }

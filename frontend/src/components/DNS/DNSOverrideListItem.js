@@ -1,4 +1,4 @@
-import React from 'react'
+import React, {useContext} from 'react'
 import { Platform } from 'react-native'
 import PropTypes from 'prop-types'
 
@@ -14,8 +14,11 @@ import {
 } from '@gluestack-ui/themed'
 
 import { ListItem } from 'components/List'
+import DeviceItem from 'components/Devices/DeviceItem'
+import { AppContext } from 'AppContext'
 
 const DNSOverrideListItem = ({ item, listName, deleteListItem, ...props }) => {
+  const context = useContext(AppContext)
   return (
     <ListItem>
       <VStack
@@ -24,7 +27,7 @@ const DNSOverrideListItem = ({ item, listName, deleteListItem, ...props }) => {
         flex={1}
         space="sm"
       >
-        <VStack flex={1} space="md" sx={{ '@md': { flexDirection: 'row' } }}>
+        <VStack flex={2} space="md" sx={{ '@md': { flexDirection: 'row' } }}>
           <Text bold>{item.Domain}</Text>
           <HStack space={'md'}>
             <Text
@@ -36,19 +39,21 @@ const DNSOverrideListItem = ({ item, listName, deleteListItem, ...props }) => {
             >
               =
             </Text>
-            <Text>{item.ResultIP || item.ResultCNAME || '0.0.0.0'}</Text>
+            <Text>{item.ResultIP || item.ResultCNAME || ''}</Text>
           </HStack>
         </VStack>
 
         <VStack
-          flex={1}
+          flex={2}
           space="sm"
           sx={{ '@md': { flexDirection: 'row' } }}
           justifyContent="space-between"
         >
           <HStack space="md">
-            <Text color="$muted500">Client:</Text>
-            <Text>{item.ClientIP}</Text>
+            <DeviceItem
+              flex={1}
+              item={context.getDevice(item.ClientIP, 'RecentIP')}
+            />
           </HStack>
 
           <HStack space="md">
@@ -75,7 +80,7 @@ const DNSOverrideListItem = ({ item, listName, deleteListItem, ...props }) => {
 
 DNSOverrideListItem.propTypes = {
   item: PropTypes.object.isRequired,
-  listName: PropTypes.string.isRequired, 
+  listName: PropTypes.string.isRequired,
   deleteListItem: PropTypes.func
 }
 
