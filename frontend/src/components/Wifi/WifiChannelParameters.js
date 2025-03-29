@@ -86,6 +86,10 @@ const WifiChannelParameters = ({
   const [disableExtraBSS, setDisableExtraBSS] = useState(true)
   const [extraSSID, setExtraSSID] = useState('-extra')
 
+  //some wifi devices were reported to crash during auth if GCMP was enabled,
+  // disable this less common cipher by default but let people enable it
+  const [disableGCMP, setDisableGCMP] = useState(false)
+
   const [selectedMode, setSelectedMode] = useState(modes[0])
 
   let bandwidth5 = [
@@ -405,6 +409,7 @@ const WifiChannelParameters = ({
       return
     }
 
+
     if (groupValues.includes('extrabss')) {
       //right now support exists for an additional AP running WPA1
       // for backwards compatibility with older devices.
@@ -435,6 +440,12 @@ const WifiChannelParameters = ({
       HE_Enable: true
     }
 
+    if (groupValues.includes('gcmpon')) {
+      wifiParameters.Rsn_pairwise = "CCMP CCMP-128 GCMP GCMP-128"
+    } else {
+      wifiParameters.Rsn_pairwise = "CCMP CCMP-128"
+    }
+
     if (groupValues.includes('wifi6')) {
       wifiParameters.He_mu_beamformer = 1
       wifiParameters.He_su_beamformee = 1
@@ -452,6 +463,7 @@ const WifiChannelParameters = ({
 
   let checkboxProps = disableWifi6 ? { isDisabled: true } : {}
   let wpa1CheckboxProps = disableExtraBSS ? { isDisabled: true } : {}
+  let gcmpCheckboxProps = disableGCMP ? { isDisabled: false } : {}
 
   return (
     <>
@@ -599,6 +611,14 @@ const WifiChannelParameters = ({
               </CheckboxIndicator>
               <CheckboxLabel>Enable WPA1 SSID</CheckboxLabel>
             </Checkbox>
+
+            <Checkbox {...gcmpCheckboxProps} value={'gcmpon'}>
+              <CheckboxIndicator mr="$2">
+                <CheckboxIcon />
+              </CheckboxIndicator>
+              <CheckboxLabel>Enable GCMP Encryption</CheckboxLabel>
+            </Checkbox>
+
           </HStack>
         </CheckboxGroup>
 

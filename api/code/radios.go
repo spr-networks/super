@@ -138,6 +138,7 @@ type HostapdConfigEntry struct {
 	Rrm_neighbor_report          int
 	Rrm_beacon_report            int
 	Op_class                     int
+	Rsn_pairwise                 string
 
 	//update below Validate when adding strings
 }
@@ -158,6 +159,10 @@ func (h *HostapdConfigEntry) Validate() error {
 	}
 	if strings.ContainsAny(h.Ssid, "\n") {
 		return fmt.Errorf("Ssid contains newlines")
+	}
+
+	if strings.ContainsAny(h.Rsn_pairwise, "\n") {
+		return fmt.Errorf("Rsn_pairwise contains newlines")
 	}
 
 	if len(h.Ssid) > 32 {
@@ -589,7 +594,7 @@ func updateExtraBSS(iface string, data string) string {
 				} else {
 					data += "wpa=" + entry.ExtraBSS[i].Wpa + "\n"
 					data += "wpa_key_mgmt=" + entry.ExtraBSS[i].WpaKeyMgmt + "\n"
-					data += "rsn_pairwise=CCMP CCMP-256 GCMP GCMP-256\n"
+					data += "rsn_pairwise=CCMP CCMP-256\n"
 					data += "wpa_psk_file=/configs/wifi/wpa2pskfile\n"
 				}
 
@@ -748,6 +753,10 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	if _, ok := newInput["Time_advertisement"]; ok {
 		conf["time_advertisement"] = newConf.Time_advertisement
+	}
+
+	if _, ok := newInput["Rsn_pairwise"]; ok {
+		conf["rsn_pairwise"] = newConf.Rsn_pairwise
 	}
 
 	if _, ok := newInput["Op_class"]; ok {
