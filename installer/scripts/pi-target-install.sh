@@ -18,7 +18,7 @@ apt -y upgrade --no-download
 apt -y install --no-download nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack jq inotify-tools
 # install docker and buildx
 apt -y install --no-download docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-apt -y install --no-download r8125-dkms linux-headers-generic
+apt -y install --no-download r8125-dkms linux-headers-raspi
 
 
 touch /mnt/fs/etc/cloud/cloud-init.disabled

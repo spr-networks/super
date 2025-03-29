@@ -42,4 +42,4 @@ apty -y install --download-only nftables wireless-regdb ethtool git nano iw clou
 # install docker and buildx
 apty -y install --download-only docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-apt -y install --download-only r8125-dkms linux-headers-generic
+apt -y install --download-only r8125-dkms linux-headers-raspi
