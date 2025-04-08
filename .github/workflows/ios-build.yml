@@ -13,7 +13,7 @@ on:
 jobs:
   ios-build:
     name: iOS Build
-    runs-on: macOS-13
+    runs-on: macOS-15
 #    defaults:
 #      run:
 #        working-directory: frontend
@@ -34,7 +34,7 @@ jobs:
           node-version: 18
 
       - name: Set up Xcode
-        run: sudo xcode-select -s /Applications/Xcode_15.0.1.app
+        run: sudo xcode-select -s /Applications/Xcode_16.2.0.app
 #        run: sudo xcode-select -s /Applications/Xcode_13.4.1.app
 
       - name: Get Xcode version
