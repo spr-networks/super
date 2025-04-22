@@ -477,6 +477,12 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 
 		//reset with previous settings
 		resetInterface(interfaces, iconfig.Name, prev_type, prev_subtype, prev_enabled, reset_random)
+
+		//set uplink
+		if iconfig.Type == "Uplink" {
+			addUplinkEntry(iconfig.Name, iconfig.Subtype)
+		}
+
 		if restart_wifid || (prev_type != "AP" && iconfig.Type == "AP") {
 			//restart wifid
 			callSuperdRestart("", "wifid")

@@ -57,12 +57,12 @@ export default class DNSAddBlocklist extends React.Component {
         this.context.error('API Failure: ' + error.message)
       })
 
-    setTimeout(() => {
+    /*setTimeout(() => {
       // can take some time - close modal
       if (this.state.pending) {
         this.props.notifyChange('blocklists')
       }
-    }, 5000)
+    }, 5000)*/
   }
 
   render() {

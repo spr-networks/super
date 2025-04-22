@@ -1,4 +1,15 @@
 # Secure Programmable Router (SPR) Release Notes
+## v1.0.8
+**Improvements**
+- Support for CM5 board & installer
+- Improved LANIF support
+- Throw events apport crashes
+**Fixes**
+- Fix interface name swapping races with mt7915e, other DBDC cards
+- When setting an uplink MAC address it was incorrectly removed from the uplink set
+- Disabled GCMP by default since it broke some HiSuite devices
+
+
 ## v1.0.5
 **Improvements**
 - Override DNS for devices

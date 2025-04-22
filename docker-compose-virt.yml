@@ -164,6 +164,7 @@ services:
       - ${PWD}/frontend/build:/ui/
       - /var/log/journal:/var/log/journal:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/apport/coredump/:/coredump/
   plugin-lookup:
     container_name: superplugin-lookup
     image: ghcr.io/spr-networks/super_plugin-lookup:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}

@@ -47,9 +47,9 @@ if [ "$ret" -ne "0" ]; then
 fi
 
 if grep --quiet Raspberry /proc/cpuinfo; then
+  # pi related tasks
   :
 else
-  # TBD check the story for clearfog
   mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
   ln -s /dev/null /lib/udev/rules.d/80-net-setup-link.rules
 fi

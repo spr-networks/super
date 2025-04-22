@@ -14,6 +14,7 @@ import (
 	logStd "log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -29,6 +30,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/spr-networks/spr-apns-proxy"
 )
 
@@ -42,6 +44,7 @@ var AlertDevicesFile = TEST_PREFIX + "/configs/base/alert_devices.json"
 var MobileProxySettingsFile = TEST_PREFIX + "/configs/base/alert_proxy.json"
 var gAlertTopicPrefix = "alerts:"
 var gDebugPrintAlert = false
+var gCrashdumpDirectory = "/coredump/"
 
 type Alert struct {
 	Topic string
@@ -874,4 +877,54 @@ func AlertsRunEventListener() {
 
 	wg.Wait()
 	logStd.Println("sprbus client exit")
+}
+
+type CrashEvent struct {
+	Filename string
+}
+
+func collectCrashes() {
+	if _, err := os.Stat(gCrashdumpDirectory); os.IsNotExist(err) {
+		log.Errorf("directory does not exist: %s", gCrashdumpDirectory)
+		return
+	}
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Errorf("failed to create watcher: %v", err)
+		return
+	}
+	defer watcher.Close()
+
+	if err := watcher.Add(gCrashdumpDirectory); err != nil {
+		log.Errorf("failed to watch directory %s: %v", gCrashdumpDirectory, err)
+		return
+	}
+
+	defer watcher.Close()
+	for {
+		select {
+		case event := <-watcher.Events:
+			if event.Op&fsnotify.Create == fsnotify.Create {
+				SprbusPublish("crashlog:event", CrashEvent{event.Name})
+			}
+		case err := <-watcher.Errors:
+			log.Printf("Error: %v", err)
+		}
+	}
+}
+
+func downloadCrash(w http.ResponseWriter, r *http.Request) {
+	filename := mux.Vars(r)["name"]
+
+	crashFilePath := gCrashdumpDirectory + "/" + filename
+	// verify
+	absPath := filepath.Dir(filepath.Clean(crashFilePath))
+	_, err := os.Stat(crashFilePath)
+	if absPath != gCrashdumpDirectory || err != nil {
+		http.Error(w, "Invalid crashdump name", 400)
+		return
+	}
+
+	http.ServeFile(w, r, crashFilePath)
 }

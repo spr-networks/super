@@ -18,6 +18,8 @@ apt -y upgrade --no-download
 apt -y install --no-download nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack jq inotify-tools
 # install docker and buildx
 apt -y install --no-download docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+apt -y install --no-download r8125-dkms linux-headers-raspi
+
 
 touch /mnt/fs/etc/cloud/cloud-init.disabled
 # slow commands
@@ -128,8 +130,18 @@ EOF
 mkdir /boot/firmware
 mount /dev/vda1 /boot/firmware
 # we need the pcie-32bit-dma enabled for the mediatek cards
-fdtoverlay -i /boot/firmware/bcm2712-rpi-5-b.dtb -o /boot/firmware/bcm2712-rpi-5-b.dtb /boot/firmware/overlays/pcie-32bit-dma-pi5.dtbo
-echo "dtparam=pciex1" >> /boot/firmware/config.txt
+# the other settings are to enable uart for the cm5
+cat << EOF >> /boot/firmware/config.txt
+dtparam=pciex1
+enable_uart=1
+dtparam=uart0=on
+dtoverlay=uart0
+dtparam=uart0_console
+pciex4_reset=0
+dtoverlay=pcie-32bit-dma-pi5
+EOF
+
+
 umount /boot/firmware
 rmdir /boot/firmware
 

@@ -474,7 +474,7 @@ const DNSBlocklist = ({ config, ...props }) => {
       return title
     }
 
-    return title.replace('BlockList Project ', '')
+    return title?.replace('BlockList Project ', '')
   }
 
   const toggleShowURI = (e) => {
@@ -705,7 +705,7 @@ const DNSBlocklist = ({ config, ...props }) => {
                   opacity={isOnlyRecommended(item) ? 0.6 : 1}
                 >
                   <Text size="sm" bold flexWrap="wrap">
-                    {niceTitle(item.Info)}
+                    {niceTitle(item.Info) || item.URI.split('/').pop()}
                   </Text>
                   <Link isExternal href={item.URI}>
                     <HStack space="xs" alignItems="center">

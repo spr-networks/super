@@ -2779,6 +2779,9 @@ func main() {
 	go startEventBus()
 	registerEventClient()
 
+	// monitor for apport crashes
+	go collectCrashes()
+
 	unix_dhcpd_router := mux.NewRouter().StrictSlash(true)
 	unix_wifid_router := mux.NewRouter().StrictSlash(true)
 	unix_wireguard_router := mux.NewRouter().StrictSlash(true)
