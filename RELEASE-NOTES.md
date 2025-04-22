@@ -3,6 +3,7 @@
 **Improvements**
 - Support for CM5 board & installer
 - Improved LANIF support
+- Throw events apport crashes
 **Fixes**
 - Fix interface name swapping races with mt7915e, other DBDC cards
 - When setting an uplink MAC address it was incorrectly removed from the uplink set
