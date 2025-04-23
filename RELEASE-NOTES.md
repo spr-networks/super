@@ -1,4 +1,8 @@
 # Secure Programmable Router (SPR) Release Notes
+## v1.0.9
+**Fixes**
+- When resetting a wireless interface a bug was introduced with CCMP-128 set incorrectly
+
 ## v1.0.8
 **Improvements**
 - Support for CM5 board & installer
