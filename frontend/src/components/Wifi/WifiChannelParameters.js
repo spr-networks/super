@@ -441,9 +441,9 @@ const WifiChannelParameters = ({
     }
 
     if (groupValues.includes('gcmpon')) {
-      wifiParameters.Rsn_pairwise = "CCMP CCMP-128 GCMP GCMP-128"
+      wifiParameters.Rsn_pairwise = "CCMP CCMP-256 GCMP GCMP-256"
     } else {
-      wifiParameters.Rsn_pairwise = "CCMP CCMP-128"
+      wifiParameters.Rsn_pairwise = "CCMP CCMP-256"
     }
 
     if (groupValues.includes('wifi6')) {
