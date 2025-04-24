@@ -2,7 +2,9 @@
 set -e
 
 mkdir data
-VERSION="24.04.2"
+# 25.04 is not yet ready due to mt7915e, r8125 driver bugs
+# 24.10 is needed for cm5 support
+VERSION="24.10"
 IMG="ubuntu-${VERSION}-preinstalled-server-arm64+raspi.img.xz"
 
 cd ./data
