@@ -146,6 +146,17 @@ umount /boot/firmware
 rmdir /boot/firmware
 
 # cleanup
+
+#remove linux-firmware rarely used files, that are huge
+rm -rf /usr/lib/firmware/mrvl
+rm -rf /usr/lib/firmware/mellanox
+rm -rf /usr/lib/firmware/qcom
+rm -rf /usr/lib/firmware/nvidia
+rm -rf /usr/lib/firmware/amdgpu
+rm -rf /usr/lib/firmware/nvidia
+rm -rf /usr/lib/firmware/i915
+
+
 #apt-get autoremove -y && apt-get clean
 #rm -rf \
 #    /tmp/* \
