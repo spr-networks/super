@@ -30,7 +30,7 @@ RUN echo \
   $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
   tee /etc/apt/sources.list.d/docker.list > /dev/null && \
 apt-get update && \
-apt-get install -y --no-install-recommends binutils upx docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin git openssh-client && \
+apt-get install -y --no-install-recommends binutils docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin git openssh-client && \
 strip --strip-unneeded \
 /usr/bin/dockerd \
 /usr/bin/containerd \
@@ -38,8 +38,7 @@ strip --strip-unneeded \
 /usr/bin/ctr \
 /usr/bin/containerd-shim* \
 /usr/libexec/docker/cli-plugins/* && \
-upx -1 /usr/bin/dockerd /usr/bin/containerd /usr/bin/docker /usr/bin/ctr /usr/bin/containerd-shim* /usr/libexec/docker/cli-plugins/* && \
-apt-get remove -y binutils upx && \
+apt-get remove -y binutils && \
 rm -rf /var/lib/apt/lists/*
 
 
