@@ -1,4 +1,10 @@
 # Secure Programmable Router (SPR) Release Notes
+## v1.0.10
+**Improvements**
+- 24.10 installer for CM5 support
+**Notes**
+- 25.04 has driver compatibility problems with r8125, mt7915e pending
+
 ## v1.0.9
 **Fixes**
 - When resetting a wireless interface a bug was introduced with CCMP-128 set incorrectly
