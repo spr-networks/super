@@ -99,7 +99,7 @@ const TabViewComponent = ({ tabs, ...props }) => {
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ height: "100%" }}>
       <TabView
         navigationState={{
           index,
