@@ -22,6 +22,7 @@ import DynDns from 'views/DNS/DynDns'
 import CoreDns from 'views/DNS/CoreDns'
 import Wireguard from 'views/Wireguard'
 import Firewall from 'views/Firewall/Firewall'
+import FirewallTabView from 'views/Firewall/FirewallTabView'
 import FirewallSettings from 'views/Firewall/FirewallSettings'
 import PFW from 'views/Firewall/Pfw'
 import PFWTasks from 'views/System/PfwTasks'
@@ -181,7 +182,7 @@ const routes = [
         path: 'firewall',
         name: 'Firewall',
         icon: FlameIcon,
-        component: Firewall,
+        component: FirewallTabView,
         hideSimple: true,
         layout: 'admin'
       },

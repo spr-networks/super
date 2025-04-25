@@ -1,8 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import PropTypes from 'prop-types'
-import { Dimensions } from 'react-native'
+import { Dimensions, ScrollView } from 'react-native'
 import { TabView, SceneMap } from 'react-native-tab-view'
-
 import {
   Box,
   HStack,
@@ -15,81 +14,92 @@ import {
 
 const TabViewComponent = ({ tabs, ...props }) => {
   const [index, setIndex] = useState(0)
+
+  // Map tab data to a consistent format
+  const parsedTabs = Array.isArray(tabs)
+    ? tabs.map(tab => ({
+        title: tab.label || tab.title,
+        icon: tab.icon,
+        component: tab.component || tab.renderItem()
+      }))
+    : tabs;
+
   const [routes] = useState(
-    tabs.map((tab, key) => ({
+    parsedTabs.map((tab, key) => ({
       key: `tab${key}`,
       title: tab.title,
-      icon: tab.icon
+      icon: tab.icon,
+      description: tab.description
     }))
   )
 
   const initialLayout = {
-    width: Dimensions.get('window').width,
-    height: Dimensions.get('window').height
+    width: Dimensions.get('window').width
   }
 
-  //NOTE key maps to title in routes
-  let sceneMap = Object.fromEntries(
-    tabs.map((tab, i) => [`tab${i}`, tab.component])
-  )
-  const renderScene = SceneMap(sceneMap)
+  // Create scene map correctly to maintain component references
+  const renderScene = ({ route }) => {
+    const tabIndex = parseInt(route.key.replace('tab', ''), 10)
+    const TabComponent = parsedTabs[tabIndex].component
+
+    return (
+      <View style={{ flex: 1, height: '100%' }}>
+        <TabComponent />
+      </View>
+    )
+  }
 
   const renderTabBar = (props) => {
-    const inputRange = props.navigationState.routes.map((x, i) => i)
+    const { colorMode } = useColorMode()
     return (
-      <Box flexDirection="row">
-        {props.navigationState.routes.map((route, i) => {
-          const opacity = props.position.interpolate({
-            inputRange,
-            outputRange: inputRange.map((inputIndex) =>
-              inputIndex === i ? 1 : 0.5
-            )
-          })
-
-          const colorMode = useColorMode()
-          let color = colorMode == 'light' ? '$muted600' : '$muted600'
-          let borderColor = colorMode == 'light' ? '$muted200' : '$muted800'
-
-          if (index === i) {
-            color = colorMode == 'light' ? '$muted700' : '$muted400'
-            borderColor = '$cyan500'
-          }
-
-          return (
-            <Box
-              key={route.title}
-              borderBottomWidth={3}
-              borderColor={borderColor}
-              flex={1}
-              alignItems="center"
-              px="$2"
-              py="$4"
-              cursor="pointer"
-            >
-              <Pressable
-                onPress={() => {
-                  setIndex(i)
-                }}
-              >
-                {/*<Animated.Text style={{color}}>{route.title}</Animated.Text>*/}
-                <HStack space="xs" alignItems="center">
-                  {route.icon ? (
-                    <Icon as={route.icon} color={color} size="xs" />
-                  ) : null}
-                  <Text size="sm" color={color}>
-                    {route.title}
-                  </Text>
-                </HStack>
-              </Pressable>
-            </Box>
-          )
-        })}
+      <Box borderBottomWidth={1} borderColor={colorMode === 'light' ? '$muted200' : '$muted800'}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+        >
+          <HStack>
+            {props.navigationState.routes.map((route, i) => {
+              let color = colorMode === 'light' ? '$muted600' : '$muted600'
+              let borderColor = 'transparent'
+              let fontWeight = "normal"
+              if (index === i) {
+                color = colorMode === 'light' ? '$muted700' : '$muted400'
+                borderColor = '$cyan500'
+                fontWeight = "bold"
+              }
+              return (
+                <Pressable
+                  key={route.title}
+                  onPress={() => {
+                    setIndex(i)
+                  }}
+                >
+                  <Box
+                    borderBottomWidth={3}
+                    borderColor={borderColor}
+                    px="$3"
+                    py="$3"
+                  >
+                    <HStack space="xs" alignItems="center">
+                      {route.icon && (
+                        <Icon as={route.icon} color={color} size="sm" />
+                      )}
+                      <Text size="sm" numberOfLines={1} fontWeight={fontWeight}>
+                        {route.title}
+                      </Text>
+                    </HStack>
+                  </Box>
+                </Pressable>
+              )
+            })}
+          </HStack>
+        </ScrollView>
       </Box>
     )
   }
 
   return (
-    <View h="$full">
+    <View style={{ flex: 1 }}>
       <TabView
         navigationState={{
           index,
@@ -100,13 +110,17 @@ const TabViewComponent = ({ tabs, ...props }) => {
         onIndexChange={setIndex}
         initialLayout={initialLayout}
         swipeEnabled={false}
+        style={{ flex: 1 }}
       />
     </View>
   )
 }
 
 TabViewComponent.propTypes = {
-  tabs: PropTypes.array
+  tabs: PropTypes.oneOfType([
+    PropTypes.array,
+    PropTypes.object
+  ]),
 }
 
 export default TabViewComponent

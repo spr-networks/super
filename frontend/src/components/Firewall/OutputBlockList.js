@@ -37,7 +37,8 @@ const OutputBlockList = (props) => {
 
   const notifyChange = (t) => {
     refModal.current()
-    props.notifyChange('block')
+    if (props.notifyChange)
+      props.notifyChange('block')
   }
 
   return (
