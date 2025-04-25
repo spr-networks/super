@@ -117,7 +117,7 @@ ItemMenu.propTypes = {
   selectedKeys: PropTypes.array,
   onSelectionChange: PropTypes.func,
   trigger: PropTypes.func,
-  newDisabled: PropTypes.boolean
+  newDisabled: PropTypes.bool
 }
 
 TagMenu.propTypes = {
