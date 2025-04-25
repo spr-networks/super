@@ -421,7 +421,7 @@ const FlowList = (props) => {
   const [flows, setFlows] = useState([])
   const [filteredFlows, setFilteredFlows] = useState([])
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedFlowIndex, setSelectedFlowIndex] = useState(-1)
+  const [selectedFlowIndex, setSelectedFlowIndex] = useState(0)
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
   const [flow, setFlow] = useState({
     title: 'NewFlow',
@@ -909,12 +909,14 @@ const FlowList = (props) => {
           shadow={2}
           p="$4"
         >
-          <EditFlow
-            edit={true}
-            flow={flow}
-            onSubmit={onSubmit}
-            onReset={resetFlow}
-          />
+          { flow && (
+            <EditFlow
+              edit={true}
+              flow={flow}
+              onSubmit={onSubmit}
+              onReset={resetFlow}
+            />
+          )}
         </Box>
 
       </VStack>
