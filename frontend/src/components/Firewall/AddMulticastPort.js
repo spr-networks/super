@@ -1,10 +1,8 @@
 import React, { useContext } from 'react'
 import PropTypes from 'prop-types'
 import { AlertContext } from 'AppContext'
-
 import { firewallAPI } from 'api'
 import { Multicast } from 'api/Multicast'
-
 import {
   Button,
   ButtonText,
@@ -16,15 +14,16 @@ import {
   Input,
   InputField,
   HStack,
-  VStack
+  VStack,
+  Spinner
 } from '@gluestack-ui/themed'
-
 import InputSelect from 'components/InputSelect'
 
 class AddMulticastPortImpl extends React.Component {
   state = {
     Address: '',
-    Port: '0'
+    Port: '0',
+    isLoading: false
   }
 
   MulticastPorts = {
@@ -33,6 +32,7 @@ class AddMulticastPortImpl extends React.Component {
     '224.0.1.129': '319',
     '224.0.1.129-2': '320'
   }
+
   MulticastServices = [
     { label: 'mDNS', value: '224.0.0.251' },
     { label: 'SSDP', value: '239.255.255.250' },
@@ -42,7 +42,6 @@ class AddMulticastPortImpl extends React.Component {
 
   constructor(props) {
     super(props)
-
     this.handleChange = this.handleChange.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
   }
@@ -63,29 +62,36 @@ class AddMulticastPortImpl extends React.Component {
   }
 
   handleSubmit() {
+    this.setState({ isLoading: true })
+
     Multicast.config().then((config) => {
       config.Addresses.push({
         Address: this.state.Address + ':' + this.state.Port
       })
-
       Multicast.setConfig(config)
         .then((res) => {
           //great, now update the firewall also
-
           firewallAPI
             .setMulticast({ Port: this.state.Port, Upstream: false })
-            .then(() => {})
+            .then(() => {
+              if (this.props.notifyChange) {
+                this.props.notifyChange('multicast')
+              }
+              this.setState({ isLoading: false })
+            })
             .catch((err) => {
               this.props.alertContext.error('Firewall API Failure', err)
+              this.setState({ isLoading: false })
             })
-
-          if (this.props.notifyChange) {
-            this.props.notifyChange('multicast')
-          }
         })
         .catch((err) => {
           this.props.alertContext.error('Multicast API Failure', err)
+          this.setState({ isLoading: false })
         })
+    })
+    .catch((err) => {
+      this.props.alertContext.error('Failed to get Multicast config', err)
+      this.setState({ isLoading: false })
     })
   }
 
@@ -126,9 +132,17 @@ class AddMulticastPortImpl extends React.Component {
             </Input>
           </FormControl>
         </HStack>
-
-        <Button action="primary" size="md" onPress={this.handleSubmit}>
-          <ButtonText>Save</ButtonText>
+        <Button
+          action="primary"
+          size="md"
+          onPress={this.handleSubmit}
+          isDisabled={this.state.isLoading}
+        >
+          {this.state.isLoading ? (
+            <Spinner color="white" size="small" />
+          ) : (
+            <ButtonText>Save</ButtonText>
+          )}
         </Button>
       </VStack>
     )

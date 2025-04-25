@@ -16,7 +16,8 @@ import {
   Input,
   InputField,
   HStack,
-  VStack
+  VStack,
+  Spinner
 } from '@gluestack-ui/themed'
 
 import ProtocolRadio from 'components/Form/ProtocolRadio'
@@ -26,7 +27,8 @@ class AddForwardBlockImpl extends React.Component {
     SrcIP: '',
     DstIP: '',
     DstPort: '',
-    Protocol: 'tcp'
+    Protocol: 'tcp',
+    isLoading: false
   }
 
   constructor(props) {
@@ -51,10 +53,13 @@ class AddForwardBlockImpl extends React.Component {
       Protocol: this.state.Protocol
     }
 
+    this.setState({ isLoading: true })
+
     const done = (res) => {
       if (this.props.notifyChange) {
         this.props.notifyChange('forward_block')
       }
+      this.setState({ isLoading: false })
     }
 
     firewallAPI
@@ -62,6 +67,7 @@ class AddForwardBlockImpl extends React.Component {
       .then(done)
       .catch((err) => {
         this.props.alertContext.error('Firewall API Failure', err)
+        this.setState({ isLoading: false })
       })
   }
 
@@ -130,8 +136,17 @@ class AddForwardBlockImpl extends React.Component {
           />
         </FormControl>
 
-        <Button action="primary" size="md" onPress={this.handleSubmit}>
-          <ButtonText>Save</ButtonText>
+        <Button
+          action="primary"
+          size="md"
+          onPress={this.handleSubmit}
+          isDisabled={this.state.isLoading}
+        >
+          {this.state.isLoading ? (
+            <Spinner color="white" size="small" />
+          ) : (
+            <ButtonText>Save</ButtonText>
+          )}
         </Button>
       </VStack>
     )

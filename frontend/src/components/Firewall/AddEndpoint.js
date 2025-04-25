@@ -16,7 +16,8 @@ import {
   Input,
   InputField,
   VStack,
-  HStack
+  HStack,
+  Spinner
 } from '@gluestack-ui/themed'
 
 import ProtocolRadio from 'components/Form/ProtocolRadio'
@@ -27,7 +28,8 @@ class AddEndpointImpl extends React.Component {
     Protocol: 'tcp',
     IP: '',
     Port: 'any',
-    Address: ''
+    Address: '',
+    isLoading: false
   }
 
   constructor(props) {
@@ -51,15 +53,19 @@ class AddEndpointImpl extends React.Component {
       Port: this.state.Port
     }
 
+    this.setState({ isLoading: true })
+
     firewallAPI
       .addEndpoint(rule)
       .then((res) => {
         if (this.props.notifyChange) {
           this.props.notifyChange('endpoint')
         }
+        this.setState({ isLoading: false })
       })
       .catch((err) => {
         this.props.alertContext.error('Firewall API Failure' + err.message)
+        this.setState({ isLoading: false })
       })
   }
 
@@ -144,8 +150,17 @@ class AddEndpointImpl extends React.Component {
           />
         </FormControl>
 
-        <Button action="primary" size="md" onPress={this.handleSubmit}>
-          <ButtonText>Save</ButtonText>
+        <Button
+          action="primary"
+          size="md"
+          onPress={this.handleSubmit}
+          isDisabled={this.state.isLoading}
+        >
+          {this.state.isLoading ? (
+            <Spinner color="white" size="small" />
+          ) : (
+            <ButtonText>Save</ButtonText>
+          )}
         </Button>
       </VStack>
     )

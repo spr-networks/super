@@ -1,8 +1,6 @@
 import React, { useContext, useState } from 'react'
 import { AlertContext } from 'AppContext'
-
 import { firewallAPI } from 'api'
-
 import {
   Box,
   Button,
@@ -14,17 +12,17 @@ import {
   Input,
   InputField,
   VStack,
-  Switch
+  Switch,
+  Spinner
 } from '@gluestack-ui/themed'
-
 import { Select, SelectItem } from 'components/Select'
 
 const AddServicePort = ({ notifyChange, ...props }) => {
   const context = useContext(AlertContext)
-
   const [Protocol, setProtocol] = useState('tcp')
   const [Port, setPort] = useState('0')
   const [UpstreamEnabled, setUpstreamEnabled] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = () => {
     let rule = {
@@ -33,15 +31,19 @@ const AddServicePort = ({ notifyChange, ...props }) => {
       UpstreamEnabled
     }
 
+    setIsLoading(true)
+
     firewallAPI
       .addServicePort(rule)
       .then((res) => {
         if (notifyChange) {
           notifyChange('service_port')
         }
+        setIsLoading(false)
       })
       .catch((err) => {
         context.error('Firewall API Failure: ' + err)
+        setIsLoading(false)
       })
   }
 
@@ -52,7 +54,6 @@ const AddServicePort = ({ notifyChange, ...props }) => {
           <FormControlLabel>
             <FormControlLabelText>Protocol</FormControlLabelText>
           </FormControlLabel>
-
           <Select
             selectedValue={Protocol}
             onValueChange={(value) => setProtocol(value)}
@@ -61,7 +62,6 @@ const AddServicePort = ({ notifyChange, ...props }) => {
             <SelectItem label="udp" value="udp" />
           </Select>
         </FormControl>
-
         <FormControl flex={1}>
           <FormControlLabel>
             <FormControlLabelText>Port</FormControlLabelText>
@@ -80,9 +80,17 @@ const AddServicePort = ({ notifyChange, ...props }) => {
           />
         </Box>
       </HStack>
-
-      <Button action="primary" size="md" onPress={handleSubmit}>
-        <ButtonText>Save</ButtonText>
+      <Button
+        action="primary"
+        size="md"
+        onPress={handleSubmit}
+        isDisabled={isLoading}
+      >
+        {isLoading ? (
+          <Spinner color="white" size="small" />
+        ) : (
+          <ButtonText>Save</ButtonText>
+        )}
       </Button>
     </VStack>
   )

@@ -22,7 +22,8 @@ import {
   InputField,
   Switch,
   Text,
-  VStack
+  VStack,
+  Spinner
 } from '@gluestack-ui/themed'
 
 import { TagItem, GroupItem, PolicyItem } from 'components/TagItem'
@@ -41,7 +42,8 @@ class AddContainerInterfaceRuleImpl extends React.Component {
     Policies: [],
     Groups: [],
     Tags: [],
-    GroupOptions: []
+    GroupOptions: [],
+    isLoading: false
   }
 
   defaultPolicies = ['wan', 'dns', 'lan', 'api', 'lan_upstream', 'disabled']
@@ -79,10 +81,13 @@ class AddContainerInterfaceRuleImpl extends React.Component {
       Tags: this.state.Tags
     }
 
+    this.setState({ isLoading: true })
+
     const done = (res) => {
       if (this.props.notifyChange) {
         this.props.notifyChange('custom_interface')
       }
+      this.setState({ isLoading: false })
     }
 
     firewallAPI
@@ -90,6 +95,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
       .then(done)
       .catch((err) => {
         this.props.alertContext.error('Firewall API Failure', err)
+        this.setState({ isLoading: false })
       })
   }
 
@@ -249,8 +255,17 @@ class AddContainerInterfaceRuleImpl extends React.Component {
           </FormControlHelper>
         </FormControl>
 
-        <Button action="primary" size="md" onPress={this.handleSubmit}>
-          <ButtonText>Save</ButtonText>
+        <Button
+          action="primary"
+          size="md"
+          onPress={this.handleSubmit}
+          isDisabled={this.state.isLoading}
+        >
+          {this.state.isLoading ? (
+            <Spinner color="white" size="small" />
+          ) : (
+            <ButtonText>Save</ButtonText>
+          )}
         </Button>
       </VStack>
     )
