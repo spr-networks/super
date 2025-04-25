@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react'
 import PropTypes from 'prop-types'
-import { Dimensions, ScrollView } from 'react-native'
+import { Platform, Dimensions, ScrollView } from 'react-native'
 import { TabView, SceneMap } from 'react-native-tab-view'
 import {
   Box,
@@ -55,7 +55,7 @@ const TabViewComponent = ({ tabs, ...props }) => {
       <Box borderBottomWidth={1} borderColor={colorMode === 'light' ? '$muted200' : '$muted800'}>
         <ScrollView
           horizontal
-          showsHorizontalScrollIndicator={false}
+          showsHorizontalScrollIndicator={Platform.OS === 'web' && window.innerWidth > 768}
         >
           <HStack>
             {props.navigationState.routes.map((route, i) => {
