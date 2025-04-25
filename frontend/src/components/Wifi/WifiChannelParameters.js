@@ -89,7 +89,6 @@ const WifiChannelParameters = ({
   //some wifi devices were reported to crash during auth if GCMP was enabled,
   // disable this less common cipher by default but let people enable it
   const [disableGCMP, setDisableGCMP] = useState(false)
-
   const [selectedMode, setSelectedMode] = useState(modes[0])
 
   let bandwidth5 = [
@@ -185,8 +184,13 @@ const WifiChannelParameters = ({
       newBandwidth
     )
 
+
+    let hasGCMP = config.rsn_pairwise.includes('GCMP')
+    if (hasGCMP) {
+      setGroupValues(groupValues.concat('gcmpon'))
+    }
+
     if (config.ieee80211ax == 1) {
-      setGroupValues(['wifi6'])
       if (!groupValues.includes('wifi6')) {
         setGroupValues(groupValues.concat('wifi6'))
       }
