@@ -3055,7 +3055,15 @@ func main() {
 
 	if isSetupMode() {
 		setupAPInit()
-		startExtension("wifid-setup/docker-compose.yml")
+
+		withRetry(10, 3, func() error {
+			ret := startExtension("wifid-setup/docker-compose.yml")
+			if ret == false {
+				return fmt.Errorf("failed to start wifid")
+			}
+			return nil
+		})
+
 	}
 
 	wireguardServer.Serve(unixWireguardListener)
