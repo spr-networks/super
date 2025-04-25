@@ -82,8 +82,7 @@ const ForwardList = (props) => {
           triggerText="Add Forward"
           triggerProps={{
             sx: {
-              '@base': { display: 'none' },
-              '@md': { display: list.length ? 'flex' : 'flex' }
+              display: 'flex'
             }
           }}
           modalRef={refModal}
@@ -148,7 +147,6 @@ const ForwardList = (props) => {
       ) : null}
 
       <Button
-        sx={{ '@md': { display: list.length ? 'none' : 'none' } }}
         action="primary"
         variant="solid"
         rounded="$none"

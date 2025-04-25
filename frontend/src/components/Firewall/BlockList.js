@@ -51,8 +51,7 @@ const BlockList = (props) => {
           triggerText="Add IP Block"
           triggerProps={{
             sx: {
-              '@base': { display: 'none' },
-              '@md': { display: list.length ? 'flex' : 'flex' }
+              display: 'flex'
             }
           }}
           modalRef={refModal}

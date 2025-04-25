@@ -12,17 +12,17 @@ import MDNSAdvertise from 'components/Firewall/MDNSAdvertise'
 const FWSettings = (props) => {
   const tabs = [
     {
-      title: 'ICMP Settings',
-      icon: ActivityIcon,     // Activity/ping icon makes sense for ICMP
-      component: () => <ICMP />
-    },
-    {
       title: 'Upstream Services',
       icon: ServerIcon,       // Server icon for service ports
       component: () => <UpstreamServicesList />
     },
     {
-      title: 'MDNS Advertise',
+      title: 'Ping/ICMP',
+      icon: ActivityIcon,     // Activity/ping icon makes sense for ICMP
+      component: () => <ICMP />
+    },
+    {
+      title: 'Multicast DNS',
       icon: RadioIcon,    // Broadcast icon for multicast names
       component: () => <MDNSAdvertise />
     }
