@@ -12,6 +12,7 @@ import {
   Box,
   Button,
   ButtonIcon,
+  ButtonText,
   FlatList,
   Heading,
   Icon,
@@ -25,20 +26,39 @@ import {
   ThreeDotsIcon,
   TrashIcon,
   CheckIcon,
-  CopyIcon
+  CopyIcon,
+  Input,
+  InputField,
+  InputIcon,
+  InputSlot,
+  Select,
+  SelectTrigger,
+  SelectInput,
+  SelectPortal,
+  SelectContent,
+  SelectItem,
+  SelectDragIndicator,
+  SelectDragIndicatorWrapper,
+  Divider,
+  Center,
+  Popover,
+  PopoverBackdrop,
+  PopoverBody,
+  PopoverContent,
+  FormControl,
+  Pressable
 } from '@gluestack-ui/themed'
 
 import { dateArrayToStr } from './Utils'
-import { PencilIcon, CircleSlashIcon } from 'lucide-react-native'
+import { PencilIcon, CircleSlashIcon, Search, ChevronLeft, ChevronRight, ChevronDownIcon, Plus } from 'lucide-react-native'
 
 import { Tooltip } from 'components/Tooltip'
 
 // Show flow card
 const Flow = ({ flow, ...props }) => {
-  // NOTE we have multiple but only support one atm.
-  const [title, setTitle] = useState(flow.title)
-  const [triggers, setTriggers] = useState(flow.triggers)
-  const [actions, setActions] = useState(flow.actions)
+  const [title, setTitle] = useState(flow?.title)
+  const [triggers, setTriggers] = useState(flow?.triggers)
+  const [actions, setActions] = useState(flow?.actions)
 
   useEffect(() => {
     if (flow?.triggers && flow?.actions) {
@@ -182,10 +202,12 @@ const Flow = ({ flow, ...props }) => {
       <VStack flex={1} space="md">
         <HStack space="md" alignItems="center">
           <HStack space="md">
+            <Text bold>{title}</Text>
+            <Text>{trigger.title}</Text>
             <Icon as={trigger.icon} color={trigger.color} />
+            <Text>{action.title}</Text>
             <Icon as={action.icon} color={action.color} />
           </HStack>
-          <Text bold>{title}</Text>
           {flow.disabled ? (
             <Text size="xs" color="$muted500">
               Disabled
@@ -193,23 +215,25 @@ const Flow = ({ flow, ...props }) => {
           ) : null}
         </HStack>
 
-        <HStack space="sm" flexWrap="wrap">
-          {Object.keys(trigger.values).map((key) => (
-            <Tooltip key={key} label={key}>
-              <Badge variant="outline" action="muted" size="xs">
-                <BadgeText>{displayValue(trigger.values[key], key)}</BadgeText>
-              </Badge>
-            </Tooltip>
-          ))}
+        { props.renderFields && (
+          <HStack space="sm" flexWrap="wrap">
+            {Object.keys(trigger.values).map((key) => (
+              <Tooltip key={key} label={key}>
+                <Badge variant="outline" action="muted" size="xs">
+                  <BadgeText>{displayValue(trigger.values[key], key)}</BadgeText>
+                </Badge>
+              </Tooltip>
+            ))}
 
-          {Object.keys(action.values).map((key) => (
-            <Tooltip key={key} label={key}>
-              <Badge variant="outline" action="muted" size="xs">
-                <BadgeText>{displayValue(action.values[key], key)}</BadgeText>
-              </Badge>
-            </Tooltip>
-          ))}
-        </HStack>
+            {Object.keys(action.values).map((key) => (
+              <Tooltip key={key} label={key}>
+                <Badge variant="outline" action="muted" size="xs">
+                  <BadgeText>{displayValue(action.values[key], key)}</BadgeText>
+                </Badge>
+              </Tooltip>
+            ))}
+          </HStack>
+        )}
       </VStack>
       {moreMenu}
     </VStack>
@@ -395,11 +419,17 @@ const convertTagRuleCard = (rule, index) => {
 const FlowList = (props) => {
   const context = useContext(AlertContext)
   const [flows, setFlows] = useState([])
+  const [filteredFlows, setFilteredFlows] = useState([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedFlowIndex, setSelectedFlowIndex] = useState(-1)
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false)
   const [flow, setFlow] = useState({
     title: 'NewFlow',
     triggers: [],
     actions: []
   })
+
+  const refInput = React.useRef(null)
 
   // empty new/edit flow when adding/modifying flows
   const resetFlow = () => {
@@ -408,6 +438,7 @@ const FlowList = (props) => {
       triggers: [],
       actions: []
     })
+    setSelectedFlowIndex(-1)
   }
 
   const fetchFlows = () => {
@@ -436,6 +467,12 @@ const FlowList = (props) => {
             ...result.TagRules.map((x, i) => convertTagRuleCard(x, i))
           ]
           setFlows(flows)
+          setFilteredFlows(flows)
+
+          // Set the editor to edit the first flow if available
+          if (flows.length > selectedFlowIndex) {
+            setFlow(flows[selectedFlowIndex])
+          }
         }
       })
       .catch((err) => {
@@ -447,6 +484,32 @@ const FlowList = (props) => {
   useEffect(() => {
     fetchFlows()
   }, [])
+
+  // Filter flows based on search query
+  const filterFlows = (query) => {
+    if (!query) {
+      setFilteredFlows(flows)
+      return
+    }
+
+    const lowercaseQuery = query.toLowerCase()
+    const filtered = flows.filter(f => {
+      // Search in title
+      if (f.title.toLowerCase().includes(lowercaseQuery)) {
+        return true
+      }
+
+      // Search in values (via JSON stringify)
+      const valuesString = JSON.stringify(f).toLowerCase()
+      return valuesString.includes(lowercaseQuery)
+    })
+
+    setFilteredFlows(filtered)
+  }
+
+  useEffect(() => {
+    filterFlows(searchQuery)
+  }, [searchQuery, flows])
 
   const onSubmit = (data) => {
     // NOTE we only have one trigger + one action for now
@@ -473,9 +536,6 @@ const FlowList = (props) => {
       .then((res) => {
         // update ui
         fetchFlows()
-
-        // empty new/edit flow when adding/modifying flows
-        resetFlow()
       })
       .catch((err) => {
         context.error(err)
@@ -541,97 +601,322 @@ const FlowList = (props) => {
   }
 
   const onDuplicate = (item) => {
-    //TODO add with title #2 + add to edit mode
     let newFlow = Object.assign({}, item)
     delete newFlow.index
     newFlow.title += '#copy'
-    saveFlow(newFlow).then((res) => {
+    //    //tbd -> duplicate should navigate to the latest one
+    saveFlow(newFlow, context).then((res) => {
       fetchFlows()
     })
   }
 
   const toggleDisable = (item) => {
     item.disabled = !item.disabled
-    saveFlow(item).then((res) => {
+    saveFlow(item, context).then((res) => {
       fetchFlows()
     })
   }
 
-  return (
-    <ScrollView sx={{ '@md': { height: '92vh' } }}>
-      <VStack sx={{ '@md': { flexDirection: 'row' } }}>
-        <VStack py="$4" sx={{ '@md': { flex: 1 } }}>
-          <HStack
-            px="$4"
-            pb="$4"
-            justifyContent="space-between"
-            alignContent="center"
-            space="sm"
-          >
-            <Heading size="md">Flows</Heading>
-            {!flows.length ? <Text>No flows configured</Text> : null}
-          </HStack>
+  const handleSelectFlow = (index) => {
+    if (index >= 0 && index < filteredFlows.length) {
+      setSelectedFlowIndex(index)
+      setFlow(filteredFlows[index])
+    }
+  }
 
-          <FlatList
-            data={flows}
-            renderItem={({ item, index }) => (
-              <Box
-                borderColor="$muted200"
-                borderBottomWidth="$1"
+  const navigateFlow = (direction) => {
+    const newIndex = selectedFlowIndex + direction
+    if (newIndex >= 0 && newIndex < filteredFlows.length) {
+      handleSelectFlow(newIndex)
+    }
+  }
+
+  const renderEmptyState = () => (
+    <Center p="$8">
+      <VStack space="md" alignItems="center">
+      </VStack>
+    </Center>
+  )
+
+  const renderCurrentFlow = () => {
+    if (filteredFlows.length === 0 || !filteredFlows[selectedFlowIndex]) {
+      return renderEmptyState()
+    }
+
+    return (
+      <Flow
+        flow={filteredFlows[selectedFlowIndex]}
+        onDelete={() => onDelete(filteredFlows[selectedFlowIndex], selectedFlowIndex)}
+        onDisable={() => toggleDisable(filteredFlows[selectedFlowIndex])}
+        onDuplicate={() => onDuplicate(filteredFlows[selectedFlowIndex])}
+        onEdit={() => onEdit(filteredFlows[selectedFlowIndex], selectedFlowIndex)}
+        renderFields={false}
+      />
+    )
+  }
+
+  return (
+    <ScrollView>
+      <Box
+        bg="$backgroundCardLight"
+        borderBottomWidth={1}
+        borderBottomColor="$borderColorLight"
+        py="$4"
+        px="$6"
+        shadow="$1"
+        sx={{
+          _dark: {
+            bg: "$backgroundCardDark",
+            borderBottomColor: "$borderColorDark"
+          }
+        }}
+      >
+        <VStack space="md">
+          <HStack alignItems="center" justifyContent="space-between">
+            <Heading size="lg" color="$textLight900" sx={{ _dark: { color: "$textDark50" } }}>
+              Flows
+            </Heading>
+
+            <HStack space="md" alignItems="center">
+              <HStack
+                space="xs"
+                alignItems="center"
+                bg="$backgroundLight100"
+                px="$2"
+                py="$1"
+                borderRadius="$md"
+                borderWidth={1}
+                borderColor="$borderColorLight"
                 sx={{
-                  _dark: { borderColor: '$muted900' },
-                  '@md': {
-                    pb: '$4',
-                    px: '$4',
-                    borderBottomWidth: '$0'
+                  _dark: {
+                    bg: "$backgroundDark700",
+                    borderColor: "$borderColorDark"
                   }
                 }}
               >
-                <Flow
-                  flow={item}
-                  onDelete={() => onDelete(item, index)}
-                  onDisable={toggleDisable}
-                  onDuplicate={onDuplicate}
-                  onEdit={() => onEdit(item, index)}
-                />
-              </Box>
-            )}
-            listKey="flow"
-            keyExtractor={(item, index) => index}
-          />
-        </VStack>
+                <Button
+                  variant="link"
+                  p="$1"
+                  isDisabled={selectedFlowIndex === 0 || filteredFlows.length === 0}
+                  onPress={() => navigateFlow(-1)}
+                >
+                  <Icon as={ChevronLeft} color={selectedFlowIndex === 0 || filteredFlows.length === 0 ? "$textLight400" : "$primary500"} />
+                </Button>
 
-        <VStack
-          sx={{
-            '@md': {
-              ml: 'auto',
-              maxHeight: '$3/4',
-              maxWidth: '$1/2'
-            }
-          }}
-          flex={1}
-        >
-          {/*<Heading size="sm" my="$4" px="$4">
-            Add &amp; Edit flow
-          </Heading>*/}
+                <Text fontSize="$sm" fontWeight="$medium" color="$textLight900" sx={{ _dark: { color: "$textDark50" } }}>
+                  {filteredFlows.length > 0 ? `${selectedFlowIndex + 1} / ${filteredFlows.length}` : "0 / 0"}
+                </Text>
 
-          <Box
-            bg="$backgroundCardLight"
-            sx={{
-              '@md': { rounded: 'md' },
-              _dark: { bg: '$backgroundCardDark' }
-            }}
-            minH={450}
-            p="$4"
+                <Button
+                  variant="link"
+                  p="$1"
+                  isDisabled={selectedFlowIndex === filteredFlows.length - 1 || filteredFlows.length === 0}
+                  onPress={() => navigateFlow(1)}
+                >
+                  <Icon as={ChevronRight} color={selectedFlowIndex === filteredFlows.length - 1 || filteredFlows.length === 0 ? "$textLight400" : "$primary500"} />
+                </Button>
+              </HStack>
+
+              <Button
+                bg="$primary500"
+                borderRadius="$lg"
+                px={{ base: "$2", md: "$4" }}
+                py="$2"
+                onPress={resetFlow}
+                sx={{
+                  ':hover': { bg: '$primary600' },
+                  ':active': { bg: '$primary700' },
+                  _dark: {
+                    bg: "$primary600",
+                    ':hover': { bg: '$primary500' },
+                    ':active': { bg: '$primary400' }
+                  }
+                }}
+              >
+                <Icon as={Plus} color="$white" />
+                <ButtonText
+                  color="$white"
+                  fontWeight="$medium"
+                  display={{ base: "none", md: "flex" }}
+                  ml={{ md: "$1.5" }}
+                >
+                  Create New Flow
+                </ButtonText>
+              </Button>
+            </HStack>
+          </HStack>
+
+          <HStack
+            alignItems="center"
+            display={{ md: "flex" }}
+            mt={{ base: "$2", md: 0 }}
           >
-            <EditFlow
-              edit={true}
-              flow={flow}
-              onSubmit={onSubmit}
-              onReset={resetFlow}
+            <Divider
+              orientation="vertical"
+              height="$6"
+              mr="$4"
+              display={{ base: "none", md: "flex" }}
+              position={{ md: "absolute" }}
+              left={{ md: "$36" }}
+              top={{ md: "$4" }}
             />
-          </Box>
+
+            <Popover
+              placement="bottom left"
+              offset={10}
+              trigger={triggerProps => (
+                <Box flex={1} maxWidth={{ md: "$96" }} ml={{ md: "$40" }} mt={{ md: "-$12" }}>
+                  <Pressable {...triggerProps} onPress={() => setIsPopoverOpen(true)}>
+                    <Input
+                      size="md"
+                      borderColor="$borderColorLight"
+                      borderRadius="$lg"
+                      bg="$backgroundLight50"
+                      sx={{
+                        ':focus': {
+                          borderColor: '$primary500',
+                          bg: '$backgroundLight100'
+                        },
+                        _dark: {
+                          borderColor: "$borderColorDark",
+                          bg: "$backgroundDark800",
+                          ':focus': {
+                            borderColor: '$primary400',
+                            bg: '$backgroundDark700'
+                          }
+                        }
+                      }}
+                    >
+                      <InputSlot pl="$3">
+                        <InputIcon as={Search} color="$textLight400" />
+                      </InputSlot>
+                      <InputField
+                        placeholder="Search flows..."
+                        value={filteredFlows.length > 0 ? filteredFlows[selectedFlowIndex]?.title : "No flows"}
+                        editable={false}
+                        color="$textLight900"
+                        placeholderTextColor="$textLight400"
+                        sx={{
+                          _dark: {
+                            color: "$textDark50",
+                            placeholderTextColor: "$textDark400"
+                          }
+                        }}
+                      />
+                      <InputSlot pr="$3">
+                        <InputIcon as={ChevronDownIcon} color="$textLight400" />
+                      </InputSlot>
+                    </Input>
+                  </Pressable>
+                </Box>
+              )}
+              isOpen={isPopoverOpen}
+              onClose={() => setIsPopoverOpen(false)}
+            >
+              <PopoverContent w="$80" maxW="$full">
+                <PopoverBody p="$3">
+                  <VStack space="md">
+                    <FormControl>
+                      <Input size="sm" rounded="$md">
+                        <InputSlot pl="$3">
+                          <InputIcon as={Search} />
+                        </InputSlot>
+                        <InputField
+                          ref={refInput}
+                          autoFocus={true}
+                          value={searchQuery}
+                          onChangeText={(text) => {
+                            setSearchQuery(text)
+                            filterFlows(text)
+                          }}
+                          placeholder="Filter flows..."
+                        />
+                      </Input>
+                    </FormControl>
+                    <ScrollView maxHeight={350} showsVerticalScrollIndicator={false}>
+                      <VStack space="sm" justifyContent="flex-start">
+                        {filteredFlows.length === 0 ? (
+                          <Text textAlign="center" p="$2" color="$muted600">No matching flows found</Text>
+                        ) : (
+                          filteredFlows.map((item, index) => (
+                            <Pressable
+                              key={`flow-${index}`}
+                              onPress={() => {
+                                setSelectedFlowIndex(index)
+                                setFlow(item)
+                                setIsPopoverOpen(false)
+                              }}
+                              borderWidth="$1"
+                              borderColor={selectedFlowIndex === index ? "$primary500" : "$primary200"}
+                              px="$4"
+                              py="$3"
+                              rounded="$md"
+                              sx={{
+                                ':hover': { borderColor: '$primary400', bg: '$primary50' },
+                                _dark: {
+                                  borderColor: selectedFlowIndex === index ? "$primary500" : "$coolGray600",
+                                  ':hover': { borderColor: '$coolGray700', bg: '$coolGray800' }
+                                }
+                              }}
+                            >
+                              <HStack space="md" alignItems="center">
+                                {item.triggers[0]?.icon && (
+                                  <Icon as={item.triggers[0].icon} color={item.triggers[0].color} size="sm" />
+                                )}
+                                {item.actions[0]?.icon && (
+                                  <Icon as={item.actions[0].icon} color={item.actions[0].color} size="sm" />
+                                )}
+                                <Text size="sm" flex={1}>{item.title}</Text>
+                                {item.disabled && (
+                                  <Text size="xs" color="$muted500">
+                                    (Disabled)
+                                  </Text>
+                                )}
+                              </HStack>
+                            </Pressable>
+                          ))
+                        )}
+                      </VStack>
+                    </ScrollView>
+                  </VStack>
+                </PopoverBody>
+              </PopoverContent>
+            </Popover>
+          </HStack>
         </VStack>
+      </Box>
+
+      <VStack space="md" p="$4">
+        <Box
+          bg="$backgroundCardLight"
+          sx={{
+            _dark: { bg: '$backgroundCardDark' },
+            rounded: 'md'
+          }}
+          shadow={2}
+        >
+          {renderCurrentFlow()}
+        </Box>
+
+        <Divider my="$4" />
+
+        <Box
+          bg="$backgroundCardLight"
+          sx={{
+            _dark: { bg: '$backgroundCardDark' },
+            rounded: 'md'
+          }}
+          shadow={2}
+          p="$4"
+        >
+          <EditFlow
+            edit={true}
+            flow={flow}
+            onSubmit={onSubmit}
+            onReset={resetFlow}
+          />
+        </Box>
+
       </VStack>
     </ScrollView>
   )
