@@ -5,6 +5,7 @@ import { NewCard } from './FlowCard'
 import { numToDays, toCron } from './FlowCards'
 import EditFlow from './EditFlow'
 import { pfwAPI } from 'api/Pfw'
+import { TouchableOpacity, Platform } from 'react-native'
 
 import {
   Badge,
@@ -41,20 +42,22 @@ import {
   SelectDragIndicatorWrapper,
   Divider,
   Center,
-  Popover,
-  PopoverBackdrop,
-  PopoverBody,
-  PopoverContent,
+  Modal,
+  ModalBackdrop,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
   FormControl,
   Pressable
 } from '@gluestack-ui/themed'
 
 import { dateArrayToStr } from './Utils'
-import { PencilIcon, CircleSlashIcon, Search, ChevronLeft, ChevronRight, ChevronDownIcon, Plus } from 'lucide-react-native'
+import { PencilIcon, CircleSlashIcon, Search, ChevronLeft, ChevronRight, ChevronDownIcon, Plus, X } from 'lucide-react-native'
 
 import { Tooltip } from 'components/Tooltip'
 
-// Show flow card
 const Flow = ({ flow, ...props }) => {
   const [title, setTitle] = useState(flow?.title)
   const [triggers, setTriggers] = useState(flow?.triggers)
@@ -68,15 +71,12 @@ const Flow = ({ flow, ...props }) => {
     }
   }, [flow])
 
-  //set title when we update actions
   useEffect(() => {
     if (title == 'NewFlow' && actions.length) {
       let title = actions[0].title
       setTitle(title)
     }
   }, [actions])
-
-  //mini
 
   const triggerBtn = (triggerProps) => (
     <Button action="secondary" variant="link" ml="auto" {...triggerProps}>
@@ -152,8 +152,6 @@ const Flow = ({ flow, ...props }) => {
       </MenuItem>
     </Menu>
   )
-
-  // TODO mini component
 
   let trigger = triggers[0],
     action = actions[0]
@@ -322,8 +320,6 @@ const convertForwardingRuleCard = (rule, index) => {
 
   let action
 
-  //NOTE: titles have to match or they will be invisible
-
   if (rule.DstInterface == '' && rule.Protocol != '') {
     action = NewCard({
       title: 'Forward',
@@ -422,7 +418,7 @@ const FlowList = (props) => {
   const [filteredFlows, setFilteredFlows] = useState([])
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedFlowIndex, setSelectedFlowIndex] = useState(0)
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const [flow, setFlow] = useState({
     title: 'NewFlow',
     triggers: [],
@@ -431,7 +427,6 @@ const FlowList = (props) => {
 
   const refInput = React.useRef(null)
 
-  // empty new/edit flow when adding/modifying flows
   const resetFlow = () => {
     setFlow({
       title: 'NewFlow',
@@ -469,7 +464,6 @@ const FlowList = (props) => {
           setFlows(flows)
           setFilteredFlows(flows)
 
-          // Set the editor to edit the first flow if available
           if (flows.length > selectedFlowIndex) {
             setFlow(flows[selectedFlowIndex])
           }
@@ -480,12 +474,10 @@ const FlowList = (props) => {
       })
   }
 
-  // load flows
   useEffect(() => {
     fetchFlows()
   }, [])
 
-  // Filter flows based on search query
   const filterFlows = (query) => {
     if (!query) {
       setFilteredFlows(flows)
@@ -494,12 +486,10 @@ const FlowList = (props) => {
 
     const lowercaseQuery = query.toLowerCase()
     const filtered = flows.filter(f => {
-      // Search in title
       if (f.title.toLowerCase().includes(lowercaseQuery)) {
         return true
       }
 
-      // Search in values (via JSON stringify)
       const valuesString = JSON.stringify(f).toLowerCase()
       return valuesString.includes(lowercaseQuery)
     })
@@ -512,7 +502,6 @@ const FlowList = (props) => {
   }, [searchQuery, flows])
 
   const onSubmit = (data) => {
-    // NOTE we only have one trigger + one action for now
     if (!data.triggers.length) {
       return context.error('missing trigger')
     }
@@ -526,15 +515,12 @@ const FlowList = (props) => {
     let actions = data.actions.map((card) => NewCard({ ...card }))
 
     let flow = { title, triggers, actions }
-    // update
     if (data.index !== undefined) {
       flow.index = data.index
     }
 
-    // send flow to api
     saveFlow(flow, context)
       .then((res) => {
-        // update ui
         fetchFlows()
       })
       .catch((err) => {
@@ -548,7 +534,6 @@ const FlowList = (props) => {
 
   const onDelete = (flow, _index) => {
     let index = flow.index
-    // update ui
     const done = () => {
       fetchFlows()
     }
@@ -604,7 +589,6 @@ const FlowList = (props) => {
     let newFlow = Object.assign({}, item)
     delete newFlow.index
     newFlow.title += '#copy'
-    //    //tbd -> duplicate should navigate to the latest one
     saveFlow(newFlow, context).then((res) => {
       fetchFlows()
     })
@@ -621,6 +605,7 @@ const FlowList = (props) => {
     if (index >= 0 && index < filteredFlows.length) {
       setSelectedFlowIndex(index)
       setFlow(filteredFlows[index])
+      setIsModalOpen(false)
     }
   }
 
@@ -634,6 +619,17 @@ const FlowList = (props) => {
   const renderEmptyState = () => (
     <Center p="$8">
       <VStack space="md" alignItems="center">
+        <Text color="$muted600" textAlign="center">No flows available</Text>
+        <Button
+          variant="solid"
+          size="md"
+          onPress={resetFlow}
+          bg="$primary500"
+          borderRadius="$lg"
+        >
+          <Icon as={Plus} color="$white" mr="$1.5" />
+          <ButtonText color="$white">Create New Flow</ButtonText>
+        </Button>
       </VStack>
     </Center>
   )
@@ -761,91 +757,124 @@ const FlowList = (props) => {
               top={{ md: "$4" }}
             />
 
-            <Popover
-              placement="bottom left"
-              offset={10}
-              trigger={triggerProps => (
-                <Box flex={1} maxWidth={{ md: "$96" }} ml={{ md: "$40" }} mt={{ md: "-$12" }}>
-                  <Pressable {...triggerProps} onPress={() => setIsPopoverOpen(true)}>
-                    <Input
-                      size="md"
-                      borderColor="$borderColorLight"
-                      borderRadius="$lg"
-                      bg="$backgroundLight50"
-                      sx={{
-                        ':focus': {
-                          borderColor: '$primary500',
-                          bg: '$backgroundLight100'
-                        },
-                        _dark: {
-                          borderColor: "$borderColorDark",
-                          bg: "$backgroundDark800",
-                          ':focus': {
-                            borderColor: '$primary400',
-                            bg: '$backgroundDark700'
-                          }
-                        }
-                      }}
-                    >
-                      <InputSlot pl="$3">
-                        <InputIcon as={Search} color="$textLight400" />
-                      </InputSlot>
-                      <InputField
-                        placeholder="Search flows..."
-                        value={filteredFlows.length > 0 ? filteredFlows[selectedFlowIndex]?.title : "No flows"}
-                        editable={false}
-                        color="$textLight900"
-                        placeholderTextColor="$textLight400"
-                        sx={{
-                          _dark: {
-                            color: "$textDark50",
-                            placeholderTextColor: "$textDark400"
-                          }
-                        }}
-                      />
-                      <InputSlot pr="$3">
-                        <InputIcon as={ChevronDownIcon} color="$textLight400" />
-                      </InputSlot>
-                    </Input>
-                  </Pressable>
-                </Box>
-              )}
-              isOpen={isPopoverOpen}
-              onClose={() => setIsPopoverOpen(false)}
+            <Box flex={1} maxWidth={{ md: "$96" }} ml={{ md: "$40" }} mt={{ md: "-$12" }}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setIsModalOpen(true)}
+              >
+                <Input
+                  size="md"
+                  borderColor="$borderColorLight"
+                  borderRadius="$lg"
+                  bg="$backgroundLight50"
+                  sx={{
+                    ':focus': {
+                      borderColor: '$primary500',
+                      bg: '$backgroundLight100'
+                    },
+                    _dark: {
+                      borderColor: "$borderColorDark",
+                      bg: "$backgroundDark800",
+                      ':focus': {
+                        borderColor: '$primary400',
+                        bg: '$backgroundDark700'
+                      }
+                    }
+                  }}
+                >
+                  <InputSlot pl="$3">
+                    <InputIcon as={Search} color="$textLight400" />
+                  </InputSlot>
+                  <InputField
+                    placeholder="Search flows..."
+                    value={filteredFlows.length > 0 ? filteredFlows[selectedFlowIndex]?.title : "No flows"}
+                    editable={false}
+                    pointerEvents="none"
+                    color="$textLight900"
+                    placeholderTextColor="$textLight400"
+                    sx={{
+                      _dark: {
+                        color: "$textDark50",
+                        placeholderTextColor: "$textDark400"
+                      }
+                    }}
+                  />
+                  <InputSlot pr="$3">
+                    <InputIcon as={ChevronDownIcon} color="$textLight400" />
+                  </InputSlot>
+                </Input>
+              </TouchableOpacity>
+            </Box>
+
+            <Modal
+              isOpen={isModalOpen}
+              onClose={() => setIsModalOpen(false)}
+              useRNModal={Platform.OS === 'web'}
+              avoidKeyboard
+              closeOnOverlayClick
             >
-              <PopoverContent w="$80" maxW="$full">
-                <PopoverBody p="$3">
-                  <VStack space="md">
-                    <FormControl>
-                      <Input size="sm" rounded="$md">
+              <ModalBackdrop />
+              <ModalContent
+                borderRadius="$lg"
+                width="$full"
+                maxWidth={450}
+                marginX="auto"
+                overflow="hidden"
+              >
+                <ModalHeader
+                  borderBottomWidth={1}
+                  borderBottomColor="$borderColor"
+                  bg="$primary50"
+                  px="$4"
+                  py="$3"
+                >
+                  <HStack alignItems="center" justifyContent="space-between" width="$full">
+                    <Heading size="sm">Select Flow</Heading>
+                    <ModalCloseButton>
+                      <Icon as={X} />
+                    </ModalCloseButton>
+                  </HStack>
+                </ModalHeader>
+
+                <ModalBody p="$0">
+                  <VStack>
+                    <Box
+                      p="$3"
+                      borderBottomWidth={1}
+                      borderBottomColor="$borderColor"
+                    >
+                      <Input
+                        size="md"
+                        variant="outline"
+                        borderRadius="$full"
+                        bg="$coolGray50"
+                      >
                         <InputSlot pl="$3">
                           <InputIcon as={Search} />
                         </InputSlot>
                         <InputField
-                          ref={refInput}
-                          autoFocus={true}
+                          placeholder="Search flows..."
                           value={searchQuery}
                           onChangeText={(text) => {
                             setSearchQuery(text)
                             filterFlows(text)
                           }}
-                          placeholder="Filter flows..."
+                          autoFocus={Platform.OS === 'web'}
                         />
                       </Input>
-                    </FormControl>
-                    <ScrollView maxHeight={350} showsVerticalScrollIndicator={false}>
-                      <VStack space="sm" justifyContent="flex-start">
+                    </Box>
+
+                    <ScrollView maxHeight={400} showsVerticalScrollIndicator={true}>
+                      <VStack space="sm" p="$3">
                         {filteredFlows.length === 0 ? (
-                          <Text textAlign="center" p="$2" color="$muted600">No matching flows found</Text>
+                          <Center py="$8">
+                            <Text color="$muted600" textAlign="center">No matching flows found</Text>
+                          </Center>
                         ) : (
                           filteredFlows.map((item, index) => (
                             <Pressable
                               key={`flow-${index}`}
-                              onPress={() => {
-                                setSelectedFlowIndex(index)
-                                setFlow(item)
-                                setIsPopoverOpen(false)
-                              }}
+                              onPress={() => handleSelectFlow(index)}
                               borderWidth="$1"
                               borderColor={selectedFlowIndex === index ? "$primary500" : "$primary200"}
                               px="$4"
@@ -879,9 +908,9 @@ const FlowList = (props) => {
                       </VStack>
                     </ScrollView>
                   </VStack>
-                </PopoverBody>
-              </PopoverContent>
-            </Popover>
+                </ModalBody>
+              </ModalContent>
+            </Modal>
           </HStack>
         </VStack>
       </Box>
