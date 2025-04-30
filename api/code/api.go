@@ -1448,8 +1448,10 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		if dev.RecentIP != "" {
 			new_ip := net.ParseIP(dev.RecentIP)
 			if new_ip != nil && isTinyNetDeviceIP(new_ip.String()) {
-				val.RecentIP = new_ip.String()
-				refreshIP = true
+				if val.RecentIP != new_ip.String() {
+					val.RecentIP = new_ip.String()
+					refreshIP = true
+				}
 			} else {
 				if new_ip == nil {
 					return "Invalid IP assignment", 400
