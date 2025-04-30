@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import PropTypes from 'prop-types'
-import { Platform, StyleSheet } from 'react-native'
+import { Platform, StyleSheet, TouchableOpacity } from 'react-native'
 import { deviceAPI, groupAPI, firewallAPI } from 'api'
 import {
   GlobeIcon,
@@ -98,9 +98,41 @@ const groupOptionsByType = (options) => {
   return groups
 }
 
+const styles = StyleSheet.create({
+  searchInput: {
+    minHeight: Platform.OS === 'ios' ? 44 : 48,
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  listItem: {
+    minHeight: Platform.OS === 'ios' ? 56 : 60,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  }
+});
+
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
 const ClientSelect = (props) => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const debouncedSearchQuery = useDebounce(searchQuery, 150)
   const [allOptions, setAllOptions] = useState([])
   const [filteredOptions, setFilteredOptions] = useState([])
   const [selectedOption, setSelectedOption] = useState(null)
@@ -109,6 +141,7 @@ const ClientSelect = (props) => {
   const [inputValue, setInputValue] = useState("")
   const [isEditing, setIsEditing] = useState(false)
   const [useCustomValue, setUseCustomValue] = useState(false)
+  const [isDataLoaded, setIsDataLoaded] = useState(false)
 
   const cleanIp = (ip) => ip.replace(/\/.*/, '')
 
@@ -132,10 +165,25 @@ const ClientSelect = (props) => {
   }
 
   useEffect(() => {
+    if (isDataLoaded && !props.value) return;
+
     const loadOptions = async () => {
       setIsLoading(true)
       try {
-        const devices = await deviceAPI.list()
+        const devicesPromise = deviceAPI.list();
+
+        let groupsPromise = null;
+        let firewallConfigPromise = null;
+
+        if (props.showGroups) {
+          groupsPromise = groupAPI.list();
+        }
+
+        if (props.showEndpoints) {
+          firewallConfigPromise = firewallAPI.config();
+        }
+
+        const devices = await devicesPromise;
 
         let deviceOptions = Object.values(devices)
           .filter((d) => d.RecentIP.length)
@@ -174,9 +222,9 @@ const ClientSelect = (props) => {
           allOptionsList = [...allOptionsList, ...policyOptions]
         }
 
-        if (props.showGroups) {
+        if (props.showGroups && groupsPromise) {
           try {
-            const groups = await groupAPI.list()
+            const groups = await groupsPromise;
             const groupOptions = groups.map((g) => ({
               label: g.Name,
               value: { Group: g.Name },
@@ -195,7 +243,7 @@ const ClientSelect = (props) => {
         if (props.showTags) {
           const tagNames = [...new Set(
             Object.values(devices)
-              .map((device) => device.DeviceTags)
+              .map((device) => device.DeviceTags || [])
               .flat()
               .filter((tagName) => tagName !== '')
           )]
@@ -212,9 +260,9 @@ const ClientSelect = (props) => {
           allOptionsList = [...allOptionsList, ...tagOptions]
         }
 
-        if (props.showEndpoints) {
+        if (props.showEndpoints && firewallConfigPromise) {
           try {
-            const config = await firewallAPI.config()
+            const config = await firewallConfigPromise;
             const endpointOptions = config.Endpoints.map((e) => ({
               label: e.RuleName,
               value: { Endpoint: e.RuleName },
@@ -230,9 +278,12 @@ const ClientSelect = (props) => {
           }
         }
 
+        const groupedOptionsData = groupOptionsByType(allOptionsList);
+
         setAllOptions(allOptionsList)
         setFilteredOptions(allOptionsList)
-        setGroupedOptions(groupOptionsByType(allOptionsList))
+        setGroupedOptions(groupedOptionsData)
+        setIsDataLoaded(true)
 
         if (props.value) {
           const found = allOptionsList.find(opt => {
@@ -258,18 +309,19 @@ const ClientSelect = (props) => {
     }
 
     loadOptions()
-  }, [props.value, props.show_CIDR_Defaults, props.showPolicies, props.showGroups, props.showTags, props.showEndpoints])
+  }, [props.value, props.show_CIDR_Defaults, props.showPolicies, props.showGroups, props.showTags, props.showEndpoints, isDataLoaded])
 
   useEffect(() => {
     if (!allOptions.length) return
 
-    if (!searchQuery) {
+    if (!debouncedSearchQuery) {
       setFilteredOptions(allOptions)
       setGroupedOptions(groupOptionsByType(allOptions))
       return
     }
 
-    const lowercaseQuery = searchQuery.toLowerCase()
+    const lowercaseQuery = debouncedSearchQuery.toLowerCase()
+
     const filtered = allOptions.filter(opt =>
       opt.label.toLowerCase().includes(lowercaseQuery) ||
       (opt.subtitle && opt.subtitle.toLowerCase().includes(lowercaseQuery))
@@ -278,9 +330,9 @@ const ClientSelect = (props) => {
     setFilteredOptions(filtered)
     setGroupedOptions(groupOptionsByType(filtered))
 
-    setUseCustomValue(searchQuery.trim() !== "" &&
+    setUseCustomValue(debouncedSearchQuery.trim() !== "" &&
       !filtered.some(opt => opt.label.toLowerCase() === lowercaseQuery))
-  }, [searchQuery, allOptions])
+  }, [debouncedSearchQuery, allOptions])
 
   const handleSelectOption = (option) => {
     setSelectedOption(option)
@@ -338,18 +390,13 @@ const ClientSelect = (props) => {
     }
 
     return (
-      <Pressable
+      <TouchableOpacity
         onPress={() => handleSelectOption(item)}
-        py="$3"
-        px="$4"
-        bg={isSelected ? "$primary100" : "transparent"}
-        _hover={{ bg: isSelected ? "$primary200" : "$coolGray100" }}
-        sx={{
-          _dark: {
-            bg: isSelected ? "$primary800" : "transparent",
-            _hover: { bg: isSelected ? "$primary700" : "$coolGray800" }
-          }
-        }}
+        style={[
+          styles.listItem,
+          { backgroundColor: isSelected ? (Platform.OS === 'web' ? "$primary100" : '#E6F2FF') : 'transparent' }
+        ]}
+        activeOpacity={0.7}
       >
         <HStack space="md" alignItems="center">
           {item.type === 'device' ? (
@@ -384,7 +431,7 @@ const ClientSelect = (props) => {
             <Icon as={CheckIcon} color="$primary500" size="sm" />
           )}
         </HStack>
-      </Pressable>
+      </TouchableOpacity>
     )
   }
 
@@ -440,8 +487,10 @@ const ClientSelect = (props) => {
               />
             </Input>
           ) : (
-            <Pressable
+            <TouchableOpacity
               onPress={() => !props.isDisabled && setIsModalOpen(true)}
+              activeOpacity={0.7}
+              style={{ borderRadius: 8 }}
             >
               <Input
                 size={props.size || "md"}
@@ -492,30 +541,31 @@ const ClientSelect = (props) => {
                   placeholder={props.placeholder || 'Select client'}
                   value={displayValue}
                   editable={false}
+                  pointerEvents="none"
                 />
                 <InputSlot pr="$3">
                   <InputIcon as={ChevronDownIcon} />
                 </InputSlot>
               </Input>
-            </Pressable>
+            </TouchableOpacity>
           )}
         </Box>
         {!isEditing && !props.isDisabled && (
-          <Pressable
+          <TouchableOpacity
             onPress={() => setIsEditing(true)}
-            backgroundColor="$primary100"
-            justifyContent="center"
-            alignItems="center"
-            borderRadius="$lg"
-            padding="$2"
-            _hover={{ bg: "$primary200" }}
-            _dark={{
-              backgroundColor: "$primary800",
-              _hover: { bg: "$primary700" }
+            style={{
+              backgroundColor: Platform.OS === 'web' ? "$primary100" : '#E6F2FF',
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderRadius: 8,
+              padding: 8,
+              minWidth: 44,
+              minHeight: 44
             }}
+            activeOpacity={0.7}
           >
             <Icon as={EditIcon} color="$primary600" size="md" />
-          </Pressable>
+          </TouchableOpacity>
         )}
       </HStack>
 
@@ -562,12 +612,17 @@ const ClientSelect = (props) => {
 
           <ModalBody p="$0">
             <VStack>
-              <Box px="$4" py="$3" borderBottomWidth={1} borderBottomColor="$borderColor">
+              <Box
+                style={styles.searchContainer}
+                borderBottomWidth={1}
+                borderBottomColor="$borderColor"
+              >
                 <Input
                   size="md"
                   variant="outline"
                   borderRadius="$full"
                   bg="$coolGray50"
+                  style={styles.searchInput}
                 >
                   <InputSlot pl="$3">
                     <InputIcon as={Search} />
@@ -577,6 +632,7 @@ const ClientSelect = (props) => {
                     value={searchQuery}
                     onChangeText={handleSearchChange}
                     autoFocus={Platform.OS === 'web'}
+                    style={{ fontSize: Platform.OS === 'ios' ? 16 : 14 }}
                   />
                 </Input>
                 {searchQuery.trim() && (
@@ -591,8 +647,9 @@ const ClientSelect = (props) => {
                     }}
                     mt="$2"
                     variant="solid"
-                    size="sm"
+                    size="md"
                     bg="$primary500"
+                    style={{ minHeight: Platform.OS === 'ios' ? 44 : 48 }}
                   >
                     <Text color="$white">Set "{searchQuery.trim()}"</Text>
                   </Button>
@@ -629,17 +686,6 @@ const ClientSelect = (props) => {
                     </Center>
                   ) : (
                     <VStack>
-                      {groupedOptions?.devices.length > 0 && (
-                        <>
-                          {renderSectionHeader('Devices', groupedOptions.devices.length)}
-                          {groupedOptions.devices.map((item, index) => (
-                            <Box key={`device-${index}`}>
-                              {renderItem({ item })}
-                            </Box>
-                          ))}
-                        </>
-                      )}
-
                       {groupedOptions?.policies.length > 0 && (
                         <>
                           {renderSectionHeader('Policies', groupedOptions.policies.length)}
@@ -683,6 +729,18 @@ const ClientSelect = (props) => {
                           ))}
                         </>
                       )}
+
+                      {groupedOptions?.devices.length > 0 && (
+                        <>
+                          {renderSectionHeader('Devices', groupedOptions.devices.length)}
+                          {groupedOptions.devices.map((item, index) => (
+                            <Box key={`device-${index}`}>
+                              {renderItem({ item })}
+                            </Box>
+                          ))}
+                        </>
+                      )}
+                      
                     </VStack>
                   )}
                 </ScrollView>
