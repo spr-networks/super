@@ -419,4 +419,4 @@ Device.propTypes = {
   showMenu: PropTypes.bool
 }
 
-export default Device
+export {Device, DeviceIcon}

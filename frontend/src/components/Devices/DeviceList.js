@@ -2,7 +2,7 @@ import React from 'react'
 
 import { FlatList } from '@gluestack-ui/themed'
 
-import Device from 'components/Devices/Device'
+import {Device} from 'components/Devices/Device'
 
 const DeviceList = ({ list, deleteListItem, notifyChange, ...props }) => {
   const renderItem = ({ item }) => (

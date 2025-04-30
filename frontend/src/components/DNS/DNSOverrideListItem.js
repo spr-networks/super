@@ -53,6 +53,7 @@ const DNSOverrideListItem = ({ item, listName, deleteListItem, ...props }) => {
             <DeviceItem
               flex={1}
               item={context.getDevice(item.ClientIP, 'RecentIP')}
+              hideMissing={true}
             />
           </HStack>
 
