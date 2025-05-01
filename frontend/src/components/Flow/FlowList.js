@@ -770,6 +770,7 @@ const FlowList = (props) => {
         >
           { flow && (
             <EditFlow
+              key={flow.index !== undefined ? `flow-${flow.index}` : `flow-${flow.title}`}
               edit={true}
               flow={flow}
               onSubmit={onSubmit}
