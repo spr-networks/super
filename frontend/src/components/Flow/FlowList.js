@@ -21,12 +21,7 @@ import {
   VStack,
   Text,
   ScrollView,
-  Menu,
-  MenuItem,
-  MenuItemLabel,
-  ThreeDotsIcon,
   TrashIcon,
-  CheckIcon,
   CopyIcon,
   Input,
   InputField,
@@ -50,193 +45,16 @@ import {
   ModalFooter,
   ModalHeader,
   FormControl,
-  Pressable
+  Pressable,
+  Switch
 } from '@gluestack-ui/themed'
 
+import Flow from './Flow'
 import { dateArrayToStr } from './Utils'
-import { PencilIcon, CircleSlashIcon, Search, ChevronLeft, ChevronRight, ChevronDownIcon, Plus, X } from 'lucide-react-native'
+import { CircleSlashIcon, Search, ChevronLeft, ChevronRight, ChevronDownIcon, Plus, X } from 'lucide-react-native'
 
 import { Tooltip } from 'components/Tooltip'
 
-const Flow = ({ flow, ...props }) => {
-  const [title, setTitle] = useState(flow?.title)
-  const [triggers, setTriggers] = useState(flow?.triggers)
-  const [actions, setActions] = useState(flow?.actions)
-
-  useEffect(() => {
-    if (flow?.triggers && flow?.actions) {
-      setTitle(flow.title)
-      setTriggers(flow.triggers)
-      setActions(flow.actions)
-    }
-  }, [flow])
-
-  useEffect(() => {
-    if (title == 'NewFlow' && actions.length) {
-      let title = actions[0].title
-      setTitle(title)
-    }
-  }, [actions])
-
-  const triggerBtn = (triggerProps) => (
-    <Button action="secondary" variant="link" ml="auto" {...triggerProps}>
-      <ButtonIcon as={ThreeDotsIcon} color="$muted600" />
-    </Button>
-  )
-
-  const onEdit = () => {
-    if (props.onEdit) {
-      props.onEdit(flow)
-    }
-  }
-
-  const onDelete = () => {
-    if (props.onDelete) {
-      props.onDelete(flow)
-    }
-  }
-
-  const onDuplicate = () => {
-    if (props.onDuplicate) {
-      props.onDuplicate(flow)
-    }
-  }
-
-  const onDisable = () => {
-    if (props.onDisable) {
-      props.onDisable(flow)
-    }
-  }
-
-  const moreMenu = (
-    <Menu
-      flex={1}
-      trigger={triggerBtn}
-      selectionMode="single"
-      closeOnSelect={true}
-      onSelectionChange={(e) => {
-        let key = e.currentKey
-        if (key == 'disable') {
-          onDisable()
-        } else if (key == 'edit') {
-          onEdit()
-        } else if (key == 'duplicate') {
-          onDuplicate()
-        } else if (key == 'delete') {
-          onDelete()
-        }
-      }}
-    >
-      <MenuItem key="disable">
-        <Icon
-          as={flow.disabled ? CheckIcon : CircleSlashIcon}
-          color={flow.disabled ? '$success700' : '$red700'}
-          mr="$2"
-        />
-        <MenuItemLabel size="sm">
-          {flow.disabled ? 'Enable' : 'Disable'}
-        </MenuItemLabel>
-      </MenuItem>
-      <MenuItem key="edit">
-        <Icon as={PencilIcon} color="$muted500" mr="$2" />
-        <MenuItemLabel size="sm">Edit</MenuItemLabel>
-      </MenuItem>
-      <MenuItem key="duplicate">
-        <CopyIcon color="$muted500" mr="$2" />
-        <MenuItemLabel size="sm">Duplicate</MenuItemLabel>
-      </MenuItem>
-
-      <MenuItem key="delete">
-        <TrashIcon color="$red700" mr="$2" />
-        <MenuItemLabel color="$red700">Delete</MenuItemLabel>
-      </MenuItem>
-    </Menu>
-  )
-
-  let trigger = triggers[0],
-    action = actions[0]
-
-  if (!trigger || !action) {
-    return <></>
-  }
-
-  const displayValue = (value, label) => {
-    if (!value) {
-      return value
-    }
-
-    if (label == 'Client') {
-      return value.Identity || value.Group || value.SrcIP
-    }
-
-    if (label == 'Dst' || label == 'OriginalDst') {
-      return value.IP || value.Domain
-    }
-
-    if (Array.isArray(value)) {
-      return value.join(',')
-    }
-
-    if (label == 'days') {
-      return dateArrayToStr(value.split(','))
-    }
-
-    return value
-  }
-
-  return (
-    <VStack
-      p="$4"
-      py="$4"
-      sx={{
-        '@base': { flexDirection: 'column-reverse' },
-        '@md': { flexDirection: 'row', p: '$8' },
-        _dark: { bg: '$backgroundCardDark' }
-      }}
-      bg="$backgroundCardLight"
-      space="md"
-      shadow={2}
-    >
-      <VStack flex={1} space="md">
-        <HStack space="md" alignItems="center">
-          <HStack space="md">
-            <Text bold>{title}</Text>
-            <Text>{trigger.title}</Text>
-            <Icon as={trigger.icon} color={trigger.color} />
-            <Text>{action.title}</Text>
-            <Icon as={action.icon} color={action.color} />
-          </HStack>
-          {flow.disabled ? (
-            <Text size="xs" color="$muted500">
-              Disabled
-            </Text>
-          ) : null}
-        </HStack>
-
-        { props.renderFields && (
-          <HStack space="sm" flexWrap="wrap">
-            {Object.keys(trigger.values).map((key) => (
-              <Tooltip key={key} label={key}>
-                <Badge variant="outline" action="muted" size="xs">
-                  <BadgeText>{displayValue(trigger.values[key], key)}</BadgeText>
-                </Badge>
-              </Tooltip>
-            ))}
-
-            {Object.keys(action.values).map((key) => (
-              <Tooltip key={key} label={key}>
-                <Badge variant="outline" action="muted" size="xs">
-                  <BadgeText>{displayValue(action.values[key], key)}</BadgeText>
-                </Badge>
-              </Tooltip>
-            ))}
-          </HStack>
-        )}
-      </VStack>
-      {moreMenu}
-    </VStack>
-  )
-}
 
 const saveFlow = async (flow, context) => {
   let trigger = flow.triggers[0],
@@ -595,10 +413,20 @@ const FlowList = (props) => {
   }
 
   const toggleDisable = (item) => {
-    item.disabled = !item.disabled
-    saveFlow(item, context).then((res) => {
-      fetchFlows()
-    })
+
+    const updatedFlow = {
+      ...item,
+      disabled: !item.disabled
+    };
+
+    saveFlow(updatedFlow, context)
+      .then(() => {
+        fetchFlows();
+      })
+      .catch((err) => {
+        console.error('Error saving flow disabled state:', err);
+        context.error('Failed to update flow: ' + (err.message || err));
+      });
   }
 
   const handleSelectFlow = (index) => {

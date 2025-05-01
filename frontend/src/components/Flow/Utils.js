@@ -136,6 +136,12 @@ const flowObjParse = (x) => {
     }
   }
 
+  for (let k of cliKeys) {
+    if (typeof x[k] === "string") {
+      return ""
+    }
+  }
+
   return JSON.stringify(x)
 }
 

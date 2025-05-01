@@ -169,7 +169,6 @@ const EditItem = ({
   } else if (label == 'Client') {
     inputElement = (
       <ClientSelect
-        showPolicies
         showGroups
         showTags
         value={value}
