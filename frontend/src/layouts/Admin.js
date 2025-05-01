@@ -710,10 +710,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
               <SafeAreaView
                 style={{
                   width: '100%',
-                  height:
-                    Platform.OS == 'web'
-                      ? Dimensions.get('window').height - 64
-                      : 'auto',
                   backgroundColor: colorMode == 'light' ? '#f3f4f6' : 'black'
                 }}
               >
