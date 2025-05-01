@@ -633,8 +633,18 @@ const ClientSelect = (props) => {
                     onChangeText={handleSearchChange}
                     autoFocus={Platform.OS === 'web'}
                     style={{ fontSize: Platform.OS === 'ios' ? 16 : 14 }}
+                    onSubmitEditing={() => {
+                      if (searchQuery.trim()) {
+                        setInputValue(searchQuery.trim());
+                        setSelectedOption(null);
+                        setIsModalOpen(false);
+                        if (props.onChange) {
+                          props.onChange(searchQuery.trim());
+                        }
+                      }
+                    }}
                   />
-                </Input>
+                  </Input>
                 {searchQuery.trim() && (
                   <Button
                     onPress={() => {
@@ -740,7 +750,7 @@ const ClientSelect = (props) => {
                           ))}
                         </>
                       )}
-                      
+
                     </VStack>
                   )}
                 </ScrollView>
