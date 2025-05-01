@@ -631,6 +631,7 @@ const DNSBlocklist = ({ config, ...props }) => {
     >
       {sections.map(({ name, data }) => (
         <VStack
+          key={name}
           w="$full"
           sx={{
             '@md': { width: 360 }
