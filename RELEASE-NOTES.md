@@ -1,4 +1,13 @@
 # Secure Programmable Router (SPR) Release Notes
+
+## v1.0.11
+**Improvements**
+- Tabbed Firewall Views
+- New PFW Flow Search
+- Client Select Redesign with Search
+**Fixes**
+- Fix dhcp time updates when editing devices and IP is not changed
+
 ## v1.0.10
 **Improvements**
 - 24.10 installer for CM5 support
