@@ -463,9 +463,11 @@ const FlowList = (props) => {
   )
 
   const renderCurrentFlow = () => {
-    if (filteredFlows.length === 0 || !filteredFlows[selectedFlowIndex]) {
+    if (filteredFlows.length === 0)
       return renderEmptyState()
-    }
+
+    if (!filteredFlows[selectedFlowIndex])
+      return (<></>)
 
     return (
       <Flow
