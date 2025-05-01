@@ -510,21 +510,6 @@ const ClientSelect = (props) => {
                 isDisabled={props.isDisabled}
                 borderRadius="$lg"
                 borderColor={(selectedOption || inputValue) ? "$primary300" : "$borderColor"}
-                bg={(selectedOption || inputValue) ? "$primary50" : "$backgroundLight50"}
-                sx={{
-                  ':hover': {
-                    borderColor: "$primary400",
-                    bg: "$primary50"
-                  },
-                  _dark: {
-                    borderColor: (selectedOption || inputValue) ? "$primary700" : "$borderColorDark",
-                    bg: (selectedOption || inputValue) ? "$primary900" : "$backgroundDark800",
-                    ':hover': {
-                      borderColor: "$primary600",
-                      bg: "$primary900"
-                    }
-                  }
-                }}
               >
                 <InputSlot pl="$3">
                   {selectedOption && (
@@ -567,7 +552,6 @@ const ClientSelect = (props) => {
           <TouchableOpacity
             onPress={() => setIsEditing(true)}
             style={{
-              backgroundColor: Platform.OS === 'web' ? "$primary100" : '#E6F2FF',
               justifyContent: 'center',
               alignItems: 'center',
               borderRadius: 8,
@@ -634,7 +618,6 @@ const ClientSelect = (props) => {
                   size="md"
                   variant="outline"
                   borderRadius="$full"
-                  bg="$coolGray50"
                   style={styles.searchInput}
                 >
                   <InputSlot pl="$3">
@@ -697,7 +680,6 @@ const ClientSelect = (props) => {
                           <Box
                             p="$4"
                             borderRadius="$full"
-                            bg="$coolGray100"
                             mb="$2"
                           >
                             <Icon as={Search} size="lg" color="$muted500" />
