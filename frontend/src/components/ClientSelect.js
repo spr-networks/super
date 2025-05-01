@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react'
 import PropTypes from 'prop-types'
 import { Platform, StyleSheet, TouchableOpacity } from 'react-native'
 import { deviceAPI, groupAPI, firewallAPI } from 'api'
+
 import {
   GlobeIcon,
   TagIcon,
@@ -12,7 +13,7 @@ import {
   EditIcon,
   ServerIcon
 } from 'lucide-react-native'
-import {DeviceIcon} from 'components/Devices/Device'
+
 import {
   Box,
   Text,
@@ -39,8 +40,11 @@ import {
   BadgeText,
   Spinner,
   ScrollView,
-  Button
+  Button,
+  useColorMode
 } from '@gluestack-ui/themed'
+
+import {DeviceIcon} from 'components/Devices/Device'
 
 const CIDR_DEFAULTS = [
   {
@@ -142,6 +146,7 @@ const ClientSelect = (props) => {
   const [isEditing, setIsEditing] = useState(false)
   const [useCustomValue, setUseCustomValue] = useState(false)
   const [isDataLoaded, setIsDataLoaded] = useState(false)
+  let isLight = useColorMode() === 'light'
 
   const cleanIp = (ip) => ip.replace(/\/.*/, '')
 
@@ -373,8 +378,16 @@ const ClientSelect = (props) => {
     if (count === 0) return null
 
     return (
-      <HStack px="$4" py="$2" bg="$coolGray100" alignItems="center" justifyContent="space-between">
-        <Text fontSize="$xs" fontWeight="$semibold" color="$muted700">{title}</Text>
+      <HStack px="$4"
+        py="$2"
+        bg={isLight ?  "$coolGray100" : "$muted600" }
+        alignItems="center"
+        justifyContent="space-between">
+        <Text fontSize="$xs"
+          fontWeight="$semibold"
+          color={isLight ? "$muted700" : "$muted100" }>
+          {title}
+        </Text>
         <Badge variant="outline" size="sm">
           <BadgeText>{count}</BadgeText>
         </Badge>
@@ -598,7 +611,7 @@ const ClientSelect = (props) => {
           <ModalHeader
             borderBottomWidth={1}
             borderBottomColor="$borderColor"
-            bg="$primary50"
+            bg={isLight ? "$primary50" : "$muted600"}
             px="$4"
             py="$3"
           >
