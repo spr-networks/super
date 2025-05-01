@@ -10,7 +10,7 @@ import {
   ThreeDotsIcon
 } from '@gluestack-ui/themed'
 
-import Device from 'components/Devices/Device'
+import { Device } from 'components/Devices/Device'
 import { SwipeListView } from 'components/SwipeListView'
 
 const DeviceList = ({ list, deleteListItem, notifyChange, ...props }) => {

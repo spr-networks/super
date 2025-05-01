@@ -673,7 +673,6 @@ const DNSLogHistoryList = (props) => {
               <FormControlLabelText size="sm">Client</FormControlLabelText>
             </FormControlLabel>
             <ClientSelect
-              isDisabled
               value={filterIps ? filterIps[0] : null}
               onChange={handleChangeIp}
             />

@@ -1,10 +1,8 @@
 import React, { useContext } from 'react'
 import PropTypes from 'prop-types'
-
 import ClientSelect from 'components/ClientSelect'
 import { firewallAPI } from 'api'
 import { AlertContext } from 'AppContext'
-
 import {
   Button,
   ButtonText,
@@ -16,9 +14,9 @@ import {
   Input,
   InputField,
   HStack,
-  VStack
+  VStack,
+  Spinner
 } from '@gluestack-ui/themed'
-
 import ProtocolRadio from 'components/Form/ProtocolRadio'
 
 class AddOutputBlockImpl extends React.Component {
@@ -26,12 +24,12 @@ class AddOutputBlockImpl extends React.Component {
     SrcIP: '0.0.0.0/0',
     DstIP: '',
     DstPort: '',
-    Protocol: 'tcp'
+    Protocol: 'tcp',
+    isLoading: false
   }
 
   constructor(props) {
     super(props)
-
     this.handleChange = this.handleChange.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
   }
@@ -51,10 +49,13 @@ class AddOutputBlockImpl extends React.Component {
       Protocol: this.state.Protocol
     }
 
+    this.setState({ isLoading: true })
+
     const done = (res) => {
       if (this.props.notifyChange) {
         this.props.notifyChange('forward_block')
       }
+      this.setState({ isLoading: false })
     }
 
     firewallAPI
@@ -62,6 +63,7 @@ class AddOutputBlockImpl extends React.Component {
       .then(done)
       .catch((err) => {
         this.props.alertContext.error('Firewall API Failure', err)
+        this.setState({ isLoading: false })
       })
   }
 
@@ -98,7 +100,6 @@ class AddOutputBlockImpl extends React.Component {
             <FormControlHelperText>IP address or CIDR</FormControlHelperText>
           </FormControlHelper>
         </FormControl>
-
         <FormControl>
           <FormControlLabel>
             <FormControlLabelText>Destination Port</FormControlLabelText>
@@ -115,20 +116,26 @@ class AddOutputBlockImpl extends React.Component {
             </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
-
         <FormControl>
           <FormControlLabel>
             <FormControlLabelText>Protocol</FormControlLabelText>
           </FormControlLabel>
-
           <ProtocolRadio
             value={this.state.Protocol}
             onChange={(value) => this.handleChange('Protocol', value)}
           />
         </FormControl>
-
-        <Button action="primary" size="md" onPress={this.handleSubmit}>
-          <ButtonText>Save</ButtonText>
+        <Button
+          action="primary"
+          size="md"
+          onPress={this.handleSubmit}
+          isDisabled={this.state.isLoading}
+        >
+          {this.state.isLoading ? (
+            <Spinner color="white" size="small" />
+          ) : (
+            <ButtonText>Save</ButtonText>
+          )}
         </Button>
       </VStack>
     )

@@ -77,7 +77,7 @@ const triggers = [
   {
     title: 'Always',
     cardType: 'trigger',
-    description: 'Always run the selected trigger',
+    description: 'Always run the selected action',
     color: '$violet300',
     icon: RepeatIcon,
     params: [],

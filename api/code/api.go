@@ -1448,8 +1448,10 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		if dev.RecentIP != "" {
 			new_ip := net.ParseIP(dev.RecentIP)
 			if new_ip != nil && isTinyNetDeviceIP(new_ip.String()) {
-				val.RecentIP = new_ip.String()
-				refreshIP = true
+				if val.RecentIP != new_ip.String() {
+					val.RecentIP = new_ip.String()
+					refreshIP = true
+				}
 			} else {
 				if new_ip == nil {
 					return "Invalid IP assignment", 400
@@ -3055,7 +3057,15 @@ func main() {
 
 	if isSetupMode() {
 		setupAPInit()
-		startExtension("wifid-setup/docker-compose.yml")
+
+		withRetry(10, 3, func() error {
+			ret := startExtension("wifid-setup/docker-compose.yml")
+			if ret == false {
+				return fmt.Errorf("failed to start wifid")
+			}
+			return nil
+		})
+
 	}
 
 	wireguardServer.Serve(unixWireguardListener)

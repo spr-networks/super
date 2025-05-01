@@ -37,7 +37,8 @@ const OutputBlockList = (props) => {
 
   const notifyChange = (t) => {
     refModal.current()
-    props.notifyChange('block')
+    if (props.notifyChange)
+      props.notifyChange('block')
   }
 
   return (
@@ -51,8 +52,7 @@ const OutputBlockList = (props) => {
           triggerText="Add IP Block"
           triggerProps={{
             sx: {
-              '@base': { display: 'none' },
-              '@md': { display: list.length ? 'flex' : 'flex' }
+              display: 'flex'
             }
           }}
           modalRef={refModal}

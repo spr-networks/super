@@ -1,10 +1,7 @@
 import React, { useContext } from 'react'
-
 import ClientSelect from 'components/ClientSelect'
-
 import { firewallAPI } from 'api'
 import { AlertContext } from 'AppContext'
-
 import {
   Button,
   ButtonText,
@@ -16,16 +13,17 @@ import {
   Input,
   InputField,
   HStack,
-  VStack
+  VStack,
+  Spinner
 } from '@gluestack-ui/themed'
-
 import ProtocolRadio from 'components/Form/ProtocolRadio'
 
 class AddBlockImpl extends React.Component {
   state = {
     SrcIP: '0.0.0.0/0',
     DstIP: '',
-    Protocol: 'tcp'
+    Protocol: 'tcp',
+    isLoading: false
   }
 
   constructor(props) {
@@ -48,10 +46,13 @@ class AddBlockImpl extends React.Component {
       Protocol: this.state.Protocol
     }
 
+    this.setState({ isLoading: true })
+
     const done = (res) => {
       if (this.props.notifyChange) {
         this.props.notifyChange('block')
       }
+      this.setState({ isLoading: false })
     }
 
     firewallAPI
@@ -59,6 +60,7 @@ class AddBlockImpl extends React.Component {
       .then(done)
       .catch((err) => {
         this.props.alertContext.error('Firewall API Failure', err)
+        this.setState({ isLoading: false })
       })
   }
 
@@ -71,7 +73,6 @@ class AddBlockImpl extends React.Component {
           <FormControlLabel>
             <FormControlLabelText>Source IP Address</FormControlLabelText>
           </FormControlLabel>
-
           <Input size="md" variant="underlined">
             <InputField
               value={this.state.SrcIP}
@@ -98,20 +99,26 @@ class AddBlockImpl extends React.Component {
             <FormControlHelperText>IP address or CIDR</FormControlHelperText>
           </FormControlHelper>
         </FormControl>
-
         <FormControl>
           <FormControlLabel>
             <FormControlLabelText>Protocol</FormControlLabelText>
           </FormControlLabel>
-
           <ProtocolRadio
             value={this.state.Protocol}
             onChange={(value) => this.handleChange('Protocol', value)}
           />
         </FormControl>
-
-        <Button action="primary" size="md" onPress={this.handleSubmit}>
-          <ButtonText>Save</ButtonText>
+        <Button
+          action="primary"
+          size="md"
+          onPress={this.handleSubmit}
+          isDisabled={this.state.isLoading}
+        >
+          {this.state.isLoading ? (
+            <Spinner color="white" size="small" />
+          ) : (
+            <ButtonText>Save</ButtonText>
+          )}
         </Button>
       </VStack>
     )

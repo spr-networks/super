@@ -560,7 +560,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
   }
 
   const doNotify = (type, title, body) => {
-    if (Platform.OS == 'ios') {
+    if (Platform.OS == 'ios' && ['danger', 'warning'].includes(type)) {
       iosNotify(type, title, body)
     } else {
       webNotify(type, title, body)
@@ -710,10 +710,6 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
               <SafeAreaView
                 style={{
                   width: '100%',
-                  height:
-                    Platform.OS == 'web'
-                      ? Dimensions.get('window').height - 64
-                      : 'auto',
                   backgroundColor: colorMode == 'light' ? '#f3f4f6' : 'black'
                 }}
               >
@@ -756,14 +752,14 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
               maxWidth: '100%',
               width: '100%',
               display: showAlert ? 'flex' : 'none',
-              top: '14%'
+              bottom: '14%'
             },
             '@md': {
               width: isOpenSidebar
                 ? 'calc(100vw - 80px)'
                 : 'calc(100vw - 260px)',
               left: isOpenSidebar ? 80 : 260,
-              top: '$16'
+              bottom: '$16'
             }
           }}
           flexWrap="wrap"

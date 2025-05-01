@@ -10,7 +10,7 @@ import {
 
 import { deviceAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
-import Device from 'components/Devices/Device'
+import {Device} from 'components/Devices/Device'
 import { ListHeader } from 'components/List'
 import TagItem from 'components/TagItem'
 
