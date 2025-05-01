@@ -654,7 +654,6 @@ const FlowList = (props) => {
                 <ModalHeader
                   borderBottomWidth={1}
                   borderBottomColor="$borderColor"
-                  bg="$primary50"
                   px="$4"
                   py="$3"
                 >
@@ -677,7 +676,6 @@ const FlowList = (props) => {
                         size="md"
                         variant="outline"
                         borderRadius="$full"
-                        bg="$coolGray50"
                       >
                         <InputSlot pl="$3">
                           <InputIcon as={Search} />
