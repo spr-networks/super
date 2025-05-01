@@ -92,7 +92,10 @@ const FlowNode = ({ title, color, children, width }) => {
       w={width || "auto"}
       flex={width ? undefined : 1}
       sx={{
-        _dark: { bg: '$secondary900', borderColor: '$coolGray900' }
+        _dark: { bg: '$secondary900',
+                 borderColor: '$coolGray900',
+                 borderLeftColor: color || "$blue500"
+                }
       }}
       shadow="$1"
     >
