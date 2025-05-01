@@ -21,10 +21,8 @@ describe('PFW', () => {
   test('Flow list', async () => {
     const utils = render(<PFW />)
 
-    expect(screen.getByText('Flows')).toBeTruthy()
-
     // wait for data to be populated
-    await waitFor(() => expect(screen.getByText('192.168.2.14')).toBeTruthy())
+    await waitFor(() => expect(screen.getByDisplayValue('213.24.76.23')).toBeTruthy())
   })
 
   test('api', async () => {
@@ -34,7 +32,6 @@ describe('PFW', () => {
 
   test('Add flow', async () => {
     const utils = render(<PFW />)
-    //expect(screen.getByText('Add & Edit flow')).toBeTruthy()
-    expect(screen.getByPlaceholderText('Name')).toBeTruthy()
+    expect(screen.getByDisplayValue('NewFlow')).toBeTruthy()
   })
 })

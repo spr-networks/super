@@ -563,8 +563,7 @@ const FlowList = (props) => {
                 <ButtonText
                   color="$white"
                   fontWeight="$medium"
-                  display={{ base: "none", md: "flex" }}
-                  ml={{ md: "$1.5" }}
+                  ml="$1.5"
                 >
                   Create New Flow
                 </ButtonText>
