@@ -934,7 +934,7 @@ func pingTest(w http.ResponseWriter, r *http.Request) {
 		}
 		defer syscall.Close(fd)
 
-		if err := syscall.BindToDevice(fd, ief.Name); err != nil {
+		if err := bindToDevice(fd, ief.Name); err != nil {
 			http.Error(w, "Error binding to interface", 400)
 			return
 		}
@@ -947,7 +947,7 @@ func pingTest(w http.ResponseWriter, r *http.Request) {
 		}
 		defer conn.Close()
 
-		err = syscall.BindToDevice(fd, ief.Name)
+		err = bindToDevice(fd, ief.Name)
 		if err != nil {
 			http.Error(w, "Failed to listen on interface", 400)
 			return

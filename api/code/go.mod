@@ -4,6 +4,8 @@ go 1.23.0
 
 toolchain go1.24.2
 
+replace github.com/spr-networks/sprbus => github.com/spr-networks/sprbus v0.1.8-0.20250504011042-685522da0a71
+
 require (
 	github.com/PaesslerAG/gval v1.2.4
 	github.com/PaesslerAG/jsonpath v0.1.1
@@ -24,7 +26,6 @@ require (
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/boombuler/barcode v1.0.2 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/influxdata/line-protocol v0.0.0-20210922203350-b1ad95c89adf // indirect
 	github.com/moby/moby v23.0.3+incompatible // indirect
 	github.com/moby/pubsub v1.0.0 // indirect
