@@ -7,8 +7,8 @@ RUN apt-get install -y --no-install-recommends libpcap-dev
 RUN mkdir /code
 WORKDIR /code
 ARG TARGETARCH
-RUN wget https://dl.google.com/go/go1.23.3.linux-${TARGETARCH}.tar.gz
-RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.23.3.linux-${TARGETARCH}.tar.gz
+RUN wget https://dl.google.com/go/go1.24.2.linux-${TARGETARCH}.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.24.2.linux-${TARGETARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
 ENV CC=clang
 COPY code/ /code/
