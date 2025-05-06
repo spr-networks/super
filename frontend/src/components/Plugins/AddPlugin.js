@@ -135,7 +135,7 @@ const AddPlugin = (props) => {
 
         <FormControlHelper>
           <FormControlHelperText>
-            Plugin pathname for unix socket
+            Docker Compose Filepath
           </FormControlHelperText>
         </FormControlHelper>
       </FormControl>
