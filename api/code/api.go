@@ -126,7 +126,7 @@ type DeviceEntry struct {
 	DeviceDisabled   bool //tbd deprecate this in favor of only using the policy name.
 }
 
-var ValidPolicyStrings = []string{"wan", "lan", "dns", "api", "lan_upstream", "disabled", "quarantine", "dns:family"}
+var ValidPolicyStrings = []string{"wan", "lan", "dns", "api", "lan_upstream", "noapi", "disabled", "quarantine", "dns:family"}
 
 var config = APIConfig{}
 
@@ -2972,6 +2972,7 @@ func main() {
 	unix_wifid_router.HandleFunc("/reportPSKAuthSuccess", reportPSKAuthSuccess).Methods("PUT")
 	unix_wifid_router.HandleFunc("/reportDisconnect", reportDisconnect).Methods("PUT")
 	unix_wifid_router.HandleFunc("/interfaces", getEnabledAPInterfaces).Methods("GET")
+	unix_wifid_router.HandleFunc("/interfaces_virtual_bss", getEnabledVirtualBSSInterfaces).Methods("GET")
 
 	// DHCP actions
 	unix_dhcpd_router.HandleFunc("/dhcpRequest", dhcpRequest).Methods("PUT")

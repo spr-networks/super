@@ -627,8 +627,10 @@ func updateExtraBSS(iface string, data string) string {
 
 					//use a static password
 					if entry.ExtraBSS[i].GuestPassword != "" {
+						data += "wpa_psk_file=/dev/null\n"
 						data += "wpa_passphrase=" + entry.ExtraBSS[i].GuestPassword + "\n"
 						if strings.Contains(entry.ExtraBSS[i].WpaKeyMgmt, "SAE") {
+							data += "sae_psk_file=/dev/null\n"
 							data += "sae_password=" + entry.ExtraBSS[i].GuestPassword + "\n"
 						}
 					} else {
@@ -1146,6 +1148,32 @@ func getEnabledAPInterfaces(w http.ResponseWriter, r *http.Request) {
 	for _, entry := range config {
 		if entry.Enabled == true && entry.Type == "AP" {
 			outputString += entry.Name + " "
+
+			if len(entry.ExtraBSS) > 0 {
+				//extra := entry.ExtraBSS[0] //tbd
+			}
+		}
+	}
+
+	w.Write([]byte(outputString))
+}
+
+func getEnabledVirtualBSSInterfaces(w http.ResponseWriter, r *http.Request) {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+
+	//read the old configuration
+	config := loadInterfacesConfigLocked()
+
+	outputString := ""
+	for _, entry := range config {
+		if entry.Enabled == true && entry.Type == "AP" {
+
+			//only 1 is supported for now.
+			if len(entry.ExtraBSS) > 0 {
+				//Itoa(i) when more
+				outputString += entry.Name + ".ap" + strconv.Itoa(0) + " "
+			}
 		}
 	}
 

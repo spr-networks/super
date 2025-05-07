@@ -153,6 +153,7 @@ var WireguardSocketPath = TEST_PREFIX + "/state/plugins/wireguard/wireguard_plug
 var BASE_READY = TEST_PREFIX + "/state/base/ready"
 
 var DEVICE_POLICY_PERMIT_PRIVATE_UPSTREAM_ACCESS = "lan_upstream"
+var DEVICE_POLICY_NOAPI = "noapi"
 
 const firstOutboundRouteTable = 11
 
@@ -1145,8 +1146,59 @@ func applyPrivateNetworkUpstreamDevice(device DeviceEntry) {
 		//if has the tag but not in the verdict map, add it
 		allowPrivateUpstreamAccess(IP)
 	} else if !foundPolicy && inUpstreamAllowed {
-		//if in the verdict map but does not have the tag, remove it
+		//if in the verdict map but does not have the policy, remove it
 		removePrivateUpstreamAccess(IP)
+	}
+}
+
+func hasNoAPIAccess(ip string) bool {
+	cmd := exec.Command("nft", "get", "element", "inet", "filter", "api_block",
+		"{", ip, "}")
+	_, err := cmd.Output()
+	return err == nil
+}
+
+func addNoAPIAccess(ip string) error {
+	cmd := exec.Command("nft", "add", "element", "inet", "filter", "api_block",
+		"{", ip, "}")
+	_, err := cmd.Output()
+
+	if err != nil {
+		log.Println("failed to add element to api_block", err)
+		log.Println(cmd)
+	}
+
+	return err
+}
+
+func removeNoAPIAccess(ip string) error {
+	cmd := exec.Command("nft", "delete", "element", "inet", "filter", "api_block",
+		"{", ip, "}")
+	_, err := cmd.Output()
+
+	if err != nil {
+		log.Println("failed to remove element from api_block", err)
+		log.Println(cmd)
+	}
+
+	return err
+}
+
+func applyNoAPI(device DeviceEntry) {
+	IP := device.RecentIP
+	if IP == "" {
+		return
+	}
+
+	foundPolicy := slices.Contains(device.Policies, DEVICE_POLICY_NOAPI)
+	inNoApi := hasNoAPIAccess(IP)
+
+	if foundPolicy && !inNoApi {
+		//if has the tag but not in the verdict map, add it
+		addNoAPIAccess(IP)
+	} else if !foundPolicy && inNoApi {
+		//if in the verdict map but does not have the policy, remove it
+		removeNoAPIAccess(IP)
 	}
 }
 
@@ -2741,6 +2793,7 @@ func populateVmapEntries(devices map[string]DeviceEntry, groups []GroupEntry, IP
 			log.Println("Unexpected disabled here. Should have aborted earlier")
 		case "lan_upstream":
 			continue //handled in applyPrivateNetworkUpstreamDevice below
+		case "noapi":
 		case "quarantine":
 		case "dns:family":
 		default:
@@ -2750,6 +2803,7 @@ func populateVmapEntries(devices map[string]DeviceEntry, groups []GroupEntry, IP
 
 	//apply other policies
 	applyPrivateNetworkUpstreamDevice(val)
+	applyNoAPI(val)
 
 }
 
