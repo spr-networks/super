@@ -571,6 +571,13 @@ func updateExtraBSS(iface string, data string) string {
 	//read theinterfaces configuration
 	config := loadInterfacesConfigLocked()
 
+	// the mac80211_mt76 manual claims 0x00 for the first AP
+	//however on the mt7915e cards it was observed that 0x00 blocks
+	// multi bss from working.
+
+	mt76_macs := []int64{0x02, 0x06, 0x0a, 0x0e, 0x12, 0x16, 0x1a}
+	extra_index := 0
+
 	for _, entry := range config {
 		if entry.Name == iface && entry.Type == "AP" {
 
@@ -580,9 +587,9 @@ func updateExtraBSS(iface string, data string) string {
 				bssid := entry.ExtraBSS[i].Bssid
 				//main bssid should have LLA to 0, others to 1? bit unclear
 				// hostapd said it depends on the driver.
-				hexInt, _ := strconv.ParseInt(bssid[:2], 16, 64)
-				hexStr := strconv.FormatInt(hexInt&^2, 16)
+				hexStr := strconv.FormatInt(mt76_macs[extra_index], 16)
 				main_bssid := fmt.Sprintf("%02s", hexStr) + bssid[2:]
+				extra_index += 1
 
 				data += "#spr-gen-bss\n"
 				data += "bssid=" + main_bssid + "\n"
@@ -1043,7 +1050,7 @@ func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "can't read hostapd config", http.StatusBadRequest)
 	}
 
-	// if anything goes is configured for the interface, enable it.
+	// if anything is configured for the interface, enable it.
 	dataString := updateExtraBSS(iface, string(data))
 
 	err = ioutil.WriteFile(path, []byte(dataString), 0600)
