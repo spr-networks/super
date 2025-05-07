@@ -274,7 +274,7 @@ table inet filter {
     $(if [ "$WIREGUARD_PORT" ]; then echo "iifname @uplink_interfaces udp dport $WIREGUARD_PORT counter accept"; fi)
 
     # block API access for specified clients,
-    # this will be set for any devices with a `guest` policy
+    # this will be set for any devices with a guest policy
     #counter tcp dport {22, 80, 443} ip saddr @api_block goto DROPLOGINP
 
     # Allow wireguard to lan services
