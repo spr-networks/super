@@ -575,7 +575,7 @@ func updateExtraBSS(iface string, data string) string {
 	//however on the mt7915e cards it was observed that 0x00 blocks
 	// multi bss from working.
 
-	mt76_macs := []int64{0x02, 0x06, 0x0a, 0x0e, 0x12, 0x16, 0x1a}
+	mt76_macs := []int64{0x02, 0x06, 0x0a, 0x0e, 0x12, 0x16, 0x1a, 0x1e}
 	extra_index := 0
 
 	for _, entry := range config {
@@ -584,17 +584,24 @@ func updateExtraBSS(iface string, data string) string {
 			// populate extra bss info
 			for i := 0; i < len(entry.ExtraBSS); i++ {
 
+				if extra_index+1 > len(mt76_macs) {
+					continue
+				}
+
 				bssid := entry.ExtraBSS[i].Bssid
 				//main bssid should have LLA to 0, others to 1? bit unclear
 				// hostapd said it depends on the driver.
 				hexStr := strconv.FormatInt(mt76_macs[extra_index], 16)
 				main_bssid := fmt.Sprintf("%02s", hexStr) + bssid[2:]
-				extra_index += 1
 
+				hexStr = strconv.FormatInt(mt76_macs[extra_index+1], 16)
+				new_bssid := fmt.Sprintf("%02s", hexStr) + bssid[2:]
+
+				extra_index += 1
 				data += "#spr-gen-bss\n"
 				data += "bssid=" + main_bssid + "\n"
 				data += "bss=" + iface + "." + strconv.Itoa(i) + "\n"
-				data += "bssid=" + entry.ExtraBSS[i].Bssid + "\n"
+				data += "bssid=" + new_bssid + "\n"
 				data += "ssid=" + entry.ExtraBSS[i].Ssid + "\n"
 				if entry.ExtraBSS[i].Wpa == "0" {
 					// Open AP
