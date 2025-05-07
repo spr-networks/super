@@ -52,6 +52,14 @@ table inet filter {
     type ifname;
   }
 
+  # clients to block from the api, for example those with
+  # the guest policy or noapi policy
+  set api_block {
+    type ipv4_addr;
+    flags interval;
+  }
+
+
   # this set contains setup interfaces with API access
   set setup_interfaces {
     type ifname;
@@ -189,6 +197,7 @@ table inet filter {
     flags interval, timeout;
   }
 
+
   # If a client is a part of this group, it will have
   # src_ip : return to succeed
   map upstream_private_rfc1918_allowed {
@@ -263,6 +272,10 @@ table inet filter {
 
     # Allow wireguard from only WANIF interfaces to prevent loops
     $(if [ "$WIREGUARD_PORT" ]; then echo "iifname @uplink_interfaces udp dport $WIREGUARD_PORT counter accept"; fi)
+
+    # block API access for specified clients,
+    # this will be set for any devices with a `guest` policy
+    counter tcp dport {22, 80, 443} ip saddr @api_block goto DROPLOGINP
 
     # Allow wireguard to lan services
     $(if [ "$WIREGUARD_PORT" ]; then echo "iifname wg0 counter tcp dport vmap @lan_tcp_accept"; fi)
