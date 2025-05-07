@@ -4,6 +4,7 @@ import WifiClients from 'components/Wifi/WifiClients'
 import WifiInterfaceList from 'components/Wifi/WifiInterfaceList'
 import WifiScan from 'components/Wifi/WifiScan'
 import WifiHostapd from 'components/Wifi/WifiHostapd'
+import WifiGuestNetwork from 'components/Wifi/WifiGuestNetwork'
 
 import { Platform } from 'react-native'
 
@@ -13,6 +14,7 @@ const WirelessConfiguration = (props) => {
   return (
     <TabView
       tabs={[
+        { title: 'Guest Network', component: WifiGuestNetwork },
         { title: 'Clients', component: WifiClients },
         { title: 'Interfaces', component: WifiInterfaceList },
         { title: 'Scan', component: WifiScan },

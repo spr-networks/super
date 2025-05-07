@@ -126,19 +126,21 @@ const AddDevice = (props) => {
     return false
   }
 
-  const allPolicies = ['wan', 'dns', 'lan', 'lan_upstream']
+  const allPolicies = ['wan', 'dns', 'lan', 'lan_upstream', 'noapi']
   const policyTips = {
     wan: 'Allow Internet Access',
     dns: 'Allow DNS Queries',
     lan: 'Allow access to ALL other devices on the network',
-    lan_upstream: 'Allow device to reach private LANs upstream'
+    lan_upstream: 'Allow device to reach private LANs upstream',
+    noapi: 'No API Access (22, 80, 443 blocked)'
   }
   const policyName = {
     wan: 'Internet Access',
     dns: 'DNS Resolution',
     lan: 'Local Network',
     lan_upstream: 'Upstream Private Networks',
-    disabled: 'Disabled'
+    disabled: 'Disabled',
+    noapi: 'No API'
   }
   const allTags = ['guest']
 

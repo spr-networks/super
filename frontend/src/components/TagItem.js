@@ -171,6 +171,10 @@ const InterfaceItem = React.memo(({ name, address, size, type, ...props }) => {
 
 const InterfaceTypeItem = ({ item, operstate, ...props }) => {
   let name = item.Interface.match(/wlan(\d+)\.(\d+)/) ? 'client' : item.Type
+  if ( item.Interface.match(/wlan(\d+)\.ap(\d+)/) ) {
+    name = 'AP-Multi/Guest'
+  }
+
   let type = item.Interface.startsWith('wlan') ? 'wifi' : 'other'
   let icon = item.Interface.startsWith('wlan') ? WifiIcon : CableIcon
 
