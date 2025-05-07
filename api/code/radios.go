@@ -627,9 +627,9 @@ func updateExtraBSS(iface string, data string) string {
 
 					//use a static password
 					if entry.ExtraBSS[i].GuestPassword != "" {
-						data += "wpa_passphrase=" + entry.ExtraBSS[i].GuestPassword
+						data += "wpa_passphrase=" + entry.ExtraBSS[i].GuestPassword + "\n"
 						if strings.Contains(entry.ExtraBSS[i].WpaKeyMgmt, "SAE") {
-							data += "sae_password=" + entry.ExtraBSS[i].GuestPassword
+							data += "sae_password=" + entry.ExtraBSS[i].GuestPassword + "\n"
 						}
 					} else {
 						//or stick to the device password database
