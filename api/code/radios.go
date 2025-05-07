@@ -15,8 +15,16 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 )
+
+type ExtraBSS struct {
+	Ssid             string
+	Bssid            string
+	Wpa              string
+	WpaKeyMgmt       string
+	DisableIsolation bool
+	GuestPassword    string
+}
 
 func getHostapdConfigPath(iface string) string {
 	if !isValidIface(iface) {
@@ -573,10 +581,12 @@ func updateExtraBSS(iface string, data string) string {
 
 	// the mac80211_mt76 manual claims 0x00 for the first AP
 	//however on the mt7915e cards it was observed that 0x00 blocks
-	// multi bss from working.
+	// multi bss from working and we should start with 0x02.
 
 	mt76_macs := []int64{0x02, 0x06, 0x0a, 0x0e, 0x12, 0x16, 0x1a, 0x1e}
 	extra_index := 0
+
+	had_parent_set := false
 
 	for _, entry := range config {
 		if entry.Name == iface && entry.Type == "AP" {
@@ -598,9 +608,14 @@ func updateExtraBSS(iface string, data string) string {
 				new_bssid := fmt.Sprintf("%02s", hexStr) + bssid[2:]
 
 				extra_index += 1
-				data += "#spr-gen-bss\n"
-				data += "bssid=" + main_bssid + "\n"
-				data += "bss=" + iface + "." + strconv.Itoa(i) + "\n"
+
+				if !had_parent_set {
+					data += "#spr-gen-bss\n"
+					data += "bssid=" + main_bssid + "\n"
+					had_parent_set = true
+				}
+
+				data += "bss=" + iface + ".ap" + strconv.Itoa(i) + "\n"
 				data += "bssid=" + new_bssid + "\n"
 				data += "ssid=" + entry.ExtraBSS[i].Ssid + "\n"
 				if entry.ExtraBSS[i].Wpa == "0" {
@@ -609,7 +624,20 @@ func updateExtraBSS(iface string, data string) string {
 					data += "wpa=" + entry.ExtraBSS[i].Wpa + "\n"
 					data += "wpa_key_mgmt=" + entry.ExtraBSS[i].WpaKeyMgmt + "\n"
 					data += "rsn_pairwise=CCMP CCMP-256\n"
-					data += "wpa_psk_file=/configs/wifi/wpa2pskfile\n"
+
+					//use a static password
+					if entry.ExtraBSS[i].GuestPassword != "" {
+						data += "wpa_passphrase=" + entry.ExtraBSS[i].GuestPassword
+						if strings.Contains(entry.ExtraBSS[i].WpaKeyMgmt, "SAE") {
+							data += "sae_password=" + entry.ExtraBSS[i].GuestPassword
+						}
+					} else {
+						//or stick to the device password database
+						data += "wpa_psk_file=/configs/wifi/wpa2pskfile\n"
+						if strings.Contains(entry.ExtraBSS[i].WpaKeyMgmt, "SAE") {
+							data += "sae_psk_file=/configs/wifi/sae_passwords\n"
+						}
+					}
 				}
 
 				// default enabled
@@ -793,7 +821,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		data += fmt.Sprint(key, "=", value, "\n")
 	}
 
-	// if anything goes is configured for the interface, enable it.
+	// if extra BSS is configured for the interface, enable it.
 	data = updateExtraBSS(iface, data)
 
 	err = ioutil.WriteFile(getHostapdConfigPath(iface), []byte(data), 0600)
@@ -882,16 +910,6 @@ func iwCommand(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(data))
 }
 
-var Interfacesmtx sync.Mutex
-
-type ExtraBSS struct {
-	Ssid             string
-	Bssid            string
-	Wpa              string
-	WpaKeyMgmt       string
-	DisableIsolation bool
-}
-
 func (e *ExtraBSS) Validate() error {
 	// Check for newlines in string fields
 	if strings.ContainsAny(e.Ssid, "\n") {
@@ -905,6 +923,9 @@ func (e *ExtraBSS) Validate() error {
 	}
 	if strings.ContainsAny(e.WpaKeyMgmt, "\n") {
 		return fmt.Errorf("WpaKeyMgmt contains newlines")
+	}
+	if strings.ContainsAny(e.GuestPassword, "\n") {
+		return fmt.Errorf("GuestPassword contains newlines")
 	}
 
 	return nil
