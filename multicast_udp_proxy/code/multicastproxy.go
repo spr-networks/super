@@ -461,6 +461,9 @@ func mdnsPublish(settings MulticastSettings) {
 				if target.Name == wanif {
 					wanif_covered = true
 				}
+			} else if target.Type == "Downlink" {
+				//mDNS advertise over wired LAN too
+				mdnsPublishIface(settings, target.Name)
 			}
 		}
 	}
