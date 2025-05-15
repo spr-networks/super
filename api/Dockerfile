@@ -10,7 +10,6 @@ RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.24.2.linux-${TARGETARCH}.
 ENV PATH="/usr/local/go/bin:$PATH"
 COPY code/ /code/
 
-WORKDIR /code
 
 RUN git clone https://github.com/spr-networks/sprbus --depth 1
 WORKDIR /code/sprbus/cmd/
@@ -18,6 +17,7 @@ RUN --mount=type=tmpfs,target=/tmpfs \
     [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
     go build -ldflags "-s -w" -o /sprbus
 
+WORKDIR /code
 ARG USE_TMPFS=true
 RUN --mount=type=tmpfs,target=/tmpfs \
     [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
