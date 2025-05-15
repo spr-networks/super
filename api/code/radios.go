@@ -616,6 +616,7 @@ func updateExtraBSS(iface string, data string) string {
 				}
 
 				data += "bss=" + iface + ".ap" + strconv.Itoa(i) + "\n"
+				data += "ctrl_interface=/state/wifi/control_" + iface + ".ap" + strconv.Itoa(i) + "\n"
 				data += "bssid=" + new_bssid + "\n"
 				data += "ssid=" + entry.ExtraBSS[i].Ssid + "\n"
 				if entry.ExtraBSS[i].Wpa == "0" {
@@ -630,6 +631,9 @@ func updateExtraBSS(iface string, data string) string {
 						data += "wpa_psk_file=/dev/null\n"
 						data += "wpa_passphrase=" + entry.ExtraBSS[i].GuestPassword + "\n"
 						if strings.Contains(entry.ExtraBSS[i].WpaKeyMgmt, "SAE") {
+							data += "beacon_prot=1\n"
+							data += "ieee80211w=1\n"
+							data += "sae_pwe=2\n"
 							data += "sae_psk_file=/dev/null\n"
 							data += "sae_password=" + entry.ExtraBSS[i].GuestPassword + "\n"
 						}
@@ -1148,10 +1152,6 @@ func getEnabledAPInterfaces(w http.ResponseWriter, r *http.Request) {
 	for _, entry := range config {
 		if entry.Enabled == true && entry.Type == "AP" {
 			outputString += entry.Name + " "
-
-			if len(entry.ExtraBSS) > 0 {
-				//extra := entry.ExtraBSS[0] //tbd
-			}
 		}
 	}
 
