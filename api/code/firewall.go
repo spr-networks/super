@@ -2641,15 +2641,26 @@ func getWifiPeers() map[string]string {
 	interfacesConfig := loadInterfacesConfigLocked()
 	Interfacesmtx.Unlock()
 
+	updatePeers := func(iface string) {
+
+		wifi_peers, err := RunHostapdAllStations(iface)
+		if err == nil {
+			for k, peer := range wifi_peers {
+				val, exists := peer["vlan_id"]
+				if exists && (val != "") {
+					peers[k] = iface + "." + peer["vlan_id"]
+				}
+			}
+		}
+
+	}
+
 	for _, entry := range interfacesConfig {
 		if entry.Enabled == true && entry.Type == "AP" {
-			wifi_peers, err := RunHostapdAllStations(entry.Name)
-			if err == nil {
-				for k, peer := range wifi_peers {
-					val, exists := peer["vlan_id"]
-					if exists && (val != "") {
-						peers[k] = entry.Name + "." + peer["vlan_id"]
-					}
+			updatePeers(entry.Name)
+			if len(entry.ExtraBSS) > 0 {
+				for i := range len(entry.ExtraBSS) {
+					updatePeers(entry.Name + ExtraBSSPrefix + strconv.Itoa(i))
 				}
 			}
 		}
@@ -2803,7 +2814,11 @@ func populateVmapEntries(devices map[string]DeviceEntry, groups []GroupEntry, IP
 
 	//apply other policies
 	applyPrivateNetworkUpstreamDevice(val)
-	applyNoAPI(val)
+
+	if !strings.Contains(Iface, ExtraBSSPrefix) {
+		//no api was applied elsewhere.
+		applyNoAPI(val)
+	}
 
 }
 
@@ -2886,6 +2901,11 @@ func establishDevice(devices map[string]DeviceEntry, groups []GroupEntry,
 	// no interface set. abort now
 	if new_iface == "" {
 		return
+	}
+
+	if strings.Contains(new_iface, ExtraBSSPrefix) {
+		//this was a guest wifi network, block API access
+		addNoAPIAccess(entry.RecentIP)
 	}
 
 	exec.Command("ip", "route", "add", routeIP, "dev", new_iface).Run()

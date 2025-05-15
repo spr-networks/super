@@ -26,6 +26,8 @@ type ExtraBSS struct {
 	GuestPassword    string
 }
 
+var ExtraBSSPrefix = ".ap"
+
 func getHostapdConfigPath(iface string) string {
 	if !isValidIface(iface) {
 		return ""
@@ -615,7 +617,7 @@ func updateExtraBSS(iface string, data string) string {
 					had_parent_set = true
 				}
 
-				data += "bss=" + iface + ".ap" + strconv.Itoa(i) + "\n"
+				data += "bss=" + iface + ExtraBSSPrefix + strconv.Itoa(i) + "\n"
 				data += "ctrl_interface=/state/wifi/control_" + iface + ".ap" + strconv.Itoa(i) + "\n"
 				data += "bssid=" + new_bssid + "\n"
 				data += "ssid=" + entry.ExtraBSS[i].Ssid + "\n"
