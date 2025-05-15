@@ -540,7 +540,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
           variant="outline"
           size="md"
           _onPress={() => setShowAdvanced(!showAdvanced)}
-          onPress={() => navigate(`/admin/alerts/settings`)}
+          onPress={() => navigate(`/admin/alerts`)}
         >
           <ButtonText>Back</ButtonText>
         </Button>

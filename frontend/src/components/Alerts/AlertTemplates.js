@@ -118,7 +118,7 @@ export default [
         StoreAlert: true,
         MessageTitle: 'Dropped Input',
         MessageBody:
-          'Drop Incoming Traffic to Router from {{IP.SrcIP}} to port {{TCP.DstPort}} {{UDP.DstPort}}',
+          'Drop Incoming Traffic to Router from {{Ethernet.SrcMAC}} {{IP.SrcIP}} to port {{TCP.DstPort}} {{UDP.DstPort}}',
         NotificationType: 'warning',
         GrabEvent: true,
         GrabValues: false

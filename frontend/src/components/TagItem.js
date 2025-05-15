@@ -121,7 +121,6 @@ const InterfaceItem = React.memo(({ name, address, size, type, ...props }) => {
   let isWifi = name?.startsWith('wlan') || type == 'wifi'
   let isOffline = !name?.length
   let colorMode = useColorMode()
-
   let k = isWifi ? 'wifi' : isOffline ? 'offline' : 'ethernet'
 
   let styles = {
@@ -171,7 +170,7 @@ const InterfaceItem = React.memo(({ name, address, size, type, ...props }) => {
 
 const InterfaceTypeItem = ({ item, operstate, ...props }) => {
   let name = item.Interface.match(/wlan(\d+)\.(\d+)/) ? 'client' : item.Type
-  if ( item.Interface.match(/wlan(\d+)\.ap(\d+)/) ) {
+  if ( item.Interface.match(/wlan(\d+)\.ap(\d+)\.(\d+)/) ) {
     name = 'AP-Multi/Guest'
   }
 
