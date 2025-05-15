@@ -49,17 +49,14 @@ import { InterfaceTypeItem } from 'components/TagItem'
 const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
   const type = 'config'
   const context = useContext(AlertContext)
-
   const [item, setItem] = useState({
     ...curItem,
     Type: curItem.Type || 'Downlink',
     MACOverride: curItem.MACOverride || '',
-    Enabled: curItem.Enabled,
+    Enabled: curItem.Enabled !== undefined ? curItem.Enabled : true,
     MACRandomize: curItem.MACRandomize,
     MACCloak: curItem.MACCloak
   })
-
-  const [enable, setEnable] = useState(curItem.Enabled)
 
   const validate = () => {
     if (
@@ -71,7 +68,6 @@ const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
       context.error('Failed to validate Type')
       return false
     }
-
     const macAddressRegex = /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/
     if (item.MACOverride != '') {
       if (!macAddressRegex.test(item.MACOverride)) {
@@ -79,12 +75,11 @@ const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
         return false
       }
     }
-
     return true
   }
 
   const doSubmit = (item) => {
-    validate() ? onSubmit(item, type, enable) : null
+    validate() ? onSubmit(item, type, item.Enabled) : null
   }
 
   let validTypes = [
@@ -99,15 +94,19 @@ const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
         <FormControlLabel>
           <FormControlLabelText>Update Interface</FormControlLabelText>
         </FormControlLabel>
-
-        <Checkbox value={enable} onChange={setEnable} isChecked={enable}>
+        <Checkbox
+          value={item.Enabled}
+          isChecked={item.Enabled}
+          onChange={(value) => {
+            setItem({ ...item, Enabled: value })
+          }}
+        >
           <CheckboxIndicator mr="$2">
             <CheckboxIcon />
           </CheckboxIndicator>
           <CheckboxLabel>Enabled</CheckboxLabel>
         </Checkbox>
       </FormControl>
-
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText>Set Interface Type</FormControlLabelText>
@@ -121,7 +120,6 @@ const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
           ))}
         </Select>
       </FormControl>
-
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText>Override MAC Address</FormControlLabelText>
@@ -135,7 +133,6 @@ const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
           />
         </Input>
       </FormControl>
-
       <HStack flex={1} space="md">
         <FormControl>
           <Checkbox
@@ -151,7 +148,6 @@ const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
             <CheckboxLabel>Randomize MAC</CheckboxLabel>
           </Checkbox>
         </FormControl>
-
         {item.MACRandomize && (
           <FormControl>
             <Checkbox
@@ -169,7 +165,6 @@ const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
           </FormControl>
         )}
       </HStack>
-
       <Button action="primary" onPress={() => doSubmit(item)}>
         <ButtonText>Save</ButtonText>
       </Button>

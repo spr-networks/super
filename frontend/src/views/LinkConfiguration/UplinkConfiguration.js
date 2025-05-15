@@ -288,14 +288,13 @@ const UplinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
   const [item, setItem] = useState({
     Type: curItem.Type || 'Uplink',
     MACOverride: curItem.MACOverride || '',
-    Enabled: curItem.Enabled,
+    Enabled: curItem.Enabled !== undefined ? curItem.Enabled : true,
     MACRandomize: curItem.MACRandomize,
     MACCloak: curItem.MACCloak
   })
 
   const [errors, setErrors] = useState({})
 
-  const [enable, setEnable] = useState(true)
 
   const validate = () => {
     if (item.Type != 'Other' && item.Type != 'Uplink' && item.Type != 'AP') {
@@ -315,7 +314,7 @@ const UplinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
   }
 
   const doSubmit = (item) => {
-    validate() ? onSubmit(item, type, enable) : null
+    validate() ? onSubmit(item, type, item.Enabled) : null
   }
 
   let validTypes = [
@@ -332,11 +331,10 @@ const UplinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
         </FormControlLabel>
 
         <Checkbox
-          value={enable}
-          defaultIsChecked={item.Enabled}
-          isChecked={enable}
+          value={item.Enabled}
+          isChecked={item.Enabled}
           onChange={(value) => {
-            setEnable(value)
+            setItem({ ...item, Enabled: value })
           }}
         >
           <CheckboxIndicator mr="$2">
