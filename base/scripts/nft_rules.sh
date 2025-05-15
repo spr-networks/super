@@ -275,7 +275,7 @@ table inet filter {
 
     # block API access for specified clients,
     # this will be set for any devices with a guest policy
-    #counter tcp dport {22, 80, 443} ip saddr @api_block goto DROPLOGINP
+    counter tcp ip saddr @api_block dport {22, 80, 443} goto DROPLOGINP
 
     # Allow wireguard to lan services
     $(if [ "$WIREGUARD_PORT" ]; then echo "iifname wg0 counter tcp dport vmap @lan_tcp_accept"; fi)
