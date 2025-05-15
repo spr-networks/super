@@ -568,16 +568,12 @@ func hostapdConfig(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(conf)
 }
 
-func updateExtraBSS(iface string, data string) string {
+func updateExtraBSSLocked(iface, data, MACOverride string) string {
 	// skip previous generation
 	idx := strings.Index(data, "#spr-gen-bss")
 	if idx != -1 {
 		data = data[:idx]
 	}
-
-	Interfacesmtx.Lock()
-	defer Interfacesmtx.Unlock()
-
 	//read theinterfaces configuration
 	config := loadInterfacesConfigLocked()
 
@@ -601,6 +597,11 @@ func updateExtraBSS(iface string, data string) string {
 				}
 
 				bssid := entry.ExtraBSS[i].Bssid
+
+				if MACOverride != "" {
+					bssid = MACOverride
+				}
+
 				//main bssid should have LLA to 0, others to 1? bit unclear
 				// hostapd said it depends on the driver.
 				hexStr := strconv.FormatInt(mt76_macs[extra_index], 16)
@@ -659,6 +660,13 @@ func updateExtraBSS(iface string, data string) string {
 	}
 
 	return data
+}
+
+func updateExtraBSS(iface, data, MACOverride string) string {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+
+	return updateExtraBSSLocked(iface, data, MACOverride)
 }
 
 func transition6e(conf map[string]interface{}) {
@@ -830,7 +838,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// if extra BSS is configured for the interface, enable it.
-	data = updateExtraBSS(iface, data)
+	data = updateExtraBSS(iface, data, "")
 
 	err = ioutil.WriteFile(getHostapdConfigPath(iface), []byte(data), 0600)
 	if err != nil {
@@ -937,6 +945,23 @@ func (e *ExtraBSS) Validate() error {
 	}
 
 	return nil
+}
+
+func UpdateHostapMACs(Iface, MAC string) {
+	// MAC Randomization was on, so update the bss config
+	// with the new MAC target
+	path := getHostapdConfigPath(Iface)
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Printf("Error reading hostapd conf: %v", err)
+		return
+	}
+
+	dataString := updateExtraBSSLocked(Iface, string(data), MAC)
+	err = ioutil.WriteFile(path, []byte(dataString), 0600)
+	if err != nil {
+		log.Printf("Error writing extrabss in new hostapd conf: %v", err)
+	}
 }
 
 /*
@@ -1087,7 +1112,7 @@ func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// if anything is configured for the interface, enable it.
-	dataString := updateExtraBSS(iface, string(data))
+	dataString := updateExtraBSS(iface, string(data), "")
 
 	err = ioutil.WriteFile(path, []byte(dataString), 0600)
 	if err != nil {

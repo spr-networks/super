@@ -815,7 +815,11 @@ func refreshInterfaceOverridesLocked() bool {
 			if err != nil {
 				log.Println("Failed to set random address "+target, err)
 			}
-			do_restart_wifid = true
+
+			//unfortunately hostapd wants the macs assigned in-config,
+			// so we need to go through with updating that
+			UpdateHostapMACs(ifconfig.Name, target)
+			do_restart_wifid = ifconfig.Type == "AP"
 		} else if ifconfig.MACOverride != "" {
 			exec.Command("ip", "link", "set", "dev", ifconfig.Name, "down").Run()
 			err := exec.Command("ip", "link", "set", "dev", ifconfig.Name, "address", ifconfig.MACOverride).Run()
@@ -823,6 +827,8 @@ func refreshInterfaceOverridesLocked() bool {
 			if err != nil {
 				log.Println("Failed to set address "+ifconfig.MACOverride, err)
 			}
+			UpdateHostapMACs(ifconfig.Name, ifconfig.MACOverride)
+			do_restart_wifid = ifconfig.Type == "AP"
 		}
 	}
 	return do_restart_wifid
