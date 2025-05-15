@@ -238,6 +238,9 @@ const Devices = (props) => {
                     let devs = devices.map((dev) => {
                       if (dev.isConnected !== true) {
                         dev.isConnected = connectedMACs.includes(dev.MAC)
+                        if (dev.isConnected) {
+                          dev.LastIface = iface //tag the last iface
+                        }
                         dev.isAssociatedOnly = associatedNotConnected.includes(dev.MAC)
                       }
 
