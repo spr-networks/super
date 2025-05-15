@@ -561,6 +561,12 @@ export default class APIWifi extends API {
       if (status['ssid[0]']) {
         status['ssid[0]'] = decodeUTF8(status['ssid[0]'])
       }
+      if (status['ssid[1]']) {
+        status['ssid[1]'] = decodeUTF8(status['ssid[1]'])
+      }
+      if (status['ssid[2]']) {
+        status['ssid[2]'] = decodeUTF8(status['ssid[2]'])
+      }
       return status;
     });
   }
@@ -646,10 +652,17 @@ export default class APIWifi extends API {
           if (typeFilter) {
             if (!devs[dev][wifi].type.includes(typeFilter)) continue;
           }
+
+
           //ignore the set up ap
           if (typeFilter == 'AP' && devs[dev][wifi].ssid === 'spr-setup') continue;
+
           //ignore vlans
-          if (wifi.includes('.')) continue;
+          if (wifi.includes(".ap")) {
+            //extra ssids look like .ap0.<vlan>
+            if (wifi.split(".").length > 2) continue
+          } else if (wifi.includes('.')) continue;
+
           ifaces = ifaces.concat(wifi);
         }
       }
@@ -671,8 +684,12 @@ export default class APIWifi extends API {
             if (!devs[dev][wifi].type.includes(typeFilter)) continue;
           }
           //ignore vlans
-          if (wifi.includes('.')) continue;
-          ifaces = ifaces.concat(wifi);
+          if (wifi.includes(".ap")) {
+            //extra ssids look like .ap0.<vlan>
+            if (wifi.split(".").length > 2) continue
+          } else if (wifi.includes('.')) continue;
+
+          ifaces = ifaces.concat(wifi)
         }
       }
 

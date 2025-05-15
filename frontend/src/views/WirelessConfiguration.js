@@ -14,14 +14,14 @@ const WirelessConfiguration = (props) => {
   return (
     <TabView
       tabs={[
-        { title: 'Guest Network', component: WifiGuestNetwork },
         { title: 'Clients', component: WifiClients },
         { title: 'Interfaces', component: WifiInterfaceList },
         { title: 'Scan', component: WifiScan },
         {
           title: Platform.OS === 'web' ? 'Radio Settings' : 'Settings',
           component: WifiHostapd
-        }
+        },
+        { title: 'Guest Network', component: WifiGuestNetwork },
       ]}
     />
   )

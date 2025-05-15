@@ -392,6 +392,14 @@ const WifiInterfaceList = (props) => {
     })
   }, [])
 
+  const decodeUTF8 = (str) => {
+    const x = str.replace(/\\x([0-9A-Fa-f]{2})/g, (_, p1) =>
+      String.fromCharCode(parseInt(p1, 16))
+    );
+
+    return decodeURIComponent(escape(x))
+  }
+
   const getMainDev = (item) => {
     let devKey = Object.keys(item.devices)
       .filter((dev) => !dev.includes('.'))
@@ -403,7 +411,7 @@ const WifiInterfaceList = (props) => {
   const getDesc = (item) => {
     let dev = getMainDev(item)
     if (dev?.type == 'AP' && dev.ssid) {
-      return `${dev.type}: ${dev.ssid}`
+      return `${dev.type}: ${decodeUTF8(dev.ssid)}`
     }
 
     return `${dev.type}`
