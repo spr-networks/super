@@ -11,6 +11,9 @@ while [ $RET -ne 0 ]; do
   RET=$?
 done
 
+IFACES_VIRTUAL=$(curl --unix-socket /state/wifi/apisock http://localhost/interfaces_virtual_bss)
+
+
 #clear failsafe state
 for IFACE in $IFACES
 do
@@ -29,6 +32,10 @@ do
   hostapd_cli -B -p /state/wifi/control_${IFACE} -a /scripts/action.sh
 done
 
+for IFACE in $IFACES_VIRTUAL
+do
+  hostapd_cli -B -p /state/wifi/control_${IFACE} -a /scripts/action.sh
+done
 
 for IFACE in $IFACES
 do
