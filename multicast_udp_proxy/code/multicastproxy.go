@@ -292,7 +292,7 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool,
 					return
 				}
 
-				fmt.Println("failed to write", err)
+				fmt.Println("failed to write: ", err)
 				return
 			}
 		}
