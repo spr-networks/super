@@ -381,10 +381,12 @@ func getDefaultGatewayLocked(dev string) (string, error) {
 	return "", fmt.Errorf("gateway not found")
 }
 
-func setDefaultUplinkGateway(iface string, index int) {
+// false -> did not set Gateway
+// true -> have a gateway or did not set one
+func setDefaultUplinkGateway(iface string, index int) bool {
 	// do not mess with route for mesh for now
 	if isLeafRouter() {
-		return
+		return false
 	}
 
 	gateway, err := getDefaultGatewayLocked(iface)
@@ -392,9 +394,9 @@ func setDefaultUplinkGateway(iface string, index int) {
 		//no gateway found, continue on
 		if err != nil {
 			//only log when err is not nil
-			log.Println("failed to set default gw for "+iface+": not found", err)
+			log.Println("failed to get default gw for "+iface+": not found", err)
 		}
-		return
+		return false
 	}
 
 	table := fmt.Sprintf("%d", firstOutboundRouteTable+index)
@@ -402,17 +404,20 @@ func setDefaultUplinkGateway(iface string, index int) {
 	current_table_route := getRouteGatewayForTable(table)
 	if current_table_route == gateway {
 		// route already set, make no updates
-		return
+		return true
 	}
 
+	ret := true
 	cmd := exec.Command("ip", "route", "replace", "default", "via", gateway, "dev", iface, "table", table)
 	_, err = cmd.Output()
 	if err != nil {
 		log.Print("Error with route setup", cmd, err)
+		ret = false
 	}
 
 	cmd = exec.Command("ip", "route", "flush", "cache")
 	_, _ = cmd.Output()
+	return ret
 }
 
 func updateOutboundRoutes() {
@@ -443,6 +448,13 @@ func collectOutbound() []string {
 	outbound := []string{}
 	for _, iface := range interfaces {
 		if iface.Type == "Uplink" && iface.Subtype != "pppup" && iface.Enabled {
+
+			gw, _ := getDefaultGatewayLocked(iface.Name)
+			if gw == "" {
+				//no gateway set, reject this outbound
+				continue
+			}
+
 			outbound = append(outbound, iface.Name)
 			if len(outbound) > 128 {
 				//rules start at 11. 253/254/255 reserved
@@ -467,6 +479,14 @@ func rebuildUplink() {
 
 	if len(outbound) < 2 {
 		//dont need more, outbound will work as is
+
+		if len(outbound) == 1 {
+			//ensure we have the gw set
+			gw, _ := getDefaultGatewayLocked(outbound[0])
+			if gw != "" {
+				exec.Command("ip", "route", "replace", "default", "via", gw, "dev", outbound[0]).Output()
+			}
+		}
 		return
 	}
 
@@ -551,7 +571,7 @@ func rebuildUplink() {
 
 }
 
-func modifyUplinkEntry(ifname string, action string) error {
+func modifyUplinkEntry(ifname, action string, rebuild bool) error {
 	cmd := exec.Command("nft", action, "element", "inet", "filter",
 		"uplink_interfaces", "{", ifname, "}")
 
@@ -582,21 +602,24 @@ func modifyUplinkEntry(ifname string, action string) error {
 		log.Println(cmd)
 	}
 
-	rebuildUplink()
+	if rebuild {
+		rebuildUplink()
+	}
+
 	return err
 }
 
-func addUplinkEntry(ifname string, subtype string) {
+func addUplinkEntry(ifname, subtype string, rebuild bool) {
 	if subtype == "pppup" {
 		//ppp-up connects a ppp to the internt
 		//but packets go directly through the ppp not the pppup provider
 		return
 	}
-	modifyUplinkEntry(ifname, "add")
+	modifyUplinkEntry(ifname, "add", rebuild)
 
 }
-func removeUplinkEntry(ifname string) {
-	modifyUplinkEntry(ifname, "delete")
+func removeUplinkEntry(ifname string, rebuild bool) {
+	modifyUplinkEntry(ifname, "delete", rebuild)
 }
 
 func flushSupernetworkEntries() {
@@ -605,7 +628,7 @@ func flushSupernetworkEntries() {
 	exec.Command("nft", "flush", "set", "ip", "filter", "supernetworks").Output()
 }
 
-func modifySupernetworkEntry(supernet string, action string) {
+func modifySupernetworkEntry(supernet, action string) {
 	cmd := exec.Command("nft", action, "element", "inet", "mangle",
 		"supernetworks", "{", supernet, "}")
 
@@ -1398,9 +1421,11 @@ func populateSets() {
 			found_wanif = true
 		}
 		if iface.Type == "Uplink" && iface.Enabled == true {
-			addUplinkEntry(iface.Name, iface.Subtype)
+			addUplinkEntry(iface.Name, iface.Subtype, false)
 		}
 	}
+
+	rebuildUplink()
 
 	//As a migration: when no longer in setup mode,
 	//import WANIF into interfaces.json
