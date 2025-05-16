@@ -4,6 +4,7 @@ import WifiClients from 'components/Wifi/WifiClients'
 import WifiInterfaceList from 'components/Wifi/WifiInterfaceList'
 import WifiScan from 'components/Wifi/WifiScan'
 import WifiHostapd from 'components/Wifi/WifiHostapd'
+import WifiGuestNetwork from 'components/Wifi/WifiGuestNetwork'
 
 import { Platform } from 'react-native'
 
@@ -19,7 +20,8 @@ const WirelessConfiguration = (props) => {
         {
           title: Platform.OS === 'web' ? 'Radio Settings' : 'Settings',
           component: WifiHostapd
-        }
+        },
+        { title: 'Guest Network', component: WifiGuestNetwork },
       ]}
     />
   )

@@ -18,11 +18,14 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
 
 import "github.com/gorilla/mux"
+
+var Interfacesmtx sync.Mutex
 
 var gAPIInterfacesPath = TEST_PREFIX + "/configs/base/interfaces.json"
 var gAPIInterfacesPublicPath = TEST_PREFIX + "/state/public/interfaces.json"
@@ -146,7 +149,7 @@ func resetInterface(interfaces []InterfaceConfig, name string, prev_type string,
 	// IMPORTANT, now the previous subtype / type needs to be updated
 	if prev_type == "Uplink" {
 
-		removeUplinkEntry(name)
+		removeUplinkEntry(name, true)
 
 		if prev_subtype == "wifi" {
 			//wifi was disabled, notify it
@@ -249,7 +252,7 @@ func configureInterface(interfaceType string, subType string, name string, MACRa
 	}
 
 	if interfaceType == "Uplink" {
-		addUplinkEntry(name, subType)
+		addUplinkEntry(name, subType, true)
 	}
 	//set the
 
@@ -285,7 +288,7 @@ func toggleInterface(name string, enabled bool) error {
 		resetInterface(config, config[i].Name, config[i].Type, config[i].Subtype, enabled, false)
 
 		if config[i].Type == "Uplink" && enabled {
-			addUplinkEntry(config[i].Name, config[i].Subtype)
+			addUplinkEntry(config[i].Name, config[i].Subtype, true)
 		}
 
 		return err
@@ -356,7 +359,7 @@ func updateInterfaceType(Iface string, Type string, Subtype string, Enabled bool
 			resetInterface(interfaces, Iface, prev_type, prev_subtype, Enabled, false)
 
 			if Type == "Uplink" && Enabled {
-				addUplinkEntry(Iface, Subtype)
+				addUplinkEntry(Iface, Subtype, true)
 			}
 		}
 
@@ -480,7 +483,7 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 
 		//set uplink
 		if iconfig.Type == "Uplink" {
-			addUplinkEntry(iconfig.Name, iconfig.Subtype)
+			addUplinkEntry(iconfig.Name, iconfig.Subtype, true)
 		}
 
 		if restart_wifid || (prev_type != "AP" && iconfig.Type == "AP") {
@@ -794,6 +797,11 @@ func refreshInterfaceOverrides() {
 	defer Interfacesmtx.Unlock()
 
 	restart_wifid := refreshInterfaceOverridesLocked()
+
+	// when setting an override the interface could have been brought down
+	//which can kill the route
+	rebuildUplink()
+
 	//restart hostap if the mac has changed
 	if restart_wifid {
 		callSuperdRestart("", "wifid")
@@ -812,13 +820,23 @@ func refreshInterfaceOverridesLocked() bool {
 			if err != nil {
 				log.Println("Failed to set random address "+target, err)
 			}
-			do_restart_wifid = true
+
+			//unfortunately hostapd wants the macs assigned in-config,
+			// so we need to go through with updating that
+			if ifconfig.Type == "AP" {
+				UpdateHostapMACs(ifconfig.Name, target)
+				do_restart_wifid = true
+			}
 		} else if ifconfig.MACOverride != "" {
 			exec.Command("ip", "link", "set", "dev", ifconfig.Name, "down").Run()
 			err := exec.Command("ip", "link", "set", "dev", ifconfig.Name, "address", ifconfig.MACOverride).Run()
 			exec.Command("ip", "link", "set", "dev", ifconfig.Name, "up").Run()
 			if err != nil {
 				log.Println("Failed to set address "+ifconfig.MACOverride, err)
+			}
+			if ifconfig.Type == "AP" {
+				UpdateHostapMACs(ifconfig.Name, ifconfig.MACOverride)
+				do_restart_wifid = true
 			}
 		}
 	}
@@ -934,7 +952,7 @@ func pingTest(w http.ResponseWriter, r *http.Request) {
 		}
 		defer syscall.Close(fd)
 
-		if err := syscall.BindToDevice(fd, ief.Name); err != nil {
+		if err := bindToDevice(fd, ief.Name); err != nil {
 			http.Error(w, "Error binding to interface", 400)
 			return
 		}
@@ -947,7 +965,7 @@ func pingTest(w http.ResponseWriter, r *http.Request) {
 		}
 		defer conn.Close()
 
-		err = syscall.BindToDevice(fd, ief.Name)
+		err = bindToDevice(fd, ief.Name)
 		if err != nil {
 			http.Error(w, "Failed to listen on interface", 400)
 			return

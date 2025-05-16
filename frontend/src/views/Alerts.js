@@ -313,7 +313,7 @@ const Alerts = (props) => {
             action="primary"
             variant="outline"
             size="sm"
-            onPress={() => navigate(`/admin/alerts/settings`)}
+            onPress={() => navigate(`/admin/alerts`)}
           >
             <ButtonText>Settings</ButtonText>
             <ButtonIcon as={SettingsIcon} ml="$2" />
@@ -405,7 +405,7 @@ const Alerts = (props) => {
         renderInPortal={false}
         shadow={2}
         size="sm"
-        onPress={() => navigate(`/admin/alerts/settings`)}
+        onPress={() => navigate(`/admin/alerts`)}
         bg="$secondary500"
         mr="$20"
       >

@@ -149,6 +149,10 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
   let protocolAuth = { sae: 'WPA3', wpa2: 'WPA2' }
   let wifi_type = protocolAuth[device.PSKEntry.Type] || 'Wired'
 
+  //for guest networks theres no psk set yet.
+  if (device.LastIface?.includes(".ap")) wifi_type = 'Guest WiFi'
+
+
   //NOTE dup code, same in view for deleteListItem
   const removeDevice = () => {
     let id = device.MAC || device.WGPubKey || 'pending'
@@ -256,6 +260,10 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
   }
 
   const getConnectedColor = (device) => {
+    if (device.LastIface?.includes(".ap")) {
+      return '$blue600'
+    }
+
     if (device.isConnected) {
       return '$green600'
     }
@@ -383,6 +391,7 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
               <IconItem
                 name={wifi_type == 'Wired' ? 'Wire' : 'Wifi'}
                 size={32}
+                color={getConnectedColor(device)}
               />
             </Tooltip>
           </VStack>

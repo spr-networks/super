@@ -1,4 +1,11 @@
 # Secure Programmable Router (SPR) Release Notes
+## v1.0.12
+**Improvements**
+- Golang version update & module upgrades
+- New API Block Policy to restart API/SSH access
+- Support for Guest SSIDs with static passwords
+**Fixes**
+- When multiple uplinks are configured but disconnected, choose only uplinks with routes set
 
 ## v1.0.11
 **Improvements**

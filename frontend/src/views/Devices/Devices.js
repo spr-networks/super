@@ -99,7 +99,7 @@ const Devices = (props) => {
   const [list, setList] = useState([])
   const [tags, setTags] = useState([])
   const [groups, setGroups] = useState([])
-  const [sortBy, setSortBy] = useState('online')
+  const [sortBy, setSortBy] = useState('date')
   const [filter, setFilter] = useState({}) // filter groups,tags
   const [unknownMacs, setUnknownMacs] = useState([])
 
@@ -226,12 +226,10 @@ const Devices = (props) => {
         // TODO check wg status for virt
         if (!appContext.isWifiDisabled) {
           //for each interface
-          wifiAPI.interfacesConfiguration().then((config) => {
-            config
-              .filter((iface) => iface.Type == 'AP' && iface.Enabled == true)
-              .forEach((iface) => {
+          wifiAPI.interfaces('AP').then((interfaces) => {
+              interfaces.forEach((iface) => {
                 wifiAPI
-                  .allStations(iface.Name)
+                  .allStations(iface)
                   .then((stations) => {
                     let connectedMACs = gatherStationsByFlag(stations, "[AUTHORIZED]", false)
                     let associatedNotConnected = gatherStationsByFlag(stations, "[AUTHORIZED]", true)
@@ -240,6 +238,9 @@ const Devices = (props) => {
                     let devs = devices.map((dev) => {
                       if (dev.isConnected !== true) {
                         dev.isConnected = connectedMACs.includes(dev.MAC)
+                        if (dev.isConnected) {
+                          dev.LastIface = iface //tag the last iface
+                        }
                         dev.isAssociatedOnly = associatedNotConnected.includes(dev.MAC)
                       }
 
@@ -250,7 +251,7 @@ const Devices = (props) => {
                     setList(devs.sort(sortDevices))
                   })
                   .catch((err) => {
-                    //context.error('WIFI API Failure', err)
+                    context.error('WIFI API Failure', err)
                   })
               })
           })
@@ -259,16 +260,12 @@ const Devices = (props) => {
             .meshIter(() => new APIWifi())
             .then((r) =>
               r.forEach((remoteWifiApi) => {
-                remoteWifiApi.interfacesConfiguration
+                remoteWifiApi.interfaces
                   .call(remoteWifiApi)
-                  .then((config) => {
-                    config
-                      .filter(
-                        (iface) => iface.Type == 'AP' && iface.Enabled == true
-                      )
-                      .forEach((iface) => {
+                  .then((interfaces) => {
+                      interfaces.forEach((iface) => {
                         remoteWifiApi.allStations
-                          .call(remoteWifiApi, iface.Name)
+                          .call(remoteWifiApi, iface)
                           .then((stations) => {
                             let connectedMACs = gatherStationsByFlag(stations, "[AUTHORIZED]", false)
                             let associatedNotConnected = gatherStationsByFlag(stations, "[AUTHORIZED]", true)
@@ -292,7 +289,7 @@ const Devices = (props) => {
                               'WIFI API Failure ' +
                                 remoteWifiApi.remoteURL +
                                 ' ' +
-                                iface.Name,
+                                iface,
                               err
                             )
                           })

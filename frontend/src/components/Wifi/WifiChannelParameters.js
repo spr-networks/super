@@ -67,8 +67,6 @@ const WifiChannelParameters = ({
   regs,
   curInterface,
   onSubmit,
-  updateExtraBSS,
-  deleteExtraBSS,
   ...props
 }) => {
   const context = useContext(AlertContext)
@@ -80,11 +78,7 @@ const WifiChannelParameters = ({
   const [errors, setErrors] = useState({})
   const [disable160, setDisable160] = useState(true)
   const [disableWifi6, setDisableWifi6] = useState(true)
-  const [groupValues, setGroupValues] = React.useState([])
-
-  //support for additional bssid
-  const [disableExtraBSS, setDisableExtraBSS] = useState(true)
-  const [extraSSID, setExtraSSID] = useState('-extra')
+  const [groupValues, setGroupValues] = useState([])
 
   //some wifi devices were reported to crash during auth if GCMP was enabled,
   // disable this less common cipher by default but let people enable it
@@ -157,7 +151,6 @@ const WifiChannelParameters = ({
     } else {
       setChannel(config.channel)
     }
-    setExtraSSID(config.ssid + '-extra')
 
     let newBandwidth = 40
     if (config.vht_oper_chwidth == 0) {
@@ -196,16 +189,6 @@ const WifiChannelParameters = ({
       }
     }
 
-    if (curInterface) {
-      if (curInterface.ExtraBSS && curInterface.ExtraBSS.length == 1) {
-        let extra = curInterface.ExtraBSS[0]
-        setExtraSSID(extra.Ssid)
-        if (!groupValues.includes('extrabss')) {
-          setGroupValues(groupValues.concat('extrabss'))
-        }
-      }
-    }
-
     //set bw and channels
     for (let iw of iws) {
       if (iw.devices[iface]) {
@@ -229,18 +212,6 @@ const WifiChannelParameters = ({
 
           if (band.he_phy_capabilities) {
             setDisableWifi6(false)
-          }
-        }
-
-        //check if valid_interface_combinations supports multiple APs
-        let combos = iw.valid_interface_combinations
-        for (let combo of combos) {
-          let ap_entry = combo.split('#').filter((e) => e.includes('AP'))
-          if (ap_entry[0] && ap_entry[0].includes('<=')) {
-            let num_supported = parseInt(ap_entry[0].split('<=')[1])
-            if (num_supported > 0) {
-              setDisableExtraBSS(false)
-            }
           }
         }
 
@@ -414,26 +385,6 @@ const WifiChannelParameters = ({
     }
 
 
-    if (groupValues.includes('extrabss')) {
-      //right now support exists for an additional AP running WPA1
-      // for backwards compatibility with older devices.
-      //configure it.
-
-      //API will take care of mediatek convention, where LLA  bit is cleared
-      // for main but set for extra
-      let bssid = getLLAIfaceAddr(iface)
-      updateExtraBSS(iface, {
-        Ssid: extraSSID,
-        Bssid: bssid,
-        Wpa: '1'
-      })
-    } else {
-      //if interfaces had an extra bss then clear it out
-      if (curInterface.ExtraBSS && curInterface.ExtraBSS.length > 0) {
-        deleteExtraBSS(iface)
-      }
-    }
-
     let wifiParameters = {
       //Interface: iface,
       Channel: channel,
@@ -466,7 +417,6 @@ const WifiChannelParameters = ({
   }
 
   let checkboxProps = disableWifi6 ? { isDisabled: true } : {}
-  let wpa1CheckboxProps = disableExtraBSS ? { isDisabled: true } : {}
   let gcmpCheckboxProps = disableGCMP ? { isDisabled: false } : {}
 
   return (
@@ -609,13 +559,6 @@ const WifiChannelParameters = ({
               <CheckboxLabel>Wifi 6 (AX)</CheckboxLabel>
             </Checkbox>
 
-            <Checkbox {...wpa1CheckboxProps} value={'extrabss'}>
-              <CheckboxIndicator mr="$2">
-                <CheckboxIcon />
-              </CheckboxIndicator>
-              <CheckboxLabel>Enable WPA1 SSID</CheckboxLabel>
-            </Checkbox>
-
             <Checkbox {...gcmpCheckboxProps} value={'gcmpon'}>
               <CheckboxIndicator mr="$2">
                 <CheckboxIcon />
@@ -626,18 +569,6 @@ const WifiChannelParameters = ({
           </HStack>
         </CheckboxGroup>
 
-        {groupValues.includes('extrabss') ? (
-          <HStack>
-            <Text flex={1}> Extra BSS Name</Text>
-            <Input flex={2} size="md" variant="underlined">
-              <InputField
-                type="text"
-                value={extraSSID}
-                onChangeText={(value) => setExtraSSID(value)}
-              />
-            </Input>
-          </HStack>
-        ) : null}
       </VStack>
     </>
   )

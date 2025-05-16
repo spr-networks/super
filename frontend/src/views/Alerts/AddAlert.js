@@ -46,14 +46,14 @@ const AddAlertView = () => {
 
   const swipeHandlers = useSwipe({
     onSwipedRight: () => {
-      navigate('/admin/alerts/settings')
+      navigate('/admin/alerts')
     }
   })
 
   const onSubmit = (item) => {
     let { id } = params
 
-    const done = () => navigate('/admin/alerts/settings')
+    const done = () => navigate('/admin/alerts')
     const fail = (err) => context.error('failed to save rule', err)
 
     if (id == ':id') {

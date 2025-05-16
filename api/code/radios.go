@@ -15,8 +15,18 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 )
+
+type ExtraBSS struct {
+	Ssid             string
+	Bssid            string
+	Wpa              string
+	WpaKeyMgmt       string
+	DisableIsolation bool
+	GuestPassword    string
+}
+
+var ExtraBSSPrefix = ".ap"
 
 func getHostapdConfigPath(iface string) string {
 	if !isValidIface(iface) {
@@ -558,18 +568,23 @@ func hostapdConfig(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(conf)
 }
 
-func updateExtraBSS(iface string, data string) string {
+func updateExtraBSSLocked(iface, data, MACOverride string) string {
 	// skip previous generation
 	idx := strings.Index(data, "#spr-gen-bss")
 	if idx != -1 {
 		data = data[:idx]
 	}
-
-	Interfacesmtx.Lock()
-	defer Interfacesmtx.Unlock()
-
 	//read theinterfaces configuration
 	config := loadInterfacesConfigLocked()
+
+	// the mac80211_mt76 manual claims 0x00 for the first AP
+	//however on the mt7915e cards it was observed that 0x00 blocks
+	// multi bss from working and we should start with 0x02.
+
+	mt76_macs := []int64{0x02, 0x06, 0x0a, 0x0e, 0x12, 0x16, 0x1a, 0x1e}
+	extra_index := 0
+
+	had_parent_set := false
 
 	for _, entry := range config {
 		if entry.Name == iface && entry.Type == "AP" {
@@ -577,17 +592,35 @@ func updateExtraBSS(iface string, data string) string {
 			// populate extra bss info
 			for i := 0; i < len(entry.ExtraBSS); i++ {
 
+				if extra_index+1 > len(mt76_macs) {
+					continue
+				}
+
 				bssid := entry.ExtraBSS[i].Bssid
+
+				if MACOverride != "" {
+					bssid = MACOverride
+				}
+
 				//main bssid should have LLA to 0, others to 1? bit unclear
 				// hostapd said it depends on the driver.
-				hexInt, _ := strconv.ParseInt(bssid[:2], 16, 64)
-				hexStr := strconv.FormatInt(hexInt&^2, 16)
+				hexStr := strconv.FormatInt(mt76_macs[extra_index], 16)
 				main_bssid := fmt.Sprintf("%02s", hexStr) + bssid[2:]
 
-				data += "#spr-gen-bss\n"
-				data += "bssid=" + main_bssid + "\n"
-				data += "bss=" + iface + "." + strconv.Itoa(i) + "\n"
-				data += "bssid=" + entry.ExtraBSS[i].Bssid + "\n"
+				hexStr = strconv.FormatInt(mt76_macs[extra_index+1], 16)
+				new_bssid := fmt.Sprintf("%02s", hexStr) + bssid[2:]
+
+				extra_index += 1
+
+				if !had_parent_set {
+					data += "#spr-gen-bss\n"
+					data += "bssid=" + main_bssid + "\n"
+					had_parent_set = true
+				}
+
+				data += "bss=" + iface + ExtraBSSPrefix + strconv.Itoa(i) + "\n"
+				data += "ctrl_interface=/state/wifi/control_" + iface + ".ap" + strconv.Itoa(i) + "\n"
+				data += "bssid=" + new_bssid + "\n"
 				data += "ssid=" + entry.ExtraBSS[i].Ssid + "\n"
 				if entry.ExtraBSS[i].Wpa == "0" {
 					// Open AP
@@ -595,7 +628,25 @@ func updateExtraBSS(iface string, data string) string {
 					data += "wpa=" + entry.ExtraBSS[i].Wpa + "\n"
 					data += "wpa_key_mgmt=" + entry.ExtraBSS[i].WpaKeyMgmt + "\n"
 					data += "rsn_pairwise=CCMP CCMP-256\n"
-					data += "wpa_psk_file=/configs/wifi/wpa2pskfile\n"
+
+					//use a static password
+					if entry.ExtraBSS[i].GuestPassword != "" {
+						data += "wpa_psk_file=/dev/null\n"
+						data += "wpa_passphrase=" + entry.ExtraBSS[i].GuestPassword + "\n"
+						if strings.Contains(entry.ExtraBSS[i].WpaKeyMgmt, "SAE") {
+							data += "beacon_prot=1\n"
+							data += "ieee80211w=1\n"
+							data += "sae_pwe=2\n"
+							data += "sae_psk_file=/dev/null\n"
+							data += "sae_password=" + entry.ExtraBSS[i].GuestPassword + "\n"
+						}
+					} else {
+						//or stick to the device password database
+						data += "wpa_psk_file=/configs/wifi/wpa2pskfile\n"
+						if strings.Contains(entry.ExtraBSS[i].WpaKeyMgmt, "SAE") {
+							data += "sae_psk_file=/configs/wifi/sae_passwords\n"
+						}
+					}
 				}
 
 				// default enabled
@@ -609,6 +660,13 @@ func updateExtraBSS(iface string, data string) string {
 	}
 
 	return data
+}
+
+func updateExtraBSS(iface, data, MACOverride string) string {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+
+	return updateExtraBSSLocked(iface, data, MACOverride)
 }
 
 func transition6e(conf map[string]interface{}) {
@@ -779,8 +837,8 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		data += fmt.Sprint(key, "=", value, "\n")
 	}
 
-	// if anything goes is configured for the interface, enable it.
-	data = updateExtraBSS(iface, data)
+	// if extra BSS is configured for the interface, enable it.
+	data = updateExtraBSS(iface, data, "")
 
 	err = ioutil.WriteFile(getHostapdConfigPath(iface), []byte(data), 0600)
 	if err != nil {
@@ -868,16 +926,6 @@ func iwCommand(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(data))
 }
 
-var Interfacesmtx sync.Mutex
-
-type ExtraBSS struct {
-	Ssid             string
-	Bssid            string
-	Wpa              string
-	WpaKeyMgmt       string
-	DisableIsolation bool
-}
-
 func (e *ExtraBSS) Validate() error {
 	// Check for newlines in string fields
 	if strings.ContainsAny(e.Ssid, "\n") {
@@ -892,8 +940,28 @@ func (e *ExtraBSS) Validate() error {
 	if strings.ContainsAny(e.WpaKeyMgmt, "\n") {
 		return fmt.Errorf("WpaKeyMgmt contains newlines")
 	}
+	if strings.ContainsAny(e.GuestPassword, "\n") {
+		return fmt.Errorf("GuestPassword contains newlines")
+	}
 
 	return nil
+}
+
+func UpdateHostapMACs(Iface, MAC string) {
+	// MAC Randomization was on, so update the bss config
+	// with the new MAC target
+	path := getHostapdConfigPath(Iface)
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Printf("Error reading hostapd conf: %v", err)
+		return
+	}
+
+	dataString := updateExtraBSSLocked(Iface, string(data), MAC)
+	err = ioutil.WriteFile(path, []byte(dataString), 0600)
+	if err != nil {
+		log.Printf("Error writing extrabss in new hostapd conf: %v", err)
+	}
 }
 
 /*
@@ -1043,8 +1111,8 @@ func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "can't read hostapd config", http.StatusBadRequest)
 	}
 
-	// if anything goes is configured for the interface, enable it.
-	dataString := updateExtraBSS(iface, string(data))
+	// if anything is configured for the interface, enable it.
+	dataString := updateExtraBSS(iface, string(data), "")
 
 	err = ioutil.WriteFile(path, []byte(dataString), 0600)
 	if err != nil {
@@ -1111,6 +1179,28 @@ func getEnabledAPInterfaces(w http.ResponseWriter, r *http.Request) {
 	for _, entry := range config {
 		if entry.Enabled == true && entry.Type == "AP" {
 			outputString += entry.Name + " "
+		}
+	}
+
+	w.Write([]byte(outputString))
+}
+
+func getEnabledVirtualBSSInterfaces(w http.ResponseWriter, r *http.Request) {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+
+	//read the old configuration
+	config := loadInterfacesConfigLocked()
+
+	outputString := ""
+	for _, entry := range config {
+		if entry.Enabled == true && entry.Type == "AP" {
+
+			//only 1 is supported for now.
+			if len(entry.ExtraBSS) > 0 {
+				//Itoa(i) when more
+				outputString += entry.Name + ".ap" + strconv.Itoa(0) + " "
+			}
 		}
 	}
 

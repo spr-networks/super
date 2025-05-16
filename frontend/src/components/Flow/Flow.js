@@ -119,19 +119,6 @@ const Flow = ({ flow, ...props }) => {
           </HStack>
         </HStack>
 
-        <HStack space="md" justifyContent="center" alignItems="center" mb="$4">
-          <HStack space="sm" alignItems="center">
-            <Text>{trigger.title}</Text>
-            <Icon as={trigger.icon} color={trigger.color} />
-          </HStack>
-
-          <Icon as={ArrowRight} size="sm" color="$muted500" />
-
-          <HStack space="sm" alignItems="center">
-            <Text>{action.title}</Text>
-            <Icon as={action.icon} color={action.color} />
-          </HStack>
-        </HStack>
 
         <HStack space="md" justifyContent="center">
           <Button
@@ -157,13 +144,6 @@ const Flow = ({ flow, ...props }) => {
       <VStack sx={{ '@base': { display: 'none' }, '@md': { display: 'flex' } }} space="md">
         <VStack space="md">
           <HStack space="md" alignItems="center">
-            <HStack space="sm" flex={1} alignItems="center">
-              <Text>{trigger.title}</Text>
-              <Icon as={trigger.icon} color={trigger.color} />
-              <Text>{action.title}</Text>
-              <Icon as={action.icon} color={action.color} />
-            </HStack>
-
             <HStack space="md" alignItems="center">
               <HStack space="md" alignItems="center">
                 <HStack space="sm">

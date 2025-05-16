@@ -36,24 +36,22 @@ export class WifiClientCount extends Component {
           .then((r) => {
             let connectMACsList = [] // Declare an array to store the 'connectMACs' variables
             r.forEach((remoteWifiApi) => {
-              remoteWifiApi.interfacesConfiguration
+              remoteWifiApi.interfaces
                 .call(remoteWifiApi)
-                .then((config) => {
-                  config.forEach((iface) => {
-                    if (iface.Type == 'AP' && iface.Enabled == true) {
-                      remoteWifiApi.allStations
+                .then((interfaces) => {
+                  interfaces.forEach((iface) => {
+                    remoteWifiApi.allStations
 
-                        .call(remoteWifiApi, iface.Name)
-                        .then((stations) => {
-                          let connectedMACs = Object.keys(stations)
-                          connectMACsList.push(...connectedMACs) // Push the 'connectedMACs' variable to the 'connectMACsList' array
-                          //alert(connectMACsList)
-                          this.setState({
-                            numberOfWifiClients: count + connectMACsList.length
-                          })
+                      .call(remoteWifiApi, iface)
+                      .then((stations) => {
+                        let connectedMACs = Object.keys(stations)
+                        connectMACsList.push(...connectedMACs) // Push the 'connectedMACs' variable to the 'connectMACsList' array
+                        //alert(connectMACsList)
+                        this.setState({
+                          numberOfWifiClients: count + connectMACsList.length
                         })
-                        .catch((err) => {})
-                    }
+                      })
+                      .catch((err) => {})
                   })
                 })
                 .catch((err) => {})
@@ -224,7 +222,11 @@ export const WifiInfo = (props) => {
     return wifiAPI
       .status(props.iface)
       .then((status) => {
-        setSsid(status['ssid[0]'])
+        if (props.iface.includes(".ap") && status['ssid[1]']) {
+          setSsid(status['ssid[1]'])
+        } else {
+          setSsid(status['ssid[0]'])
+        }
         setChannel(status['channel'])
         setFreq(status['freq'])
       })

@@ -57,7 +57,7 @@ export const transformTag = (context, tag, value, supportTags = true) => {
       } else if (deviceItem && deviceItem.Enabled) {
         return <Text> Enabled </Text>
       } else {
-        return <Text> Disabled </Text>        
+        return <Text> Disabled </Text>
       }
     }
   }

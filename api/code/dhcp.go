@@ -318,6 +318,13 @@ func handleDHCPResult(MAC string, IP string, Router string, Name string, Iface s
 		newDevice.DeviceTags = []string{}
 		newDevice.DHCPFirstTime = time.Now().String()
 		newDevice.DHCPLastTime = newDevice.DHCPFirstTime
+
+		//guest ssid defaults
+		if strings.Contains(Iface, ExtraBSSPrefix) {
+			newDevice.Policies = []string{"wan", "dns", "noapi"}
+			newDevice.DeviceTags = []string{"guest"}
+		}
+
 		devices[newDevice.MAC] = newDevice
 		val = newDevice
 	} else {

@@ -33,6 +33,9 @@ import AuthSettings from 'views/AuthSettings'
 import AuthValidate from 'views/AuthValidate'
 import SystemInfoTabView from 'views/SystemInfoTabView'
 import LinkConfigurationTabView from 'views/LinkConfigurationTabView'
+
+import AlertsTabView from 'views/AlertsTabView'
+
 import Alerts from 'views/Alerts'
 import AlertSettings from 'views/AlertSettings'
 import AddAlert from 'views/Alerts/AddAlert'
@@ -296,16 +299,8 @@ const routes = [
         path: 'alerts',
         name: 'Alerts',
         icon: AlertTriangleIcon,
-        component: Alerts,
+        component: AlertsTabView,
         layout: 'admin'
-      },
-      {
-        path: 'alerts/settings',
-        name: 'Alerts Configuration',
-        icon: Settings2Icon,
-        component: AlertSettings,
-        layout: 'admin',
-        hidden: true
       },
       {
         name: 'Alert',

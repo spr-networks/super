@@ -292,7 +292,7 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool,
 					return
 				}
 
-				fmt.Println("failed to write", err)
+				fmt.Println("failed to write: ", err)
 				return
 			}
 		}
@@ -461,6 +461,9 @@ func mdnsPublish(settings MulticastSettings) {
 				if target.Name == wanif {
 					wanif_covered = true
 				}
+			} else if target.Type == "Downlink" {
+				//mDNS advertise over wired LAN too
+				mdnsPublishIface(settings, target.Name)
 			}
 		}
 	}

@@ -71,6 +71,7 @@ const WifiClients = (props) => {
     if (!ifaces) {
       return
     }
+
     let stations = {}
 
     for (let iface of ifaces) {
