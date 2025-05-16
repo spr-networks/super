@@ -126,7 +126,7 @@ type DeviceEntry struct {
 	DeviceDisabled   bool //tbd deprecate this in favor of only using the policy name.
 }
 
-var ValidPolicyStrings = []string{"wan", "lan", "dns", "api", "lan_upstream", "noapi", "disabled", "quarantine", "dns:family"}
+var ValidPolicyStrings = []string{"wan", "lan", "dns", "api", "lan_upstream", "noapi", "guestonly", "disabled", "quarantine", "dns:family"}
 
 var config = APIConfig{}
 

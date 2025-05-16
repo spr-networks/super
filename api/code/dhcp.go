@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -60,6 +61,14 @@ type DHCPResponse struct {
 	RouterIP   string
 	DNSIP      string
 	LeaseTime  string
+}
+
+type DHCPFail struct {
+	MAC        string
+	Identifier string
+	Name       string
+	Iface      string
+	Reason     string
 }
 
 var DHCPmtx sync.Mutex
@@ -321,7 +330,8 @@ func handleDHCPResult(MAC string, IP string, Router string, Name string, Iface s
 
 		//guest ssid defaults
 		if strings.Contains(Iface, ExtraBSSPrefix) {
-			newDevice.Policies = []string{"wan", "dns", "noapi"}
+			//guestonly policy -> can only exist on the guest AP
+			newDevice.Policies = []string{"wan", "dns", "noapi", "guestonly"}
 			newDevice.DeviceTags = []string{"guest"}
 		}
 
@@ -385,6 +395,24 @@ func dhcpRequest(w http.ResponseWriter, r *http.Request) {
 
 	devices := getDevicesJson()
 	val, exists := devices[dhcp.MAC]
+
+	if exists {
+		if strings.Contains(dhcp.Iface, ExtraBSSPrefix) {
+			//ensure the device had the guestonly policy
+			//this should only happen if a MAC is already known for a device
+			if !slices.Contains(val.Policies, "guestonly") {
+				fail := DHCPFail{}
+				fail.Iface = dhcp.Iface
+				fail.MAC = dhcp.MAC
+				fail.Identifier = dhcp.Identifier
+				fail.Name = dhcp.Name
+				fail.Reason = "Missing GuestOnly Policy, Possible MAC Spoofing"
+				SprbusPublish("dhcp:spoof", fail)
+				http.Error(w, "Refuse dhcp from wanif", 400)
+				return
+			}
+		}
+	}
 
 	if exists && val.RecentIP != "" && isTinyNetIPLocked(val.RecentIP) {
 		IP = val.RecentIP

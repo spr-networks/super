@@ -30,6 +30,7 @@ import {
 import { EyeIcon } from 'lucide-react-native'
 
 import { Select } from 'components/Select'
+import DeviceQRCode from 'components/Devices/DeviceQRCode'
 
 let modes = [
   { label: '5 & 6 GHz', value: 'a' },
@@ -343,6 +344,11 @@ const WifiChannelParameters = ({
                       autoComplete="off"
                     />
                   </Input>
+                  <>
+                    {(uipasswordType == 'text') && (
+                      <DeviceQRCode ssid={extraSSID} psk={guestPassword} type="WPA" />
+                    )}
+                  </>
                   {'password' in errors ? (
                     <FormControlError>
                       <FormControlErrorText>
