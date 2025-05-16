@@ -1,4 +1,9 @@
 # Secure Programmable Router (SPR) Release Notes
+## v1.0.13
+**Improvements**
+- Show QR Code for Guest WiFi
+- New "guestonly" policy for Guest APs
+
 ## v1.0.12
 **Improvements**
 - Golang version update & module upgrades
