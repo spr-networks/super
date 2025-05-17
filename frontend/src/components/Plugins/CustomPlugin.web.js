@@ -30,8 +30,6 @@ const CustomPlugin = ({ ...props }) => {
   //NOTE can pass both src and srcdoc, src is for dev mode
   let src = !isDoc && props.src ? buildURL(props.src) : null
   let srcDoc = (isDoc && props.srcDoc) || null
-  let width = '100%',
-    height = '100%'
 
   const postMessage = (message) => {
     if (typeof message !== 'string') {
@@ -73,9 +71,7 @@ const CustomPlugin = ({ ...props }) => {
       src,
       srcDoc,
       ref,
-      width,
-      height,
-      style: { borderWidth: 0 },
+      style: { borderWidth: 0, height: "100vh" },
       sandbox
     })
   } else {
@@ -83,9 +79,7 @@ const CustomPlugin = ({ ...props }) => {
       src,
       srcDoc,
       ref,
-      width,
-      height,
-      style: { borderWidth: 0 },
+      style: { borderWidth: 0, height: "100vh" },
     })
   }
 
