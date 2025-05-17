@@ -4,7 +4,6 @@
 - Fix viewport size for plugins
 - Fix pending devices vs guest ap
 
-
 ## v1.0.13
 **Improvements**
 - Show QR Code for Guest WiFi
