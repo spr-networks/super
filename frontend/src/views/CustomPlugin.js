@@ -217,9 +217,9 @@ const CustomPluginView = ({ ...props }) => {
     page = <CustomPluginForm />
   } else {
     page = (
-      <VStack space="md" p="$4" h="$full">
+      <VStack space="md" p="$4" flex={1}>
         {/*<Heading size="md">{name}</Heading>*/}
-        <PluginFrame name={name} isSandboxed={props.isSandboxed} />
+        <PluginFrame name={name} isSandboxed={props.isSandboxed} flex={1} />
       </VStack>
     )
   }
