@@ -1,0 +1,286 @@
+x-labels:
+  &default-labels
+  org.supernetworks.ci: ${CI:-false}
+  org.supernetworks.version: ${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+
+x-logging:
+  &default-logging
+  driver: journald
+
+services:
+  base:
+    container_name: superbase
+    image: ghcr.io/spr-networks/super_base:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    build:
+      context: base
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_base:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/super_base:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    network_mode: host
+    privileged: true
+    logging: *default-logging
+    volumes:
+      - ${PWD}/configs/base/:/configs/base/
+      - ${PWD}/state/base/:/state/base/
+      - ${PWD}/state/plugins/:/state/plugins/
+      - ${PWD}/plugins/:/plugins/
+  superd:
+    container_name: superd
+    image: ghcr.io/spr-networks/super_superd:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    build:
+      context: superd
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_superd:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/super_superd:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    network_mode: host
+    privileged: true
+    logging: *default-logging
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${PWD}/state/api/:/state/api/
+      - ${PWD}/configs/base/:/configs/base/
+      - ${PWD}/:/super/
+  dhcp:
+    container_name: superdhcp
+    image: ghcr.io/spr-networks/super_dhcp:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    build:
+      context: dhcp
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_dhcp:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/super_dhcp:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    depends_on:
+      - "base"
+    logging: *default-logging
+    volumes:
+      - ${PWD}/configs/base/:/configs/base/:ro
+      - ${PWD}/configs/dhcp/:/configs/dhcp/
+      - ${PWD}/state/dhcp/:/state/dhcp/
+      - ${PWD}/state/plugins/mesh/:/state/plugins/mesh/:ro
+      - /sys/fs/bpf:/sys/fs/bpf
+  dhcp_client:
+    container_name: superdhcp_client
+    image: ghcr.io/spr-networks/super_dhcp_client:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    build:
+      context: dhcp
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_dhcp_client:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/super_dhcp_client:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    network_mode: host
+    privileged: true
+    depends_on:
+      - "base"
+    logging: *default-logging
+    entrypoint: /scripts/client.sh
+    volumes:
+      - ${PWD}/configs/base/:/configs/base/:ro
+      - ${PWD}/state/dhcp-client/:/state/dhcp-client/
+  dns:
+    runtime: runsc
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+    container_name: superdns
+    image: ghcr.io/spr-networks/super_dns:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    build:
+      context: dns
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_dns:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/super_dns:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    logging: *default-logging
+    depends_on:
+      - "base"
+    volumes:
+      - ${PWD}/configs/dns/:/configs/dns/
+      - ${PWD}/state/api/:/state/api/
+      - ${PWD}/state/dns/:/state/dns/
+      - ${PWD}/state/plugins/mesh/:/state/plugins/mesh/:ro
+      - ${PWD}/state/public/:/state/public/:ro
+      - /etc/resolv.conf:/etc/resolv.conf:ro
+  wifid:
+    container_name: superwifid
+    image: ghcr.io/spr-networks/super_wifid:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    build:
+      context: wifid
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_wifid:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/super_wifid:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    network_mode: host
+    privileged: true
+    logging: *default-logging
+    depends_on:
+      - "api"
+      - "dhcp"
+      - "multicast_udp_proxy"
+    volumes:
+      - ${PWD}/configs/base/:/configs/base/:ro
+      - ${PWD}/configs/wifi/:/configs/wifi/
+      - ${PWD}/state/wifi/:/state/wifi/
+  multicast_udp_proxy:
+    container_name: super_multicast_udp_proxy
+    image: ghcr.io/spr-networks/super_multicast_udp_proxy:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    build:
+      context: multicast_udp_proxy
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_multicast_udp_proxy:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/super_multicast_udp_proxy:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    network_mode: host
+    privileged: true
+    depends_on:
+      - "base"
+      - "api"
+    logging: *default-logging
+    volumes:
+      - ${PWD}/configs/base/:/configs/base/:ro
+      - ${PWD}/state/public/:/state/public/:ro
+      - ${PWD}/state/plugins/mesh/:/state/plugins/mesh/:ro
+  wireguard:
+    container_name: superwireguard
+    image: ghcr.io/spr-networks/super_wireguard:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    build:
+      context: wireguard
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_wireguard:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/super_wireguard:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    network_mode: host
+    privileged: true
+    depends_on:
+      - "base"
+      - "dhcp"
+      - "api"
+    logging: *default-logging
+    volumes:
+      - ${PWD}/configs/base/:/configs/base/:ro
+      - ${PWD}/configs/wireguard/:/configs/wireguard/
+      - ${PWD}/state/plugins/wireguard/:/state/plugins/wireguard/
+      - ${PWD}/state/plugins/mesh/:/state/plugins/mesh/:ro
+      - ${PWD}/state/dhcp/:/state/dhcp/
+  frontend:
+    container_name: superfrontend
+    image: ghcr.io/spr-networks/super_frontend:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    entrypoint: ["cp", "-RT", "/app/build/", "/frontend/build"]
+    build:
+      context: frontend
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_frontend:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/super_frontend:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    network_mode: none
+    volumes:
+      - ${PWD}/frontend/:/frontend
+  api:
+    container_name: superapi
+    image: ghcr.io/spr-networks/super_api:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    build:
+      context: api
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_api:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/super_api:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    network_mode: host
+    privileged: true
+    restart: always
+    depends_on:
+      - "base"
+      - "frontend"
+      - "superd"
+    logging: *default-logging
+    volumes:
+      - ${PWD}/configs/auth/:/configs/auth/
+      - ${PWD}/configs/base/:/configs/base/
+      - ${PWD}/configs/devices/:/configs/devices/
+      - ${PWD}/configs/dns:/configs/dns/
+      - ${PWD}/configs/plugins/:/configs/plugins/
+      - ${PWD}/configs/ppp:/configs/ppp/
+      - ${PWD}/configs/wifi/:/configs/wifi/
+      - ${PWD}/configs/wifi_uplink/:/configs/wifi_uplink/
+      - ${PWD}/configs/wireguard/:/configs/wireguard/
+      - ${PWD}/configs/scripts/:/configs/scripts/
+      - ${PWD}/configs/pfw/:/configs/pfw/
+      - ${PWD}/state/wifi/:/state/wifi/
+      - ${PWD}/state/dhcp/:/state/dhcp/
+      - ${PWD}/state/dns/:/state/dns/
+      - ${PWD}/state/api/:/state/api/
+      - ${PWD}/state/backups/:/state/backups/
+      - ${PWD}/state/base/:/state/base/
+      - ${PWD}/state/dhcp-client/:/state/dhcp-client/
+      - ${PWD}/state/plugins/:/state/plugins/
+      - ${PWD}/state/public/:/state/public/
+      - ${PWD}/frontend/build:/ui/
+      - /var/log/journal:/var/log/journal:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/apport/coredump/:/coredump/
+  plugin-lookup:
+    runtime: runsc
+    container_name: superplugin-lookup
+    image: ghcr.io/spr-networks/super_plugin-lookup:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    build:
+      context: plugin-lookup
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_plugin-lookup:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/super_plugin-lookup:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    logging: *default-logging
+    depends_on:
+      - "base"
+      - "dns"
+    volumes:
+      - ${PWD}/state/plugins/plugin-lookup/:/state/plugins/plugin-lookup/
+      - /etc/resolv.conf:/etc/resolv.conf:ro
+  packet_logs:
+    container_name: superpacket_logs
+    image: ghcr.io/spr-networks/super_packet_logs:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    build:
+      context: packet_logs
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_packet_logs:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/super_packet_logs:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    network_mode: host
+    privileged: true
+    restart: always
+    logging: *default-logging
+    volumes:
+      - ${PWD}/state/api/:/state/api/
+      - ${PWD}/state/plugins/packet_logs/:/state/plugins/packet_logs
+      - ${PWD}/configs/base/:/configs/base/:ro
+      - /dev/log:/dev/log
+  db:
+    runtime: runsc
+    container_name: superdb
+    image: ghcr.io/spr-networks/super_db:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    build:
+      context: db
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_db:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/super_db:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    depends_on:
+      - "api"
+    logging: *default-logging
+    volumes:
+      - ${PWD}/configs/base/:/configs/base/:ro
+      - ${PWD}/configs/db/:/configs/db/
+      - ${PWD}/state/api/:/state/api/
+      - ${PWD}/state/plugins/db/:/state/plugins/db/
+      - /etc/resolv.conf:/etc/resolv.conf:ro
