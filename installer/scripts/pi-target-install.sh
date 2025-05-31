@@ -177,6 +177,38 @@ mount -t cgroup -o devices devices /sys/fs/cgroup/devices
 # disable iptables for docker
 echo -ne "{\n  \"iptables\": false\n}" > /etc/docker/daemon.json
 
+cat > /etc/docker/daemon.json << EOF
+{
+    "iptables": false,
+    "runtimes": {
+        "runsc": {
+            "path": "/usr/local/bin/runsc",
+            "runtimeArgs": [
+              "--host-uds=all",
+              "--platform=kvm"
+             ]
+        },
+        "runsc-systrap": {
+            "path": "/usr/local/bin/runsc",
+            "runtimeArgs": [
+              "--host-uds=all",
+              "--platform=systrap"
+             ]
+        }
+    }
+}
+EOF
+
+set -e
+ARCH=$(uname -m)
+URL=https://storage.googleapis.com/gvisor/releases/release/latest/${ARCH}
+wget ${URL}/runsc ${URL}/runsc.sha512 ${URL}/containerd-shim-runsc-v1 ${URL}/containerd-shim-runsc-v1.sha512
+sha512sum -c runsc.sha512
+sha512sum -c containerd-shim-runsc-v1.sha512
+rm -f *.sha512
+chmod a+rx runsc containerd-shim-runsc-v1
+sudo mv runsc containerd-shim-runsc-v1 /usr/local/bin
+
 dockerd  &
 containerd &
 
