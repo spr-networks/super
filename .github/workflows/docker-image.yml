@@ -47,8 +47,6 @@ jobs:
         name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v3
--        with:
--          driver-opts: image=moby/buildkit:master
 
       -
         name: Authenticate to ghcr
@@ -69,7 +67,7 @@ jobs:
             docker-compose.yml
           set: |
             *.platform=linux/amd64,linux/arm64
-          push: ${{ github.event_name == 'workflow_run' && github.ref_name == 'main' || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
+          push: ${{ (github.event_name == 'workflow_run' && github.ref_name == 'main') || (env.RELEASE_CHANNEL != '' && github.event_name == 'push') }}
           provenance: false
 
       -
@@ -83,7 +81,7 @@ jobs:
           set: |
             *.platform=linux/amd64,linux/arm64
             *.context=./ppp
-          push: ${{ github.event_name == 'workflow_run' && github.ref_name == 'main' || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
+          push: ${{ (github.event_name == 'workflow_run' && github.ref_name == 'main') || (env.RELEASE_CHANNEL != '' && github.event_name == 'push') }}
           provenance: false
 
       -
@@ -97,7 +95,7 @@ jobs:
           set: |
             *.platform=linux/amd64,linux/arm64
             *.context=./wifi_uplink
-          push: ${{ github.event_name == 'workflow_run' && github.ref_name == 'main' || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
+          push: ${{ (github.event_name == 'workflow_run' && github.ref_name == 'main') || (env.RELEASE_CHANNEL != '' && github.event_name == 'push') }}
           provenance: false
 
       -
@@ -111,7 +109,7 @@ jobs:
           set: |
             *.platform=linux/amd64,linux/arm64
             *.context=./dyndns
-          push: ${{ github.event_name == 'workflow_run' && github.ref_name == 'main' || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
+          push: ${{ (github.event_name == 'workflow_run' && github.ref_name == 'main') || (env.RELEASE_CHANNEL != '' && github.event_name == 'push') }}
           provenance: false
 
       # Combine all build outputs for signing
@@ -142,7 +140,7 @@ jobs:
         uses: sigstore/cosign-installer@v3.6.0
 
       - name: Sign the images with GitHub OIDC Token
-        if: ${{ github.event_name == 'workflow_run' && github.ref_name == 'main' || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
+        if: ${{ (github.event_name == 'workflow_run' && github.ref_name == 'main') || (env.RELEASE_CHANNEL != '' && github.event_name == 'push') }}
         run: |
           cosign sign --yes ${{ steps.extract_info.outputs.IMAGE_INFO }}
 
