@@ -302,6 +302,18 @@ func migrateFirewallGroupsToPolicies() {
 	}
 }
 
+func isLinkReallyUpNetlink(interfaceName string) bool {
+	link, err := netlink.LinkByName(interfaceName)
+	if err != nil {
+		log.Printf("Failed to get link %s: %v", interfaceName, err)
+		return false
+	}
+
+	attrs := link.Attrs()
+	return (attrs.Flags&net.FlagUp != 0) && (attrs.RawFlags&unix.IFF_RUNNING != 0)
+}
+
+
 // getDefaultGatewayForSubnet returns the first possible host IP for a given subnet
 func getDefaultGatewayForSubnet(subnet string) string {
 	// Parse the IP address and the network mask
@@ -448,6 +460,10 @@ func collectOutbound() []string {
 	outbound := []string{}
 	for _, iface := range interfaces {
 		if iface.Type == "Uplink" && iface.Subtype != "pppup" && iface.Enabled {
+
+			if !isLinkReallyUpNetlink(iface.Name) {
+				continue
+			}
 
 			gw, _ := getDefaultGatewayLocked(iface.Name)
 			if gw == "" {
