@@ -2192,7 +2192,7 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 	devices := getDevicesJson()
 	pendingPsk, exists := devices["pending"]
 
-	guest_wifi := !strings.Contains(pska.Iface, ExtraBSSPrefix)
+	guest_wifi := strings.Contains(pska.Iface, ExtraBSSPrefix)
 
 	if exists && !guest_wifi {
 		var foundPSK = false
