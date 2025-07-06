@@ -2,7 +2,6 @@ FROM ubuntu:24.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y --no-install-recommends nftables iproute2 netcat-traditional inetutils-ping net-tools nano ca-certificates git curl wget
-RUN apt-get install -y --no-install-recommends clang
 RUN mkdir /code
 WORKDIR /code
 
@@ -12,7 +11,6 @@ RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.24.2.linux-$TARGETARCH.ta
 ENV PATH="/usr/local/go/bin:$PATH"
 
 # Build CoreDHCP
-ENV CC=clang
 ARG CACHEBUST=1
 RUN git clone https://github.com/spr-networks/coredhcp
 WORKDIR /code/coredhcp

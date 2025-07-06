@@ -15,7 +15,7 @@ ENV PATH="/usr/local/go/bin:$PATH"
 ARG COREDNS_VER=unknown
 ARG PLUGINS_VER=unknown
 ARG CACHEBUST=1
-RUN git clone --depth 1 --branch v1.11.3 https://github.com/coredns/coredns.git
+RUN git clone --depth 1 --branch v1.12.2 https://github.com/coredns/coredns.git
 WORKDIR /code/coredns/
 
 ARG USE_TMPFS=true

@@ -1,4 +1,10 @@
 # Secure Programmable Router (SPR) Release Notes
+
+## v1.0.15
+**Fixes**
+- Bump build for guest ap fix
+- Add gvisor demo
+
 ## v1.0.14
 **Fixes**
 - Fix viewport size for plugins
