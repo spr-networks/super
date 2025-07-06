@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"golang.org/x/sys/unix"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -21,6 +22,7 @@ import (
 
 import (
 	"github.com/gorilla/mux"
+	"github.com/vishvananda/netlink"
 )
 
 var FWmtx sync.Mutex
@@ -312,7 +314,6 @@ func isLinkReallyUpNetlink(interfaceName string) bool {
 	attrs := link.Attrs()
 	return (attrs.Flags&net.FlagUp != 0) && (attrs.RawFlags&unix.IFF_RUNNING != 0)
 }
-
 
 // getDefaultGatewayForSubnet returns the first possible host IP for a given subnet
 func getDefaultGatewayForSubnet(subnet string) string {
