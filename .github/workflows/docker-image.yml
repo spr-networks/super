@@ -1,5 +1,6 @@
 name: Docker Image CI
 
+#on: [ push, pull_request ]
 on:
   workflow_run:
     workflows: ["Bump version"]
@@ -22,112 +23,57 @@ jobs:
     steps:
       -
         name: Checkout
-        uses: actions/checkout@v4  # Updated to latest version
+        uses: actions/checkout@v3
         with:
           fetch-depth: '0'
-
       -
         name: Get version from git
         run: echo "RELEASE_VERSION=$(git describe --tags --abbrev=0 | grep -Eo '[0-9]+\.[0-9]+.[0-9]+')" >> $GITHUB_ENV
-
       -
         name: Set release channel for dev
         run: echo "RELEASE_CHANNEL=-dev" >> $GITHUB_ENV
         if: ${{ github.ref_name == 'dev' }}
-
       -
         name: Test release tag version and channel
         run: echo "RELEASE_VERSION == $RELEASE_VERSION  CHANNEL == $RELEASE_CHANNEL"
-
       -
         name: Set up QEMU
         run: sudo apt-get update && sudo apt-get install -y qemu-user-static
-
       -
         name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v3
-
       -
         name: Authenticate to ghcr
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
       -
         name: Build and push status
         run: echo "event = ${{ github.event_name }}, ref_name = ${{ github.ref_name }}. push main == push to ghcr"
-
-      # Build sequentially to avoid resource exhaustion
       -
-        name: Build main services
-        id: bake_main
+        name: Build and push with bake action
+        id: bake
         uses: docker/bake-action@v5
         with:
           sbom: true
           files: |
             docker-compose.yml
-          set: |
-            *.platform=linux/amd64,linux/arm64
-          push: ${{ (github.event_name == 'workflow_run' && github.ref_name == 'main') || (env.RELEASE_CHANNEL != '' && github.event_name == 'push') }}
-          provenance: false
-
-      -
-        name: Build ppp service
-        id: bake_ppp
-        uses: docker/bake-action@v5
-        with:
-          sbom: true
-          files: |
             ppp/docker-compose.yml
-          set: |
-            *.platform=linux/amd64,linux/arm64
-            *.context=./ppp
-          push: ${{ (github.event_name == 'workflow_run' && github.ref_name == 'main') || (env.RELEASE_CHANNEL != '' && github.event_name == 'push') }}
-          provenance: false
-
-      -
-        name: Build wifi_uplink service
-        id: bake_wifi
-        uses: docker/bake-action@v5
-        with:
-          sbom: true
-          files: |
             wifi_uplink/docker-compose.yml
-          set: |
-            *.platform=linux/amd64,linux/arm64
-            *.context=./wifi_uplink
-          push: ${{ (github.event_name == 'workflow_run' && github.ref_name == 'main') || (env.RELEASE_CHANNEL != '' && github.event_name == 'push') }}
-          provenance: false
-
-      -
-        name: Build dyndns service
-        id: bake_dyndns
-        uses: docker/bake-action@v5
-        with:
-          sbom: true
-          files: |
             dyndns/docker-compose.yml
           set: |
             *.platform=linux/amd64,linux/arm64
-            *.context=./dyndns
-          push: ${{ (github.event_name == 'workflow_run' && github.ref_name == 'main') || (env.RELEASE_CHANNEL != '' && github.event_name == 'push') }}
+            dyndns*.context=./dyndns
+            wifi_uplink*.context=./wifi_uplink
+            ppp*.context=./ppp
+          push: ${{ github.event_name == 'workflow_run' && github.ref_name == 'main' || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
           provenance: false
 
-      # Combine all build outputs for signing
       - name: Extract images and digests
         id: extract_info
         run: |
           echo 'IMAGE_INFO<<EOF' >> $GITHUB_OUTPUT
-          # Combine metadata from all build steps
-          combined_metadata=$(echo '{
-            "main": ${{ steps.bake_main.outputs.metadata }},
-            "ppp": ${{ steps.bake_ppp.outputs.metadata }},
-            "wifi": ${{ steps.bake_wifi.outputs.metadata }},
-            "dyndns": ${{ steps.bake_dyndns.outputs.metadata }}
-          }' | jq -c)
-
-          echo "$combined_metadata" | \
+          echo '${{ steps.bake.outputs.metadata }}' | \
           jq -r '[ to_entries[] |
-             .value | to_entries[] |
              select(.key != "buildx.build.warnings") |
             .value |
             (.["image.name"] | split(",")[]) as $name |
@@ -136,11 +82,12 @@ jobs:
           echo 'EOF' >> $GITHUB_OUTPUT
 
       # Install the cosign tool
+      # https://github.com/sigstore/cosign-installer
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.6.0
 
       - name: Sign the images with GitHub OIDC Token
-        if: ${{ (github.event_name == 'workflow_run' && github.ref_name == 'main') || (env.RELEASE_CHANNEL != '' && github.event_name == 'push') }}
+        if: ${{ github.event_name == 'workflow_run' && github.ref_name == 'main' || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
         run: |
           cosign sign --yes ${{ steps.extract_info.outputs.IMAGE_INFO }}
 
