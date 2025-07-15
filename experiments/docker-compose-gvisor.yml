@@ -26,6 +26,22 @@ services:
       - ${PWD}/state/base/:/state/base/
       - ${PWD}/state/plugins/:/state/plugins/
       - ${PWD}/plugins/:/plugins/
+  watchdog:
+    container_name: superwatchdog
+    image: ghcr.io/spr-networks/super_watchdog:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    build:
+      context: watchdog
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_watchdog:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/super_watchdog:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    network_mode: host
+    privileged: true
+    logging: *default-logging
+    volumes:
+      - ${PWD}/configs/watchdog/:/configs/watchdog/
+      - /dev/watchdog:/dev/watchdog
   superd:
     container_name: superd
     image: ghcr.io/spr-networks/super_superd:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}

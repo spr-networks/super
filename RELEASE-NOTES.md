@@ -4,6 +4,8 @@
 **Fixes**
 - Bump build for guest ap fix
 - Add gvisor demo
+- Add watchdog support
+- Fix OTP bug with API, breaking login with otp
 
 ## v1.0.14
 **Fixes**

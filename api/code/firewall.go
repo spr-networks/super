@@ -1128,6 +1128,7 @@ func applyEndpointRules(device DeviceEntry) {
 				}
 			}
 		}
+
 	next:
 
 		hasAccess := hasFirewallDeviceEndpointEntry(IP, e)
@@ -2849,6 +2850,7 @@ func populateVmapEntries(devices map[string]DeviceEntry, groups []GroupEntry, IP
 		case "noapi":
 		case "quarantine":
 		case "dns:family":
+		case "guestonly":
 		default:
 			log.Println("Unknown policy: " + policy_name)
 		}
