@@ -205,6 +205,14 @@ class API {
 
     return this.fetch(method, url, body)
       .then((response) => {
+
+        if (response.redirected) {
+          const url = new URL(response.url);
+          if (url.pathname === '/auth/validate' || url.pathname === '/auth/validate/') {
+            window.location.href = '/auth/validate';
+          }
+        }
+
         if (!response.ok) {
           return Promise.reject({
             message: response.status,
