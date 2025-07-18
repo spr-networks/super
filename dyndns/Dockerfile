@@ -8,8 +8,16 @@ ARG TARGETARCH
 RUN wget https://dl.google.com/go/go1.24.2.linux-${TARGETARCH}.tar.gz
 RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.24.2.linux-${TARGETARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
-RUN git clone --branch v3.0.7 https://github.com/TimothyYe/godns.git
-WORKDIR godns/cmd/godns
+RUN git clone --branch v3.2.5 https://github.com/TimothyYe/godns.git
+WORKDIR godns
+# Install Node.js for building the web UI
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt-get install -y nodejs
+# Build the web UI first
+WORKDIR web
+RUN npm install && npm run build
+# Copy the built UI to where go generate expects it
+RUN cp -r out ../internal/server/
+WORKDIR ../cmd/godns
 ARG USE_TMPFS=true
 RUN --mount=type=tmpfs,target=/tmpfs \
     [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \

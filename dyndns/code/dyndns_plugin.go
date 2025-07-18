@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"os/exec"
 	"regexp"
@@ -18,11 +20,12 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var UNIX_PLUGIN_LISTENER = "/state/plugins/dyndns/dyndns_plugin"
-
 var Configmtx sync.Mutex
 var TEST_PREFIX = ""
+var UNIX_PLUGIN_LISTENER = TEST_PREFIX + "/state/plugins/dyndns/dyndns_plugin"
 var GoDyndnsConfigFile = TEST_PREFIX + "/configs/dyndns/godyndns.json"
+var godnsProcess *exec.Cmd
+var godnsProxy *httputil.ReverseProxy
 
 type GodyndnsDomain struct {
 	DomainName string   `json:"domain_name"`
@@ -42,9 +45,68 @@ type GodyndnsConfig struct {
 	Socks5Proxy string           `json:"socks5"`
 	Resolver    string           `json:"resolver"`
 	RunOnce     bool             `json:"run_once"`
+	WebPanel    WebPanelConfig   `json:"web_panel,omitempty"`
+}
+
+type WebPanelConfig struct {
+	Enabled  bool   `json:"enabled"`
+	Addr     string `json:"addr"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+func startGoDyndns() {
+	stopGoDyndns()
+	
+	config := loadConfig()
+	if config.Provider == "" {
+		// Don't start if no provider is configured
+		fmt.Println("godns not started: no provider configured")
+		return
+	}
+	
+	godnsProcess = exec.Command("/godns", "-c", GoDyndnsConfigFile)
+	godnsProcess.Stdout = os.Stdout
+	godnsProcess.Stderr = os.Stderr
+	
+	if err := godnsProcess.Start(); err != nil {
+		fmt.Println("godns failed to start", err)
+		return
+	}
+	
+	fmt.Println("godns started with PID:", godnsProcess.Process.Pid)
+	
+	// Setup proxy to godns web panel if enabled
+	config := loadConfig()
+	if config.WebPanel.Enabled && config.WebPanel.Addr != "" {
+		// Give godns a moment to start its web server
+		time.Sleep(2 * time.Second)
+		
+		target, err := url.Parse("http://" + config.WebPanel.Addr)
+		if err == nil {
+			godnsProxy = httputil.NewSingleHostReverseProxy(target)
+			fmt.Println("godns web panel proxy configured for", target)
+		}
+	}
+}
+
+func stopGoDyndns() {
+	if godnsProcess != nil && godnsProcess.Process != nil {
+		godnsProcess.Process.Kill()
+		godnsProcess.Wait()
+		godnsProcess = nil
+	}
+	godnsProxy = nil
 }
 
 func runGoDyndns() {
+	// For backward compatibility, run once mode
+	config := loadConfig()
+	if config.Provider == "" {
+		// Don't run if no provider is configured
+		return
+	}
+	
 	cmd := exec.Command("/godns", "-c", GoDyndnsConfigFile)
 	stdout, err := cmd.Output()
 	if err != nil {
@@ -116,12 +178,22 @@ func setConfiguration(w http.ResponseWriter, r *http.Request) {
 	err = validateConfig(config)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
+		return
 	}
 
-	//we use godns in run once mode
-	//alternatively could patch it to support reloading the configuration file.
-	//more effectively
-	config.RunOnce = true
+	// Set default web panel settings if not provided
+	if config.WebPanel.Enabled && config.WebPanel.Addr == "" {
+		config.WebPanel.Addr = "127.0.0.1:9876"
+	}
+	if config.WebPanel.Enabled && config.WebPanel.Username == "" {
+		config.WebPanel.Username = "admin"
+		config.WebPanel.Password = "password"
+	}
+
+	// If web panel is enabled, don't use run once mode
+	if !config.WebPanel.Enabled {
+		config.RunOnce = true
+	}
 
 	data, _ := json.Marshal(config)
 
@@ -131,7 +203,11 @@ func setConfiguration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	runGoDyndns()
+	if config.WebPanel.Enabled {
+		startGoDyndns()
+	} else {
+		runGoDyndns()
+	}
 }
 
 func refreshDyndns(w http.ResponseWriter, r *http.Request) {
@@ -191,17 +267,18 @@ func startIntervalTimer() {
 		for {
 			select {
 			case <-ticker.C:
-
-				Configmtx.Lock()
-				runGoDyndns()
-				Configmtx.Unlock()
-
+				config := loadConfig()
+				if !config.WebPanel.Enabled {
+					// Only run in interval mode if web panel is disabled
+					Configmtx.Lock()
+					runGoDyndns()
+					Configmtx.Unlock()
+				}
 			}
 		}
 	}
 
 	go runTimer()
-
 }
 
 func migrate_ip_urls() {
@@ -233,6 +310,55 @@ func dyndns_init() {
 	migrate_ip_urls()
 }
 
+func handleUIProxy(w http.ResponseWriter, r *http.Request) {
+	config := loadConfig()
+	
+	// If no provider is configured, return a message
+	if config.Provider == "" {
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprintf(w, `
+			<html>
+			<body>
+				<h1>GoDNS Dynamic DNS Plugin</h1>
+				<p>No DNS provider configured yet.</p>
+				<p>Please configure the plugin using the SPR UI or API first.</p>
+			</body>
+			</html>
+		`)
+		return
+	}
+	
+	// If web panel is not enabled, enable it automatically
+	if !config.WebPanel.Enabled || godnsProxy == nil {
+		config.WebPanel.Enabled = true
+		config.WebPanel.Addr = "127.0.0.1:9876"
+		config.WebPanel.Username = "admin"
+		config.WebPanel.Password = "dyndns"
+		config.RunOnce = false
+		
+		data, _ := json.Marshal(config)
+		ioutil.WriteFile(GoDyndnsConfigFile, data, 0600)
+		
+		startGoDyndns()
+		
+		// Give godns time to start
+		time.Sleep(3 * time.Second)
+	}
+	
+	if godnsProxy == nil {
+		http.Error(w, "Web panel is starting, please refresh in a few seconds", 503)
+		return
+	}
+	
+	// Remove the /ui prefix before proxying
+	r.URL.Path = strings.TrimPrefix(r.URL.Path, "/ui")
+	if r.URL.Path == "" {
+		r.URL.Path = "/"
+	}
+	
+	godnsProxy.ServeHTTP(w, r)
+}
+
 func main() {
 
 	dyndns_init()
@@ -242,6 +368,9 @@ func main() {
 	unix_plugin_router.HandleFunc("/config", getConfiguration).Methods("GET")
 	unix_plugin_router.HandleFunc("/config", setConfiguration).Methods("PUT")
 	unix_plugin_router.HandleFunc("/refresh", refreshDyndns).Methods("GET")
+	
+	// Handle UI proxy requests
+	unix_plugin_router.PathPrefix("/ui").HandlerFunc(handleUIProxy)
 
 	os.Remove(UNIX_PLUGIN_LISTENER)
 	unixPluginListener, err := net.Listen("unix", UNIX_PLUGIN_LISTENER)
@@ -250,8 +379,17 @@ func main() {
 	}
 
 	startIntervalTimer()
+	
+	// Start godns if web panel is enabled
+	config := loadConfig()
+	if config.WebPanel.Enabled {
+		go startGoDyndns()
+	}
 
 	pluginServer := http.Server{Handler: logRequest(unix_plugin_router)}
+
+	// Cleanup on exit
+	defer stopGoDyndns()
 
 	pluginServer.Serve(unixPluginListener)
 }
