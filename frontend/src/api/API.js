@@ -147,6 +147,7 @@ class API {
 
   setAuthHeaders(username = '', password = '') {
     this.authHeaders = 'Basic ' + Base64.btoa(username + ':' + password)
+    saveLogin(username, password)
   }
 
   setAuthTokenHeaders(token = '') {

@@ -17,7 +17,7 @@ import {
   VStack
 } from '@gluestack-ui/themed'
 
-const OTPValidate = ({ onSuccess, onSetup, ...props }) => {
+const OTPValidate = ({ onSuccess, onSetup, isLogin, ...props }) => {
   const [code, setCode] = useState('')
   const [status, setStatus] = useState('')
   const [errors, setErrors] = useState({})
@@ -41,15 +41,19 @@ const OTPValidate = ({ onSuccess, onSetup, ...props }) => {
   }
 
   useEffect(() => {
-    authAPI
-      .statusOTP()
-      .then((res) => {
-        setStatus(res.State)
-      })
-      .catch((err) => {})
+    if (!isLogin) {
+      authAPI
+        .statusOTP()
+        .then((res) => {
+          setStatus(res.State)
+        })
+        .catch((err) => {})
 
-    if (!code.length) {
-      setErrors({})
+      if (!code.length) {
+        setErrors({})
+      }
+    } else {
+      setStatus("registered") //assume registered on logins
     }
   }, [code])
 
@@ -94,7 +98,8 @@ const OTPValidate = ({ onSuccess, onSetup, ...props }) => {
 
 OTPValidate.propTypes = {
   onSuccess: PropTypes.func.isRequired,
-  onSetup: PropTypes.func.isRequired
+  onSetup: PropTypes.func,
+  isLogin: PropTypes.bool
 }
 
 export default OTPValidate
