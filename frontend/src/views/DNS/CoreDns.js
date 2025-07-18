@@ -292,6 +292,7 @@ const CoreDns = (props) => {
                     </Input>
                     <Checkbox
                       value={!provider.DisableTls}
+                      defaultIsChecked={!provider.DisableTls}
                       onChange={(v) => updateUpstreamProvider(index, 'DisableTls', !v)}
                     >
                       <CheckboxIndicator mr="$2">
@@ -395,6 +396,7 @@ const CoreDns = (props) => {
                     </Input>
                     <Checkbox
                       value={!provider.DisableTls}
+                      defaultIsChecked={!provider.DisableTls}
                       onChange={(v) => updateFamilyProvider(index, 'DisableTls', !v)}
                     >
                       <CheckboxIndicator mr="$2">
