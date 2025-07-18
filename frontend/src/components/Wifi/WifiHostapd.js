@@ -121,7 +121,10 @@ const WifiHostapd = (props) => {
     'ieee80211ax',
     'he_su_beamformer',
     'he_su_beamformee',
-    'he_mu_beamformer'
+    'he_mu_beamformer',
+    'rssi_reject_assoc_rssi',
+    'rssi_reject_assoc_timeout',
+    'rssi_ignore_probe_requests'
   ]
   const canEdit = canEditInt.concat(canEditString)
 
@@ -279,6 +282,17 @@ const WifiHostapd = (props) => {
       He_mu_beamformer: parseInt(inconfig.he_mu_beamformer)
     }
 
+    // Add RSSI fields if they exist
+    if (inconfig.rssi_reject_assoc_rssi !== undefined) {
+      data.Rssi_reject_assoc_rssi = parseInt(inconfig.rssi_reject_assoc_rssi)
+    }
+    if (inconfig.rssi_reject_assoc_timeout !== undefined) {
+      data.Rssi_reject_assoc_timeout = parseInt(inconfig.rssi_reject_assoc_timeout)
+    }
+    if (inconfig.rssi_ignore_probe_requests !== undefined) {
+      data.Rssi_ignore_probe_requests = parseInt(inconfig.rssi_ignore_probe_requests)
+    }
+
     wifiAPI.updateConfig(iface, data).then((curConfig) => {
       setConfig(sortConf(curConfig))
     })
@@ -296,6 +310,17 @@ const WifiHostapd = (props) => {
       He_su_beamformer: parseInt(config.he_su_beamformer),
       He_su_beamformee: parseInt(config.he_su_beamformee),
       He_mu_beamformer: parseInt(config.he_mu_beamformer)
+    }
+
+    // Add RSSI fields if they exist
+    if (config.rssi_reject_assoc_rssi !== undefined) {
+      data.Rssi_reject_assoc_rssi = parseInt(config.rssi_reject_assoc_rssi)
+    }
+    if (config.rssi_reject_assoc_timeout !== undefined) {
+      data.Rssi_reject_assoc_timeout = parseInt(config.rssi_reject_assoc_timeout)
+    }
+    if (config.rssi_ignore_probe_requests !== undefined) {
+      data.Rssi_ignore_probe_requests = parseInt(config.rssi_ignore_probe_requests)
     }
 
     wifiAPI.updateConfig(iface, data).then((curConfig) => {
