@@ -4,6 +4,7 @@
 **Improvements**
 - Added RSSI threshold support for limiting when devices connect
 - Added support for multiple TLS dns upstreams to coredns
+- Support open ssid for uplink connections
 **Fixes**
 - Smoothed out OTP flow for plugins, fixed OTP login, added OTP rate limits
 - Golang module updates
