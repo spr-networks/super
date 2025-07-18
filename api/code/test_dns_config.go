@@ -63,7 +63,7 @@ func SetupDNSTest() (string, func(), error) {
 // Test functions
 func testMigration() {
 	fmt.Println("=== Testing DNS Settings Migration ===")
-	
+
 	// Test 1: Legacy to new format
 	legacy := DNSSettings{
 		UpstreamIPAddress:       "1.1.1.1",
@@ -73,9 +73,9 @@ func testMigration() {
 		UpstreamFamilyTLSHost:   "cloudflare-dns.com",
 		DisableFamilyTls:        false,
 	}
-	
+
 	legacy.migrateToProviders()
-	
+
 	if len(legacy.UpstreamProviders) != 1 {
 		fmt.Printf("FAIL: Expected 1 upstream provider, got %d\n", len(legacy.UpstreamProviders))
 	} else if legacy.UpstreamProviders[0].IPAddress != "1.1.1.1" {
@@ -83,7 +83,7 @@ func testMigration() {
 	} else {
 		fmt.Println("PASS: Legacy migration successful")
 	}
-	
+
 	// Test 2: Already migrated format
 	migrated := DNSSettings{
 		UpstreamProviders: []DNSProvider{
@@ -93,9 +93,9 @@ func testMigration() {
 			{IPAddress: "208.67.222.123", TLSHost: "doh.opendns.com", DisableTls: false},
 		},
 	}
-	
+
 	migrated.migrateToProviders()
-	
+
 	if migrated.UpstreamIPAddress != "9.9.9.9" {
 		fmt.Printf("FAIL: Expected legacy IP to be set to 9.9.9.9, got %s\n", migrated.UpstreamIPAddress)
 	} else {
@@ -105,14 +105,14 @@ func testMigration() {
 
 func testConfigGeneration() {
 	fmt.Println("\n=== Testing CoreDNS Config Generation ===")
-	
+
 	_, cleanup, err := SetupDNSTest()
 	if err != nil {
 		fmt.Printf("FAIL: Could not setup test: %v\n", err)
 		return
 	}
 	defer cleanup()
-	
+
 	// Test with multiple providers
 	settings := DNSSettings{
 		UpstreamProviders: []DNSProvider{
@@ -125,19 +125,19 @@ func testConfigGeneration() {
 			{IPAddress: "208.67.222.123", TLSHost: "doh.opendns.com", DisableTls: false},
 		},
 	}
-	
+
 	// Write the config using the actual function
 	updateDNSCorefileMulti(settings)
-	
+
 	// Read back the generated config
 	content, err := ioutil.ReadFile(DNSConfigFile)
 	if err != nil {
 		fmt.Printf("FAIL: Could not read generated config: %v\n", err)
 		return
 	}
-	
+
 	config := string(content)
-	
+
 	// Check for expected content
 	expectedPatterns := []string{
 		"forward . tls://1.1.1.1 8.8.8.8 tls://9.9.9.9 {",
@@ -148,7 +148,7 @@ func testConfigGeneration() {
 		"tls_servername 1.1.1.3 cloudflare-dns.com",
 		"tls_servername 208.67.222.123 doh.opendns.com",
 	}
-	
+
 	allPassed := true
 	for _, pattern := range expectedPatterns {
 		if !strings.Contains(config, pattern) {
@@ -156,11 +156,11 @@ func testConfigGeneration() {
 			allPassed = false
 		}
 	}
-	
+
 	if allPassed {
 		fmt.Println("PASS: Config generation successful")
 	}
-	
+
 	// Verify no TLS servername for non-TLS server
 	if strings.Contains(config, "tls_servername 8.8.8.8") {
 		fmt.Println("FAIL: Config should not contain tls_servername for non-TLS server")
@@ -171,14 +171,14 @@ func testConfigGeneration() {
 
 func testConfigParsing() {
 	fmt.Println("\n=== Testing CoreDNS Config Parsing ===")
-	
+
 	_, cleanup, err := SetupDNSTest()
 	if err != nil {
 		fmt.Printf("FAIL: Could not setup test: %v\n", err)
 		return
 	}
 	defer cleanup()
-	
+
 	// Write a test config
 	config := `.:53 {
   errors
@@ -198,16 +198,16 @@ func testConfigParsing() {
   reload
   loadbalance
 }`
-	
+
 	err = ioutil.WriteFile(DNSConfigFile, []byte(config), 0644)
 	if err != nil {
 		fmt.Printf("FAIL: Could not write test config: %v\n", err)
 		return
 	}
-	
+
 	// Parse using the actual function
 	settings := parseDNSCorefile()
-	
+
 	if settings.UpstreamIPAddress != "1.1.1.1" {
 		fmt.Printf("FAIL: Expected upstream IP 1.1.1.1, got %s\n", settings.UpstreamIPAddress)
 	} else if settings.UpstreamTLSHost != "cloudflare-dns.com" {
@@ -217,7 +217,7 @@ func testConfigParsing() {
 	} else {
 		fmt.Println("PASS: Primary DNS parsed correctly")
 	}
-	
+
 	if settings.UpstreamFamilyIPAddress != "1.1.1.3" {
 		fmt.Printf("FAIL: Expected family IP 1.1.1.3, got %s\n", settings.UpstreamFamilyIPAddress)
 	} else if settings.UpstreamFamilyTLSHost != "cloudflare-dns.com" {
@@ -229,7 +229,7 @@ func testConfigParsing() {
 
 func testBuildForwardLine() {
 	fmt.Println("\n=== Testing Forward Line Building ===")
-	
+
 	tests := []struct {
 		name      string
 		providers []DNSProvider
@@ -259,7 +259,7 @@ func testBuildForwardLine() {
 			expected: "  forward . tls://1.1.1.1 8.8.8.8 tls://9.9.9.9 {",
 		},
 	}
-	
+
 	allPassed := true
 	for _, tt := range tests {
 		result := buildForwardLine(tt.providers)
@@ -268,7 +268,7 @@ func testBuildForwardLine() {
 			allPassed = false
 		}
 	}
-	
+
 	if allPassed {
 		fmt.Println("PASS: All forward line tests passed")
 	}
@@ -276,14 +276,14 @@ func testBuildForwardLine() {
 
 func testFileOperations() {
 	fmt.Println("\n=== Testing File Operations ===")
-	
+
 	_, cleanup, err := SetupDNSTest()
 	if err != nil {
 		fmt.Printf("FAIL: Could not setup test: %v\n", err)
 		return
 	}
 	defer cleanup()
-	
+
 	// Test writing config with multiple providers
 	settings := DNSSettings{
 		UpstreamProviders: []DNSProvider{
@@ -294,13 +294,13 @@ func testFileOperations() {
 			{IPAddress: "1.1.1.3", TLSHost: "cloudflare-dns.com", DisableTls: false},
 		},
 	}
-	
+
 	// Write using actual function
 	updateDNSCorefileMulti(settings)
-	
+
 	// Read it back and parse
 	parsedSettings := parseDNSCorefile()
-	
+
 	// The parsed settings will have the legacy format populated from the first provider
 	if parsedSettings.UpstreamIPAddress == "1.1.1.1" {
 		fmt.Println("PASS: File write/read/parse cycle successful")
@@ -313,14 +313,13 @@ func testFileOperations() {
 func TestDNSConfiguration(t *testing.T) {
 	fmt.Println("DNS Configuration Unit Tests")
 	fmt.Println("============================")
-	
+
 	testMigration()
 	testBuildForwardLine()
 	testConfigGeneration()
 	testConfigParsing()
 	testFileOperations()
-	
+
 	fmt.Println("\n=== Test Summary ===")
 	fmt.Println("Check output above for PASS/FAIL results")
 }
-

@@ -151,7 +151,7 @@ type HostapdConfigEntry struct {
 	Rsn_pairwise                 string
 	Rssi_reject_assoc_rssi       int
 	Rssi_reject_assoc_timeout    int
-	Rssi_ignore_probe_request     int
+	Rssi_ignore_probe_request    int
 
 	//update below Validate when adding strings
 }

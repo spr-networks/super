@@ -25,10 +25,10 @@ type DNSSettings struct {
 	UpstreamFamilyTLSHost   string
 	DisableTls              bool
 	DisableFamilyTls        bool
-	
+
 	// New fields for multiple providers
-	UpstreamProviders       []DNSProvider
-	FamilyProviders         []DNSProvider
+	UpstreamProviders []DNSProvider
+	FamilyProviders   []DNSProvider
 }
 
 // Migrate legacy settings to new provider format
@@ -41,7 +41,7 @@ func (dns *DNSSettings) migrateToProviders() {
 			DisableTls: dns.DisableTls,
 		}}
 	}
-	
+
 	// Migrate family providers if not already populated
 	if len(dns.FamilyProviders) == 0 && dns.UpstreamFamilyIPAddress != "" {
 		dns.FamilyProviders = []DNSProvider{{
@@ -50,14 +50,14 @@ func (dns *DNSSettings) migrateToProviders() {
 			DisableTls: dns.DisableFamilyTls,
 		}}
 	}
-	
+
 	// Update legacy fields from new format for backward compatibility
 	if len(dns.UpstreamProviders) > 0 {
 		dns.UpstreamIPAddress = dns.UpstreamProviders[0].IPAddress
 		dns.UpstreamTLSHost = dns.UpstreamProviders[0].TLSHost
 		dns.DisableTls = dns.UpstreamProviders[0].DisableTls
 	}
-	
+
 	if len(dns.FamilyProviders) > 0 {
 		dns.UpstreamFamilyIPAddress = dns.FamilyProviders[0].IPAddress
 		dns.UpstreamFamilyTLSHost = dns.FamilyProviders[0].TLSHost
@@ -161,7 +161,7 @@ func buildForwardLine(providers []DNSProvider) string {
 func updateDNSCorefileMulti(dns DNSSettings) {
 	// Ensure migration to new format
 	dns.migrateToProviders()
-	
+
 	// Read the file
 	file, err := os.Open(DNSConfigFile)
 	if err != nil {
@@ -187,7 +187,7 @@ func updateDNSCorefileMulti(dns DNSSettings) {
 
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
-		
+
 		if skipUntilCloseBrace {
 			if strings.Contains(line, "}") {
 				skipUntilCloseBrace = false
@@ -197,7 +197,7 @@ func updateDNSCorefileMulti(dns DNSSettings) {
 
 		if strings.Contains(line, "forward . ") {
 			lastForwardIdx = len(updatedLines)
-			
+
 			// Check if this is a family policy forward
 			isFamilyPolicy := false
 			for j := i; j < len(lines) && !strings.Contains(lines[j], "}"); j++ {
@@ -216,23 +216,23 @@ func updateDNSCorefileMulti(dns DNSSettings) {
 
 			if len(providers) > 0 {
 				updatedLines = append(updatedLines, buildForwardLine(providers))
-				
+
 				// Add spr_policy if this is family
 				if isFamilyPolicy {
 					updatedLines = append(updatedLines, "    spr_policy dns:family")
 				}
-				
+
 				// Add tls_servername entries for each provider that uses TLS
 				for _, provider := range providers {
 					if !provider.DisableTls && provider.TLSHost != "" {
 						updatedLines = append(updatedLines, "    tls_servername "+provider.IPAddress+" "+provider.TLSHost)
 					}
 				}
-				
+
 				updatedLines = append(updatedLines, "    max_concurrent 1000")
 				updatedLines = append(updatedLines, "  }")
 			}
-			
+
 			skipUntilCloseBrace = true
 		} else {
 			updatedLines = append(updatedLines, line)
@@ -243,19 +243,19 @@ func updateDNSCorefileMulti(dns DNSSettings) {
 	if !hasDnsFamilyPolicy && len(dns.FamilyProviders) > 0 && lastForwardIdx != -1 {
 		newForwarder := []string{buildForwardLine(dns.FamilyProviders)}
 		newForwarder = append(newForwarder, "    spr_policy dns:family")
-		
+
 		// Add tls_servername entries
 		for _, provider := range dns.FamilyProviders {
 			if !provider.DisableTls && provider.TLSHost != "" {
 				newForwarder = append(newForwarder, "    tls_servername "+provider.IPAddress+" "+provider.TLSHost)
 			}
 		}
-		
+
 		newForwarder = append(newForwarder, "    max_concurrent 1000")
 		newForwarder = append(newForwarder, "  }")
-		
+
 		// Insert after the last forward block
-		updatedLines = append(updatedLines[:lastForwardIdx+1], 
+		updatedLines = append(updatedLines[:lastForwardIdx+1],
 			append(newForwarder, updatedLines[lastForwardIdx+1:]...)...)
 	}
 
@@ -266,7 +266,7 @@ func updateDNSCorefileMulti(dns DNSSettings) {
 		return
 	}
 	defer outputFile.Close()
-	
+
 	writer := bufio.NewWriter(outputFile)
 	for _, line := range updatedLines {
 		_, err := writer.WriteString(line + "\n")
@@ -404,11 +404,11 @@ func dnsSettings(w http.ResponseWriter, r *http.Request) {
 
 		// Migrate legacy format to new format
 		settings.migrateToProviders()
-		
+
 		// Validate all providers
 		const dnsPattern = `^(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6}\.?)$`
 		dnsRegex := regexp.MustCompile(dnsPattern)
-		
+
 		// Validate upstream providers
 		for _, provider := range settings.UpstreamProviders {
 			new_ip := net.ParseIP(provider.IPAddress)
@@ -416,18 +416,18 @@ func dnsSettings(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, fmt.Errorf("Invalid IP Address for DNS: %s", provider.IPAddress).Error(), 400)
 				return
 			}
-			
+
 			if provider.DisableTls == true && provider.TLSHost != "" {
 				http.Error(w, fmt.Errorf("Unexpected TLS Host when TLS is disabled").Error(), 400)
 				return
 			}
-			
+
 			if provider.DisableTls == false && !dnsRegex.MatchString(provider.TLSHost) {
 				http.Error(w, fmt.Errorf("Invalid DNS TLS host name: %s", provider.TLSHost).Error(), 400)
 				return
 			}
 		}
-		
+
 		// Validate family providers
 		for _, provider := range settings.FamilyProviders {
 			new_ip := net.ParseIP(provider.IPAddress)
@@ -435,18 +435,18 @@ func dnsSettings(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, fmt.Errorf("Invalid IP Address for Family DNS: %s", provider.IPAddress).Error(), 400)
 				return
 			}
-			
+
 			if provider.DisableTls == true && provider.TLSHost != "" {
 				http.Error(w, fmt.Errorf("Unexpected TLS Host when TLS is disabled").Error(), 400)
 				return
 			}
-			
+
 			if provider.DisableTls == false && !dnsRegex.MatchString(provider.TLSHost) {
 				http.Error(w, fmt.Errorf("Invalid DNS TLS host name: %s", provider.TLSHost).Error(), 400)
 				return
 			}
 		}
-		
+
 		// Also validate legacy fields for backward compatibility
 		if settings.UpstreamIPAddress != "" {
 			new_ip := net.ParseIP(settings.UpstreamIPAddress)
@@ -454,12 +454,12 @@ func dnsSettings(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, fmt.Errorf("Invalid IP Address for DNS").Error(), 400)
 				return
 			}
-			
+
 			if settings.DisableTls == true && settings.UpstreamTLSHost != "" {
 				http.Error(w, fmt.Errorf("Unexpected TLS Host when TLS is disabled").Error(), 400)
 				return
 			}
-			
+
 			if settings.DisableTls == false && settings.UpstreamTLSHost != "" && !dnsRegex.MatchString(settings.UpstreamTLSHost) {
 				http.Error(w, fmt.Errorf("Invalid DNS TLS host name").Error(), 400)
 				return
