@@ -31,8 +31,24 @@ const OTPValidate = ({ onSuccess, onSetup, isLogin, ...props }) => {
 
         onSuccess()
       })
-      .catch((err) => {
-        setErrors({ validate: 'Invalid OTP Code' })
+      .catch(async (err) => {
+        let errorMessage = 'Invalid OTP Code'
+        
+        // Extract the actual error message from the backend
+        if (err.response) {
+          try {
+            const errorText = await err.response.text()
+            if (errorText) {
+              errorMessage = errorText
+            }
+          } catch (e) {
+            // If we can't read the response, use the default message
+          }
+        } else if (err.message) {
+          errorMessage = err.message
+        }
+        
+        setErrors({ validate: errorMessage })
       })
   }
 
@@ -83,7 +99,7 @@ const OTPValidate = ({ onSuccess, onSetup, isLogin, ...props }) => {
         {'validate' in errors ? (
           <FormControlError>
             <FormControlErrorIcon as={AlertCircleIcon} />
-            <FormControlErrorText>Invalid Code</FormControlErrorText>
+            <FormControlErrorText>{errors.validate}</FormControlErrorText>
           </FormControlError>
         ) : null}
       </FormControl>
