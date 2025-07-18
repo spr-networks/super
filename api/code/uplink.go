@@ -107,12 +107,14 @@ func (n *WPANetwork) Validate() error {
 	}
 
 	if n.KeyMgmt == "" {
-		return fmt.Errorf("KeyMgmt field must be set (WPA-PSK WPA-PSK-SHA256 or WPA-PSK WPA-PSK-SHA256 SAE)")
+		return fmt.Errorf("KeyMgmt field must be set (NONE, WPA-PSK, WPA-PSK-SHA256, or SAE)")
 	}
 
 	parts := strings.Split(n.KeyMgmt, " ")
 	for _, part := range parts {
-		if part == "WPA-PSK" {
+		if part == "NONE" {
+			continue
+		} else if part == "WPA-PSK" {
 			continue
 		} else if part == "WPA-PSK-SHA256" {
 			continue
@@ -168,7 +170,7 @@ ctrl_interface=DIR=/var/run/wpa_supplicant_` + wpa.Iface + `
 {{if not .Disabled}}
 network={
 	ssid={{encodeSSID .SSID}}
-	psk={{escapeWPAPassword .Password}}
+	{{if ne .KeyMgmt "NONE"}}psk={{escapeWPAPassword .Password}}{{end}}
 	{{if .Priority}}priority={{.Priority}}{{end}}
 	{{if .BSSID}}bssid={{.BSSID}}{{end}}
 	key_mgmt={{.KeyMgmt}}
