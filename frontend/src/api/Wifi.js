@@ -495,7 +495,10 @@ const canEditInt = [
   'ieee80211ax',
   'he_su_beamformer',
   'he_su_beamformee',
-  'he_mu_beamformer'
+  'he_mu_beamformer',
+  'rssi_reject_assoc_rssi',
+  'rssi_reject_assoc_timeout',
+  'rssi_ignore_probe_request'
 ]
 const canEdit = canEditInt.concat(canEditString)
 

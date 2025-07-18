@@ -151,7 +151,7 @@ type HostapdConfigEntry struct {
 	Rsn_pairwise                 string
 	Rssi_reject_assoc_rssi       int
 	Rssi_reject_assoc_timeout    int
-	Rssi_ignore_probe_requests   int
+	Rssi_ignore_probe_request     int
 
 	//update below Validate when adding strings
 }
@@ -850,11 +850,11 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if _, ok := newInput["Rssi_ignore_probe_requests"]; ok {
-		if newConf.Rssi_ignore_probe_requests == 0 {
-			delete(conf, "rssi_ignore_probe_requests")
+	if _, ok := newInput["Rssi_ignore_probe_request"]; ok {
+		if newConf.Rssi_ignore_probe_request == 0 {
+			delete(conf, "rssi_ignore_probe_request")
 		} else {
-			conf["rssi_ignore_probe_requests"] = newConf.Rssi_ignore_probe_requests
+			conf["rssi_ignore_probe_request"] = newConf.Rssi_ignore_probe_request
 		}
 	}
 
