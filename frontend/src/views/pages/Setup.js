@@ -688,7 +688,7 @@ const Setup = (props) => {
             <Icon as={BookOpenTextIcon} color="$muted500" />
             <Link
               isExternal
-              href="https://www.supernetworks.org/pages/docs/guides_plus/mesh"
+              href="https://www.supernetworks.org/pages/docs/guides/guides_plus/mesh"
             >
               <Text>PLUS Mesh Setup Guide</Text>
             </Link>
