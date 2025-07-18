@@ -61,6 +61,7 @@ import {
 import { InterfaceTypeItem } from 'components/TagItem'
 
 let keymgmts = [
+  { value: 'NONE', label: 'Open (No Password)' },
   { value: 'WPA-PSK WPA-PSK-SHA256 SAE', label: 'WPA2/WPA3' },
   { value: 'WPA-PSK WPA-PSK-SHA256', label: 'WPA2' },
   { value: 'SAE', label: 'WPA3' }
@@ -223,22 +224,24 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
           ))}
         </Select>
       </FormControl>
-      <FormControl>
-        <FormControlLabel>
-          <FormControlLabelText>Password</FormControlLabelText>
-        </FormControlLabel>
-        <Input variant="underlined">
-          <InputField
-            type="password"
-            autoComplete="off"
-            autoCorrect="off"
-            placeholder="Password..."
-            value={item.Password}
-            onChangeText={(Password) => setItem({ ...item, Password })}
-            autoFocus
-          />
-        </Input>
-      </FormControl>
+      {item.KeyMgmt !== 'NONE' && (
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Password</FormControlLabelText>
+          </FormControlLabel>
+          <Input variant="underlined">
+            <InputField
+              type="password"
+              autoComplete="off"
+              autoCorrect="off"
+              placeholder="Password..."
+              value={item.Password}
+              onChangeText={(Password) => setItem({ ...item, Password })}
+              autoFocus
+            />
+          </Input>
+        </FormControl>
+      )}
 
       {/*
         //priority will only matter once UI supports multiple ssids.
