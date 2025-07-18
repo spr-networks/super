@@ -21,11 +21,17 @@ import {
   Button,
   ButtonIcon,
   ButtonText,
+  Checkbox,
+  CheckboxIcon,
+  CheckboxIndicator,
+  CheckboxLabel,
   FormControl,
   FormControlLabel,
   FormControlLabelText,
   FormControlError,
   FormControlErrorText,
+  FormControlHelper,
+  FormControlHelperText,
   Heading,
   HStack,
   Input,
@@ -124,7 +130,7 @@ const WifiHostapd = (props) => {
     'he_mu_beamformer',
     'rssi_reject_assoc_rssi',
     'rssi_reject_assoc_timeout',
-    'rssi_ignore_probe_requests'
+    'rssi_ignore_probe_request'
   ]
   const canEdit = canEditInt.concat(canEditString)
 
@@ -244,6 +250,16 @@ const WifiHostapd = (props) => {
     wifiAPI
       .config(iface)
       .then((conf) => {
+        // Initialize RSSI fields if they don't exist
+        if (conf.rssi_reject_assoc_rssi === undefined) {
+          conf.rssi_reject_assoc_rssi = 0
+        }
+        if (conf.rssi_reject_assoc_timeout === undefined) {
+          conf.rssi_reject_assoc_timeout = 30
+        }
+        if (conf.rssi_ignore_probe_request === undefined) {
+          conf.rssi_ignore_probe_request = 0
+        }
         setConfig(sortConf(conf))
       })
       .catch((err) => {
@@ -289,8 +305,8 @@ const WifiHostapd = (props) => {
     if (inconfig.rssi_reject_assoc_timeout !== undefined) {
       data.Rssi_reject_assoc_timeout = parseInt(inconfig.rssi_reject_assoc_timeout)
     }
-    if (inconfig.rssi_ignore_probe_requests !== undefined) {
-      data.Rssi_ignore_probe_requests = parseInt(inconfig.rssi_ignore_probe_requests)
+    if (inconfig.rssi_ignore_probe_request !== undefined) {
+      data.Rssi_ignore_probe_request = parseInt(inconfig.rssi_ignore_probe_request)
     }
 
     wifiAPI.updateConfig(iface, data).then((curConfig) => {
@@ -319,8 +335,8 @@ const WifiHostapd = (props) => {
     if (config.rssi_reject_assoc_timeout !== undefined) {
       data.Rssi_reject_assoc_timeout = parseInt(config.rssi_reject_assoc_timeout)
     }
-    if (config.rssi_ignore_probe_requests !== undefined) {
-      data.Rssi_ignore_probe_requests = parseInt(config.rssi_ignore_probe_requests)
+    if (config.rssi_ignore_probe_request !== undefined) {
+      data.Rssi_ignore_probe_request = parseInt(config.rssi_ignore_probe_request)
     }
 
     wifiAPI.updateConfig(iface, data).then((curConfig) => {
