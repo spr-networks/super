@@ -663,10 +663,7 @@ func validateOTP(w http.ResponseWriter, r *http.Request) (bool, string, error) {
 	}
 
 	// Reset attempt counter on successful validation
-	otpAttemptsMtx.Lock()
 	delete(otpAttempts, otpUserReq.Name)
-	otpAttemptsMtx.Unlock()
-
 	return true, otpUserReq.Name, nil
 }
 
