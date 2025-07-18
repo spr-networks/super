@@ -121,7 +121,7 @@ func (n *WPANetwork) Validate() error {
 		} else if part == "SAE" {
 			continue
 		}
-		return fmt.Errorf("KeyMgmt field has invalid field " + part)
+		return fmt.Errorf("KeyMgmt field has invalid value " + part)
 	}
 
 	return nil
