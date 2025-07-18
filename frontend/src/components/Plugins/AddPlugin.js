@@ -6,6 +6,10 @@ import { AlertContext } from 'layouts/Admin'
 import {
   Button,
   ButtonText,
+  Checkbox,
+  CheckboxIcon,
+  CheckboxIndicator,
+  CheckboxLabel,
   FormControl,
   FormControlHelper,
   FormControlHelperText,
@@ -13,7 +17,9 @@ import {
   FormControlLabelText,
   Input,
   InputField,
-  VStack
+  VStack,
+  HStack,
+  Text
 } from '@gluestack-ui/themed'
 
 const AddPlugin = (props) => {
@@ -23,6 +29,11 @@ const AddPlugin = (props) => {
   const [URI, setURI] = useState('')
   const [UnixPath, setUnixPath] = useState('')
   const [ComposeFilePath, setComposeFilePath] = useState('')
+  const [Enabled, setEnabled] = useState(true)
+  const [GitURL, setGitURL] = useState('')
+  const [HasUI, setHasUI] = useState(false)
+  const [InstallTokenPath, setInstallTokenPath] = useState('')
+  const [ScopedPaths, setScopedPaths] = useState('')
 
   const handleChange = (name, value) => {
     if (name == 'Name') {
@@ -37,13 +48,37 @@ const AddPlugin = (props) => {
     if (name == 'ComposeFilePath') {
       setComposeFilePath(value)
     }
+    if (name == 'GitURL') {
+      setGitURL(value)
+    }
+    if (name == 'InstallTokenPath') {
+      setInstallTokenPath(value)
+    }
+    if (name == 'ScopedPaths') {
+      setScopedPaths(value)
+    }
   }
 
   const handleSubmit = (e) => {
     e.preventDefault()
 
     // TODO validate
-    let plugin = { Name, URI, UnixPath, ComposeFilePath }
+    // Convert ScopedPaths string to array
+    const scopedPathsArray = ScopedPaths
+      ? ScopedPaths.split(',').map(path => path.trim()).filter(path => path.length > 0)
+      : []
+
+    let plugin = { 
+      Name, 
+      URI, 
+      UnixPath, 
+      ComposeFilePath,
+      Enabled,
+      GitURL,
+      HasUI,
+      InstallTokenPath,
+      ScopedPaths: scopedPathsArray
+    }
     pluginAPI
       .add(plugin)
       .then((res) => {
@@ -136,6 +171,102 @@ const AddPlugin = (props) => {
         <FormControlHelper>
           <FormControlHelperText>
             Docker Compose Filepath
+          </FormControlHelperText>
+        </FormControlHelper>
+      </FormControl>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Git URL</FormControlLabelText>
+        </FormControlLabel>
+
+        <Input variant="underlined">
+          <InputField
+            type="text"
+            value={GitURL}
+            onChangeText={(value) => handleChange('GitURL', value)}
+          />
+        </Input>
+
+        <FormControlHelper>
+          <FormControlHelperText>
+            Git repository URL for the plugin
+          </FormControlHelperText>
+        </FormControlHelper>
+      </FormControl>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Install Token Path</FormControlLabelText>
+        </FormControlLabel>
+
+        <Input variant="underlined">
+          <InputField
+            type="text"
+            value={InstallTokenPath}
+            onChangeText={(value) => handleChange('InstallTokenPath', value)}
+          />
+        </Input>
+
+        <FormControlHelper>
+          <FormControlHelperText>
+            Path to installation token file
+          </FormControlHelperText>
+        </FormControlHelper>
+      </FormControl>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Scoped Paths</FormControlLabelText>
+        </FormControlLabel>
+
+        <Input variant="underlined">
+          <InputField
+            type="text"
+            value={ScopedPaths}
+            onChangeText={(value) => handleChange('ScopedPaths', value)}
+          />
+        </Input>
+
+        <FormControlHelper>
+          <FormControlHelperText>
+            Comma-separated list of paths the plugin can access
+          </FormControlHelperText>
+        </FormControlHelper>
+      </FormControl>
+
+      <FormControl>
+        <Checkbox
+          value={Enabled}
+          onChange={setEnabled}
+        >
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>Enabled</CheckboxLabel>
+        </Checkbox>
+
+        <FormControlHelper>
+          <FormControlHelperText>
+            Enable plugin on creation
+          </FormControlHelperText>
+        </FormControlHelper>
+      </FormControl>
+
+      <FormControl>
+        <Checkbox
+          value={HasUI}
+          onChange={setHasUI}
+        >
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>Has UI</CheckboxLabel>
+        </Checkbox>
+
+        <FormControlHelper>
+          <FormControlHelperText>
+            Plugin provides a user interface
           </FormControlHelperText>
         </FormControlHelper>
       </FormControl>

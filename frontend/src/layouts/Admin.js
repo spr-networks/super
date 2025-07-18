@@ -347,6 +347,8 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
           <OTPValidate
             onSuccess={() => {
               modalState.setShowModal(false)
+              // Trigger a custom event to notify about OTP validation success
+              window.dispatchEvent(new Event('otp-validated'))
             }}
             onSetup={() => {
               modalState.setShowModal(false)
