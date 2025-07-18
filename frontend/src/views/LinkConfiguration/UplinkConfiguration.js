@@ -115,6 +115,10 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
     if (assignBSSID == false) {
       item.BSSID = ''
     }
+    // Clear password if KeyMgmt is NONE
+    if (item.KeyMgmt === 'NONE') {
+      item.Password = ''
+    }
     onSubmit(item, type, enable)
   }
 
@@ -142,7 +146,12 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
         for (let entry of res.WPAs) {
           if (entry.Iface == iface) {
             if (entry.Networks && entry.Networks.length > 0) {
-              setItem(entry.Networks[0])
+              const network = entry.Networks[0]
+              setItem({
+                ...network,
+                // Ensure KeyMgmt has a default value if not present
+                KeyMgmt: network.KeyMgmt || 'WPA-PSK WPA-PSK-SHA256 SAE'
+              })
             }
             break
           }
@@ -212,7 +221,14 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
         </FormControlLabel>
         <Select
           selectedValue={item.KeyMgmt}
-          onValueChange={(KeyMgmt) => setItem({ ...item, KeyMgmt })}
+          onValueChange={(KeyMgmt) => {
+            // Clear password when switching to NONE
+            if (KeyMgmt === 'NONE') {
+              setItem({ ...item, KeyMgmt, Password: '' })
+            } else {
+              setItem({ ...item, KeyMgmt })
+            }
+          }}
         >
           {keymgmts.map((opt) => (
             <Select.Item
