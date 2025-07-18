@@ -25,6 +25,7 @@ import (
 var AuthUsersFile = TEST_PREFIX + "/configs/auth/auth_users.json"
 var AuthTokensFile = TEST_PREFIX + "/configs/auth/auth_tokens.json"
 var OTPSettingsFile = TEST_PREFIX + "/configs/auth/otp_settings.json"
+var OTPLockoutFile = TEST_PREFIX + "/configs/auth/otp_lockouts.json"
 var WebAuthnOtpFile = TEST_PREFIX + "/state/api/webauthn_otp"
 var AuthWebAuthnFile = TEST_PREFIX + "/state/api/webauthn.json"
 var Tokensmtx sync.Mutex
@@ -620,6 +621,10 @@ func validateOTP(w http.ResponseWriter, r *http.Request) (bool, string, error) {
 	// Check rate limit
 	if attempt.Count >= maxOTPAttempts {
 		attempt.LockedUntil = time.Now().Add(otpLockoutDuration)
+		// Save lockout to persistent storage
+		if err := saveOTPLockoutsLocked(); err != nil {
+			log.Printf("Error saving OTP lockouts: %v", err)
+		}
 		log.Printf("OTP rate limit exceeded for user %s from IP %s", otpUserReq.Name, r.RemoteAddr)
 		return false, "", fmt.Errorf("Too many attempts. Account locked for %v", otpLockoutDuration)
 	}
@@ -664,6 +669,10 @@ func validateOTP(w http.ResponseWriter, r *http.Request) (bool, string, error) {
 
 	// Reset attempt counter on successful validation
 	delete(otpAttempts, otpUserReq.Name)
+	// Update persistent storage since we removed a lockout
+	if err := saveOTPLockoutsLocked(); err != nil {
+		log.Printf("Error saving OTP lockouts: %v", err)
+	}
 	return true, otpUserReq.Name, nil
 }
 
@@ -675,6 +684,57 @@ func initJwtOtpSecret() {
 			gJwtOtpSecret = b
 		}
 	}
+}
+
+func saveOTPLockoutsLocked() error {
+	// Must be called with otpAttemptsMtx already locked
+	// Only save entries that are actually locked
+	lockouts := make(map[string]*OTPAttempt)
+	now := time.Now()
+
+	for user, attempt := range otpAttempts {
+		if now.Before(attempt.LockedUntil) {
+			lockouts[user] = attempt
+		}
+	}
+
+	data, err := json.MarshalIndent(lockouts, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(OTPLockoutFile, data, 0600)
+}
+
+func loadOTPLockouts() error {
+	otpAttemptsMtx.Lock()
+	defer otpAttemptsMtx.Unlock()
+
+	data, err := ioutil.ReadFile(OTPLockoutFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// File doesn't exist yet, that's ok
+			return nil
+		}
+		return err
+	}
+
+	var lockouts map[string]*OTPAttempt
+	err = json.Unmarshal(data, &lockouts)
+	if err != nil {
+		return err
+	}
+
+	// Merge loaded lockouts with existing attempts
+	now := time.Now()
+	for user, attempt := range lockouts {
+		// Only restore if still locked
+		if now.Before(attempt.LockedUntil) {
+			otpAttempts[user] = attempt
+		}
+	}
+
+	return nil
 }
 
 func cleanupOTPAttemptsLocked() {
@@ -690,6 +750,7 @@ func cleanupOTPAttemptsLocked() {
 
 func initAuth() {
 	initJwtOtpSecret()
+        loadOTPLockouts()
 }
 
 func generateOTPToken(w http.ResponseWriter, r *http.Request) {
