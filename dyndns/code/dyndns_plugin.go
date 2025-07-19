@@ -45,7 +45,7 @@ type GodyndnsConfig struct {
 	Socks5Proxy string           `json:"socks5"`
 	Resolver    string           `json:"resolver"`
 	RunOnce     bool             `json:"run_once"`
-	WebPanel    WebPanelConfig   `json:"web_panel,omitempty"`
+	WebPanel    WebPanelConfig   `json:"web_panel,omitempty"` // Internal use only
 }
 
 type WebPanelConfig struct {
@@ -53,6 +53,23 @@ type WebPanelConfig struct {
 	Addr     string `json:"addr"`
 	Username string `json:"username"`
 	Password string `json:"password"`
+}
+
+// GodyndnsConfigAPI is the config exposed to the API (without internal fields)
+type GodyndnsConfigAPI struct {
+	Provider    string           `json:"provider"`
+	Email       string           `json:"email"`
+	Password    string           `json:"password"`
+	LoginToken  string           `json:"login_token"`
+	Domains     []GodyndnsDomain `json:"domains"`
+	IpUrls      []string         `json:"ip_urls"`
+	IpUrl       string           `json:"ip_url"`   //deprecated entry, replaced by ip_urls
+	Ipv6Url     string           `json:"ipv6_url"` //deprecated entry, replaced by ip_urls
+	IpType      string           `json:"ip_type"`
+	Interval    int              `json:"interval"`
+	Socks5Proxy string           `json:"socks5"`
+	Resolver    string           `json:"resolver"`
+	RunOnce     bool             `json:"run_once"`
 }
 
 func startGoDyndns() {
@@ -77,7 +94,6 @@ func startGoDyndns() {
 	fmt.Println("godns started with PID:", godnsProcess.Process.Pid)
 	
 	// Setup proxy to godns web panel if enabled
-	config := loadConfig()
 	if config.WebPanel.Enabled && config.WebPanel.Addr != "" {
 		// Give godns a moment to start its web server
 		time.Sleep(2 * time.Second)
@@ -166,14 +182,30 @@ func setConfiguration(w http.ResponseWriter, r *http.Request) {
 	Configmtx.Lock()
 	defer Configmtx.Unlock()
 
-	config := GodyndnsConfig{}
-	err := json.NewDecoder(r.Body).Decode(&config)
+	// Decode API config
+	apiConfig := GodyndnsConfigAPI{}
+	err := json.NewDecoder(r.Body).Decode(&apiConfig)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
 
-	config.Provider = strings.Title(config.Provider)
+	// Convert to full config
+	config := GodyndnsConfig{
+		Provider:    strings.Title(apiConfig.Provider),
+		Email:       apiConfig.Email,
+		Password:    apiConfig.Password,
+		LoginToken:  apiConfig.LoginToken,
+		Domains:     apiConfig.Domains,
+		IpUrls:      apiConfig.IpUrls,
+		IpUrl:       apiConfig.IpUrl,
+		Ipv6Url:     apiConfig.Ipv6Url,
+		IpType:      apiConfig.IpType,
+		Interval:    apiConfig.Interval,
+		Socks5Proxy: apiConfig.Socks5Proxy,
+		Resolver:    apiConfig.Resolver,
+		RunOnce:     apiConfig.RunOnce,
+	}
 
 	err = validateConfig(config)
 	if err != nil {
@@ -181,17 +213,16 @@ func setConfiguration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set default web panel settings if not provided
-	if config.WebPanel.Enabled && config.WebPanel.Addr == "" {
+	// Always enable web panel internally if provider is configured
+	if config.Provider != "" {
+		config.WebPanel.Enabled = true
 		config.WebPanel.Addr = "127.0.0.1:9876"
-	}
-	if config.WebPanel.Enabled && config.WebPanel.Username == "" {
 		config.WebPanel.Username = "admin"
-		config.WebPanel.Password = "password"
-	}
-
-	// If web panel is enabled, don't use run once mode
-	if !config.WebPanel.Enabled {
+		config.WebPanel.Password = "dyndns"
+		config.RunOnce = false
+	} else {
+		// No provider, disable web panel
+		config.WebPanel.Enabled = false
 		config.RunOnce = true
 	}
 
@@ -220,8 +251,25 @@ func refreshDyndns(w http.ResponseWriter, r *http.Request) {
 func getConfiguration(w http.ResponseWriter, r *http.Request) {
 	config := loadConfig()
 
+	// Convert to API version (without web panel settings)
+	apiConfig := GodyndnsConfigAPI{
+		Provider:    config.Provider,
+		Email:       config.Email,
+		Password:    config.Password,
+		LoginToken:  config.LoginToken,
+		Domains:     config.Domains,
+		IpUrls:      config.IpUrls,
+		IpUrl:       config.IpUrl,
+		Ipv6Url:     config.Ipv6Url,
+		IpType:      config.IpType,
+		Interval:    config.Interval,
+		Socks5Proxy: config.Socks5Proxy,
+		Resolver:    config.Resolver,
+		RunOnce:     config.RunOnce,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(config)
+	json.NewEncoder(w).Encode(apiConfig)
 }
 
 func loadConfig() GodyndnsConfig {
@@ -350,12 +398,7 @@ func handleUIProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	// Remove the /ui prefix before proxying
-	r.URL.Path = strings.TrimPrefix(r.URL.Path, "/ui")
-	if r.URL.Path == "" {
-		r.URL.Path = "/"
-	}
-	
+	// Proxy the request as-is to godns
 	godnsProxy.ServeHTTP(w, r)
 }
 
@@ -369,8 +412,8 @@ func main() {
 	unix_plugin_router.HandleFunc("/config", setConfiguration).Methods("PUT")
 	unix_plugin_router.HandleFunc("/refresh", refreshDyndns).Methods("GET")
 	
-	// Handle UI proxy requests
-	unix_plugin_router.PathPrefix("/ui").HandlerFunc(handleUIProxy)
+	// Handle all other requests as UI proxy (catches both / and /ui paths)
+	unix_plugin_router.PathPrefix("/").HandlerFunc(handleUIProxy)
 
 	os.Remove(UNIX_PLUGIN_LISTENER)
 	unixPluginListener, err := net.Listen("unix", UNIX_PLUGIN_LISTENER)
