@@ -13,7 +13,7 @@ echo nameserver 1.1.1.1 > /etc/resolv.conf
 # is no longer sufficient to work with a complex docker-compose file.
 # Install the upstream docker packages then.
 apt-get update
-apt-get -y install ca-certificates curl gnupg
+apt-get -y install ca-certificates curl gnupg dhcpcd5
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 chmod a+r /etc/apt/keyrings/docker.gpg
