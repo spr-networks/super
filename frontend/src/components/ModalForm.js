@@ -54,7 +54,9 @@ const ModalForm = (props) => {
 
   return (
     <>
-      {props.triggerText ? (
+      {props.triggerComponent ? (
+        React.cloneElement(props.triggerComponent, { onPress: toggleModal })
+      ) : props.triggerText ? (
         <Button {...triggerProps}>
           <ButtonText>{props.triggerText || 'Open Modal'}</ButtonText>
           <ButtonIcon as={PlusIcon} ml="$1" />
@@ -89,6 +91,7 @@ ModalForm.propTypes = {
   triggerIcon: PropTypes.object,
   triggerProps: PropTypes.object,
   triggerText: PropTypes.string,
+  triggerComponent: PropTypes.element,
   modalRef: PropTypes.any
 }
 

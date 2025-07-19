@@ -21,8 +21,10 @@ import {
   View,
   VStack,
   HStack,
-  CheckIcon
+  CheckIcon,
+  Divider
 } from '@gluestack-ui/themed'
+import { Trash2Icon, PlusIcon } from 'lucide-react-native'
 import { ListHeader } from 'components/List'
 
 const CoreDns = (props) => {
@@ -33,6 +35,11 @@ const CoreDns = (props) => {
   const [enableTls, setEnableTls] = useState(true)
   const [enableFamilyTls, setEnableFamilyTls] = useState(true)
   const [disableRebindingCheck, setDisableRebindingCheck] = useState(false)
+  
+  // New state for multiple providers
+  const [upstreamProviders, setUpstreamProviders] = useState([])
+  const [familyProviders, setFamilyProviders] = useState([])
+  const [useMultipleProviders, setUseMultipleProviders] = useState(false)
 
   const contextType = useContext(AppContext)
 
@@ -62,6 +69,34 @@ const CoreDns = (props) => {
     }
   }
 
+  const addUpstreamProvider = () => {
+    setUpstreamProviders([...upstreamProviders, { IPAddress: '', TLSHost: '', DisableTls: false }])
+  }
+
+  const removeUpstreamProvider = (index) => {
+    setUpstreamProviders(upstreamProviders.filter((_, i) => i !== index))
+  }
+
+  const updateUpstreamProvider = (index, field, value) => {
+    const updated = [...upstreamProviders]
+    updated[index][field] = value
+    setUpstreamProviders(updated)
+  }
+
+  const addFamilyProvider = () => {
+    setFamilyProviders([...familyProviders, { IPAddress: '', TLSHost: '', DisableTls: false }])
+  }
+
+  const removeFamilyProvider = (index) => {
+    setFamilyProviders(familyProviders.filter((_, i) => i !== index))
+  }
+
+  const updateFamilyProvider = (index, field, value) => {
+    const updated = [...familyProviders]
+    updated[index][field] = value
+    setFamilyProviders(updated)
+  }
+
   const submitSettings = (value) => {
     let config = {
       UpstreamIPAddress: ip,
@@ -71,6 +106,13 @@ const CoreDns = (props) => {
       UpstreamFamilyTLSHost: host_fam,
       DisableFamilyTls: !enableFamilyTls,
     }
+    
+    // Add multiple providers if enabled
+    if (useMultipleProviders) {
+      config.UpstreamProviders = upstreamProviders.filter(p => p.IPAddress)
+      config.FamilyProviders = familyProviders.filter(p => p.IPAddress)
+    }
+    
     CoreDNS.setConfig(config).then(
       () => {
         alertState.success('Updated DNS Settings')
@@ -111,6 +153,15 @@ const CoreDns = (props) => {
       setIpFam(config.UpstreamFamilyIPAddress)
       setEnableTls(!config.DisableTls)
       setEnableFamilyTls(!config.DisableFamilyTls)
+      
+      // Load multiple providers if available
+      if (config.UpstreamProviders && config.UpstreamProviders.length > 0) {
+        setUpstreamProviders(config.UpstreamProviders)
+        setUseMultipleProviders(true)
+      }
+      if (config.FamilyProviders && config.FamilyProviders.length > 0) {
+        setFamilyProviders(config.FamilyProviders)
+      }
     })
   }, [])
 
@@ -154,35 +205,115 @@ const CoreDns = (props) => {
             </CheckboxIndicator>
             <CheckboxLabel>Disabled</CheckboxLabel>
           </Checkbox>
-
-          <Text bold>Primary: DNS IP</Text>
-          <InputSelect
-            options={options}
-            value={ip}
-            onChange={(v) => onChangeText('ip', v)}
-            onChangeText={(v) => onChangeText('ip', v)}
-          />
-          <Text bold>DNS Hostname (for encrypted DNS)</Text>
-          <Input variant="underlined">
-            <InputField
-              value={host}
-              onChangeText={(v) => onChangeText('host', v)}
-            />
-          </Input>
+          
           <Text bold>
-            Encrypt Outbound DNS Requests with DNS over HTTPS (DoH)
+            Enable Multiple DNS Providers (Fallback Support)
           </Text>
 
           <Checkbox
-            value={enableTls}
-            defaultIsChecked={enableTls}
-            onChange={setEnableTls}
+            value={useMultipleProviders}
+            defaultIsChecked={useMultipleProviders}
+            onChange={setUseMultipleProviders}
           >
             <CheckboxIndicator mr="$2">
               <CheckboxIcon />
             </CheckboxIndicator>
-            <CheckboxLabel>Enabled</CheckboxLabel>
+            <CheckboxLabel>Use Multiple Providers</CheckboxLabel>
           </Checkbox>
+
+          {!useMultipleProviders ? (
+            <>
+              <Text bold>Primary: DNS IP</Text>
+              <InputSelect
+                options={options}
+                value={ip}
+                onChange={(v) => onChangeText('ip', v)}
+                onChangeText={(v) => onChangeText('ip', v)}
+              />
+              <Text bold>DNS Hostname (for encrypted DNS)</Text>
+              <Input variant="underlined">
+                <InputField
+                  value={host}
+                  onChangeText={(v) => onChangeText('host', v)}
+                />
+              </Input>
+              <Text bold>
+                Encrypt Outbound DNS Requests with DNS over TLS (DoT)
+              </Text>
+
+              <Checkbox
+                value={enableTls}
+                defaultIsChecked={enableTls}
+                onChange={setEnableTls}
+              >
+                <CheckboxIndicator mr="$2">
+                  <CheckboxIcon />
+                </CheckboxIndicator>
+                <CheckboxLabel>Enabled</CheckboxLabel>
+              </Checkbox>
+            </>
+          ) : (
+            <>
+              <Text bold>Primary DNS Providers (Tried in Order)</Text>
+              {upstreamProviders.map((provider, index) => (
+                <Box key={index} borderWidth={1} borderColor="$borderColorLight" borderRadius="$md" p="$2">
+                  <VStack space="sm">
+                    <HStack space="md" alignItems="center">
+                      <InputSelect
+                        flex={1}
+                        options={options}
+                        value={provider.IPAddress}
+                        onChange={(v) => {
+                          updateUpstreamProvider(index, 'IPAddress', v)
+                          if (presets[v]) {
+                            updateUpstreamProvider(index, 'TLSHost', presets[v])
+                          }
+                        }}
+                        onChangeText={(v) => {
+                          updateUpstreamProvider(index, 'IPAddress', v)
+                        }}
+                        placeholder="DNS IP Address"
+                      />
+                      <Button
+                        size="sm"
+                        action="secondary"
+                        variant="outline"
+                        onPress={() => removeUpstreamProvider(index)}
+                      >
+                        <ButtonIcon as={Trash2Icon} />
+                      </Button>
+                    </HStack>
+                    <Input variant="underlined">
+                      <InputField
+                        value={provider.TLSHost}
+                        onChangeText={(v) => updateUpstreamProvider(index, 'TLSHost', v)}
+                        placeholder="DNS Hostname (for DoT)"
+                      />
+                    </Input>
+                    <Checkbox
+                      value={!provider.DisableTls}
+                      defaultIsChecked={!provider.DisableTls}
+                      onChange={(v) => updateUpstreamProvider(index, 'DisableTls', !v)}
+                    >
+                      <CheckboxIndicator mr="$2">
+                        <CheckboxIcon />
+                      </CheckboxIndicator>
+                      <CheckboxLabel>Enable TLS</CheckboxLabel>
+                    </Checkbox>
+                  </VStack>
+                </Box>
+              ))}
+              <Button
+                size="sm"
+                action="secondary"
+                variant="outline"
+                onPress={addUpstreamProvider}
+              >
+                <ButtonIcon as={PlusIcon} mr="$1" />
+                <ButtonText>Add Provider</ButtonText>
+              </Button>
+            </>
+          )}
 
         </VStack>
       </Box>
@@ -194,34 +325,99 @@ const CoreDns = (props) => {
         p="$4"
       >
         <VStack space="lg">
-          <Text bold>Family Filter: DNS IP</Text>
-          <InputSelect
-            options={options_family}
-            value={ip_fam}
-            onChange={(v) => onChangeText('ip_fam', v)}
-            onChangeText={(v) => onChangeText('ip_fam', v)}
-          />
-          <Text bold>Family Filter: DNS Hostname (for encrypted DNS)</Text>
-          <Input variant="underlined">
-            <InputField
-              value={host_fam}
-              onChangeText={(v) => onChangeText('host_fam', v)}
-            />
-          </Input>
-          <Text bold>
-            Encrypt Outbound DNS Requests with DNS over HTTPS (DoH)
-          </Text>
+          {!useMultipleProviders ? (
+            <>
+              <Text bold>Family Filter: DNS IP</Text>
+              <InputSelect
+                options={options_family}
+                value={ip_fam}
+                onChange={(v) => onChangeText('ip_fam', v)}
+                onChangeText={(v) => onChangeText('ip_fam', v)}
+              />
+              <Text bold>Family Filter: DNS Hostname (for encrypted DNS)</Text>
+              <Input variant="underlined">
+                <InputField
+                  value={host_fam}
+                  onChangeText={(v) => onChangeText('host_fam', v)}
+                />
+              </Input>
+              <Text bold>
+                Encrypt Outbound DNS Requests with DNS over TLS (DoT)
+              </Text>
 
-          <Checkbox
-            value={enableFamilyTls}
-            defaultIsChecked={enableFamilyTls}
-            onChange={setEnableFamilyTls}
-          >
-            <CheckboxIndicator mr="$2">
-              <CheckboxIcon />
-            </CheckboxIndicator>
-            <CheckboxLabel>Enabled</CheckboxLabel>
-          </Checkbox>
+              <Checkbox
+                value={enableFamilyTls}
+                defaultIsChecked={enableFamilyTls}
+                onChange={setEnableFamilyTls}
+              >
+                <CheckboxIndicator mr="$2">
+                  <CheckboxIcon />
+                </CheckboxIndicator>
+                <CheckboxLabel>Enabled</CheckboxLabel>
+              </Checkbox>
+            </>
+          ) : (
+            <>
+              <Text bold>Family Filter DNS Providers (Tried in Order)</Text>
+              {familyProviders.map((provider, index) => (
+                <Box key={index} borderWidth={1} borderColor="$borderColorLight" borderRadius="$md" p="$2">
+                  <VStack space="sm">
+                    <HStack space="md" alignItems="center">
+                      <InputSelect
+                        flex={1}
+                        options={options_family}
+                        value={provider.IPAddress}
+                        onChange={(v) => {
+                          updateFamilyProvider(index, 'IPAddress', v)
+                          if (presets[v]) {
+                            updateFamilyProvider(index, 'TLSHost', presets[v])
+                          }
+                        }}
+                        onChangeText={(v) => {
+                          updateFamilyProvider(index, 'IPAddress', v)
+                        }}
+                        placeholder="Family DNS IP Address"
+                      />
+                      <Button
+                        size="sm"
+                        action="secondary"
+                        variant="outline"
+                        onPress={() => removeFamilyProvider(index)}
+                      >
+                        <ButtonIcon as={Trash2Icon} />
+                      </Button>
+                    </HStack>
+                    <Input variant="underlined">
+                      <InputField
+                        value={provider.TLSHost}
+                        onChangeText={(v) => updateFamilyProvider(index, 'TLSHost', v)}
+                        placeholder="DNS Hostname (for DoT)"
+                      />
+                    </Input>
+                    <Checkbox
+                      value={!provider.DisableTls}
+                      defaultIsChecked={!provider.DisableTls}
+                      onChange={(v) => updateFamilyProvider(index, 'DisableTls', !v)}
+                    >
+                      <CheckboxIndicator mr="$2">
+                        <CheckboxIcon />
+                      </CheckboxIndicator>
+                      <CheckboxLabel>Enable TLS</CheckboxLabel>
+                    </Checkbox>
+                  </VStack>
+                </Box>
+              ))}
+              <Button
+                size="sm"
+                action="secondary"
+                variant="outline"
+                onPress={addFamilyProvider}
+              >
+                <ButtonIcon as={PlusIcon} mr="$1" />
+                <ButtonText>Add Family Provider</ButtonText>
+              </Button>
+            </>
+          )}
 
           <HStack>
             <Button action="primary" onPress={submitSettings}>

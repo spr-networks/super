@@ -13,7 +13,7 @@ echo nameserver 1.1.1.1 > /etc/resolv.conf
 # is no longer sufficient to work with a complex docker-compose file.
 # Install the upstream docker packages then.
 apt-get update
-apt-get -y install ca-certificates curl gnupg
+apt-get -y install ca-certificates curl gnupg dhcpcd5
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 chmod a+r /etc/apt/keyrings/docker.gpg
@@ -106,16 +106,21 @@ EOF
 set -e
 ARCH=$(uname -m)
 URL=https://storage.googleapis.com/gvisor/releases/release/latest/${ARCH}
+pushd /tmp
 wget ${URL}/runsc ${URL}/runsc.sha512 ${URL}/containerd-shim-runsc-v1 ${URL}/containerd-shim-runsc-v1.sha512
 sha512sum -c runsc.sha512
 sha512sum -c containerd-shim-runsc-v1.sha512
 rm -f *.sha512
 chmod a+rx runsc containerd-shim-runsc-v1
-sudo mv runsc containerd-shim-runsc-v1 /usr/local/bin
+mv runsc containerd-shim-runsc-v1 /usr/local/bin
+popd
 
 
 # SPR setup
-mkdir /home/spr
+if [ ! -d /home/spr ]; then 
+  mkdir /home/spr
+fi
+
 cd /home/spr
 cp /tmp/setup.sh .
 cp /tmp/run.sh .

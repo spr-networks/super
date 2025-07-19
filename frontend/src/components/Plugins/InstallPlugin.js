@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState, useRef } from 'react'
 import PropTypes from 'prop-types'
 
 import {
@@ -52,31 +52,30 @@ const InstallPlugin = ({ ...props }) => {
     return true
   }
 
-  const handleSubmit = () => {
-    if (!validUrl(url)) {
-      context.error(
-        `Invalid url, only github repositories for now. Example: https://github.com/spr-networks/spr-mitmproxy.git`
-      )
-      return
-    }
-
+  const installPlugin = (pluginUrl) => {
     setIsRunning(true)
-    //TODO fetch github repo, show notification:
-    // * plugin.json is parsed successfully
-    // * plugin build done and installed & running
-
+    
     api
-      .put('/plugin/install_user_url', url)
+      .put('/plugin/install_user_url', pluginUrl)
       .then((res) => {
         context.success(`Plugin installing...`)
         setIsRunning(false)
+        // Clear the URL on success
+        setUrl('')
+        // Clear any pending installation
+        sessionStorage.removeItem('pendingPluginInstall')
       })
       .catch((err) => {
+        setIsRunning(false)
         if (err.response) {
           err.response.text().then((data) => {
             if (data.includes('Invalid JWT')) {
-              //context.error(`One Time Passcode Authentication Required, failure: ${data}`)
-              //NOTE this is catched outside of here and will show the OTP modal
+              // Store the URL for retry after OTP validation
+              sessionStorage.setItem('pendingPluginInstall', JSON.stringify({
+                url: pluginUrl,
+                timestamp: Date.now()
+              }))
+              // The OTP modal will be shown by the error handler in Admin.js
             } else {
               context.error(`Check Plugin URL: ${data}`)
             }
@@ -85,12 +84,60 @@ const InstallPlugin = ({ ...props }) => {
           context.error(`API Error`, err)
         }
       })
-
-    //context.success(`TODO, Plugin parsed... build it`)
-    setTimeout(() => {
-      setIsRunning(false)
-    }, 1500)
   }
+
+  const handleSubmit = () => {
+    if (!validUrl(url)) {
+      context.error(
+        `Invalid url, only github repositories for now. Example: https://github.com/spr-networks/spr-mitmproxy.git`
+      )
+      return
+    }
+
+    installPlugin(url)
+  }
+
+  // Check for pending plugin installation from sessionStorage
+  const checkAndRetryPendingInstall = () => {
+    const pendingPlugin = sessionStorage.getItem('pendingPluginInstall')
+    if (pendingPlugin) {
+      const { url: pendingUrl, timestamp } = JSON.parse(pendingPlugin)
+      // Check if the pending installation is less than 5 minutes old
+      if (Date.now() - timestamp < 5 * 60 * 1000) {
+        setUrl(pendingUrl)
+        sessionStorage.removeItem('pendingPluginInstall')
+        // Auto-submit after a short delay
+        setTimeout(() => {
+          context.info('Retrying plugin installation...')
+          installPlugin(pendingUrl)
+        }, 500)
+      } else {
+        // Clear stale pending installation
+        sessionStorage.removeItem('pendingPluginInstall')
+      }
+    }
+  }
+
+  // Check on component mount
+  useEffect(() => {
+    checkAndRetryPendingInstall()
+  }, [])
+
+  // Listen for OTP validation success
+  useEffect(() => {
+    const handleOTPValidated = () => {
+      // Give a small delay for the JWT token to be set
+      setTimeout(() => {
+        checkAndRetryPendingInstall()
+      }, 100)
+    }
+
+    window.addEventListener('otp-validated', handleOTPValidated)
+    
+    return () => {
+      window.removeEventListener('otp-validated', handleOTPValidated)
+    }
+  }, [])
 
   const colorMode = useColorMode()
 

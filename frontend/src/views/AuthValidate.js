@@ -48,7 +48,7 @@ const AuthValidate = (props) => {
           Validate OTP Code
         </Heading>
 
-        <OTPValidate onSuccess={onSuccess} />
+        <OTPValidate isLogin={true} onSuccess={onSuccess} />
 
         <Button
           action="secondary"

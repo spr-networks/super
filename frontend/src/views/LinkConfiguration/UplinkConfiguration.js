@@ -61,6 +61,7 @@ import {
 import { InterfaceTypeItem } from 'components/TagItem'
 
 let keymgmts = [
+  { value: 'NONE', label: 'Open (No Password)' },
   { value: 'WPA-PSK WPA-PSK-SHA256 SAE', label: 'WPA2/WPA3' },
   { value: 'WPA-PSK WPA-PSK-SHA256', label: 'WPA2' },
   { value: 'SAE', label: 'WPA3' }
@@ -114,6 +115,10 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
     if (assignBSSID == false) {
       item.BSSID = ''
     }
+    // Clear password if KeyMgmt is NONE
+    if (item.KeyMgmt === 'NONE') {
+      item.Password = ''
+    }
     onSubmit(item, type, enable)
   }
 
@@ -141,7 +146,12 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
         for (let entry of res.WPAs) {
           if (entry.Iface == iface) {
             if (entry.Networks && entry.Networks.length > 0) {
-              setItem(entry.Networks[0])
+              const network = entry.Networks[0]
+              setItem({
+                ...network,
+                // Ensure KeyMgmt has a default value if not present
+                KeyMgmt: network.KeyMgmt || 'WPA-PSK WPA-PSK-SHA256 SAE'
+              })
             }
             break
           }
@@ -211,7 +221,14 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
         </FormControlLabel>
         <Select
           selectedValue={item.KeyMgmt}
-          onValueChange={(KeyMgmt) => setItem({ ...item, KeyMgmt })}
+          onValueChange={(KeyMgmt) => {
+            // Clear password when switching to NONE
+            if (KeyMgmt === 'NONE') {
+              setItem({ ...item, KeyMgmt, Password: '' })
+            } else {
+              setItem({ ...item, KeyMgmt })
+            }
+          }}
         >
           {keymgmts.map((opt) => (
             <Select.Item
@@ -223,22 +240,24 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
           ))}
         </Select>
       </FormControl>
-      <FormControl>
-        <FormControlLabel>
-          <FormControlLabelText>Password</FormControlLabelText>
-        </FormControlLabel>
-        <Input variant="underlined">
-          <InputField
-            type="password"
-            autoComplete="off"
-            autoCorrect="off"
-            placeholder="Password..."
-            value={item.Password}
-            onChangeText={(Password) => setItem({ ...item, Password })}
-            autoFocus
-          />
-        </Input>
-      </FormControl>
+      {item.KeyMgmt !== 'NONE' && (
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Password</FormControlLabelText>
+          </FormControlLabel>
+          <Input variant="underlined">
+            <InputField
+              type="password"
+              autoComplete="off"
+              autoCorrect="off"
+              placeholder="Password..."
+              value={item.Password}
+              onChangeText={(Password) => setItem({ ...item, Password })}
+              autoFocus
+            />
+          </Input>
+        </FormControl>
+      )}
 
       {/*
         //priority will only matter once UI supports multiple ssids.

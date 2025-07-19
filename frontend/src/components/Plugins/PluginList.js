@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import {
@@ -13,29 +13,46 @@ import {
   Switch,
   Text,
   CloseIcon,
-  Spinner
+  Spinner,
+  Divider
 } from '@gluestack-ui/themed'
-import { MonitorCheckIcon } from 'lucide-react-native'
+import { MonitorCheckIcon, EditIcon } from 'lucide-react-native'
 
 import { ListItem } from 'components/List'
 import { Tooltip } from 'components/Tooltip'
+import ModalForm from 'components/ModalForm'
+import EditPlugin from 'components/Plugins/EditPlugin'
 
 import { pluginAPI } from 'api'
 import { alertState } from 'AppContext'
 
-const PluginListItem = ({ item, deleteListItem, handleChange, ...props }) => {
+const PluginListItem = ({ item, deleteListItem, handleChange, notifyChange, ...props }) => {
   const navigate = useNavigate()
+  const editModalRef = useRef(null)
+
+  const getFieldDisplay = (label, value) => {
+    if (!value || (Array.isArray(value) && value.length === 0)) return null
+    
+    return (
+      <HStack space="sm" w="$full">
+        <Text size="sm" color="$muted500" minWidth={120}>
+          {label}:
+        </Text>
+        <Text size="sm" flex={1} numberOfLines={1}>
+          {Array.isArray(value) ? value.join(', ') : value}
+        </Text>
+      </HStack>
+    )
+  }
 
   return (
     <ListItem>
-      <VStack flex={1} space="sm">
-        <Tooltip label={`URI: ${item.URI || 'not set'}`}>
-          <Text size="md" bold>
+      <VStack flex={1} space="md">
+        <HStack space="md" alignItems="center">
+          <Text size="lg" bold>
             {item.Name}
           </Text>
-        </Tooltip>
-
-        <HStack space="sm">
+          
           {item.Version === undefined ? (
             <Spinner size="small" />
           ) : (
@@ -47,60 +64,76 @@ const PluginListItem = ({ item, deleteListItem, handleChange, ...props }) => {
               <BadgeText>{item.Version || 'none'}</BadgeText>
             </Badge>
           )}
+        </HStack>
 
-          {item.Enabled && item.HasUI ? (
-            <Tooltip label={'Show plugin UI'}>
-              <Button
-                variant="link"
-                action="secondary"
-                size="sm"
-                onPress={() =>
-                  navigate(
-                    `/admin/custom_plugin/${encodeURIComponent(item.URI)}/`
-                  )
-                }
-              >
-                <ButtonIcon as={MonitorCheckIcon} size={24} />
-              </Button>
-            </Tooltip>
-          ) : null}
+        <VStack space="xs">
+          {getFieldDisplay('URI', item.URI)}
+          {getFieldDisplay('Git URL', item.GitURL)}
+          {getFieldDisplay('Unix Path', item.UnixPath)}
+          {getFieldDisplay('Compose Path', item.ComposeFilePath)}
+          {getFieldDisplay('Token Path', item.InstallTokenPath)}
+          {getFieldDisplay('Scoped Paths', item.ScopedPaths)}
+        </VStack>
+
+        <HStack space="sm" alignItems="center">
+          {item.HasUI && (
+            <Badge variant="solid" action="info">
+              <BadgeText>Has UI</BadgeText>
+            </Badge>
+          )}
+          
+          {item.Plus && (
+            <Badge variant="solid" action="warning">
+              <BadgeText>PLUS</BadgeText>
+            </Badge>
+          )}
         </HStack>
       </VStack>
 
-      <VStack
-        flex={2}
-        space="md"
-        sx={{
-          '@base': { display: 'none' },
-          '@md': { display: 'flex' }
-        }}
-        alignItems="flex-end"
-      >
-        {item.ComposeFilePath ? (
-          <HStack space="sm">
-            <Text size="sm" color="$muted500">
-              Compose Path
-            </Text>
-            <Text size="sm" isTruncated>
-              {item.ComposeFilePath}
-            </Text>
-          </HStack>
-        ) : null}
-      </VStack>
-
-      <HStack space="4xl">
-        <Box w={100} alignItems="center" alignSelf="center">
+      <HStack space="md" alignItems="center">
+        <Box w={80} alignItems="center">
           <Switch
             value={item.Enabled}
             onValueChange={() => handleChange(item, !item.Enabled)}
           />
         </Box>
 
+        {item.Enabled && item.HasUI && (
+          <Tooltip label={'Show plugin UI'}>
+            <Button
+              variant="link"
+              action="secondary"
+              size="sm"
+              onPress={() =>
+                navigate(
+                  `/admin/custom_plugin/${encodeURIComponent(item.URI)}/`
+                )
+              }
+            >
+              <ButtonIcon as={MonitorCheckIcon} />
+            </Button>
+          </Tooltip>
+        )}
+
+        <ModalForm
+          title={`Edit Plugin: ${item.Name}`}
+          triggerComponent={
+            <Button variant="solid" action="secondary" size="sm">
+              <ButtonIcon as={EditIcon} />
+            </Button>
+          }
+          modalRef={editModalRef}
+        >
+          <EditPlugin 
+            plugin={item} 
+            onClose={() => editModalRef.current?.()} 
+            notifyChange={notifyChange}
+          />
+        </ModalForm>
+
         <Button
-          alignSelf="center"
           variant="link"
           onPress={() => deleteListItem(item)}
-          ml="$8"
         >
           <ButtonIcon as={CloseIcon} color="$red700" />
         </Button>
@@ -136,6 +169,7 @@ const PluginList = ({ list, deleteListItem, notifyChange, ...props }) => {
       item={item}
       deleteListItem={deleteListItem}
       handleChange={handleChange}
+      notifyChange={notifyChange}
     />
   )
 

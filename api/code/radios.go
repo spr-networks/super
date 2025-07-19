@@ -149,6 +149,9 @@ type HostapdConfigEntry struct {
 	Rrm_beacon_report            int
 	Op_class                     int
 	Rsn_pairwise                 string
+	Rssi_reject_assoc_rssi       int
+	Rssi_reject_assoc_timeout    int
+	Rssi_ignore_probe_request    int
 
 	//update below Validate when adding strings
 }
@@ -829,6 +832,30 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		//remove op_class otherwise. in the future we may want to calculate this always.
 		delete(conf, "op_class")
 		relax6e(conf)
+	}
+
+	if _, ok := newInput["Rssi_reject_assoc_rssi"]; ok {
+		if newConf.Rssi_reject_assoc_rssi == 0 {
+			delete(conf, "rssi_reject_assoc_rssi")
+		} else {
+			conf["rssi_reject_assoc_rssi"] = newConf.Rssi_reject_assoc_rssi
+		}
+	}
+
+	if _, ok := newInput["Rssi_reject_assoc_timeout"]; ok {
+		if newConf.Rssi_reject_assoc_timeout == 0 {
+			delete(conf, "rssi_reject_assoc_timeout")
+		} else {
+			conf["rssi_reject_assoc_timeout"] = newConf.Rssi_reject_assoc_timeout
+		}
+	}
+
+	if _, ok := newInput["Rssi_ignore_probe_request"]; ok {
+		if newConf.Rssi_ignore_probe_request == 0 {
+			delete(conf, "rssi_ignore_probe_request")
+		} else {
+			conf["rssi_ignore_probe_request"] = newConf.Rssi_ignore_probe_request
+		}
 	}
 
 	// write new conf

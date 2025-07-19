@@ -7,14 +7,16 @@
     fallthrough
   }
 
-  forward . tls://1.1.1.1 tls://1.0.0.1 {
-    tls_servername cloudflare-dns.com
+  forward . tls://1.1.1.1 tls://9.9.9.9 {
+    tls_servername 1.1.1.1 cloudflare-dns.com
+    tls_servername 9.9.9.9 dns.quad9.net
     max_concurrent 1000
   }
 
-  forward . tls://1.1.1.3 tls://1.0.0.3 {
+  forward . tls://1.1.1.3 tls://208.67.222.123 {
     spr_policy dns:family
-    tls_servername cloudflare-dns.com
+    tls_servername 1.1.1.3 cloudflare-dns.com
+    tls_servername 208.67.222.123 doh.opendns.com
     max_concurrent 1000
   }
 

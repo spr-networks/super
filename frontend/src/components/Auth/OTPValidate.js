@@ -17,7 +17,7 @@ import {
   VStack
 } from '@gluestack-ui/themed'
 
-const OTPValidate = ({ onSuccess, onSetup, ...props }) => {
+const OTPValidate = ({ onSuccess, onSetup, isLogin, ...props }) => {
   const [code, setCode] = useState('')
   const [status, setStatus] = useState('')
   const [errors, setErrors] = useState({})
@@ -31,8 +31,24 @@ const OTPValidate = ({ onSuccess, onSetup, ...props }) => {
 
         onSuccess()
       })
-      .catch((err) => {
-        setErrors({ validate: 'Invalid OTP Code' })
+      .catch(async (err) => {
+        let errorMessage = 'Invalid OTP Code'
+        
+        // Extract the actual error message from the backend
+        if (err.response) {
+          try {
+            const errorText = await err.response.text()
+            if (errorText) {
+              errorMessage = errorText
+            }
+          } catch (e) {
+            // If we can't read the response, use the default message
+          }
+        } else if (err.message) {
+          errorMessage = err.message
+        }
+        
+        setErrors({ validate: errorMessage })
       })
   }
 
@@ -41,15 +57,19 @@ const OTPValidate = ({ onSuccess, onSetup, ...props }) => {
   }
 
   useEffect(() => {
-    authAPI
-      .statusOTP()
-      .then((res) => {
-        setStatus(res.State)
-      })
-      .catch((err) => {})
+    if (!isLogin) {
+      authAPI
+        .statusOTP()
+        .then((res) => {
+          setStatus(res.State)
+        })
+        .catch((err) => {})
 
-    if (!code.length) {
-      setErrors({})
+      if (!code.length) {
+        setErrors({})
+      }
+    } else {
+      setStatus("registered") //assume registered on logins
     }
   }, [code])
 
@@ -79,7 +99,7 @@ const OTPValidate = ({ onSuccess, onSetup, ...props }) => {
         {'validate' in errors ? (
           <FormControlError>
             <FormControlErrorIcon as={AlertCircleIcon} />
-            <FormControlErrorText>Invalid Code</FormControlErrorText>
+            <FormControlErrorText>{errors.validate}</FormControlErrorText>
           </FormControlError>
         ) : null}
       </FormControl>
@@ -94,7 +114,8 @@ const OTPValidate = ({ onSuccess, onSetup, ...props }) => {
 
 OTPValidate.propTypes = {
   onSuccess: PropTypes.func.isRequired,
-  onSetup: PropTypes.func.isRequired
+  onSetup: PropTypes.func,
+  isLogin: PropTypes.bool
 }
 
 export default OTPValidate

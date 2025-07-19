@@ -14,7 +14,7 @@ on:
 jobs:
   build-images:
     name: Build images
-    runs-on: ubuntu-24.04
+    runs-on: self-hosted
     permissions:
       contents: read
       packages: write
@@ -36,9 +36,6 @@ jobs:
       -
         name: Test release tag version and channel
         run: echo "RELEASE_VERSION == $RELEASE_VERSION  CHANNEL == $RELEASE_CHANNEL"
-      -
-        name: Set up QEMU
-        run: sudo apt-get update && sudo apt-get install -y qemu-user-static
       -
         name: Set up Docker Buildx
         id: buildx
