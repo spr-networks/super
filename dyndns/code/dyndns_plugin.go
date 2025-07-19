@@ -155,63 +155,89 @@ func modifyProxyResponse(resp *http.Response) error {
 		locationFixScript := `<script>
 			// Patch location for srcdoc context
 			if (window.location.href === 'about:srcdoc') {
-				// Save original location
-				const originalLocation = window.location;
+				// Use a Proxy to intercept location access
 				const parentLocation = window.parent.location;
 				
-				// Create a new location object that inherits from the original
-				const patchedLocation = Object.create(originalLocation);
-				
-				// Override specific properties
-				Object.defineProperties(patchedLocation, {
-					origin: {
-						get: function() { return parentLocation.origin; },
-						enumerable: true
-					},
-					href: {
-						get: function() { return parentLocation.origin + '/plugins/dyndns/'; },
-						enumerable: true
-					},
-					pathname: {
-						get: function() { return '/plugins/dyndns/'; },
-						enumerable: true
-					},
-					protocol: {
-						get: function() { return parentLocation.protocol; },
-						enumerable: true
-					},
-					host: {
-						get: function() { return parentLocation.host; },
-						enumerable: true
-					},
-					hostname: {
-						get: function() { return parentLocation.hostname; },
-						enumerable: true
-					},
-					port: {
-						get: function() { return parentLocation.port; },
-						enumerable: true
-					}
-				});
-				
-				// Replace window.location
-				try {
-					Object.defineProperty(window, 'location', {
-						get: function() { return patchedLocation; },
-						configurable: true
+				// Create a proxy handler for location objects
+				const createLocationProxy = (target) => {
+					return new Proxy(target, {
+						get: function(obj, prop) {
+							switch(prop) {
+								case 'origin':
+									return parentLocation.origin;
+								case 'href':
+									return parentLocation.origin + '/plugins/dyndns/';
+								case 'pathname':
+									return '/plugins/dyndns/';
+								case 'protocol':
+									return parentLocation.protocol;
+								case 'host':
+									return parentLocation.host;
+								case 'hostname':
+									return parentLocation.hostname;
+								case 'port':
+									return parentLocation.port;
+								case 'search':
+									return target.search;
+								case 'hash':
+									return target.hash;
+								default:
+									// For methods and other properties, bind to original
+									const value = target[prop];
+									if (typeof value === 'function') {
+										return value.bind(target);
+									}
+									return value;
+							}
+						}
 					});
-				} catch(e) {
-					console.warn('Could not override window.location:', e);
+				};
+				
+				// Store original getters
+				const originalWindowLocation = Object.getOwnPropertyDescriptor(window, 'location');
+				const originalDocumentLocation = Object.getOwnPropertyDescriptor(document, 'location');
+				
+				// Override window.location getter
+				if (originalWindowLocation && originalWindowLocation.get) {
+					Object.defineProperty(window, 'location', {
+						get: function() {
+							return createLocationProxy(originalWindowLocation.get.call(this));
+						},
+						set: originalWindowLocation.set,
+						enumerable: originalWindowLocation.enumerable,
+						configurable: originalWindowLocation.configurable
+					});
 				}
 				
-				// Also patch document.location
-				try {
+				// Override document.location getter
+				if (originalDocumentLocation && originalDocumentLocation.get) {
 					Object.defineProperty(document, 'location', {
-						get: function() { return patchedLocation; },
-						configurable: true
+						get: function() {
+							return createLocationProxy(originalDocumentLocation.get.call(this));
+						},
+						set: originalDocumentLocation.set,
+						enumerable: originalDocumentLocation.enumerable,
+						configurable: originalDocumentLocation.configurable
 					});
-				} catch(e) {
-					console.warn('Could not override document.location:', e);
+				}
+				
+				// Also override URL constructor to use parent origin
+				const OriginalURL = window.URL;
+				window.URL = class extends OriginalURL {
+					constructor(url, base) {
+						// If no base provided and url is relative, use parent origin
+						if (!base && typeof url === 'string' && !url.match(/^[a-zA-Z]+:\/\//)) {
+							base = parentLocation.origin + '/plugins/dyndns/';
+						}
+						super(url, base);
+					}
+				};
+				// Copy static methods
+				Object.setPrototypeOf(window.URL, OriginalURL);
+				for (let prop in OriginalURL) {
+					if (OriginalURL.hasOwnProperty(prop)) {
+						window.URL[prop] = OriginalURL[prop];
+					}
 				}
 			}
 			
