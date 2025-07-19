@@ -151,12 +151,70 @@ func modifyProxyResponse(resp *http.Response) error {
 
 		bodyStr := string(bodyBytes)
 		
-		// Inject base tag to help with relative URLs
-		baseTag := `<base href="/plugins/dyndns/">`
-		bodyStr = strings.Replace(bodyStr, "<head>", "<head>\n" + baseTag, 1)
-		
-		// Also inject a script to set the proper base URL for the app
-		baseScript := `<script>
+		// Inject script to fix srcdoc location issues
+		locationFixScript := `<script>
+			// Patch location for srcdoc context
+			if (window.location.href === 'about:srcdoc') {
+				// Save original location
+				const originalLocation = window.location;
+				const parentLocation = window.parent.location;
+				
+				// Create a new location object that inherits from the original
+				const patchedLocation = Object.create(originalLocation);
+				
+				// Override specific properties
+				Object.defineProperties(patchedLocation, {
+					origin: {
+						get: function() { return parentLocation.origin; },
+						enumerable: true
+					},
+					href: {
+						get: function() { return parentLocation.origin + '/plugins/dyndns/'; },
+						enumerable: true
+					},
+					pathname: {
+						get: function() { return '/plugins/dyndns/'; },
+						enumerable: true
+					},
+					protocol: {
+						get: function() { return parentLocation.protocol; },
+						enumerable: true
+					},
+					host: {
+						get: function() { return parentLocation.host; },
+						enumerable: true
+					},
+					hostname: {
+						get: function() { return parentLocation.hostname; },
+						enumerable: true
+					},
+					port: {
+						get: function() { return parentLocation.port; },
+						enumerable: true
+					}
+				});
+				
+				// Replace window.location
+				try {
+					Object.defineProperty(window, 'location', {
+						get: function() { return patchedLocation; },
+						configurable: true
+					});
+				} catch(e) {
+					console.warn('Could not override window.location:', e);
+				}
+				
+				// Also patch document.location
+				try {
+					Object.defineProperty(document, 'location', {
+						get: function() { return patchedLocation; },
+						configurable: true
+					});
+				} catch(e) {
+					console.warn('Could not override document.location:', e);
+				}
+			}
+			
 			// Set base URL for Next.js app
 			window.__NEXT_ROUTER_BASEPATH = '/plugins/dyndns';
 			window.__NEXT_ASSET_PREFIX = '/admin/custom_plugin/dyndns/static';
@@ -173,7 +231,9 @@ func modifyProxyResponse(resp *http.Response) error {
 				};
 			})();
 		</script>`
-		bodyStr = strings.Replace(bodyStr, "</head>", baseScript + "\n</head>", 1)
+		
+		// Inject at the very beginning of head to run before any other scripts
+		bodyStr = strings.Replace(bodyStr, "<head>", "<head>\n" + locationFixScript, 1)
 		
 		// Rewrite paths to use the public static route
 		bodyStr = strings.ReplaceAll(bodyStr, `href="/_next/`, `href="/admin/custom_plugin/dyndns/static/_next/`)
@@ -380,7 +440,7 @@ func handleUIProxy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ensure godns is running with web panel
-	if !config.WebPanel.Enabled {
+	if !config.WebPanel.Enabled || godnsManager.GetProxy() == nil {
 		config.WebPanel.Enabled = true
 		config.WebPanel.Addr = "127.0.0.1:9876"
 		config.WebPanel.Username = "admin"
