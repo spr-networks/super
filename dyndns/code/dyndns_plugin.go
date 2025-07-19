@@ -153,85 +153,31 @@ func modifyProxyResponse(resp *http.Response) error {
 		
 		// Inject script to fix srcdoc location issues
 		locationFixScript := `<script>
-			// Patch location for srcdoc context
+			// Patch for srcdoc context
 			if (window.location.href === 'about:srcdoc') {
-				// Use a Proxy to intercept location access
 				const parentLocation = window.parent.location;
 				
-				// Create a proxy handler for location objects
-				const createLocationProxy = (target) => {
-					return new Proxy(target, {
-						get: function(obj, prop) {
-							switch(prop) {
-								case 'origin':
-									return parentLocation.origin;
-								case 'href':
-									return parentLocation.origin + '/plugins/dyndns/';
-								case 'pathname':
-									return '/plugins/dyndns/';
-								case 'protocol':
-									return parentLocation.protocol;
-								case 'host':
-									return parentLocation.host;
-								case 'hostname':
-									return parentLocation.hostname;
-								case 'port':
-									return parentLocation.port;
-								case 'search':
-									return target.search;
-								case 'hash':
-									return target.hash;
-								default:
-									// For methods and other properties, bind to original
-									const value = target[prop];
-									if (typeof value === 'function') {
-										return value.bind(target);
-									}
-									return value;
-							}
-						}
-					});
-				};
-				
-				// Store original getters
-				const originalWindowLocation = Object.getOwnPropertyDescriptor(window, 'location');
-				const originalDocumentLocation = Object.getOwnPropertyDescriptor(document, 'location');
-				
-				// Override window.location getter
-				if (originalWindowLocation && originalWindowLocation.get) {
-					Object.defineProperty(window, 'location', {
-						get: function() {
-							return createLocationProxy(originalWindowLocation.get.call(this));
-						},
-						set: originalWindowLocation.set,
-						enumerable: originalWindowLocation.enumerable,
-						configurable: originalWindowLocation.configurable
-					});
-				}
-				
-				// Override document.location getter
-				if (originalDocumentLocation && originalDocumentLocation.get) {
-					Object.defineProperty(document, 'location', {
-						get: function() {
-							return createLocationProxy(originalDocumentLocation.get.call(this));
-						},
-						set: originalDocumentLocation.set,
-						enumerable: originalDocumentLocation.enumerable,
-						configurable: originalDocumentLocation.configurable
-					});
-				}
-				
-				// Also override URL constructor to use parent origin
+				// Override URL constructor to handle the case where Next.js creates URLs
 				const OriginalURL = window.URL;
 				window.URL = class extends OriginalURL {
 					constructor(url, base) {
-						// If no base provided and url is relative, use parent origin
-						if (!base && typeof url === 'string' && !url.match(/^[a-zA-Z]+:\/\//)) {
+						// Handle the specific case that's failing
+						if (typeof url === 'string' && typeof base === 'string') {
+							// If base is 'null' or 'about:srcdoc', use parent origin
+							if (base === 'null' || base === 'about:srcdoc' || base.includes('srcdoc')) {
+								base = parentLocation.origin + '/plugins/dyndns/';
+							}
+						} else if (!base && typeof url === 'string' && !url.match(/^[a-zA-Z]+:\/\//)) {
+							// If no base provided and url is relative, use parent origin
+							base = parentLocation.origin + '/plugins/dyndns/';
+						} else if (base && typeof base === 'object' && base.origin === 'null') {
+							// If base is a location-like object with null origin
 							base = parentLocation.origin + '/plugins/dyndns/';
 						}
 						super(url, base);
 					}
 				};
+				
 				// Copy static methods
 				Object.setPrototypeOf(window.URL, OriginalURL);
 				for (let prop in OriginalURL) {
@@ -239,6 +185,59 @@ func modifyProxyResponse(resp *http.Response) error {
 						window.URL[prop] = OriginalURL[prop];
 					}
 				}
+				
+				// Patch location properties directly (without redefining)
+				// This creates getters on the location object itself
+				try {
+					Object.defineProperty(window.location, 'origin', {
+						get: function() { return parentLocation.origin; },
+						configurable: true
+					});
+				} catch(e) {}
+				
+				try {
+					Object.defineProperty(window.location, 'href', {
+						get: function() { return parentLocation.origin + '/plugins/dyndns/'; },
+						set: function(v) { return v; },
+						configurable: true
+					});
+				} catch(e) {}
+				
+				try {
+					Object.defineProperty(window.location, 'pathname', {
+						get: function() { return '/plugins/dyndns/'; },
+						set: function(v) { return v; },
+						configurable: true
+					});
+				} catch(e) {}
+				
+				try {
+					Object.defineProperty(window.location, 'protocol', {
+						get: function() { return parentLocation.protocol; },
+						configurable: true
+					});
+				} catch(e) {}
+				
+				try {
+					Object.defineProperty(window.location, 'host', {
+						get: function() { return parentLocation.host; },
+						configurable: true
+					});
+				} catch(e) {}
+				
+				try {
+					Object.defineProperty(window.location, 'hostname', {
+						get: function() { return parentLocation.hostname; },
+						configurable: true
+					});
+				} catch(e) {}
+				
+				try {
+					Object.defineProperty(window.location, 'port', {
+						get: function() { return parentLocation.port; },
+						configurable: true
+					});
+				} catch(e) {}
 			}
 			
 			// Set base URL for Next.js app
