@@ -74,33 +74,66 @@ type GodyndnsConfigAPI struct {
 
 func startGoDyndns() {
 	stopGoDyndns()
-	
+
 	config := loadConfig()
 	if config.Provider == "" {
 		// Don't start if no provider is configured
 		fmt.Println("godns not started: no provider configured")
 		return
 	}
-	
+
 	godnsProcess = exec.Command("/godns", "-c", GoDyndnsConfigFile)
 	godnsProcess.Stdout = os.Stdout
 	godnsProcess.Stderr = os.Stderr
-	
+
 	if err := godnsProcess.Start(); err != nil {
 		fmt.Println("godns failed to start", err)
 		return
 	}
-	
+
 	fmt.Println("godns started with PID:", godnsProcess.Process.Pid)
-	
-	// Setup proxy to godns web panel if enabled
+
+	// Setup proxy with path rewriting
 	if config.WebPanel.Enabled && config.WebPanel.Addr != "" {
-		// Give godns a moment to start its web server
 		time.Sleep(2 * time.Second)
-		
+
 		target, err := url.Parse("http://" + config.WebPanel.Addr)
 		if err == nil {
 			godnsProxy = httputil.NewSingleHostReverseProxy(target)
+			godnsProxy.ModifyResponse = func(resp *http.Response) error {
+				// Only rewrite HTML responses
+				contentType := resp.Header.Get("Content-Type")
+				if strings.Contains(contentType, "text/html") {
+					// Read the body
+					bodyBytes, err := ioutil.ReadAll(resp.Body)
+					if err != nil {
+						return err
+					}
+					resp.Body.Close()
+
+					// Rewrite paths
+					bodyStr := string(bodyBytes)
+					bodyStr = strings.ReplaceAll(bodyStr, `href="/_next/`, `href="/plugins/dyndns/_next/`)
+					bodyStr = strings.ReplaceAll(bodyStr, `src="/_next/`, `src="/plugins/dyndns/_next/`)
+					bodyStr = strings.ReplaceAll(bodyStr, `"/_next/`, `"/plugins/dyndns/_next/`)
+					bodyStr = strings.ReplaceAll(bodyStr, `'/_next/`, `'/plugins/dyndns/_next/`)
+
+					// Update content length
+					bodyBytes = []byte(bodyStr)
+					resp.Body = ioutil.NopCloser(strings.NewReader(bodyStr))
+					resp.ContentLength = int64(len(bodyBytes))
+					resp.Header.Set("Content-Length", fmt.Sprintf("%d", len(bodyBytes)))
+				}
+
+				// Rewrite Location headers for redirects
+				if location := resp.Header.Get("Location"); location != "" {
+					if strings.HasPrefix(location, "/") {
+						resp.Header.Set("Location", "/plugins/dyndns"+location)
+					}
+				}
+
+				return nil
+			}
 			fmt.Println("godns web panel proxy configured for", target)
 		}
 	}
@@ -122,7 +155,7 @@ func runGoDyndns() {
 		// Don't run if no provider is configured
 		return
 	}
-	
+
 	cmd := exec.Command("/godns", "-c", GoDyndnsConfigFile)
 	stdout, err := cmd.Output()
 	if err != nil {
@@ -360,7 +393,7 @@ func dyndns_init() {
 
 func handleUIProxy(w http.ResponseWriter, r *http.Request) {
 	config := loadConfig()
-	
+
 	// If no provider is configured, return a message
 	if config.Provider == "" {
 		w.Header().Set("Content-Type", "text/html")
@@ -375,7 +408,7 @@ func handleUIProxy(w http.ResponseWriter, r *http.Request) {
 		`)
 		return
 	}
-	
+
 	// If web panel is not enabled, enable it automatically
 	if !config.WebPanel.Enabled || godnsProxy == nil {
 		config.WebPanel.Enabled = true
@@ -383,22 +416,20 @@ func handleUIProxy(w http.ResponseWriter, r *http.Request) {
 		config.WebPanel.Username = "admin"
 		config.WebPanel.Password = "dyndns"
 		config.RunOnce = false
-		
+
 		data, _ := json.Marshal(config)
 		ioutil.WriteFile(GoDyndnsConfigFile, data, 0600)
-		
-		startGoDyndns()
-		
-		// Give godns time to start
+
+		go startGoDyndns()
 		time.Sleep(3 * time.Second)
 	}
-	
+
 	if godnsProxy == nil {
 		http.Error(w, "Web panel is starting, please refresh in a few seconds", 503)
 		return
 	}
-	
-	// Proxy the request as-is to godns
+
+	// Proxy the request
 	godnsProxy.ServeHTTP(w, r)
 }
 
@@ -411,8 +442,8 @@ func main() {
 	unix_plugin_router.HandleFunc("/config", getConfiguration).Methods("GET")
 	unix_plugin_router.HandleFunc("/config", setConfiguration).Methods("PUT")
 	unix_plugin_router.HandleFunc("/refresh", refreshDyndns).Methods("GET")
-	
-	// Handle all other requests as UI proxy (catches both / and /ui paths)
+
+	// Handle all other requests as UI proxy
 	unix_plugin_router.PathPrefix("/").HandlerFunc(handleUIProxy)
 
 	os.Remove(UNIX_PLUGIN_LISTENER)
@@ -422,7 +453,7 @@ func main() {
 	}
 
 	startIntervalTimer()
-	
+
 	// Start godns if web panel is enabled
 	config := loadConfig()
 	if config.WebPanel.Enabled {
