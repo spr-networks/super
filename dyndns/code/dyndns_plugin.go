@@ -20,17 +20,163 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var Configmtx sync.Mutex
-var TEST_PREFIX = ""
-var UNIX_PLUGIN_LISTENER = TEST_PREFIX + "/state/plugins/dyndns/dyndns_plugin"
-var GoDyndnsConfigFile = TEST_PREFIX + "/configs/dyndns/godyndns.json"
-var godnsProcess *exec.Cmd
-var godnsProxy *httputil.ReverseProxy
+var (
+	configMutex  sync.RWMutex
+	godnsManager *GodnsManager
 
+	TEST_PREFIX          = ""
+	UNIX_PLUGIN_LISTENER = TEST_PREFIX + "/state/plugins/dyndns/dyndns_plugin"
+	GoDyndnsConfigFile   = TEST_PREFIX + "/configs/dyndns/godyndns.json"
+)
+
+// GodnsManager handles all godns process management
+type GodnsManager struct {
+	mu              sync.Mutex
+	process         *exec.Cmd
+	proxy           *httputil.ReverseProxy
+	isRunning       bool
+	webPanelEnabled bool
+}
+
+func NewGodnsManager() *GodnsManager {
+	return &GodnsManager{}
+}
+
+// Start godns based on current mode (web panel or one-shot)
+func (gm *GodnsManager) Start(config GodyndnsConfig) {
+	gm.mu.Lock()
+	defer gm.mu.Unlock()
+
+	if config.Provider == "" {
+		fmt.Println("godns: no provider configured, not starting")
+		return
+	}
+
+	// Stop any existing process
+	gm.stopInternal()
+
+	if config.WebPanel.Enabled {
+		gm.startWebPanel(config)
+	} else {
+		// For one-shot mode, just run it
+		go gm.runOneShot()
+	}
+}
+
+// Run godns once (for manual refresh or timer)
+func (gm *GodnsManager) RunOnce() {
+	config := loadConfig()
+	if config.Provider == "" {
+		return
+	}
+
+	if config.WebPanel.Enabled {
+		// If web panel is enabled, godns is already running
+		return
+	}
+
+	// Run in background to not block
+	go gm.runOneShot()
+}
+
+func (gm *GodnsManager) runOneShot() {
+	cmd := exec.Command("/godns", "-c", GoDyndnsConfigFile)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("godns error: %v\nOutput: %s\n", err, output)
+	} else {
+		fmt.Printf("godns output: %s\n", output)
+	}
+}
+
+func (gm *GodnsManager) startWebPanel(config GodyndnsConfig) {
+	gm.process = exec.Command("/godns", "-c", GoDyndnsConfigFile)
+	gm.process.Stdout = os.Stdout
+	gm.process.Stderr = os.Stderr
+
+	if err := gm.process.Start(); err != nil {
+		fmt.Printf("godns failed to start: %v\n", err)
+		return
+	}
+
+	fmt.Printf("godns started with PID: %d\n", gm.process.Process.Pid)
+	gm.isRunning = true
+	gm.webPanelEnabled = true
+
+	// Setup proxy after giving godns time to start
+	time.Sleep(2 * time.Second)
+
+	if config.WebPanel.Addr != "" {
+		target, err := url.Parse("http://" + config.WebPanel.Addr)
+		if err == nil {
+			gm.proxy = httputil.NewSingleHostReverseProxy(target)
+			gm.proxy.ModifyResponse = modifyProxyResponse
+			fmt.Printf("godns web panel proxy configured for %v\n", target)
+		}
+	}
+}
+
+func (gm *GodnsManager) Stop() {
+	gm.mu.Lock()
+	defer gm.mu.Unlock()
+	gm.stopInternal()
+}
+
+func (gm *GodnsManager) stopInternal() {
+	if gm.process != nil && gm.process.Process != nil {
+		gm.process.Process.Kill()
+		gm.process.Wait()
+		gm.process = nil
+	}
+	gm.proxy = nil
+	gm.isRunning = false
+	gm.webPanelEnabled = false
+}
+
+func (gm *GodnsManager) GetProxy() *httputil.ReverseProxy {
+	gm.mu.Lock()
+	defer gm.mu.Unlock()
+	return gm.proxy
+}
+
+// Proxy response modifier to fix paths
+func modifyProxyResponse(resp *http.Response) error {
+	contentType := resp.Header.Get("Content-Type")
+	if strings.Contains(contentType, "text/html") {
+		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		resp.Body.Close()
+
+		bodyStr := string(bodyBytes)
+		// Rewrite paths to use the public static route
+		bodyStr = strings.ReplaceAll(bodyStr, `href="/_next/`, `href="/admin/custom_plugin/dyndns/static/_next/`)
+		bodyStr = strings.ReplaceAll(bodyStr, `src="/_next/`, `src="/admin/custom_plugin/dyndns/static/_next/`)
+		bodyStr = strings.ReplaceAll(bodyStr, `"/_next/`, `"/admin/custom_plugin/dyndns/static/_next/`)
+		bodyStr = strings.ReplaceAll(bodyStr, `'/_next/`, `'/admin/custom_plugin/dyndns/static/_next/`)
+
+		bodyBytes = []byte(bodyStr)
+		resp.Body = ioutil.NopCloser(strings.NewReader(bodyStr))
+		resp.ContentLength = int64(len(bodyBytes))
+		resp.Header.Set("Content-Length", fmt.Sprintf("%d", len(bodyBytes)))
+	}
+
+	if location := resp.Header.Get("Location"); location != "" {
+		if strings.HasPrefix(location, "/") {
+			resp.Header.Set("Location", "/plugins/dyndns"+location)
+		}
+	}
+
+	return nil
+}
+
+// Config structures
 type GodyndnsDomain struct {
 	DomainName string   `json:"domain_name"`
 	SubDomains []string `json:"sub_domains"`
 }
+
 type GodyndnsConfig struct {
 	Provider    string           `json:"provider"`
 	Email       string           `json:"email"`
@@ -38,14 +184,14 @@ type GodyndnsConfig struct {
 	LoginToken  string           `json:"login_token"`
 	Domains     []GodyndnsDomain `json:"domains"`
 	IpUrls      []string         `json:"ip_urls"`
-	IpUrl       string           `json:"ip_url"`   //deprecated entry, replaced by ip_urls
-	Ipv6Url     string           `json:"ipv6_url"` //deprecated entry, replaced by ip_urls
+	IpUrl       string           `json:"ip_url"`   //deprecated
+	Ipv6Url     string           `json:"ipv6_url"` //deprecated
 	IpType      string           `json:"ip_type"`
 	Interval    int              `json:"interval"`
 	Socks5Proxy string           `json:"socks5"`
 	Resolver    string           `json:"resolver"`
 	RunOnce     bool             `json:"run_once"`
-	WebPanel    WebPanelConfig   `json:"web_panel,omitempty"` // Internal use only
+	WebPanel    WebPanelConfig   `json:"web_panel,omitempty"`
 }
 
 type WebPanelConfig struct {
@@ -55,7 +201,7 @@ type WebPanelConfig struct {
 	Password string `json:"password"`
 }
 
-// GodyndnsConfigAPI is the config exposed to the API (without internal fields)
+// API config without internal fields
 type GodyndnsConfigAPI struct {
 	Provider    string           `json:"provider"`
 	Email       string           `json:"email"`
@@ -63,8 +209,8 @@ type GodyndnsConfigAPI struct {
 	LoginToken  string           `json:"login_token"`
 	Domains     []GodyndnsDomain `json:"domains"`
 	IpUrls      []string         `json:"ip_urls"`
-	IpUrl       string           `json:"ip_url"`   //deprecated entry, replaced by ip_urls
-	Ipv6Url     string           `json:"ipv6_url"` //deprecated entry, replaced by ip_urls
+	IpUrl       string           `json:"ip_url"`
+	Ipv6Url     string           `json:"ipv6_url"`
 	IpType      string           `json:"ip_type"`
 	Interval    int              `json:"interval"`
 	Socks5Proxy string           `json:"socks5"`
@@ -72,101 +218,168 @@ type GodyndnsConfigAPI struct {
 	RunOnce     bool             `json:"run_once"`
 }
 
-func startGoDyndns() {
-	stopGoDyndns()
+// Config management
+func loadConfig() GodyndnsConfig {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
 
-	config := loadConfig()
-	if config.Provider == "" {
-		// Don't start if no provider is configured
-		fmt.Println("godns not started: no provider configured")
-		return
-	}
-
-	godnsProcess = exec.Command("/godns", "-c", GoDyndnsConfigFile)
-	godnsProcess.Stdout = os.Stdout
-	godnsProcess.Stderr = os.Stderr
-
-	if err := godnsProcess.Start(); err != nil {
-		fmt.Println("godns failed to start", err)
-		return
-	}
-
-	fmt.Println("godns started with PID:", godnsProcess.Process.Pid)
-
-	// Setup proxy with path rewriting
-	if config.WebPanel.Enabled && config.WebPanel.Addr != "" {
-		time.Sleep(2 * time.Second)
-
-		target, err := url.Parse("http://" + config.WebPanel.Addr)
-		if err == nil {
-			godnsProxy = httputil.NewSingleHostReverseProxy(target)
-			godnsProxy.ModifyResponse = func(resp *http.Response) error {
-				// Only rewrite HTML responses
-				contentType := resp.Header.Get("Content-Type")
-				if strings.Contains(contentType, "text/html") {
-					// Read the body
-					bodyBytes, err := ioutil.ReadAll(resp.Body)
-					if err != nil {
-						return err
-					}
-					resp.Body.Close()
-
-					// Rewrite paths
-					bodyStr := string(bodyBytes)
-					bodyStr = strings.ReplaceAll(bodyStr, `href="/_next/`, `href="/plugins/dyndns/_next/`)
-					bodyStr = strings.ReplaceAll(bodyStr, `src="/_next/`, `src="/plugins/dyndns/_next/`)
-					bodyStr = strings.ReplaceAll(bodyStr, `"/_next/`, `"/plugins/dyndns/_next/`)
-					bodyStr = strings.ReplaceAll(bodyStr, `'/_next/`, `'/plugins/dyndns/_next/`)
-
-					// Update content length
-					bodyBytes = []byte(bodyStr)
-					resp.Body = ioutil.NopCloser(strings.NewReader(bodyStr))
-					resp.ContentLength = int64(len(bodyBytes))
-					resp.Header.Set("Content-Length", fmt.Sprintf("%d", len(bodyBytes)))
-				}
-
-				// Rewrite Location headers for redirects
-				if location := resp.Header.Get("Location"); location != "" {
-					if strings.HasPrefix(location, "/") {
-						resp.Header.Set("Location", "/plugins/dyndns"+location)
-					}
-				}
-
-				return nil
-			}
-			fmt.Println("godns web panel proxy configured for", target)
-		}
-	}
-}
-
-func stopGoDyndns() {
-	if godnsProcess != nil && godnsProcess.Process != nil {
-		godnsProcess.Process.Kill()
-		godnsProcess.Wait()
-		godnsProcess = nil
-	}
-	godnsProxy = nil
-}
-
-func runGoDyndns() {
-	// For backward compatibility, run once mode
-	config := loadConfig()
-	if config.Provider == "" {
-		// Don't run if no provider is configured
-		return
-	}
-
-	cmd := exec.Command("/godns", "-c", GoDyndnsConfigFile)
-	stdout, err := cmd.Output()
+	config := GodyndnsConfig{}
+	data, err := ioutil.ReadFile(GoDyndnsConfigFile)
 	if err != nil {
-		fmt.Println("godns failed to run", err)
+		return config
 	}
-	fmt.Println("out", string(stdout))
+
+	json.Unmarshal(data, &config)
+	return config
 }
 
-func validateConfig(config GodyndnsConfig) error {
+func saveConfig(config GodyndnsConfig) error {
+	configMutex.Lock()
+	defer configMutex.Unlock()
 
+	data, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(GoDyndnsConfigFile, data, 0600)
+}
+
+// HTTP Handlers
+func getConfiguration(w http.ResponseWriter, r *http.Request) {
+	config := loadConfig()
+
+	// Convert to API version (hide web panel)
+	apiConfig := GodyndnsConfigAPI{
+		Provider:    config.Provider,
+		Email:       config.Email,
+		Password:    config.Password,
+		LoginToken:  config.LoginToken,
+		Domains:     config.Domains,
+		IpUrls:      config.IpUrls,
+		IpUrl:       config.IpUrl,
+		Ipv6Url:     config.Ipv6Url,
+		IpType:      config.IpType,
+		Interval:    config.Interval,
+		Socks5Proxy: config.Socks5Proxy,
+		Resolver:    config.Resolver,
+		RunOnce:     config.RunOnce,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(apiConfig)
+}
+
+func setConfiguration(w http.ResponseWriter, r *http.Request) {
+	var apiConfig GodyndnsConfigAPI
+	if err := json.NewDecoder(r.Body).Decode(&apiConfig); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	// Convert to full config
+	config := GodyndnsConfig{
+		Provider:    strings.Title(apiConfig.Provider),
+		Email:       apiConfig.Email,
+		Password:    apiConfig.Password,
+		LoginToken:  apiConfig.LoginToken,
+		Domains:     apiConfig.Domains,
+		IpUrls:      apiConfig.IpUrls,
+		IpUrl:       apiConfig.IpUrl,
+		Ipv6Url:     apiConfig.Ipv6Url,
+		IpType:      apiConfig.IpType,
+		Interval:    apiConfig.Interval,
+		Socks5Proxy: apiConfig.Socks5Proxy,
+		Resolver:    apiConfig.Resolver,
+		RunOnce:     apiConfig.RunOnce,
+	}
+
+	if err := validateConfig(config); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	// Set web panel based on provider
+	if config.Provider != "" {
+		config.WebPanel.Enabled = true
+		config.WebPanel.Addr = "127.0.0.1:9876"
+		config.WebPanel.Username = "admin"
+		config.WebPanel.Password = "dyndns"
+		config.RunOnce = false
+	} else {
+		config.WebPanel.Enabled = false
+		config.RunOnce = true
+	}
+
+	if err := saveConfig(config); err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	// Restart godns with new config
+	godnsManager.Start(config)
+}
+
+func refreshDyndns(w http.ResponseWriter, r *http.Request) {
+	godnsManager.RunOnce()
+	w.WriteHeader(http.StatusOK)
+}
+
+func handleStaticProxy(w http.ResponseWriter, r *http.Request) {
+	proxy := godnsManager.GetProxy()
+	if proxy == nil {
+		http.Error(w, "Service not ready", 503)
+		return
+	}
+
+	// Remove /static prefix and restore original path
+	r.URL.Path = strings.TrimPrefix(r.URL.Path, "/static")
+	proxy.ServeHTTP(w, r)
+}
+
+func handleUIProxy(w http.ResponseWriter, r *http.Request) {
+	config := loadConfig()
+
+	if config.Provider == "" {
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprintf(w, `
+			<html>
+			<body>
+				<h1>GoDNS Dynamic DNS Plugin</h1>
+				<p>No DNS provider configured yet.</p>
+				<p>Please configure the plugin using the SPR UI first.</p>
+			</body>
+			</html>
+		`)
+		return
+	}
+
+	// Ensure godns is running with web panel
+	if !config.WebPanel.Enabled {
+		config.WebPanel.Enabled = true
+		config.WebPanel.Addr = "127.0.0.1:9876"
+		config.WebPanel.Username = "admin"
+		config.WebPanel.Password = "dyndns"
+		config.RunOnce = false
+
+		saveConfig(config)
+		godnsManager.Start(config)
+		time.Sleep(3 * time.Second)
+	}
+
+	proxy := godnsManager.GetProxy()
+	if proxy == nil {
+		http.Error(w, "Web panel is starting, please refresh in a few seconds", 503)
+		return
+	}
+
+	proxy.ServeHTTP(w, r)
+}
+
+// Validation
+func validateConfig(config GodyndnsConfig) error {
 	validCommand := regexp.MustCompile(`^[:/\-=@A-Za-z0-9.]+$`).MatchString
+
 	if !validCommand(config.Provider) {
 		return fmt.Errorf("invalid provider")
 	}
@@ -211,126 +424,13 @@ func validateConfig(config GodyndnsConfig) error {
 	return nil
 }
 
-func setConfiguration(w http.ResponseWriter, r *http.Request) {
-	Configmtx.Lock()
-	defer Configmtx.Unlock()
-
-	// Decode API config
-	apiConfig := GodyndnsConfigAPI{}
-	err := json.NewDecoder(r.Body).Decode(&apiConfig)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-
-	// Convert to full config
-	config := GodyndnsConfig{
-		Provider:    strings.Title(apiConfig.Provider),
-		Email:       apiConfig.Email,
-		Password:    apiConfig.Password,
-		LoginToken:  apiConfig.LoginToken,
-		Domains:     apiConfig.Domains,
-		IpUrls:      apiConfig.IpUrls,
-		IpUrl:       apiConfig.IpUrl,
-		Ipv6Url:     apiConfig.Ipv6Url,
-		IpType:      apiConfig.IpType,
-		Interval:    apiConfig.Interval,
-		Socks5Proxy: apiConfig.Socks5Proxy,
-		Resolver:    apiConfig.Resolver,
-		RunOnce:     apiConfig.RunOnce,
-	}
-
-	err = validateConfig(config)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-
-	// Always enable web panel internally if provider is configured
-	if config.Provider != "" {
-		config.WebPanel.Enabled = true
-		config.WebPanel.Addr = "127.0.0.1:9876"
-		config.WebPanel.Username = "admin"
-		config.WebPanel.Password = "dyndns"
-		config.RunOnce = false
-	} else {
-		// No provider, disable web panel
-		config.WebPanel.Enabled = false
-		config.RunOnce = true
-	}
-
-	data, _ := json.Marshal(config)
-
-	err = ioutil.WriteFile(GoDyndnsConfigFile, data, 0600)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-
-	if config.WebPanel.Enabled {
-		startGoDyndns()
-	} else {
-		runGoDyndns()
-	}
-}
-
-func refreshDyndns(w http.ResponseWriter, r *http.Request) {
-	Configmtx.Lock()
-	defer Configmtx.Unlock()
-
-	runGoDyndns()
-}
-
-func getConfiguration(w http.ResponseWriter, r *http.Request) {
-	config := loadConfig()
-
-	// Convert to API version (without web panel settings)
-	apiConfig := GodyndnsConfigAPI{
-		Provider:    config.Provider,
-		Email:       config.Email,
-		Password:    config.Password,
-		LoginToken:  config.LoginToken,
-		Domains:     config.Domains,
-		IpUrls:      config.IpUrls,
-		IpUrl:       config.IpUrl,
-		Ipv6Url:     config.Ipv6Url,
-		IpType:      config.IpType,
-		Interval:    config.Interval,
-		Socks5Proxy: config.Socks5Proxy,
-		Resolver:    config.Resolver,
-		RunOnce:     config.RunOnce,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(apiConfig)
-}
-
-func loadConfig() GodyndnsConfig {
-	Configmtx.Lock()
-	defer Configmtx.Unlock()
-
-	config := GodyndnsConfig{}
-
-	data, err := ioutil.ReadFile(GoDyndnsConfigFile)
-	if err != nil {
-		return config
-	}
-
-	err = json.Unmarshal(data, &config)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	return config
-}
-
+// Utilities
 func getInterval() time.Duration {
 	config := loadConfig()
 	if config.Interval == 0 {
 		return 300 * time.Second
-	} else {
-		return time.Duration(config.Interval) * time.Second
 	}
+	return time.Duration(config.Interval) * time.Second
 }
 
 func logRequest(handler http.Handler) http.Handler {
@@ -342,31 +442,19 @@ func logRequest(handler http.Handler) http.Handler {
 	})
 }
 
+// Background timer
 func startIntervalTimer() {
-	runTimer := func() {
+	go func() {
 		ticker := time.NewTicker(getInterval())
-		for {
-			select {
-			case <-ticker.C:
-				config := loadConfig()
-				if !config.WebPanel.Enabled {
-					// Only run in interval mode if web panel is disabled
-					Configmtx.Lock()
-					runGoDyndns()
-					Configmtx.Unlock()
-				}
-			}
+		for range ticker.C {
+			godnsManager.RunOnce()
 		}
-	}
-
-	go runTimer()
+	}()
 }
 
-func migrate_ip_urls() {
-	//upgrade ip urls from the old format
+// Migration
+func migrateIpUrls() {
 	config := loadConfig()
-	Configmtx.Lock()
-	defer Configmtx.Unlock()
 
 	if len(config.IpUrls) == 0 {
 		urls := []string{}
@@ -376,94 +464,51 @@ func migrate_ip_urls() {
 		if config.Ipv6Url != "" {
 			urls = append(urls, config.Ipv6Url)
 		}
-		config.IpUrls = urls
-		config.RunOnce = true
-		data, _ := json.Marshal(config)
-		err := ioutil.WriteFile(GoDyndnsConfigFile, data, 0600)
-		if err != nil {
-			fmt.Println("[-] Failed to save migration")
+		if len(urls) > 0 {
+			config.IpUrls = urls
+			config.RunOnce = true
+			saveConfig(config)
 		}
 	}
-
-}
-
-func dyndns_init() {
-	migrate_ip_urls()
-}
-
-func handleUIProxy(w http.ResponseWriter, r *http.Request) {
-	config := loadConfig()
-
-	// If no provider is configured, return a message
-	if config.Provider == "" {
-		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprintf(w, `
-			<html>
-			<body>
-				<h1>GoDNS Dynamic DNS Plugin</h1>
-				<p>No DNS provider configured yet.</p>
-				<p>Please configure the plugin using the SPR UI or API first.</p>
-			</body>
-			</html>
-		`)
-		return
-	}
-
-	// If web panel is not enabled, enable it automatically
-	if !config.WebPanel.Enabled || godnsProxy == nil {
-		config.WebPanel.Enabled = true
-		config.WebPanel.Addr = "127.0.0.1:9876"
-		config.WebPanel.Username = "admin"
-		config.WebPanel.Password = "dyndns"
-		config.RunOnce = false
-
-		data, _ := json.Marshal(config)
-		ioutil.WriteFile(GoDyndnsConfigFile, data, 0600)
-
-		go startGoDyndns()
-		time.Sleep(3 * time.Second)
-	}
-
-	if godnsProxy == nil {
-		http.Error(w, "Web panel is starting, please refresh in a few seconds", 503)
-		return
-	}
-
-	// Proxy the request
-	godnsProxy.ServeHTTP(w, r)
 }
 
 func main() {
+	// Initialize
+	godnsManager = NewGodnsManager()
+	migrateIpUrls()
 
-	dyndns_init()
+	// Setup routes
+	router := mux.NewRouter().StrictSlash(true)
+	router.HandleFunc("/config", getConfiguration).Methods("GET")
+	router.HandleFunc("/config", setConfiguration).Methods("PUT")
+	router.HandleFunc("/refresh", refreshDyndns).Methods("GET")
 
-	unix_plugin_router := mux.NewRouter().StrictSlash(true)
+	// Handle static files (from SPR's public route)
+	router.PathPrefix("/static/").HandlerFunc(handleStaticProxy)
 
-	unix_plugin_router.HandleFunc("/config", getConfiguration).Methods("GET")
-	unix_plugin_router.HandleFunc("/config", setConfiguration).Methods("PUT")
-	unix_plugin_router.HandleFunc("/refresh", refreshDyndns).Methods("GET")
+	// Catch-all for UI
+	router.PathPrefix("/").HandlerFunc(handleUIProxy)
 
-	// Handle all other requests as UI proxy
-	unix_plugin_router.PathPrefix("/").HandlerFunc(handleUIProxy)
-
+	// Setup Unix socket
 	os.Remove(UNIX_PLUGIN_LISTENER)
-	unixPluginListener, err := net.Listen("unix", UNIX_PLUGIN_LISTENER)
+	listener, err := net.Listen("unix", UNIX_PLUGIN_LISTENER)
 	if err != nil {
 		panic(err)
 	}
 
+	// Start timer
 	startIntervalTimer()
 
-	// Start godns if web panel is enabled
+	// Start godns if configured
 	config := loadConfig()
-	if config.WebPanel.Enabled {
-		go startGoDyndns()
+	if config.Provider != "" {
+		godnsManager.Start(config)
 	}
 
-	pluginServer := http.Server{Handler: logRequest(unix_plugin_router)}
-
 	// Cleanup on exit
-	defer stopGoDyndns()
+	defer godnsManager.Stop()
 
-	pluginServer.Serve(unixPluginListener)
+	// Serve
+	server := http.Server{Handler: logRequest(router)}
+	server.Serve(listener)
 }
