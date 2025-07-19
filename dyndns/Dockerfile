@@ -14,6 +14,8 @@ WORKDIR godns
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt-get install -y nodejs
 # Build the web UI first
 WORKDIR web
+# Copy our custom next.config.js with proper paths
+COPY code/next.config.js .
 RUN npm install && npm run build
 # Copy the built UI to where go generate expects it
 RUN cp -r out ../internal/server/
