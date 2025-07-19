@@ -150,6 +150,31 @@ func modifyProxyResponse(resp *http.Response) error {
 		resp.Body.Close()
 
 		bodyStr := string(bodyBytes)
+		
+		// Inject base tag to help with relative URLs
+		baseTag := `<base href="/plugins/dyndns/">`
+		bodyStr = strings.Replace(bodyStr, "<head>", "<head>\n" + baseTag, 1)
+		
+		// Also inject a script to set the proper base URL for the app
+		baseScript := `<script>
+			// Set base URL for Next.js app
+			window.__NEXT_ROUTER_BASEPATH = '/plugins/dyndns';
+			window.__NEXT_ASSET_PREFIX = '/admin/custom_plugin/dyndns/static';
+			
+			// Override fetch to handle API calls correctly
+			(function() {
+				const origFetch = window.fetch;
+				window.fetch = function(url, options) {
+					// If it's a relative URL, prepend our base
+					if (typeof url === 'string' && url.startsWith('/') && !url.startsWith('/plugins/') && !url.startsWith('/admin/')) {
+						url = '/plugins/dyndns' + url;
+					}
+					return origFetch(url, options);
+				};
+			})();
+		</script>`
+		bodyStr = strings.Replace(bodyStr, "</head>", baseScript + "\n</head>", 1)
+		
 		// Rewrite paths to use the public static route
 		bodyStr = strings.ReplaceAll(bodyStr, `href="/_next/`, `href="/admin/custom_plugin/dyndns/static/_next/`)
 		bodyStr = strings.ReplaceAll(bodyStr, `src="/_next/`, `src="/admin/custom_plugin/dyndns/static/_next/`)
