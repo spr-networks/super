@@ -59,7 +59,7 @@ jobs:
             wifi_uplink*.context=./wifi_uplink
             ppp*.context=./ppp
           push: ${{ github.event_name == 'workflow_run' && github.ref_name == 'main' || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
-          provenance: false
+          provenance: true
 
       - name: Extract images and digests
         id: extract_info
