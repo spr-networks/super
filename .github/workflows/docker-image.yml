@@ -42,6 +42,26 @@ jobs:
       -
         name: Build and push status
         run: echo "event = ${{ github.event_name }}, ref_name = ${{ github.ref_name }}. push main == push to ghcr"
+
+      # Extract image names from bake config before build
+      - name: Get image names from bake config
+        id: bake_config
+        run: |
+          echo 'IMAGE_NAMES<<EOF' >> $GITHUB_OUTPUT
+          docker buildx bake \
+            -f docker-compose.yml \
+            -f ppp/docker-compose.yml \
+            -f wifi_uplink/docker-compose.yml \
+            -f dyndns/docker-compose.yml \
+            --set "*.platform=linux/amd64,linux/arm64" \
+            --set "dyndns*.context=./dyndns" \
+            --set "wifi_uplink*.context=./wifi_uplink" \
+            --set "ppp*.context=./ppp" \
+            --print | \
+          jq -r '.target | to_entries[] | .value.tags[]' | \
+          sort -u >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+
       -
         name: Build and push with bake action
         id: bake
@@ -61,17 +81,19 @@ jobs:
           push: ${{ github.event_name == 'workflow_run' && github.ref_name == 'main' || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
           provenance: false
 
+      # Extract digests from pushed images
       - name: Extract images and digests
         id: extract_info
+        if: ${{ github.event_name == 'workflow_run' && github.ref_name == 'main' || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
         run: |
           echo 'IMAGE_INFO<<EOF' >> $GITHUB_OUTPUT
-          echo '${{ steps.bake.outputs.metadata }}' | \
-          jq -r '[ to_entries[] |
-             select(.key != "buildx.build.warnings") |
-            .value |
-            (.["image.name"] | split(",")[]) as $name |
-            $name + "@" + .["containerimage.digest"]
-          ] | join(" ")' >> $GITHUB_OUTPUT
+          for image in ${{ steps.bake_config.outputs.IMAGE_NAMES }}; do
+            # Get the manifest digest for the multi-platform image
+            digest=$(docker buildx imagetools inspect "$image" --format "{{.Manifest.Digest}}")
+            if [ -n "$digest" ]; then
+              echo "${image}@${digest}"
+            fi
+          done >> $GITHUB_OUTPUT
           echo 'EOF' >> $GITHUB_OUTPUT
 
       # Install the cosign tool
@@ -86,8 +108,10 @@ jobs:
 
       - name: Prepare Attestation Matrix
         id: container_digests
+        if: ${{ github.event_name == 'workflow_run' && github.ref_name == 'main' || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
         run: |
-          matrix=$(echo ${{ steps.extract_info.outputs.IMAGE_INFO }} | jq -R -s -c 'split(" ") | map(split("@") | {name:  (.[0] | split(":")[0]), digest: .[1] | rtrimstr("\n") }) | group_by(.name) | map(.[0]) ')
+          matrix=$(echo '${{ steps.extract_info.outputs.IMAGE_INFO }}' | \
+            jq -R -s -c 'split("\n") | map(select(length > 0)) | map(split("@") | {name: (.[0] | split(":")[0]), digest: .[1]}) | unique_by(.name)')
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
     outputs:
       container_digests: ${{ steps.container_digests.outputs.matrix}}
@@ -99,8 +123,8 @@ jobs:
       packages: write
       attestations: write
     needs: build-images
-    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch' }}
-    runs-on: ubuntu-24.04
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch') && needs.build-images.outputs.container_digests != '' }}
+    runs-on: self-hosted
     strategy:
       matrix:
         image: ${{ fromJSON(needs.build-images.outputs.container_digests) }}
