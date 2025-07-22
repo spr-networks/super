@@ -93,7 +93,7 @@ jobs:
           jq -c '[ to_entries[] |
              select(.key != "buildx.build.warnings" and .value["containerimage.digest"]) |
              {
-               name: ("ghcr.io/spr-networks/super_" + .key + ":${{ env.RELEASE_VERSION }}${{ env.RELEASE_CHANNEL }}"),
+               name: ("ghcr.io/spr-networks/super_" + .key ),
                digest: .value["containerimage.digest"]
              }
           ]')
