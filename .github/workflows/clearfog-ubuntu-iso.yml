@@ -26,6 +26,9 @@ jobs:
         run:  git fetch --tags
       - name: Get version from git
         run: echo "RELEASE_VERSION_TAG=$(git tag --contains $(git rev-parse HEAD) | grep -v clearfog)" >> $GITHUB_ENV
+      -
+        name: Authenticate to ghcr
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - name: Set up Qemu emulation
         run: ./installer/qemu-setup-linux.sh
       - name: Download the image
