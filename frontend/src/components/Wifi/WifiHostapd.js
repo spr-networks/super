@@ -273,6 +273,13 @@ const WifiHostapd = (props) => {
     setUpdated(true)
     let configNew = { ...config }
     if (canEditInt.includes(name)) {
+      // Allow minus sign for negative numbers
+      if (value === '-' || value === '') {
+        // Allow intermediate states while typing
+        configNew[name] = value
+        setConfig(configNew)
+        return
+      }
       if (isNaN(parseFloat(value))) {
         return
       }
