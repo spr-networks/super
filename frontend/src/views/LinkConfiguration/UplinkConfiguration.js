@@ -41,7 +41,9 @@ import {
   ThreeDotsIcon,
   HStack,
   BadgeIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  Link,
+  LinkText
 } from '@gluestack-ui/themed'
 
 import { wifiAPI, api } from 'api'
@@ -56,7 +58,8 @@ import {
   CableIcon,
   CheckIcon,
   NetworkIcon,
-  WifiIcon
+  WifiIcon,
+  InfoIcon
 } from 'lucide-react-native'
 import { InterfaceTypeItem } from 'components/TagItem'
 
@@ -65,6 +68,25 @@ let keymgmts = [
   { value: 'WPA-PSK WPA-PSK-SHA256 SAE', label: 'WPA2/WPA3' },
   { value: 'WPA-PSK WPA-PSK-SHA256', label: 'WPA2' },
   { value: 'SAE', label: 'WPA3' }
+]
+
+const DEFAULT_CAPTIVE_DOMAINS = [
+  'www.appleiphonecell.com',
+  'captive.apple.com',
+  'www.airport.us',
+  'www.ibook.info',
+  'www.itools.info',
+  'www.thinkdifferent.us',
+  'clients3.google.com',
+  'clients4.google.com',
+  'android.clients.google.com',
+  'connectivitycheck.android.com',
+  'connectivitycheck.gstatic.com',
+  'www.gstatic.com',
+  'www.google.com',
+  'www.androidbak.net',
+  'd2uzsrnmmf6tds.cloudfront.net',
+  'msftncsi.com'
 ]
 
 const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
@@ -77,6 +99,9 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
     Priority: '1',
     BSSID: ''
   })
+  const [captivePortalPassthrough, setCaptivePortalPassthrough] = useState(true)
+  const [captivePortalDomains, setCaptivePortalDomains] = useState(DEFAULT_CAPTIVE_DOMAINS)
+  const [domainInput, setDomainInput] = useState(DEFAULT_CAPTIVE_DOMAINS.join('\n'))
 
   const [ssids, setSSIDs] = useState([])
   const [optSSIDs, setOptsSSIDs] = useState([])
@@ -119,7 +144,8 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
     if (item.KeyMgmt === 'NONE') {
       item.Password = ''
     }
-    onSubmit(item, type, enable)
+    // Pass captive portal settings
+    onSubmit(item, type, !item.Disabled, captivePortalPassthrough, captivePortalDomains)
   }
 
   const scan = (iface) => {
@@ -280,6 +306,57 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
 
       <FormControl>
         <FormControlLabel>
+          <FormControlLabelText>Captive Portal</FormControlLabelText>
+        </FormControlLabel>
+        <HStack space="sm" alignItems="center">
+          <Checkbox
+            isChecked={captivePortalPassthrough}
+            value={captivePortalPassthrough}
+            onChange={(val) => setCaptivePortalPassthrough(val)}
+          >
+            <CheckboxIndicator mr="$2">
+              <CheckboxIcon />
+            </CheckboxIndicator>
+            <CheckboxLabel>Allow Captive Portal DNS Bypass</CheckboxLabel>
+          </Checkbox>
+          <Link href="https://captivebehavior.wballiance.com/" isExternal>
+            <Icon as={InfoIcon} size="sm" color="$primary500" />
+          </Link>
+        </HStack>
+      </FormControl>
+
+      {captivePortalPassthrough && (
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Captive Portal Domains</FormControlLabelText>
+          </FormControlLabel>
+          <VStack space="sm">
+            <Input variant="outline">
+              <InputField
+                placeholder="Enter domains (one per line or comma-separated)"
+                value={domainInput}
+                onChangeText={(text) => {
+                  setDomainInput(text)
+                  const domains = text.split(/[\n,]/).map(d => d.trim()).filter(d => d.length > 0)
+                  setCaptivePortalDomains(domains)
+                }}
+                multiline
+                numberOfLines={12}
+                style={{
+                  minHeight: 200,
+                  textAlignVertical: 'top'
+                }}
+              />
+            </Input>
+            <Text size="xs" color="$muted500">
+              {captivePortalDomains.length} domains configured
+            </Text>
+          </VStack>
+        </FormControl>
+      )}
+
+      <FormControl>
+        <FormControlLabel>
           <FormControlLabelText>Status</FormControlLabelText>
         </FormControlLabel>
         <Checkbox
@@ -309,8 +386,11 @@ const UplinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
     MACOverride: curItem.MACOverride || '',
     Enabled: curItem.Enabled !== undefined ? curItem.Enabled : true,
     MACRandomize: curItem.MACRandomize,
-    MACCloak: curItem.MACCloak
+    MACCloak: curItem.MACCloak,
+    CaptivePortalPassthrough: curItem.CaptivePortalPassthrough !== undefined ? curItem.CaptivePortalPassthrough : false,
+    CaptivePortalDomains: curItem.CaptivePortalDomains || []
   })
+  const [domainInput, setDomainInput] = useState(curItem.CaptivePortalDomains ? curItem.CaptivePortalDomains.join(', ') : '')
 
   const [errors, setErrors] = useState({})
 
@@ -424,6 +504,49 @@ const UplinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
           </FormControl>
         )}
       </HStack>
+
+      {item.Type === 'Uplink' && (
+        <>
+          <FormControl>
+            <HStack space="sm" alignItems="center">
+              <Checkbox
+                value={item.CaptivePortalPassthrough}
+                isChecked={item.CaptivePortalPassthrough}
+                onChange={(value) => {
+                  setItem({ ...item, CaptivePortalPassthrough: value })
+                }}
+              >
+                <CheckboxIndicator mr="$2">
+                  <CheckboxIcon />
+                </CheckboxIndicator>
+                <CheckboxLabel>Allow Captive Portal DNS Bypass</CheckboxLabel>
+              </Checkbox>
+              <Link href="https://captivebehavior.wballiance.com/" isExternal>
+                <Icon as={InfoIcon} size="sm" color="$primary500" />
+              </Link>
+            </HStack>
+          </FormControl>
+          
+          {item.CaptivePortalPassthrough && (
+            <FormControl>
+              <FormControlLabel>
+                <FormControlLabelText>Captive Portal Domains</FormControlLabelText>
+              </FormControlLabel>
+              <Input variant="underlined">
+                <InputField
+                  placeholder="captive.apple.com, connectivitycheck.gstatic.com"
+                  value={domainInput}
+                  onChangeText={(text) => {
+                    setDomainInput(text)
+                    const domains = text.split(',').map(d => d.trim()).filter(d => d.length > 0)
+                    setItem({ ...item, CaptivePortalDomains: domains })
+                  }}
+                />
+              </Input>
+            </FormControl>
+          )}
+        </>
+      )}
 
       <Button colorScheme="primary" onPress={() => doSubmit(item)}>
         <ButtonText>Save</ButtonText>
@@ -814,11 +937,17 @@ const UplinkInfo = (props) => {
     </Menu>
   )
 
-  const onSubmit = (item, type, enable) => {
+  const onSubmit = (item, type, enable, captivePortal, captiveDomains) => {
     let new_entry
 
     if (type == 'wifi') {
-      new_entry = { Iface: iface, Enabled: enable, Networks: [item] }
+      new_entry = { 
+        Iface: iface, 
+        Enabled: enable, 
+        Networks: [item], 
+        CaptivePortalPassthrough: captivePortal !== undefined ? captivePortal : true,
+        CaptivePortalDomains: captiveDomains || DEFAULT_CAPTIVE_DOMAINS
+      }
     } else if (type == 'ppp') {
       new_entry = { ...item, Enabled: enable, Iface: iface }
     } else if (type == 'ip') {

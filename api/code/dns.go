@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -158,6 +159,74 @@ func buildForwardLine(providers []DNSProvider) string {
 	return "  forward . " + strings.Join(servers, " ") + " {"
 }
 
+// collectCaptivePortalDomains reads all interfaces and collects domains for captive portal bypass
+func collectCaptivePortalDomains() []string {
+	domainMap := make(map[string]bool)
+
+	// Read interfaces configuration
+	interfaces := loadInterfacesConfigLocked()
+
+	// Collect domains from uplinks with captive portal passthrough enabled
+	for _, iface := range interfaces {
+		if iface.Type == "Uplink" && iface.CaptivePortalPassthrough && len(iface.CaptivePortalDomains) > 0 {
+			for _, domain := range iface.CaptivePortalDomains {
+				domainMap[domain] = true
+			}
+		}
+	}
+
+	// Convert map to slice
+	var domains []string
+	for domain := range domainMap {
+		domains = append(domains, domain)
+	}
+
+	return domains
+}
+
+// getUpstreamDNSFromDHCP reads DNS servers from DHCP state files
+func getUpstreamDNSFromDHCP() []string {
+	var dnsServers []string
+	stateDir := TEST_PREFIX + "/state/dhcp-client/"
+
+	// Read all dns.* files in the state directory
+	files, err := ioutil.ReadDir(stateDir)
+	if err != nil {
+		fmt.Printf("Error reading dhcp state directory: %v\n", err)
+		return nil
+	}
+
+	for _, file := range files {
+		if strings.HasPrefix(file.Name(), "dns.") {
+			content, err := ioutil.ReadFile(stateDir + file.Name())
+			if err != nil {
+				continue
+			}
+
+			// Parse space-separated DNS servers
+			servers := strings.Fields(string(content))
+			for _, server := range servers {
+				// Validate IP address
+				if net.ParseIP(server) != nil {
+					dnsServers = append(dnsServers, server)
+				}
+			}
+		}
+	}
+
+	// Remove duplicates
+	uniqueServers := make(map[string]bool)
+	var result []string
+	for _, server := range dnsServers {
+		if !uniqueServers[server] {
+			uniqueServers[server] = true
+			result = append(result, server)
+		}
+	}
+
+	return result
+}
+
 func updateDNSCorefileMulti(dns DNSSettings) {
 	// Ensure migration to new format
 	dns.migrateToProviders()
@@ -192,6 +261,13 @@ func updateDNSCorefileMulti(dns DNSSettings) {
 			if strings.Contains(line, "}") {
 				skipUntilCloseBrace = false
 			}
+			continue
+		}
+
+		// Check for captive portal forward block (skip it, we'll regenerate if needed)
+		if strings.Contains(line, "forward ") && !strings.Contains(line, "forward . ") {
+			// This is a domain-specific forward, skip the entire block
+			skipUntilCloseBrace = true
 			continue
 		}
 
@@ -257,6 +333,41 @@ func updateDNSCorefileMulti(dns DNSSettings) {
 		// Insert after the last forward block
 		updatedLines = append(updatedLines[:lastForwardIdx+1],
 			append(newForwarder, updatedLines[lastForwardIdx+1:]...)...)
+	}
+
+	// Add captive portal forward rule at the beginning
+	captivePortalDomains := collectCaptivePortalDomains()
+	upstreamDNS := getUpstreamDNSFromDHCP()
+
+	if len(captivePortalDomains) > 0 && len(upstreamDNS) > 0 {
+		var captivePortalForward []string
+
+		// Build the forward line with domains and upstream DNS servers
+		forwardLine := "  forward " + strings.Join(captivePortalDomains, " ") + " " + strings.Join(upstreamDNS, " ") + " {"
+		captivePortalForward = append(captivePortalForward, forwardLine)
+		captivePortalForward = append(captivePortalForward, "    max_concurrent 1000")
+		captivePortalForward = append(captivePortalForward, "  }")
+
+		// Find where to insert (right after the . { line, inside the main block)
+		insertIdx := -1
+		for i, line := range updatedLines {
+			if strings.Contains(line, ".:53 {") {
+				insertIdx = i + 1
+				break
+			}
+		}
+
+		// Insert captive portal forward rule
+		if insertIdx > -1 {
+			updatedLines = append(updatedLines[:insertIdx],
+				append(captivePortalForward, updatedLines[insertIdx:]...)...)
+		} else {
+			// If we couldn't find the insertion point, add after the first line
+			if len(updatedLines) > 1 {
+				updatedLines = append(updatedLines[:1],
+					append(captivePortalForward, updatedLines[1:]...)...)
+			}
+		}
 	}
 
 	// Write the updated content back to the file

@@ -31,18 +31,20 @@ var gAPIInterfacesPath = TEST_PREFIX + "/configs/base/interfaces.json"
 var gAPIInterfacesPublicPath = TEST_PREFIX + "/state/public/interfaces.json"
 
 type InterfaceConfig struct {
-	Name         string
-	Type         string
-	Subtype      string
-	Enabled      bool
-	ExtraBSS     []ExtraBSS `json:",omitempty"`
-	DisableDHCP  bool       `json:",omitempty"`
-	IP           string     `json:",omitempty"`
-	Router       string     `json:",omitempty"`
-	VLAN         string     `json:",omitempty"`
-	MACOverride  string     `json:",omitempty"`
-	MACRandomize bool       `json:",omitempty"`
-	MACCloak     bool       `json:",omitempty"`
+	Name                     string
+	Type                     string
+	Subtype                  string
+	Enabled                  bool
+	ExtraBSS                 []ExtraBSS `json:",omitempty"`
+	DisableDHCP              bool       `json:",omitempty"`
+	IP                       string     `json:",omitempty"`
+	Router                   string     `json:",omitempty"`
+	VLAN                     string     `json:",omitempty"`
+	MACOverride              string     `json:",omitempty"`
+	MACRandomize             bool       `json:",omitempty"`
+	MACCloak                 bool       `json:",omitempty"`
+	CaptivePortalPassthrough bool       `json:",omitempty"`
+	CaptivePortalDomains     []string   `json:",omitempty"`
 }
 
 // this will be exported to all containers in public/interfaces.json
@@ -218,7 +220,7 @@ func configureInterface(interfaceType string, subType string, name string, MACRa
 
 	}
 
-	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, "", "", "", "", MACRandomize, MACCloak}
+	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, "", "", "", "", MACRandomize, MACCloak, false, []string{}}
 
 	config := loadInterfacesConfigLocked()
 
