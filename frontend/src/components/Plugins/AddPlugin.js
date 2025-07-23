@@ -365,6 +365,7 @@ const AddPlugin = (props) => {
         pluginName={Name || manifest?.Name}
         permissions={permissionsFormatted}
         gitUrl={GitURL}
+        networkCapabilities={manifest?.NetworkCapabilities}
       />
 
       {/* Loading indicator when fetching manifest */}
