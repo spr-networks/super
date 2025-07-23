@@ -6,9 +6,10 @@ STATE=/state/dhcp-client/
 
 function run_dhcp() {
   # clear out the dhcp states
-  rm ${STATE}/coredhcp*.json
-  rm /var/run/dhclient_*.lease
-  rm ${STATE}/gateway.*
+  rm -f "${STATE}"/coredhcp*.json
+  rm -f /var/run/dhclient_*.lease
+  rm -f "${STATE}"/gateway.*
+  rm -f "${STATE}"/dns.*
 
 
   if [ "$RUN_WAN_DHCP" ]; then
@@ -37,8 +38,10 @@ function run_dhcp() {
     for name in ${names[@]}; do
         echo "Running coredhcp_client for ${name}"
 
-        /coredhcp_client -d -i ${name} -v ${RUN_WAN_DHCP_IPV} -lf ${STATE}/coredhcp-${name}.json
-        GATEWAY=$(jq -r .Routers[0] <  ${STATE}/coredhcp-${name}.json)
+        /coredhcp_client -d -i "${name}" -v "${RUN_WAN_DHCP_IPV}" -lf "${STATE}/coredhcp-${name}.json"
+        GATEWAY=$(jq -r .Routers[0] < "${STATE}/coredhcp-${name}.json")
+        # Extract DNS servers from DHCP response
+        DNS_SERVERS=$(jq -r '.DNSServers[]' < "${STATE}/coredhcp-${name}.json" 2>/dev/null | tr '\n' ' ')
         # check for an IP, if no IP, run dhclient as a fallback
         ping 1.1.1.1 -c 1 -W 3
         ret=$?
@@ -49,9 +52,15 @@ function run_dhcp() {
           rm /var/run/dhclient_${name}.lease
           dhclient -lf /var/run/dhclient_${name}.lease ${name}
           GATEWAY=$(grep -E "^\s+option routers" /var/run/dhclient_${name}.lease  | awk '{print $3}' | cut -d ',' -f1 | cut -d ';' -f1)
+          # Extract DNS servers from dhclient lease
+          DNS_SERVERS=$(grep -E "^\s+option domain-name-servers" /var/run/dhclient_${name}.lease | awk '{for(i=3;i<=NF;i++) print $i}' | tr -d ',;' | tr '\n' ' ')
         fi
         # write the gateway router IP to disk
-        echo $GATEWAY > /state/dhcp-client/gateway.${name}
+        echo "$GATEWAY" > "/state/dhcp-client/gateway.${name}"
+        # write DNS servers to disk for captive portal use
+        if [ -n "$DNS_SERVERS" ]; then
+          echo "$DNS_SERVERS" > "/state/dhcp-client/dns.${name}"
+        fi
     done
 
     # Handle static IP assignments
