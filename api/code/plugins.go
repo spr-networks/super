@@ -1190,6 +1190,77 @@ func installUserPluginGitUrl(router *mux.Router, router_public *mux.Router) func
 	})
 }
 
+// Phase 1: Download plugin and return permissions info
+func downloadUserPluginInfo(w http.ResponseWriter, r *http.Request) {
+	gitURL := ""
+	err := json.NewDecoder(r.Body).Decode(&gitURL)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	// Download the plugin without auto-config
+	success := downloadUserExtension(gitURL, false)
+	if !success {
+		http.Error(w, "Failed to download plugin", 400)
+		return
+	}
+
+	// Read the plugin.json from the downloaded plugin
+	params := url.Values{}
+	params.Set("git_url", gitURL)
+	creds := GitOptions{"", "", false, false}
+	jsonValue, _ := json.Marshal(creds)
+
+	data, err := superdRequest("get_plugin_config", params, bytes.NewBuffer(jsonValue))
+	if err != nil {
+		http.Error(w, "Failed to read plugin configuration", 400)
+		return
+	}
+
+	plugin := PluginConfig{}
+	err = json.Unmarshal(data, &plugin)
+	if err != nil {
+		http.Error(w, "Invalid plugin configuration", 400)
+		return
+	}
+
+	// Override GitURL to match what was requested
+	plugin.GitURL = gitURL
+
+	// Return plugin info with permissions
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(plugin)
+}
+
+// Phase 2: Complete plugin installation after user confirms permissions
+func completeUserPluginInstall(router *mux.Router, router_public *mux.Router) func(http.ResponseWriter, *http.Request) {
+	return applyJwtOtpCheck(func(w http.ResponseWriter, r *http.Request) {
+		plugin := PluginConfig{}
+		err := json.NewDecoder(r.Body).Decode(&plugin)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		Configmtx.Lock()
+		defer Configmtx.Unlock()
+
+		// Install the plugin configuration
+		success := installUserPluginConfig(plugin)
+		if !success {
+			http.Error(w, "Failed to install plugin", 400)
+			return
+		}
+
+		// Save and update routes
+		saveConfigLocked()
+		PluginRoutes(router, router_public)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(config.Plugins)
+	})
+}
+
 func installUserPluginConfig(plugin PluginConfig) bool {
 
 	//should not be a Plus module

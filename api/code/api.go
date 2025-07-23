@@ -2943,6 +2943,8 @@ func main() {
 	//TBD: API Docs
 	external_router_authenticated.HandleFunc("/plugin/custom_compose_paths", applyJwtOtpCheck(modifyCustomComposePaths)).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/plugin/install_user_url", installUserPluginGitUrl(external_router_authenticated, external_router_public)).Methods("PUT")
+	external_router_authenticated.HandleFunc("/plugin/download_info", applyJwtOtpCheck(downloadUserPluginInfo)).Methods("PUT")
+	external_router_authenticated.HandleFunc("/plugin/complete_install", completeUserPluginInstall(external_router_authenticated, external_router_public)).Methods("PUT")
 	external_router_authenticated.HandleFunc("/plusToken", plusToken).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/plusTokenValid", plusTokenValid).Methods("GET")
 	external_router_authenticated.HandleFunc("/stopPlusExtension", stopPlusExt).Methods("PUT")
