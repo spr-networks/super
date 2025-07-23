@@ -1,7 +1,8 @@
-import React, { useContext, useState } from 'react'
+import React, { useContext, useState, useEffect } from 'react'
 
 import { pluginAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
+import PluginPermissionPrompt from './PluginPermissionPrompt'
 
 import {
   Button,
@@ -19,7 +20,8 @@ import {
   InputField,
   VStack,
   HStack,
-  Text
+  Text,
+  Spinner
 } from '@gluestack-ui/themed'
 
 const AddPlugin = (props) => {
@@ -34,6 +36,13 @@ const AddPlugin = (props) => {
   const [HasUI, setHasUI] = useState(false)
   const [InstallTokenPath, setInstallTokenPath] = useState('')
   const [ScopedPaths, setScopedPaths] = useState('')
+  
+  // Permission prompt states
+  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false)
+  const [fetchingManifest, setFetchingManifest] = useState(false)
+  const [manifest, setManifest] = useState(null)
+  const [permissions, setPermissions] = useState(null)
+  const [permissionsFormatted, setPermissionsFormatted] = useState(null)
 
   const handleChange = (name, value) => {
     if (name == 'Name') {
@@ -59,36 +68,109 @@ const AddPlugin = (props) => {
     }
   }
 
+  // Fetch plugin manifest when GitURL changes
+  useEffect(() => {
+    if (GitURL && GitURL.trim()) {
+      const timer = setTimeout(() => {
+        fetchManifest()
+      }, 1000) // Debounce for 1 second
+      
+      return () => clearTimeout(timer)
+    }
+  }, [GitURL])
+
+  const fetchManifest = async () => {
+    setFetchingManifest(true)
+    try {
+      const manifestData = await pluginAPI.downloadInfo(GitURL)
+      setManifest(manifestData)
+      
+      // Update form fields from manifest if they're empty
+      if (manifestData.Name && !Name) setName(manifestData.Name)
+      if (manifestData.URI && !URI) setURI(manifestData.URI)
+      if (manifestData.UnixPath && !UnixPath) setUnixPath(manifestData.UnixPath)
+      if (manifestData.ComposeFilePath && !ComposeFilePath) setComposeFilePath(manifestData.ComposeFilePath)
+      if (manifestData.HasUI !== undefined) setHasUI(manifestData.HasUI)
+      if (manifestData.InstallTokenPath && !InstallTokenPath) setInstallTokenPath(manifestData.InstallTokenPath)
+      if (manifestData.ScopedPaths && !ScopedPaths) {
+        setScopedPaths(manifestData.ScopedPaths.join(', '))
+      }
+      
+      // Parse permissions
+      const perms = pluginAPI.parsePermissions(manifestData)
+      setPermissions(perms)
+      setPermissionsFormatted(pluginAPI.formatPermissions(perms))
+    } catch (err) {
+      console.error('Failed to fetch plugin manifest:', err)
+      // Don't show error to user - manifest is optional
+    } finally {
+      setFetchingManifest(false)
+    }
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
 
-    // TODO validate
-    // Convert ScopedPaths string to array
-    const scopedPathsArray = ScopedPaths
-      ? ScopedPaths.split(',').map(path => path.trim()).filter(path => path.length > 0)
-      : []
-
-    let plugin = { 
-      Name, 
-      URI, 
-      UnixPath, 
-      ComposeFilePath,
-      Enabled,
-      GitURL,
-      HasUI,
-      InstallTokenPath,
-      ScopedPaths: scopedPathsArray
+    // Check if we need to show permission prompt
+    if (GitURL && permissions && permissions.hasToken && !showPermissionPrompt) {
+      setShowPermissionPrompt(true)
+      return
     }
-    pluginAPI
-      .add(plugin)
-      .then((res) => {
-        if (props.notifyChange) {
-          props.notifyChange('plugin')
-        }
-      })
-      .catch((err) => {
-        contextType.error(`XX API Error:`, err)
-      })
+
+    submitPlugin()
+  }
+
+  const submitPlugin = () => {
+    // If this came from a GitURL with manifest, use the complete install API
+    if (GitURL && manifest) {
+      // Use the manifest data to complete installation
+      pluginAPI
+        .completeInstall(manifest)
+        .then((res) => {
+          setShowPermissionPrompt(false)
+          if (props.notifyChange) {
+            props.notifyChange('plugin')
+          }
+        })
+        .catch((err) => {
+          contextType.error(`API Error:`, err)
+        })
+    } else {
+      // Legacy method for manual plugin creation
+      // Convert ScopedPaths string to array
+      const scopedPathsArray = ScopedPaths
+        ? ScopedPaths.split(',').map(path => path.trim()).filter(path => path.length > 0)
+        : []
+
+      let plugin = { 
+        Name, 
+        URI, 
+        UnixPath, 
+        ComposeFilePath,
+        Enabled,
+        GitURL,
+        HasUI,
+        InstallTokenPath,
+        ScopedPaths: scopedPathsArray
+      }
+      
+      pluginAPI
+        .add(plugin)
+        .then((res) => {
+          setShowPermissionPrompt(false)
+          if (props.notifyChange) {
+            props.notifyChange('plugin')
+          }
+        })
+        .catch((err) => {
+          contextType.error(`API Error:`, err)
+        })
+    }
+  }
+
+  const handleAcceptPermissions = () => {
+    setShowPermissionPrompt(false)
+    submitPlugin()
   }
 
   return (
@@ -274,6 +356,26 @@ const AddPlugin = (props) => {
       <Button action="primary" size="md" onPress={handleSubmit}>
         <ButtonText>Save</ButtonText>
       </Button>
+
+      {/* Permission prompt modal */}
+      <PluginPermissionPrompt
+        isOpen={showPermissionPrompt}
+        onClose={() => setShowPermissionPrompt(false)}
+        onAccept={handleAcceptPermissions}
+        pluginName={Name || manifest?.Name}
+        permissions={permissionsFormatted}
+        gitUrl={GitURL}
+      />
+
+      {/* Loading indicator when fetching manifest */}
+      {fetchingManifest && (
+        <HStack space="sm" alignItems="center" mt="$2">
+          <Spinner size="small" />
+          <Text size="sm" color="$muted500">
+            Loading plugin information...
+          </Text>
+        </HStack>
+      )}
     </VStack>
   )
 }
