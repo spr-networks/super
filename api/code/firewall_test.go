@@ -974,7 +974,7 @@ func TestServicePorts(t *testing.T) {
 				Port:            "99999",
 				UpstreamEnabled: false,
 			},
-			expectError: false, // Port validation is numeric only, will overflow to 34463
+			expectError: true, // Port validation now correctly rejects out-of-range ports
 		},
 		{
 			name: "Invalid protocol",
@@ -1866,7 +1866,7 @@ func TestDHCPDevicePolicyApplication(t *testing.T) {
 	t.Run("disabled_device_no_ethernet_filter", func(t *testing.T) {
 		disabledMAC := "11:22:33:44:55:66"
 		disabledIP := "192.168.1.101"
-		
+
 		// Create a disabled device
 		disabledDevice := DeviceEntry{
 			MAC:            disabledMAC,
@@ -1898,17 +1898,17 @@ func TestDHCPDevicePolicyApplication(t *testing.T) {
 	// Test 5: Test device moving between interfaces
 	t.Run("device_interface_change", func(t *testing.T) {
 		newIface := "eth1"
-		
+
 		// Update device to new interface
 		handleDHCPResult(testMAC, testIP, "192.168.1.1", testName, newIface)
-		
+
 		// Reload device to get updated interface
 		updatedDevices := getDevicesJson()
 		updatedDevice := updatedDevices[testMAC]
-		
+
 		// Trigger policy refresh with updated device
 		refreshDeviceGroupsAndPolicy(updatedDevices, groups, updatedDevice)
-		
+
 		time.Sleep(100 * time.Millisecond)
 
 		// Check if ethernet_filter is updated with new interface
