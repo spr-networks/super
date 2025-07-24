@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os/exec"
 	"strings"
 	"testing"
 )
@@ -607,6 +608,144 @@ func TestAddVmap(t *testing.T) {
 	})
 }
 
+func TestInterfaceRanges(t *testing.T) {
+	InitNFTClient()
+
+	// Test adding multiple entries to an interval map to ensure they don't create ranges
+	t.Run("dns_access_no_ranges", func(t *testing.T) {
+		// Debug key construction first
+		ip1 := IPToBytes("192.168.1.100")
+		iface1 := InterfaceToBytes("eth0")
+		key1 := append(ip1, iface1...)
+
+		ip2 := IPToBytes("192.168.1.101")
+		iface2 := InterfaceToBytes("eth1")
+		key2 := append(ip2, iface2...)
+
+		t.Logf("Key 1: %v (len=%d)", key1, len(key1))
+		t.Logf("Key 2: %v (len=%d)", key2, len(key2))
+		t.Logf("IP1: %v, Iface1: %v", ip1, iface1)
+		t.Logf("IP2: %v, Iface2: %v", ip2, iface2)
+
+		// Test with consecutive IPs (the problem case)
+		// Try adding them with some separation to see if timing affects merging
+		err1 := AddIPIfaceVerdictElement("inet", "filter", "dns_access", "192.168.1.100", "eth0", "accept")
+		if err1 != nil {
+			t.Fatalf("Failed to add first entry: %v", err1)
+		}
+
+		// Check intermediate state
+		cmd := exec.Command("nft", "list", "map", "inet", "filter", "dns_access")
+		output, _ := cmd.Output()
+		t.Logf("After first element:\n%s", string(output))
+
+		err2 := AddIPIfaceVerdictElement("inet", "filter", "dns_access", "192.168.1.101", "eth1", "accept")
+
+		if err2 != nil {
+			t.Fatalf("Failed to add second entry: %v", err2)
+		}
+
+		// Check the actual nftables output
+		cmd2 := exec.Command("nft", "list", "map", "inet", "filter", "dns_access")
+		output2, err := cmd2.Output()
+		if err != nil {
+			t.Fatalf("Failed to list map: %v", err)
+		}
+
+		mapOutput := string(output2)
+		t.Logf("Consecutive IPs dns_access map contents:\n%s", mapOutput)
+
+		// Check for unexpected ranges
+		if strings.Contains(mapOutput, "eth0\"-\"eth1") || strings.Contains(mapOutput, "\"eth0\"-\"eth1\"") {
+			t.Error("Unexpected interface range found in map - interfaces should be individual entries")
+		}
+	})
+
+	// Test with non-consecutive IPs to see if interval merging still happens
+	t.Run("dns_access_non_consecutive", func(t *testing.T) {
+		// Use non-consecutive IPs and different interfaces
+		err1 := AddIPIfaceVerdictElement("inet", "filter", "dns_access", "192.168.5.50", "wlan0", "accept")
+		err2 := AddIPIfaceVerdictElement("inet", "filter", "dns_access", "10.0.0.25", "docker0", "accept")
+
+		if err1 != nil {
+			t.Fatalf("Failed to add first non-consecutive entry: %v", err1)
+		}
+		if err2 != nil {
+			t.Fatalf("Failed to add second non-consecutive entry: %v", err2)
+		}
+
+		// Check the actual nftables output
+		cmd := exec.Command("nft", "list", "map", "inet", "filter", "dns_access")
+		output, err := cmd.Output()
+		if err != nil {
+			t.Fatalf("Failed to list map: %v", err)
+		}
+
+		mapOutput := string(output)
+		t.Logf("Non-consecutive IPs dns_access map contents:\n%s", mapOutput)
+
+		// These should definitely be separate entries
+		if !strings.Contains(mapOutput, "192.168.5.50") {
+			t.Error("First non-consecutive IP entry not found in map")
+		}
+		if !strings.Contains(mapOutput, "10.0.0.25") {
+			t.Error("Second non-consecutive IP entry not found in map")
+		}
+		if !strings.Contains(mapOutput, "wlan0") {
+			t.Error("wlan0 interface not found in map")
+		}
+		if !strings.Contains(mapOutput, "docker0") {
+			t.Error("docker0 interface not found in map")
+		}
+	})
+
+	// Test non-interval maps should definitely not create ranges
+	t.Run("ethernet_filter_no_ranges", func(t *testing.T) {
+		// Add two entries to ethernet_filter (which does NOT have flags interval)
+		err1 := AddMACVerdictElement("inet", "filter", "ethernet_filter", "192.168.1.100", "eth0", "aa:bb:cc:dd:ee:01", "accept")
+		err2 := AddMACVerdictElement("inet", "filter", "ethernet_filter", "192.168.1.101", "eth1", "aa:bb:cc:dd:ee:02", "accept")
+
+		if err1 != nil {
+			t.Fatalf("Failed to add first ethernet_filter entry: %v", err1)
+		}
+		if err2 != nil {
+			t.Fatalf("Failed to add second ethernet_filter entry: %v", err2)
+		}
+
+		// Check the actual nftables output
+		cmd := exec.Command("nft", "list", "map", "inet", "filter", "ethernet_filter")
+		output, err := cmd.Output()
+		if err != nil {
+			t.Fatalf("Failed to list ethernet_filter map: %v", err)
+		}
+
+		mapOutput := string(output)
+		t.Logf("ethernet_filter map contents:\n%s", mapOutput)
+
+		// Verify individual entries exist
+		if !strings.Contains(mapOutput, "192.168.1.100") {
+			t.Error("First IP entry not found in ethernet_filter map")
+		}
+		if !strings.Contains(mapOutput, "192.168.1.101") {
+			t.Error("Second IP entry not found in ethernet_filter map")
+		}
+		if !strings.Contains(mapOutput, "aa:bb:cc:dd:ee:01") {
+			t.Error("First MAC entry not found in ethernet_filter map")
+		}
+		if !strings.Contains(mapOutput, "aa:bb:cc:dd:ee:02") {
+			t.Error("Second MAC entry not found in ethernet_filter map")
+		}
+
+		// ethernet_filter should NEVER have ranges since it lacks flags interval
+		if strings.Contains(mapOutput, "eth0\"-\"eth1") || strings.Contains(mapOutput, "\"eth0\"-\"eth1\"") {
+			t.Error("Unexpected interface range found in ethernet_filter - non-interval maps should never create ranges")
+		}
+		if strings.Contains(mapOutput, "192.168.1.100-192.168.1.101") {
+			t.Error("Unexpected IP range found in ethernet_filter - non-interval maps should never create ranges")
+		}
+	})
+}
+
 func TestDeleteDebug(t *testing.T) {
 	InitNFTClient()
 	client := GetNFTClient()
@@ -620,7 +759,7 @@ func TestDeleteDebug(t *testing.T) {
 
 	// Try to delete manually
 	mapName := "tcpfwd"
-	key := append(IPToBytes("192.168.1.100"), PortToBytes("80")...)
+	key := append(IPToBytes("192.168.1.100"), PortToBytesForConcatenated("80")...)
 	t.Logf("Key for delete: %v (len=%d)", key, len(key))
 
 	// Get the map
