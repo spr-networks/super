@@ -476,7 +476,7 @@ func setDefaultUplinkGateway(iface string, index int) bool {
 
 	ret := true
 	cmd := exec.Command("ip", "route", "replace", "default", "via", gateway, "dev", iface, "table", table)
-
+	_, err = cmd.Output()
 	if err != nil {
 		log.Print("Error with route setup", cmd, err)
 		ret = false
