@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
-	"regexp"
 	"slices"
 	"sort"
 	"strconv"
@@ -72,6 +71,62 @@ type CustomInterfaceRule struct {
 	Policies  []string
 	Groups    []string
 	Tags      []string //unused for now
+}
+
+// validatePort checks if a port string is valid.
+// Returns true if the port is valid, false otherwise.
+// Valid ports are:
+// - "any" (special case)
+// - Single port number between 1-65535
+// - Port range in format "start-end" where both are between 1-65535
+func validatePort(port string) (bool, error) {
+	if port == "any" || port == "0-65535" {
+		return true, nil
+	}
+
+	// Check for port range (but not negative numbers)
+	if strings.Contains(port, "-") && !strings.HasPrefix(port, "-") {
+		parts := strings.Split(port, "-")
+		if len(parts) != 2 {
+			return false, fmt.Errorf("invalid port range format")
+		}
+
+		start, err := strconv.Atoi(parts[0])
+		if err != nil {
+			return false, fmt.Errorf("invalid start port in range")
+		}
+
+		end, err := strconv.Atoi(parts[1])
+		if err != nil {
+			return false, fmt.Errorf("invalid end port in range")
+		}
+
+		if start < 1 || start > 65535 {
+			return false, fmt.Errorf("start port %d is out of valid range (1-65535)", start)
+		}
+
+		if end < 1 || end > 65535 {
+			return false, fmt.Errorf("end port %d is out of valid range (1-65535)", end)
+		}
+
+		if start > end {
+			return false, fmt.Errorf("start port must be less than or equal to end port")
+		}
+
+		return true, nil
+	}
+
+	// Single port
+	portNum, err := strconv.Atoi(port)
+	if err != nil {
+		return false, fmt.Errorf("invalid port number")
+	}
+
+	if portNum < 1 || portNum > 65535 {
+		return false, fmt.Errorf("port %d is out of valid range (1-65535)", portNum)
+	}
+
+	return true, nil
 }
 
 func (c *CustomInterfaceRule) Equals(other *CustomInterfaceRule) bool {
@@ -1695,19 +1750,16 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	re := regexp.MustCompile("^([0-9]+-[0-9]+|[0-9]+)$")
-
-	if fwd.SrcPort != "any" && !re.MatchString(fwd.SrcPort) {
-		http.Error(w, "Invalid SrcPort", 400)
+	// Validate source port
+	if valid, err := validatePort(fwd.SrcPort); !valid {
+		http.Error(w, fmt.Sprintf("Invalid SrcPort: %v", err), 400)
 		return
 	}
 
-	if fwd.DstPort != "any" {
-		_, err = strconv.Atoi(fwd.DstPort)
-		if err != nil {
-			http.Error(w, "Invalid DstPort", 400)
-			return
-		}
+	// Validate destination port
+	if valid, err := validatePort(fwd.DstPort); !valid {
+		http.Error(w, fmt.Sprintf("Invalid DstPort: %v", err), 400)
+		return
 	}
 
 	if CIDRorIP(fwd.SrcIP) != nil {
@@ -1856,10 +1908,9 @@ func blockForwardingIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	re := regexp.MustCompile("^([0-9]+-[0-9]+|[0-9]+)$")
-
-	if !re.MatchString(br.DstPort) {
-		http.Error(w, "Invalid DstPort", 400)
+	// Validate destination port
+	if valid, err := validatePort(br.DstPort); !valid {
+		http.Error(w, fmt.Sprintf("Invalid DstPort: %v", err), 400)
 		return
 	}
 
@@ -1904,10 +1955,21 @@ func modifyServicePort(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	re := regexp.MustCompile("^([0-9]+)$")
+	// Validate port (service ports should be single ports only)
+	if port.Port == "" {
+		http.Error(w, "Port cannot be empty", 400)
+		return
+	}
 
-	if port.Port == "" || !re.MatchString(port.Port) {
-		http.Error(w, "Invalid Port", 400)
+	// For service ports, we don't allow ranges or special values
+	portNum, err := strconv.Atoi(port.Port)
+	if err != nil {
+		http.Error(w, "Invalid Port: must be a number", 400)
+		return
+	}
+
+	if portNum < 1 || portNum > 65535 {
+		http.Error(w, fmt.Sprintf("Invalid Port: %d is out of valid range (1-65535)", portNum), 400)
 		return
 	}
 
@@ -1977,10 +2039,21 @@ func modifyMulticast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	re := regexp.MustCompile("^([0-9]+)$")
+	// Validate port (multicast ports should be single ports only)
+	if port.Port == "" {
+		http.Error(w, "Port cannot be empty", 400)
+		return
+	}
 
-	if port.Port == "" || !re.MatchString(port.Port) {
-		http.Error(w, "Invalid Port", 400)
+	// For multicast ports, we don't allow ranges or special values
+	portNum, err := strconv.Atoi(port.Port)
+	if err != nil {
+		http.Error(w, "Invalid Port: must be a number", 400)
+		return
+	}
+
+	if portNum < 1 || portNum > 65535 {
+		http.Error(w, fmt.Sprintf("Invalid Port: %d is out of valid range (1-65535)", portNum), 400)
 		return
 	}
 
@@ -2068,10 +2141,14 @@ func modifyEndpoint(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		re := regexp.MustCompile("^([0-9]+)$")
-
-		if endpoint.Port != "0-65535" && endpoint.Port != "any" && (endpoint.Port == "" || !re.MatchString(endpoint.Port)) {
-			http.Error(w, "Invalid Port", 400)
+		// Validate port (endpoints support single ports and special values)
+		if endpoint.Port != "" {
+			if valid, err := validatePort(endpoint.Port); !valid {
+				http.Error(w, fmt.Sprintf("Invalid Port: %v", err), 400)
+				return
+			}
+		} else {
+			http.Error(w, "Port cannot be empty", 400)
 			return
 		}
 
@@ -2378,23 +2455,18 @@ func isForwardBlockInstalled(br ForwardingBlockRule) bool {
 }
 
 func addForwardBlock(br ForwardingBlockRule) error {
-	key := br.SrcIP + "." + br.DstIP + "." + br.Protocol + "." + br.DstPort
-	err := AddElementToMap("inet", "filter", blockVmapName, key, blockVerdict)
-
+	err := AddForwardingBlockRule(br.SrcIP, br.DstIP, br.Protocol, br.DstPort)
 	if err != nil {
-		log.Println("failed to add element", err)
+		log.Println("failed to add forwarding block rule", err)
 	}
 	return err
 }
 
 func deleteForwardBlock(br ForwardingBlockRule) error {
-	key := br.SrcIP + "." + br.DstIP + "." + br.Protocol + "." + br.DstPort + ":" + blockVerdict
-	err := DeleteElementFromMap("inet", "filter", blockVmapName, key)
-
+	err := DeleteForwardingBlockRule(br.SrcIP, br.DstIP, br.Protocol, br.DstPort)
 	if err != nil {
-		log.Println("failed to delete element", err)
+		log.Println("failed to delete forwarding block rule", err)
 	}
-
 	return err
 }
 
