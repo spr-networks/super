@@ -1825,8 +1825,7 @@ func getNFTVerdictMap(map_name string) []verdictEntry {
 	existing := []verdictEntry{}
 
 	//nft -j list map inet filter name
-	cmd := exec.Command("nft", "-j", "list", "map", "inet", "filter", map_name)
-	stdout, err := cmd.Output()
+	stdout, err := ListMapJSON("inet", "filter", map_name)
 	if err != nil {
 		return existing
 	}
@@ -1878,8 +1877,7 @@ type dnsVerdictEntry struct {
 func getCustomDNSVerdictMap() []dnsVerdictEntry {
 	existing := []dnsVerdictEntry{}
 
-	cmd := exec.Command("nft", "-j", "list", "map", "inet", "nat", "custom_dns_devices")
-	stdout, err := cmd.Output()
+	stdout, err := ListMapJSON("inet", "nat", "custom_dns_devices")
 	if err != nil {
 		return existing
 	}
