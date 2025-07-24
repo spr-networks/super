@@ -1615,6 +1615,12 @@ func applyContainerInterfaces() {
 		if err != nil {
 			log.Println("failed to populate "+dockerif+" "+dockernet+" on fwd_iface_lan", err)
 		}
+		
+		// Also add docker to dns_access to match what base container does
+		err = AddElementToMapComplex("inet", "filter", "dns_access", []string{dockernet, dockerif}, "accept")
+		if err != nil {
+			log.Println("failed to populate "+dockerif+" "+dockernet+" on dns_access", err)
+		}
 	}
 
 	for _, container_rule := range gFirewallConfig.CustomInterfaceRules {
