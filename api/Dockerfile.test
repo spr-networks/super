@@ -35,6 +35,8 @@ ENV TEST_PREFIX="/test"
 ENV LANIF="eth0"
 ENV WANIF="eth1"
 ENV LANIP="10.10.10.1"
+ENV DOCKERIF="docker0"
+ENV DOCKERNET="172.17.0.0/16"
 
 # Create required directories
 RUN mkdir -p /test/configs/base /test/state/api /test/configs/interfaces /test/configs/wifi /test/configs/devices /test/state/public/
