@@ -657,41 +657,41 @@ func getVLANInterfaces(parent string) ([]net.Interface, error) {
 }
 
 func addApiInterface(iface string) {
-	exec.Command("nft", "add", "element", "inet", "filter", "api_interfaces", "{", iface, "}").Run()
+	AddInterfaceToSet("api_interfaces", iface)
 }
 
 func deleteApiInterface(iface string) {
-	exec.Command("nft", "add", "element", "inet", "filter", "api_interfaces", "{", iface, "}").Run()
+	DeleteInterfaceFromSet("api_interfaces", iface)
 }
 
 func addSetupInterface(iface string) {
-	exec.Command("nft", "add", "element", "inet", "filter", "setup_interfaces", "{", iface, "}").Run()
+	AddInterfaceToSet("setup_interfaces", iface)
 }
 
 func deleteSetupInterface(iface string) {
-	exec.Command("nft", "delete", "element", "inet", "filter", "setup_interfaces", "{", iface, "}").Run()
+	DeleteInterfaceFromSet("setup_interfaces", iface)
 }
 
 func addSetupDHCPInterface(iface string) {
-	exec.Command("nft", "add", "element", "inet", "filter", "setup_interfaces_dhcp", "{", iface, "}").Run()
+	AddInterfaceToSet("setup_interfaces_dhcp", iface)
 }
 
 func deleteSetupDHCPInterface(iface string) {
-	exec.Command("nft", "delete", "element", "inet", "filter", "setup_interfaces_dhcp", "{", iface, "}").Run()
+	DeleteInterfaceFromSet("setup_interfaces_dhcp", iface)
 }
 
 func addLanInterface(iface string) {
-	exec.Command("nft", "add", "element", "inet", "filter", "lan_interfaces", "{", iface, "}").Run()
-	exec.Command("nft", "add", "element", "inet", "nat", "lan_interfaces", "{", iface, "}").Run()
+	AddInterfaceToSetWithTable("inet", "filter", "lan_interfaces", iface)
+	AddInterfaceToSetWithTable("inet", "nat", "lan_interfaces", iface)
 }
 
 func addWiredLanInterface(iface string) {
-	exec.Command("nft", "add", "element", "inet", "filter", "wired_lan_interfaces", "{", iface, "}").Run()
+	AddInterfaceToSet("wired_lan_interfaces", iface)
 }
 
 func deleteLanInterface(iface string) {
-	exec.Command("nft", "delete", "element", "inet", "filter", "lan_interfaces", "{", iface, "}").Run()
-	exec.Command("nft", "delete", "element", "inet", "nat", "lan_interfaces", "{", iface, "}").Run()
+	DeleteInterfaceFromSetWithTable("inet", "filter", "lan_interfaces", iface)
+	DeleteInterfaceFromSetWithTable("inet", "nat", "lan_interfaces", iface)
 }
 
 func doRefreshVlanTrunk(iface string, enable bool, devices map[string]DeviceEntry) {
@@ -745,7 +745,7 @@ func doRefreshVlanTrunk(iface string, enable bool, devices map[string]DeviceEntr
 
 			addLanInterface(vlanIface)
 			// add vlan to dhcp_access
-			exec.Command("nft", "add", "element", "inet", "filter", "dhcp_access", "{", vlanIface, ".", dev.MAC, ":", "accept", "}").Run()
+			AddElementToMapComplex("inet", "filter", "dhcp_access", []string{vlanIface, dev.MAC}, "accept")
 		}
 	}
 }
@@ -916,7 +916,7 @@ func refreshDownlinksLocked() {
 	interfaces := loadInterfacesConfigLocked()
 
 	//empty the wired lan interfaces list
-	exec.Command("nft", "flush", "set", "inet", "filter", "wired_lan_interfaces").Run()
+	FlushSetWithTable("inet", "filter", "wired_lan_interfaces")
 
 	// and repopulate it
 	lanif := os.Getenv("LANIF")

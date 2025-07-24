@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
-	"os/exec"
 	"sync"
 	"time"
 )
@@ -122,8 +121,7 @@ func parseIPTrafficElements(elements []interface{}) []IPTrafficElement {
 }
 
 func getDeviceTrafficSet(setName string) []TrafficElement {
-	cmd := exec.Command("nft", "-j", "list", "set", "ip", "accounting", setName)
-	stdout, err := cmd.Output()
+	stdout, err := ListSetJSON("ip", "accounting", setName)
 
 	if err != nil {
 		fmt.Println("getDeviceTrafficSet failed to list ip accounting", setName, "->", err)
@@ -173,8 +171,7 @@ func getDeviceTraffic(w http.ResponseWriter, r *http.Request) {
 
 func getIPTrafficSet() []IPTrafficElement {
 	setName := "all_ip"
-	cmd := exec.Command("nft", "-j", "list", "set", "ip", "accounting", setName)
-	stdout, err := cmd.Output()
+	stdout, err := ListSetJSON("ip", "accounting", setName)
 
 	if err != nil {
 		fmt.Println("getIPTrafficSet failed to list ip accounting", setName, err)
