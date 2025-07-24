@@ -534,8 +534,8 @@ func TestPortValidationInAPI(t *testing.T) {
 			endpoint: "/firewall/service_ports",
 			method:   http.MethodPut,
 			body: ServicePort{
-				Protocol: "tcp",
-				Port:     "70000",
+				Protocol:        "tcp",
+				Port:            "70000",
 				UpstreamEnabled: false,
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -546,8 +546,8 @@ func TestPortValidationInAPI(t *testing.T) {
 			endpoint: "/firewall/service_ports",
 			method:   http.MethodPut,
 			body: ServicePort{
-				Protocol: "tcp",
-				Port:     "0",
+				Protocol:        "tcp",
+				Port:            "0",
 				UpstreamEnabled: false,
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -1742,5 +1742,263 @@ func TestConcurrentFirewallOperations(t *testing.T) {
 
 	if len(gFirewallConfig.BlockRules) != 10 {
 		t.Errorf("Expected 10 block rules, got %d", len(gFirewallConfig.BlockRules))
+	}
+}
+
+func TestGetNFTVerdictMapCrashScenarios(t *testing.T) {
+	// Test that getNFTVerdictMap handles edge cases without crashing
+	// This is the fix for the "index out of range [1] with length 1" panic
+
+	// Set up the test environment
+	setupFirewallTest(t)
+	defer teardownFirewallTest(t)
+
+	tests := []struct {
+		name        string
+		shouldPanic bool
+	}{
+		{
+			name:        "non_existent_map",
+			shouldPanic: false,
+		},
+		{
+			name:        "lan_access",
+			shouldPanic: false,
+		},
+		{
+			name:        "dhcp_access",
+			shouldPanic: false,
+		},
+		{
+			name:        "empty_name",
+			shouldPanic: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// We'll test with real nftables calls instead of mocking
+			// The fix in getNFTVerdictMap should handle any response gracefully
+
+			// This should not panic
+			defer func() {
+				if r := recover(); r != nil && !tt.shouldPanic {
+					t.Errorf("getNFTVerdictMap panicked unexpectedly: %v", r)
+				}
+			}()
+
+			// Test with various map names that may or may not exist
+			mapName := "test_map_" + tt.name
+			result := getNFTVerdictMap(mapName)
+			if result == nil {
+				t.Error("getNFTVerdictMap returned nil, expected empty slice")
+			}
+		})
+	}
+}
+
+func TestDHCPDevicePolicyApplication(t *testing.T) {
+	setupFirewallTest(t)
+	defer teardownFirewallTest(t)
+
+	// Initialize groups (empty for this test since we're testing device policies directly)
+	groups := []GroupEntry{}
+	saveGroupsJson(groups)
+
+	// Test device configuration
+	testMAC := "aa:bb:cc:dd:ee:ff"
+	testIP := "192.168.1.100"
+	testIface := "eth0"
+	testName := "test-device"
+
+	// Create a device with WAN and DNS policies
+	device := DeviceEntry{
+		MAC:      testMAC,
+		RecentIP: testIP,
+		Name:     testName,
+		Policies: []string{"wan", "dns"},
+		Groups:   []string{},
+	}
+
+	// Save the device
+	devices := map[string]DeviceEntry{
+		testMAC: device,
+	}
+	saveDevicesJson(devices)
+
+	// Simulate DHCP lease by calling handleDHCPResult
+	handleDHCPResult(testMAC, testIP, "192.168.1.1", testName, testIface)
+
+	// Manually trigger policy refresh (normally done by other parts of the system)
+	refreshDeviceGroupsAndPolicy(devices, groups, device)
+
+	// Allow time for async operations
+	time.Sleep(100 * time.Millisecond)
+
+	// Test 1: Verify ethernet_filter gets the MAC address added
+	t.Run("ethernet_filter_updated", func(t *testing.T) {
+		// Check if the MAC was added to ethernet_filter with return verdict
+		err := GetMACVerdictElement("inet", "filter", "ethernet_filter", testIP, testIface, testMAC, "return")
+		if err != nil {
+			t.Errorf("MAC address not found in ethernet_filter: %v", err)
+		}
+	})
+
+	// Test 2: Verify WAN policy is applied (internet_access map)
+	t.Run("wan_policy_applied", func(t *testing.T) {
+		// For WAN policy, device should be in internet_access map
+		err := GetIPIfaceVerdictElement("inet", "filter", "internet_access", testIP, testIface, "accept")
+		if err != nil {
+			t.Errorf("Device with WAN policy not found in internet_access map: %v", err)
+		}
+	})
+
+	// Test 3: Verify DNS policy is applied (dns_access map)
+	t.Run("dns_policy_applied", func(t *testing.T) {
+		// For DNS policy, device should be in dns_access map
+		err := GetIPIfaceVerdictElement("inet", "filter", "dns_access", testIP, testIface, "accept")
+		if err != nil {
+			t.Errorf("Device with DNS policy not found in dns_access map: %v", err)
+		}
+	})
+
+	// Test 4: Verify disabled device doesn't get ethernet_filter entry
+	t.Run("disabled_device_no_ethernet_filter", func(t *testing.T) {
+		disabledMAC := "11:22:33:44:55:66"
+		disabledIP := "192.168.1.101"
+		
+		// Create a disabled device
+		disabledDevice := DeviceEntry{
+			MAC:            disabledMAC,
+			RecentIP:       disabledIP,
+			Name:           "disabled-device",
+			Policies:       []string{"disabled"},
+			Groups:         []string{},
+			DeviceDisabled: true,
+		}
+
+		devices[disabledMAC] = disabledDevice
+		saveDevicesJson(devices)
+
+		// Simulate DHCP for disabled device
+		handleDHCPResult(disabledMAC, disabledIP, "192.168.1.1", "disabled-device", testIface)
+
+		// Trigger policy refresh
+		refreshDeviceGroupsAndPolicy(devices, groups, disabledDevice)
+
+		time.Sleep(100 * time.Millisecond)
+
+		// Verify it's NOT in ethernet_filter
+		err := GetMACVerdictElement("inet", "filter", "ethernet_filter", disabledIP, testIface, disabledMAC, "return")
+		if err == nil {
+			t.Error("Disabled device should not be in ethernet_filter")
+		}
+	})
+
+	// Test 5: Test device moving between interfaces
+	t.Run("device_interface_change", func(t *testing.T) {
+		newIface := "eth1"
+		
+		// Update device to new interface
+		handleDHCPResult(testMAC, testIP, "192.168.1.1", testName, newIface)
+		
+		// Reload device to get updated interface
+		updatedDevices := getDevicesJson()
+		updatedDevice := updatedDevices[testMAC]
+		
+		// Trigger policy refresh with updated device
+		refreshDeviceGroupsAndPolicy(updatedDevices, groups, updatedDevice)
+		
+		time.Sleep(100 * time.Millisecond)
+
+		// Check if ethernet_filter is updated with new interface
+		err := GetMACVerdictElement("inet", "filter", "ethernet_filter", testIP, newIface, testMAC, "return")
+		if err != nil {
+			t.Errorf("MAC address not found in ethernet_filter with new interface: %v", err)
+		}
+
+		// Old interface entry should be removed (this might need implementation verification)
+		err = GetMACVerdictElement("inet", "filter", "ethernet_filter", testIP, testIface, testMAC, "return")
+		if err == nil {
+			t.Log("Warning: Old interface entry might still exist in ethernet_filter")
+		}
+	})
+}
+
+func TestFlushVmaps(t *testing.T) {
+	setupFirewallTest(t)
+	defer teardownFirewallTest(t)
+
+	// Test that flushVmaps doesn't crash with various inputs
+	tests := []struct {
+		name      string
+		IPString  string
+		MACString string
+		iface     string
+		tags      []string
+		flush     bool
+	}{
+		{
+			name:      "Valid inputs",
+			IPString:  "192.168.1.100",
+			MACString: "aa:bb:cc:dd:ee:ff",
+			iface:     "eth0",
+			tags:      []string{"test", "device"},
+			flush:     true,
+		},
+		{
+			name:      "Empty IP",
+			IPString:  "",
+			MACString: "aa:bb:cc:dd:ee:ff",
+			iface:     "eth0",
+			tags:      []string{"test"},
+			flush:     false,
+		},
+		{
+			name:      "Empty MAC",
+			IPString:  "192.168.1.100",
+			MACString: "",
+			iface:     "eth0",
+			tags:      []string{},
+			flush:     true,
+		},
+		{
+			name:      "Empty interface",
+			IPString:  "192.168.1.100",
+			MACString: "aa:bb:cc:dd:ee:ff",
+			iface:     "",
+			tags:      []string{"test"},
+			flush:     true,
+		},
+		{
+			name:      "No tags",
+			IPString:  "192.168.1.100",
+			MACString: "aa:bb:cc:dd:ee:ff",
+			iface:     "eth0",
+			tags:      []string{},
+			flush:     true,
+		},
+		{
+			name:      "All empty",
+			IPString:  "",
+			MACString: "",
+			iface:     "",
+			tags:      []string{},
+			flush:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// This should not panic
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("flushVmaps panicked: %v", r)
+				}
+			}()
+
+			// Call flushVmaps - it should handle all edge cases gracefully
+			flushVmaps(tt.IPString, tt.MACString, tt.iface, tt.tags, tt.flush)
+		})
 	}
 }
