@@ -1872,43 +1872,89 @@ func getNFTVerdictMap(map_name string) []verdictEntry {
 	}
 
 	for _, d := range data5 {
-		e, ok := d.([]interface{})
-		if !ok || len(e) == 0 {
-			continue
+		// Handle both array format and direct map format
+		var f map[string]interface{}
+		
+		// Try direct map format first (newer format)
+		if direct_map, ok := d.(map[string]interface{}); ok {
+			f = direct_map
+		} else {
+			// Try array format (older format)
+			e, ok := d.([]interface{})
+			if !ok || len(e) == 0 {
+				continue
+			}
+
+			f_temp, ok := e[0].(map[string]interface{})
+			if !ok {
+				continue
+			}
+			f = f_temp
 		}
 
-		f, ok := e[0].(map[string]interface{})
-		if !ok {
-			continue
-		}
+		// Check if we have the expected "concat" format
+		g, concat_ok := f["concat"].([]interface{})
+		if concat_ok && len(g) > 0 {
+			// Original format with concat array
+			// Get first element
+			first, _ := g[0].(string)
 
-		g, ok := f["concat"].([]interface{})
-		if !ok || len(g) == 0 {
-			continue
-		}
-
-		// Get first element
-		first, _ := g[0].(string)
-
-		// Check for second element
-		if len(g) > 1 {
-			second, second_ok := g[1].(string)
-			if len(g) > 2 {
-				third, third_ok := g[2].(string)
-				if third_ok && second_ok {
-					existing = append(existing, verdictEntry{first, second, third})
-				}
-			} else {
-				if second_ok {
-					if map_name == "dhcp_access" {
-						// type ifname . ether_addr : verdict (no IP)
-						existing = append(existing, verdictEntry{"", first, second})
-					} else {
-						// for _dst_access
-						// type ipv4_addr . ifname : verdict (no MAC)
-						existing = append(existing, verdictEntry{first, second, ""})
+			// Check for second element
+			if len(g) > 1 {
+				second, second_ok := g[1].(string)
+				if len(g) > 2 {
+					third, third_ok := g[2].(string)
+					if third_ok && second_ok {
+						existing = append(existing, verdictEntry{first, second, third})
+					}
+				} else {
+					if second_ok {
+						if map_name == "dhcp_access" {
+							// type ifname . ether_addr : verdict (no IP)
+							entry := verdictEntry{"", first, second}
+							existing = append(existing, entry)
+						} else {
+							// for _dst_access
+							// type ipv4_addr . ifname : verdict (no MAC)
+							existing = append(existing, verdictEntry{first, second, ""})
+						}
 					}
 				}
+			}
+		} else {
+			// New format where the key is a single concatenated string
+			// The key is the first key in the map
+			for key, _ := range f {
+				if map_name == "dhcp_access" && len(key) >= 22 {
+					// dhcp_access: ifname (16 bytes) . ether_addr (8 bytes)
+					// Extract interface name (first 16 bytes, null-terminated)
+					ifname_bytes := []byte(key[:16])
+					var ifname string
+					null_idx := -1
+					for i, b := range ifname_bytes {
+						if b == 0 {
+							null_idx = i
+							break
+						}
+					}
+					if null_idx >= 0 {
+						ifname = string(ifname_bytes[:null_idx])
+					} else {
+						ifname = string(ifname_bytes)
+					}
+					
+					// Extract MAC address (next 6 bytes)
+					if len(key) >= 22 {
+						mac_bytes := []byte(key[16:22])
+						mac := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", 
+							mac_bytes[0], mac_bytes[1], mac_bytes[2], 
+							mac_bytes[3], mac_bytes[4], mac_bytes[5])
+						
+						entry := verdictEntry{"", ifname, mac}
+						existing = append(existing, entry)
+					}
+				}
+				break // Only process the first key
 			}
 		}
 	}

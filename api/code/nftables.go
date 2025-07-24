@@ -254,18 +254,19 @@ func (c *NFTClient) AddMapElement(family TableFamily, tableName, mapName string,
 		Key: key,
 	}
 
-	// For interval maps, try to prevent automatic range creation
-	// Note: This is a known issue with interval maps automatically merging adjacent elements
+	// Check if this is a verdict map first
+	isVerdictMap := set.IsMap && set.DataType.Name == "verdict"
+	
+	// For interval maps, we need to set KeyEnd = Key to prevent range merging
 	if set.Interval {
 		element.IntervalEnd = false
-		// Try setting KeyEnd to the same as Key to prevent range interpretation
 		element.KeyEnd = make([]byte, len(key))
 		copy(element.KeyEnd, key)
 	}
 
-	// Check if this is a verdict map
-	if set.IsMap && set.DataType.Name == "verdict" {
-		// For verdict maps, we need to use VerdictData instead of Val
+	if isVerdictMap {
+		// For verdict maps, always use VerdictData regardless of interval flag
+		// This avoids the netlink issues with interval verdict maps
 		verdictStr := string(value)
 
 		switch verdictStr {
@@ -669,8 +670,8 @@ func PortToBytesForConcatenated(port string) []byte {
 	if err != nil {
 		return nil
 	}
-	// Return 4 bytes for inet_service in concatenated types
-	return []byte{0, 0, byte(p >> 8), byte(p & 0xff)}
+	// Return 4 bytes for inet_service in concatenated types - big endian
+	return []byte{byte(p >> 8), byte(p & 0xff), 0, 0}
 }
 
 // ProtocolToBytes converts a protocol string to bytes
@@ -685,6 +686,25 @@ func ProtocolToBytes(protocol string) []byte {
 	default:
 		if p, err := strconv.Atoi(protocol); err == nil {
 			return []byte{byte(p)}
+		}
+		return nil
+	}
+}
+
+// ProtocolToBytesForConcatenated converts protocol to bytes with proper padding for concatenated types
+func ProtocolToBytesForConcatenated(protocol string) []byte {
+	// For concatenated types, inet_proto might need different padding
+	// Let's try 4-byte alignment like we do for ports
+	switch protocol {
+	case "tcp":
+		return []byte{6, 0, 0, 0}
+	case "udp":
+		return []byte{17, 0, 0, 0}
+	case "icmp":
+		return []byte{1, 0, 0, 0}
+	default:
+		if p, err := strconv.Atoi(protocol); err == nil {
+			return []byte{byte(p), 0, 0, 0}
 		}
 		return nil
 	}
@@ -801,30 +821,30 @@ func DeleteForwardingRule(protocol, srcIP, srcPort, dstIP, dstPort string) error
 func AddBlockRule(srcIP, dstIP, protocol string) error {
 	client := GetNFTClient()
 
-	// Build the composite key: srcIP (4 bytes) + dstIP (4 bytes) + protocol (1 byte)
+	// Build the composite key: srcIP (4 bytes) + dstIP (4 bytes) + protocol (4 bytes for concatenated)
 	srcBytes := IPToBytes(srcIP)
 	dstBytes := IPToBytes(dstIP)
-	protoBytes := ProtocolToBytes(protocol)
+	protoBytes := ProtocolToBytesForConcatenated(protocol)
 
 	if srcBytes == nil || dstBytes == nil || protoBytes == nil {
 		return fmt.Errorf("invalid IP or protocol")
 	}
 
-	key := make([]byte, 0, 9) // 4 + 4 + 1 bytes
+	key := make([]byte, 0, 12) // 4 + 4 + 4 bytes
 	key = append(key, srcBytes...)
 	key = append(key, dstBytes...)
 	key = append(key, protoBytes...)
 
 	value := []byte("drop")
 
-	return client.AddMapElement(TableFamilyInet, "filter", "block", key, value)
+	return client.AddMapElement(TableFamilyInet, "nat", "block", key, value)
 }
 
 // DeleteBlockRule removes a block rule from the block map
 func DeleteBlockRule(srcIP, dstIP, protocol string) error {
 	client := GetNFTClient()
 
-	key := append(append(IPToBytes(srcIP), IPToBytes(dstIP)...), ProtocolToBytes(protocol)...)
+	key := append(append(IPToBytes(srcIP), IPToBytes(dstIP)...), ProtocolToBytesForConcatenated(protocol)...)
 
 	return client.DeleteMapElement(TableFamilyInet, "nat", "block", key)
 }
@@ -833,7 +853,7 @@ func DeleteBlockRule(srcIP, dstIP, protocol string) error {
 func AddOutputBlockRule(srcIP, dstIP, protocol string) error {
 	client := GetNFTClient()
 
-	key := append(append(IPToBytes(srcIP), IPToBytes(dstIP)...), ProtocolToBytes(protocol)...)
+	key := append(append(IPToBytes(srcIP), IPToBytes(dstIP)...), ProtocolToBytesForConcatenated(protocol)...)
 	value := []byte("drop")
 
 	return client.AddMapElement(TableFamilyInet, "filter", "output_block", key, value)
@@ -843,7 +863,7 @@ func AddOutputBlockRule(srcIP, dstIP, protocol string) error {
 func DeleteOutputBlockRule(srcIP, dstIP, protocol string) error {
 	client := GetNFTClient()
 
-	key := append(append(IPToBytes(srcIP), IPToBytes(dstIP)...), ProtocolToBytes(protocol)...)
+	key := append(append(IPToBytes(srcIP), IPToBytes(dstIP)...), ProtocolToBytesForConcatenated(protocol)...)
 
 	return client.DeleteMapElement(TableFamilyInet, "filter", "output_block", key)
 }
@@ -852,7 +872,22 @@ func DeleteOutputBlockRule(srcIP, dstIP, protocol string) error {
 func AddForwardingBlockRule(srcIP, dstIP, protocol, dstPort string) error {
 	client := GetNFTClient()
 
-	key := append(append(append(IPToBytes(srcIP), IPToBytes(dstIP)...), ProtocolToBytes(protocol)...), PortToBytesForConcatenated(dstPort)...)
+	// Build the composite key: srcIP (4 bytes) + dstIP (4 bytes) + protocol (4 bytes) + dstPort (2 bytes for inet_service)
+	srcBytes := IPToBytes(srcIP)
+	dstBytes := IPToBytes(dstIP)
+	protoBytes := ProtocolToBytesForConcatenated(protocol)
+	portBytes := PortToBytesForConcatenated(dstPort)
+
+	if srcBytes == nil || dstBytes == nil || protoBytes == nil || portBytes == nil {
+		return fmt.Errorf("invalid IP, protocol, or port")
+	}
+
+	key := make([]byte, 0, 16) // 4 + 4 + 4 + 4 bytes
+	key = append(key, srcBytes...)
+	key = append(key, dstBytes...)
+	key = append(key, protoBytes...)
+	key = append(key, portBytes...)
+
 	value := []byte("drop")
 
 	return client.AddMapElement(TableFamilyInet, "filter", "fwd_block", key, value)
@@ -862,7 +897,21 @@ func AddForwardingBlockRule(srcIP, dstIP, protocol, dstPort string) error {
 func DeleteForwardingBlockRule(srcIP, dstIP, protocol, dstPort string) error {
 	client := GetNFTClient()
 
-	key := append(append(append(IPToBytes(srcIP), IPToBytes(dstIP)...), ProtocolToBytes(protocol)...), PortToBytesForConcatenated(dstPort)...)
+	// Build the composite key: srcIP (4 bytes) + dstIP (4 bytes) + protocol (4 bytes) + dstPort (2 bytes for inet_service)
+	srcBytes := IPToBytes(srcIP)
+	dstBytes := IPToBytes(dstIP)
+	protoBytes := ProtocolToBytesForConcatenated(protocol)
+	portBytes := PortToBytesForConcatenated(dstPort)
+
+	if srcBytes == nil || dstBytes == nil || protoBytes == nil || portBytes == nil {
+		return fmt.Errorf("invalid IP, protocol, or port")
+	}
+
+	key := make([]byte, 0, 16) // 4 + 4 + 4 + 4 bytes
+	key = append(key, srcBytes...)
+	key = append(key, dstBytes...)
+	key = append(key, protoBytes...)
+	key = append(key, portBytes...)
 
 	return client.DeleteMapElement(TableFamilyInet, "filter", "fwd_block", key)
 }
@@ -1246,6 +1295,17 @@ func buildConcatenatedKey(mapName string, keyParts []string) ([]byte, error) {
 		macBytes := MACToBytes(keyParts[2])
 		if macBytes == nil {
 			return nil, fmt.Errorf("invalid MAC address: %s", keyParts[2])
+		}
+		keyBytes = append(keyBytes, macBytes...)
+
+	} else if mapName == "dhcp_access" && len(keyParts) == 2 {
+		// Type: ifname . ether_addr
+		ifaceBytes := InterfaceToBytes(keyParts[0])
+		keyBytes = append(keyBytes, ifaceBytes...)
+
+		macBytes := MACToBytes(keyParts[1])
+		if macBytes == nil {
+			return nil, fmt.Errorf("invalid MAC address: %s", keyParts[1])
 		}
 		keyBytes = append(keyBytes, macBytes...)
 
