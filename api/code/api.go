@@ -1834,22 +1834,68 @@ func getNFTVerdictMap(map_name string) []verdictEntry {
 	var data map[string]interface{}
 	err = json.Unmarshal(stdout, &data)
 	data2, ok := data["nftables"].([]interface{})
-	if ok != true {
-		log.Fatal("invalid json")
+	if !ok {
+		log.Printf("getNFTVerdictMap: invalid json structure - missing nftables")
+		return existing
 	}
-	data3, ok := data2[1].(map[string]interface{})
+
+	// The new ListMapJSON implementation only returns the map data without metadata
+	// So we need to check for either format (old nft -j had metadata at index 0)
+	var mapIndex int
+	if len(data2) == 0 {
+		log.Printf("getNFTVerdictMap: empty nftables array")
+		return existing
+	} else if len(data2) == 1 {
+		// New format: only map data
+		mapIndex = 0
+	} else {
+		// Old format: metadata at 0, map at 1
+		mapIndex = 1
+	}
+
+	data3, ok := data2[mapIndex].(map[string]interface{})
+	if !ok {
+		log.Printf("getNFTVerdictMap: invalid structure at nftables[%d]", mapIndex)
+		return existing
+	}
+
 	data4, ok := data3["map"].(map[string]interface{})
+	if !ok {
+		log.Printf("getNFTVerdictMap: missing map in nftables[%d]", mapIndex)
+		return existing
+	}
+
 	data5, ok := data4["elem"].([]interface{})
+	if !ok {
+		// Map might be empty, which is fine
+		return existing
+	}
+
 	for _, d := range data5 {
 		e, ok := d.([]interface{})
+		if !ok || len(e) == 0 {
+			continue
+		}
+
 		f, ok := e[0].(map[string]interface{})
+		if !ok {
+			continue
+		}
+
 		g, ok := f["concat"].([]interface{})
-		if ok {
-			first, _ := g[0].(string)
+		if !ok || len(g) == 0 {
+			continue
+		}
+
+		// Get first element
+		first, _ := g[0].(string)
+
+		// Check for second element
+		if len(g) > 1 {
 			second, second_ok := g[1].(string)
 			if len(g) > 2 {
 				third, third_ok := g[2].(string)
-				if third_ok {
+				if third_ok && second_ok {
 					existing = append(existing, verdictEntry{first, second, third})
 				}
 			} else {

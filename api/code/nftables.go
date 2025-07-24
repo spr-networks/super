@@ -1,3 +1,5 @@
+//go:build linux
+
 package main
 
 import (
@@ -247,8 +249,10 @@ func (c *NFTClient) AddMapElement(family TableFamily, tableName, mapName string,
 
 	// For concatenated types, we need to ensure proper alignment
 	// The google/nftables library expects keys to match the exact size
-	if set.KeyType.Bytes > uint32(len(key)) {
-		// Pad the key to the expected size
+	fmt.Printf("AddMapElement: map=%s, KeyType.Name=%s, KeyType.Bytes=%d, actual key len=%d\n", mapName, set.KeyType.Name, set.KeyType.Bytes, len(key))
+	if set.KeyType.Bytes > uint32(len(key)) && !strings.Contains(set.KeyType.Name, ".") {
+		// Only pad for non-concatenated types
+		// Concatenated types (containing ".") should use actual byte length
 		paddedKey := make([]byte, set.KeyType.Bytes)
 		copy(paddedKey, key)
 		key = paddedKey
@@ -305,7 +309,7 @@ func (c *NFTClient) AddMapElement(family TableFamily, tableName, mapName string,
 			// This looks like a verdict string, convert it
 			value = VerdictToBytes(string(value))
 		}
-		
+
 		// Check if we need to pad the value as well
 		if set.IsMap && set.DataType.Bytes > uint32(len(value)) {
 			paddedValue := make([]byte, set.DataType.Bytes)
@@ -324,6 +328,8 @@ func (c *NFTClient) AddMapElement(family TableFamily, tableName, mapName string,
 	if err != nil {
 		return fmt.Errorf("failed to flush after adding element: %w", err)
 	}
+	
+	fmt.Printf("Successfully added element to map %s (key len: %d, verdict: %v)\n", set.Name, len(key), element.VerdictData != nil)
 	return nil
 }
 
@@ -676,7 +682,7 @@ func ProtocolToBytes(protocol string) []byte {
 
 // InterfaceToBytes converts an interface name to bytes
 func InterfaceToBytes(iface string) []byte {
-	// Pad to 16 bytes for nftables
+	// For nftables ifname type in concatenated keys, pad to 16 bytes
 	padded := make([]byte, 16)
 	copy(padded, []byte(iface))
 	return padded
@@ -688,7 +694,10 @@ func MACToBytes(mac string) []byte {
 	if err != nil {
 		return nil
 	}
-	return []byte(hw)
+	// nftables expects 8 bytes for ether_addr type (6 bytes MAC + 2 bytes padding)
+	padded := make([]byte, 8)
+	copy(padded, hw)
+	return padded
 }
 
 // VerdictToBytes converts a verdict string to bytes
@@ -1213,6 +1222,62 @@ func GetElementFromMap(family, tableName, mapName, key string) error {
 	return client.GetMapElement(f, tableName, mapName, keyBytes)
 }
 
+// buildConcatenatedKey builds a properly encoded key for concatenated map types
+func buildConcatenatedKey(mapName string, keyParts []string) ([]byte, error) {
+	var keyBytes []byte
+	
+	// Check for known concatenated map patterns
+	if mapName == "ethernet_filter" && len(keyParts) == 3 {
+		// Type: ipv4_addr . ifname . ether_addr
+		ipBytes := IPToBytes(keyParts[0])
+		if ipBytes == nil {
+			return nil, fmt.Errorf("invalid IP address: %s", keyParts[0])
+		}
+		keyBytes = append(keyBytes, ipBytes...)
+		
+		ifaceBytes := InterfaceToBytes(keyParts[1])
+		keyBytes = append(keyBytes, ifaceBytes...)
+		
+		macBytes := MACToBytes(keyParts[2])
+		if macBytes == nil {
+			return nil, fmt.Errorf("invalid MAC address: %s", keyParts[2])
+		}
+		keyBytes = append(keyBytes, macBytes...)
+		
+		fmt.Printf("buildConcatenatedKey: ethernet_filter key built - ip=%v, iface=%v, mac=%v, total=%d bytes\n", 
+			ipBytes, ifaceBytes, macBytes, len(keyBytes))
+	} else if (mapName == "internet_access" || mapName == "dns_access" || mapName == "lan_access") && len(keyParts) == 2 {
+		// Type: ipv4_addr . ifname
+		ipBytes := IPToBytes(keyParts[0])
+		if ipBytes == nil {
+			return nil, fmt.Errorf("invalid IP address: %s", keyParts[0])
+		}
+		keyBytes = append(keyBytes, ipBytes...)
+		
+		ifaceBytes := InterfaceToBytes(keyParts[1])
+		keyBytes = append(keyBytes, ifaceBytes...)
+	} else {
+		// For other maps or unknown patterns, try to intelligently parse
+		for _, part := range keyParts {
+			// Try IP first
+			if ipBytes := IPToBytes(part); ipBytes != nil {
+				keyBytes = append(keyBytes, ipBytes...)
+			} else if macBytes := MACToBytes(part); macBytes != nil {
+				// Try MAC
+				keyBytes = append(keyBytes, macBytes...)
+			} else if portNum, err := strconv.Atoi(part); err == nil && portNum <= 65535 {
+				// Try port number
+				keyBytes = append(keyBytes, PortToBytes(part)...)
+			} else {
+				// Assume interface name
+				keyBytes = append(keyBytes, InterfaceToBytes(part)...)
+			}
+		}
+	}
+	
+	return keyBytes, nil
+}
+
 // AddElementToMapComplex adds element with complex key to a map
 func AddElementToMapComplex(family, tableName, mapName string, keyParts []string, value string) error {
 	client := GetNFTClient()
@@ -1223,12 +1288,19 @@ func AddElementToMapComplex(family, tableName, mapName string, keyParts []string
 		f = TableFamilyIP
 	}
 
-	// Build composite key by concatenating parts with "."
-	key := strings.Join(keyParts, ".")
-	keyBytes := []byte(key)
+	// Build the concatenated key
+	keyBytes, err := buildConcatenatedKey(mapName, keyParts)
+	if err != nil {
+		return err
+	}
+	
 	valueBytes := []byte(value)
-
-	return client.AddMapElement(f, tableName, mapName, keyBytes, valueBytes)
+	err = client.AddMapElement(f, tableName, mapName, keyBytes, valueBytes)
+	if err != nil {
+		fmt.Printf("AddElementToMapComplex failed: %v\n", err)
+		return err
+	}
+	return nil
 }
 
 // DeleteElementFromMapComplex deletes element with complex key from a map
@@ -1241,8 +1313,12 @@ func DeleteElementFromMapComplex(family, tableName, mapName string, keyParts []s
 		f = TableFamilyIP
 	}
 
-	key := strings.Join(keyParts, ".")
-	keyBytes := []byte(key)
+	// Build the concatenated key
+	keyBytes, err := buildConcatenatedKey(mapName, keyParts)
+	if err != nil {
+		return err
+	}
+	
 	return client.DeleteMapElement(f, tableName, mapName, keyBytes)
 }
 
@@ -1256,20 +1332,35 @@ func GetElementFromMapComplex(family, tableName, mapName string, keyParts []stri
 		f = TableFamilyIP
 	}
 
-	key := strings.Join(keyParts, ".")
-	keyBytes := []byte(key)
+	// Build the concatenated key
+	keyBytes, err := buildConcatenatedKey(mapName, keyParts)
+	if err != nil {
+		return err
+	}
+	
 	return client.GetMapElement(f, tableName, mapName, keyBytes)
 }
 
 // AddMACVerdictElement adds an element with IP.Interface.MAC:Verdict format
 func AddMACVerdictElement(family, tableName, mapName, ip, iface, mac, verdict string) error {
+	fmt.Printf("AddMACVerdictElement: map=%s, ip=%s, iface=%s, mac=%s, verdict=%s\n", mapName, ip, iface, mac, verdict)
 	return AddElementToMapComplex(family, tableName, mapName, []string{ip, iface, mac}, verdict)
 }
 
 // GetMACVerdictElement checks if element with IP.Interface.MAC:Verdict format exists
 func GetMACVerdictElement(family, tableName, mapName, ip, iface, mac, verdict string) error {
-	key := ip + "." + iface + "." + mac + ":" + verdict
-	return GetElementFromMap(family, tableName, mapName, key)
+	return GetElementFromMapComplex(family, tableName, mapName, []string{ip, iface, mac})
+}
+
+// AddIPIfaceVerdictElement adds an element with IP.Interface:Verdict format
+func AddIPIfaceVerdictElement(family, tableName, mapName, ip, iface, verdict string) error {
+	fmt.Printf("AddIPIfaceVerdictElement: map=%s, ip=%s, iface=%s, verdict=%s\n", mapName, ip, iface, verdict)
+	return AddElementToMapComplex(family, tableName, mapName, []string{ip, iface}, verdict)
+}
+
+// GetIPIfaceVerdictElement checks if element with IP.Interface:Verdict format exists
+func GetIPIfaceVerdictElement(family, tableName, mapName, ip, iface, verdict string) error {
+	return GetElementFromMapComplex(family, tableName, mapName, []string{ip, iface})
 }
 
 // CheckMapExists checks if a map exists (replacement for nft list map)
