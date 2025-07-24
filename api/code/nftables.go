@@ -1477,6 +1477,38 @@ func InsertRuleToChain(family, tableName, chainName, rule string) error {
 	return nil
 }
 
+// AddIPToSet adds an IP address to a set
+func AddIPToSet(family, tableName, setName, ip string) error {
+	client := GetNFTClient()
+	var f TableFamily
+	switch family {
+	case "inet":
+		f = TableFamilyInet
+	case "ip":
+		f = TableFamilyIP
+	default:
+		return fmt.Errorf("unsupported family: %s", family)
+	}
+	
+	return client.AddSetElement(f, tableName, setName, IPToBytes(ip))
+}
+
+// DeleteIPFromSet deletes an IP address from a set
+func DeleteIPFromSet(family, tableName, setName, ip string) error {
+	client := GetNFTClient()
+	var f TableFamily
+	switch family {
+	case "inet":
+		f = TableFamilyInet
+	case "ip":
+		f = TableFamilyIP
+	default:
+		return fmt.Errorf("unsupported family: %s", family)
+	}
+	
+	return client.DeleteSetElement(f, tableName, setName, IPToBytes(ip))
+}
+
 // CheckChainExists checks if a chain exists
 func CheckChainExists(family, tableName, chainName string) error {
 	// Note: google/nftables doesn't have a direct way to check chain existence

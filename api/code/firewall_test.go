@@ -85,7 +85,50 @@ func setupFirewallTest(t *testing.T) {
 }
 
 func teardownFirewallTest(t *testing.T) {
+	// Clear firewall configuration
+	FWmtx.Lock()
+	gFirewallConfig = FirewallConfig{[]ForwardingRule{}, []BlockRule{}, []OutputBlockRule{},
+		[]ForwardingBlockRule{}, []CustomInterfaceRule{}, []ServicePort{},
+		[]Endpoint{}, []MulticastPort{}, false, false, ""}
+	FWmtx.Unlock()
 
+	// Clear devices and groups
+	Devicesmtx.Lock()
+	devices := map[string]DeviceEntry{}
+	saveDevicesJson(devices)
+	Devicesmtx.Unlock()
+
+	Groupsmtx.Lock()
+	groups := []GroupEntry{}
+	saveGroupsJson(groups)
+	Groupsmtx.Unlock()
+
+	// Flush nftables maps that tests may have populated
+	maps := []string{
+		"ethernet_filter",
+		"internet_access", 
+		"dns_access",
+		"lan_access",
+		"dhcp_access",
+		"fwd_block",
+		"output_block",
+		"block",
+		"lan_tcp_accept",
+		"lan_udp_accept",
+		"wan_tcp_accept",
+		"wan_udp_accept",
+		"multicast_lan_udp_accept",
+		"multicast_wan_udp_accept",
+		"tcpfwd",
+		"udpfwd",
+		"tcpanyfwd",
+		"udpanyfwd",
+	}
+	
+	for _, mapName := range maps {
+		_ = FlushMapByName("inet", "filter", mapName)
+		_ = FlushMapByName("inet", "nat", mapName)
+	}
 }
 
 func checkNFTRuleExists(t *testing.T, rule string) bool {
@@ -2059,4 +2102,99 @@ func TestFlushVmaps(t *testing.T) {
 			flushVmaps(tt.IPString, tt.MACString, tt.iface, tt.tags, tt.flush)
 		})
 	}
+}
+
+func TestDockerDNSAccessPreservation(t *testing.T) {
+	setupFirewallTest(t)
+	defer teardownFirewallTest(t)
+
+	t.Run("Docker DNS access should be preserved", func(t *testing.T) {
+		// Get Docker interface and network from environment
+		dockerIf := os.Getenv("DOCKERIF")
+		dockerNet := os.Getenv("DOCKERNET")
+		
+		if dockerIf == "" || dockerNet == "" {
+			t.Skip("DOCKERIF or DOCKERNET not set")
+		}
+		
+		// First, manually add Docker to dns_access (simulating what base does)
+		err := AddIPIfaceVerdictElement("inet", "filter", "dns_access", dockerNet, dockerIf, "accept")
+		if err != nil {
+			t.Fatalf("Failed to add Docker to dns_access: %v", err)
+		}
+		
+		// Verify it was added
+		err = GetIPIfaceVerdictElement("inet", "filter", "dns_access", dockerNet, dockerIf, "accept")
+		if err != nil {
+			t.Fatalf("Docker not found in dns_access after adding: %v", err)
+		}
+		
+		// Now simulate API startup by calling initFirewallRules
+		initFirewallRules()
+		
+		// Check if Docker is still in dns_access
+		err = GetIPIfaceVerdictElement("inet", "filter", "dns_access", dockerNet, dockerIf, "accept")
+		if err != nil {
+			t.Errorf("Docker was removed from dns_access during initFirewallRules: %v", err)
+		}
+		
+		// Also check by listing the map
+		output, err := exec.Command("nft", "list", "map", "inet", "filter", "dns_access").Output()
+		if err != nil {
+			t.Logf("Failed to list dns_access map: %v", err)
+		} else {
+			outputStr := string(output)
+			t.Logf("dns_access contents after init:\n%s", outputStr)
+			if !strings.Contains(outputStr, dockerIf) || !strings.Contains(outputStr, dockerNet) {
+				t.Errorf("Docker entry not found in dns_access map output")
+			}
+		}
+	})
+}
+
+func TestSupernetworkOperations(t *testing.T) {
+	setupFirewallTest(t)
+	defer teardownFirewallTest(t)
+
+	t.Run("Add supernetwork entries", func(t *testing.T) {
+		// Test adding supernetwork entries
+		supernet := "10.0.0.0/8"
+		addSupernetworkEntry(supernet)
+		
+		// Note: We can't easily verify the actual nftables entries without proper mocking
+		// This test ensures the functions don't crash
+	})
+
+	t.Run("Update firewall subnets", func(t *testing.T) {
+		// Test updating firewall subnets
+		dnsIP := "10.10.10.1"
+		tinyNets := []string{"10.10.10.0/24", "192.168.1.0/24"}
+		
+		updateFirewallSubnets(dnsIP, tinyNets)
+		
+		// Note: We can't easily verify the actual nftables entries without proper mocking
+		// This test ensures the functions don't crash
+	})
+
+	t.Run("Flush supernetwork entries", func(t *testing.T) {
+		// Test flushing supernetwork entries
+		flushSupernetworkEntries()
+		
+		// Note: We can't easily verify the actual nftables entries without proper mocking
+		// This test ensures the functions don't crash
+	})
+
+	t.Run("Modify supernetwork entry", func(t *testing.T) {
+		// Test the modifySupernetworkEntry function which uses set operations
+		supernet := "172.16.0.0/12"
+		
+		// Test adding
+		modifySupernetworkEntry(supernet, "add")
+		
+		// Test deleting
+		modifySupernetworkEntry(supernet, "delete")
+		
+		// Test invalid action (should be handled gracefully)
+		modifySupernetworkEntry(supernet, "invalid")
+	})
 }

@@ -704,32 +704,32 @@ func modifySupernetworkEntry(supernet, action string) {
 	var err error
 
 	if action == "add" {
-		err = AddElementToMap("inet", "mangle", "supernetworks", supernet, "")
+		err = AddIPToSet("inet", "mangle", "supernetworks", supernet)
 		if err != nil {
 			log.Println("failed to add mangle supernetworks element", err)
 		}
 
-		err = AddElementToMap("inet", "filter", "supernetworks", supernet, "")
+		err = AddIPToSet("inet", "filter", "supernetworks", supernet)
 		if err != nil {
 			log.Println("failed to add filter supernetworks element", err)
 		}
 
-		err = AddElementToMap("ip", "accounting", "local_lan", supernet, "")
+		err = AddIPToSet("ip", "accounting", "local_lan", supernet)
 		if err != nil {
 			log.Println("failed to add ip accounting local_lan element", err)
 		}
 	} else if action == "delete" {
-		err = DeleteElementFromMap("inet", "mangle", "supernetworks", supernet)
+		err = DeleteIPFromSet("inet", "mangle", "supernetworks", supernet)
 		if err != nil {
 			log.Println("failed to delete mangle supernetworks element", err)
 		}
 
-		err = DeleteElementFromMap("inet", "filter", "supernetworks", supernet)
+		err = DeleteIPFromSet("inet", "filter", "supernetworks", supernet)
 		if err != nil {
 			log.Println("failed to delete filter supernetworks element", err)
 		}
 
-		err = DeleteElementFromMap("ip", "accounting", "local_lan", supernet)
+		err = DeleteIPFromSet("ip", "accounting", "local_lan", supernet)
 		if err != nil {
 			log.Println("failed to delete ip accounting local_lan element", err)
 		}
