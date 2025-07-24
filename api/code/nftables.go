@@ -666,8 +666,24 @@ func PortToBytes(port string) []byte {
 
 // PortToBytesForConcatenated returns 4 bytes for concatenated maps
 func PortToBytesForConcatenated(port string) []byte {
+	// Handle port ranges like "5000-6000" 
+	if strings.Contains(port, "-") {
+		parts := strings.Split(port, "-")
+		if len(parts) == 2 {
+			startPort, err1 := strconv.Atoi(parts[0])
+			endPort, err2 := strconv.Atoi(parts[1])
+			if err1 == nil && err2 == nil && startPort <= endPort && startPort > 0 && endPort <= 65535 {
+				// For interval maps, we use the start port for the key
+				// The nftables library will handle the range internally
+				return []byte{byte(startPort >> 8), byte(startPort & 0xff), 0, 0}
+			}
+		}
+		return nil
+	}
+	
+	// Handle single port
 	p, err := strconv.Atoi(port)
-	if err != nil {
+	if err != nil || p <= 0 || p > 65535 {
 		return nil
 	}
 	// Return 4 bytes for inet_service in concatenated types - big endian
