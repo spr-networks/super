@@ -348,10 +348,10 @@ func updateDNSCorefileMulti(dns DNSSettings) {
 		captivePortalForward = append(captivePortalForward, "    max_concurrent 1000")
 		captivePortalForward = append(captivePortalForward, "  }")
 
-		// Find where to insert (right after the . { line, inside the main block)
+		// Find where to insert (right after the . { or .:53 { line, inside the main block)
 		insertIdx := -1
 		for i, line := range updatedLines {
-			if strings.Contains(line, ".:53 {") {
+			if strings.Contains(line, ". {") || strings.Contains(line, ".:53 {") {
 				insertIdx = i + 1
 				break
 			}
