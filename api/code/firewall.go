@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"golang.org/x/sys/unix"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -21,7 +20,6 @@ import (
 
 import (
 	"github.com/gorilla/mux"
-	"github.com/vishvananda/netlink"
 )
 
 var FWmtx sync.Mutex
@@ -358,16 +356,7 @@ func migrateFirewallGroupsToPolicies() {
 	}
 }
 
-func isLinkReallyUpNetlink(interfaceName string) bool {
-	link, err := netlink.LinkByName(interfaceName)
-	if err != nil {
-		log.Printf("Failed to get link %s: %v", interfaceName, err)
-		return false
-	}
-
-	attrs := link.Attrs()
-	return (attrs.Flags&net.FlagUp != 0) && (attrs.RawFlags&unix.IFF_RUNNING != 0)
-}
+// Platform-specific implementation in linux.go and darwin.go
 
 // getDefaultGatewayForSubnet returns the first possible host IP for a given subnet
 func getDefaultGatewayForSubnet(subnet string) string {
@@ -2715,51 +2704,7 @@ type RouteEntry struct {
 	Gateway string `json:"gateway"`
 }
 
-func getRouteInterface(IP string) string {
-	routes := []RouteEntry{}
-
-	cmd := exec.Command("ip", "-j", "route", "get", IP)
-	output, err := cmd.Output()
-
-	if err != nil {
-		return ""
-	}
-
-	err = json.Unmarshal(output, &routes)
-	if err != nil {
-		log.Println(err)
-		return ""
-	}
-
-	if len(routes) == 1 {
-		return routes[0].Dev
-	}
-
-	return ""
-}
-
-func getRouteGatewayForTable(Table string) string {
-	routes := []RouteEntry{}
-
-	cmd := exec.Command("ip", "-j", "route", "show", "table", Table)
-	output, err := cmd.Output()
-
-	if err != nil {
-		return ""
-	}
-
-	err = json.Unmarshal(output, &routes)
-	if err != nil {
-		log.Println(err)
-		return ""
-	}
-
-	if len(routes) == 1 {
-		return routes[0].Gateway
-	}
-
-	return ""
-}
+// Platform-specific implementations are in route_linux.go and route_darwin.go
 
 func populateVmapEntries(devices map[string]DeviceEntry, groups []GroupEntry, IP, MAC, Iface, WGPubKey, DNSCustom string) {
 

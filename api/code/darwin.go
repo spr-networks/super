@@ -287,3 +287,43 @@ func AddChain(family, tableName, chainName string) error {
 func DeleteChain(family, tableName, chainName string) error {
 	return fmt.Errorf("nftables not supported on macOS")
 }
+
+// IP set operations
+func AddIPToSet(family, tableName, setName, ip string) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
+func DeleteIPFromSet(family, tableName, setName, ip string) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
+func AddCIDRToSet(family, tableName, setName, cidr string) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
+// Route operations
+func getRouteInterface(IP string) string {
+	// Stub implementation for macOS
+	return ""
+}
+
+func getRouteGatewayForTable(Table string) string {
+	// Stub implementation for macOS
+	return ""
+}
+
+// CIDR operations
+func AddIPIfaceCIDRVerdictElement(family, tableName, mapName, cidr, iface, verdict string) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
+// Verdict element operations
+func DeleteMACVerdictElement(family, tableName, mapName, ip, iface, mac, verdict string) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
+// Network interface checking
+func isLinkReallyUpNetlink(interfaceName string) bool {
+	// Stub implementation for macOS
+	return false
+}
