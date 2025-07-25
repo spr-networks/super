@@ -49,13 +49,15 @@ type InterfaceConfig struct {
 
 // this will be exported to all containers in public/interfaces.json
 type PublicInterfaceConfig struct {
-	Name         string
-	Type         string
-	Subtype      string
-	Enabled      bool
-	MACOverride  string `json:",omitempty"`
-	MACRandomize bool   `json:",omitempty"`
-	MACCloak     bool   `json:",omitempty"`
+	Name                     string
+	Type                     string
+	Subtype                  string
+	Enabled                  bool
+	MACOverride              string   `json:",omitempty"`
+	MACRandomize             bool     `json:",omitempty"`
+	MACCloak                 bool     `json:",omitempty"`
+	CaptivePortalPassthrough bool     `json:",omitempty"`
+	CaptivePortalDomains     []string `json:",omitempty"`
 }
 
 func isValidMAC(MAC string) bool {
@@ -368,6 +370,108 @@ func updateInterfaceType(Iface string, Type string, Subtype string, Enabled bool
 		return interfaces, err
 	}
 	return interfaces, nil
+}
+
+// isValidDomain validates a domain name to prevent injection attacks
+func isValidDomain(domain string) bool {
+	// Check for empty domain
+	if domain == "" {
+		return false
+	}
+
+	// Check for newlines, carriage returns, or other control characters
+	for _, r := range domain {
+		if r < 32 || r == 127 {
+			return false
+		}
+	}
+
+	// Basic domain validation regex
+	// Allows subdomains, hyphens, and international domains
+	domainRegex := regexp.MustCompile(`^([a-zA-Z0-9][a-zA-Z0-9-]*\.)*[a-zA-Z0-9][a-zA-Z0-9-]*\.[a-zA-Z]{2,}$`)
+	if !domainRegex.MatchString(domain) {
+		return false
+	}
+
+	// Check domain length (max 253 characters)
+	if len(domain) > 253 {
+		return false
+	}
+
+	// Check each label length (max 63 characters)
+	labels := strings.Split(domain, ".")
+	for _, label := range labels {
+		if len(label) > 63 || len(label) == 0 {
+			return false
+		}
+	}
+
+	return true
+}
+
+func updateInterfaceCaptivePortal(Iface string, CaptivePortalPassthrough bool, CaptivePortalDomains []string) error {
+	if !isValidIface(Iface) {
+		return fmt.Errorf("Invalid iface name " + Iface)
+	}
+
+	// Validate all domains
+	validatedDomains := []string{}
+	for _, domain := range CaptivePortalDomains {
+		domain = strings.TrimSpace(domain)
+		if domain == "" {
+			continue
+		}
+		if !isValidDomain(domain) {
+			return fmt.Errorf("Invalid domain: %s", domain)
+		}
+		validatedDomains = append(validatedDomains, domain)
+	}
+
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+	interfaces := loadInterfacesConfigLocked()
+
+	found := false
+	changed := false
+	for i, iface := range interfaces {
+		if iface.Name == Iface {
+			found = true
+			if interfaces[i].CaptivePortalPassthrough != CaptivePortalPassthrough ||
+				len(interfaces[i].CaptivePortalDomains) != len(validatedDomains) {
+				changed = true
+			} else {
+				// Check if domains are different
+				for j, domain := range interfaces[i].CaptivePortalDomains {
+					if j >= len(validatedDomains) || domain != validatedDomains[j] {
+						changed = true
+						break
+					}
+				}
+			}
+			interfaces[i].CaptivePortalPassthrough = CaptivePortalPassthrough
+			interfaces[i].CaptivePortalDomains = validatedDomains
+			break
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("Interface not found: " + Iface)
+	}
+
+	err := writeInterfacesConfigLocked(interfaces)
+	if err != nil {
+		return err
+	}
+
+	// Restart DNS if captive portal settings changed
+	if changed {
+		// Need to regenerate DNS config with new captive portal settings
+		dns := parseDNSCorefile()
+		updateDNSCorefileMulti(dns)
+		callSuperdRestart("", "dns")
+	}
+
+	return nil
 }
 
 func updateInterfaceIP(iconfig InterfaceConfig) error {
@@ -905,6 +1009,20 @@ func updateLinkConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate captive portal domains
+	validatedDomains := []string{}
+	for _, domain := range iconfig.CaptivePortalDomains {
+		domain = strings.TrimSpace(domain)
+		if domain == "" {
+			continue
+		}
+		if !isValidDomain(domain) {
+			http.Error(w, fmt.Sprintf("Invalid domain: %s", domain), 400)
+			return
+		}
+		validatedDomains = append(validatedDomains, domain)
+	}
+
 	i := InterfaceConfig{}
 	i.Name = iconfig.Name
 	i.Type = iconfig.Type
@@ -912,6 +1030,8 @@ func updateLinkConfig(w http.ResponseWriter, r *http.Request) {
 	i.MACRandomize = iconfig.MACRandomize
 	i.MACCloak = iconfig.MACCloak
 	i.MACOverride = iconfig.MACOverride
+	i.CaptivePortalPassthrough = iconfig.CaptivePortalPassthrough
+	i.CaptivePortalDomains = validatedDomains
 
 	err = updateInterfaceConfig(i)
 	if err != nil {
