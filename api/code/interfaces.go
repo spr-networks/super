@@ -409,71 +409,6 @@ func isValidDomain(domain string) bool {
 	return true
 }
 
-func updateInterfaceCaptivePortal(Iface string, CaptivePortalPassthrough bool, CaptivePortalDomains []string) error {
-	if !isValidIface(Iface) {
-		return fmt.Errorf("Invalid iface name " + Iface)
-	}
-
-	// Validate all domains
-	validatedDomains := []string{}
-	for _, domain := range CaptivePortalDomains {
-		domain = strings.TrimSpace(domain)
-		if domain == "" {
-			continue
-		}
-		if !isValidDomain(domain) {
-			return fmt.Errorf("Invalid domain: %s", domain)
-		}
-		validatedDomains = append(validatedDomains, domain)
-	}
-
-	Interfacesmtx.Lock()
-	defer Interfacesmtx.Unlock()
-	interfaces := loadInterfacesConfigLocked()
-
-	found := false
-	changed := false
-	for i, iface := range interfaces {
-		if iface.Name == Iface {
-			found = true
-			if interfaces[i].CaptivePortalPassthrough != CaptivePortalPassthrough ||
-				len(interfaces[i].CaptivePortalDomains) != len(validatedDomains) {
-				changed = true
-			} else {
-				// Check if domains are different
-				for j, domain := range interfaces[i].CaptivePortalDomains {
-					if j >= len(validatedDomains) || domain != validatedDomains[j] {
-						changed = true
-						break
-					}
-				}
-			}
-			interfaces[i].CaptivePortalPassthrough = CaptivePortalPassthrough
-			interfaces[i].CaptivePortalDomains = validatedDomains
-			break
-		}
-	}
-
-	if !found {
-		return fmt.Errorf("Interface not found: " + Iface)
-	}
-
-	err := writeInterfacesConfigLocked(interfaces)
-	if err != nil {
-		return err
-	}
-
-	// Restart DNS if captive portal settings changed
-	if changed {
-		// Need to regenerate DNS config with new captive portal settings
-		dns := parseDNSCorefile()
-		updateDNSCorefileMulti(dns)
-		callSuperdRestart("", "dns")
-	}
-
-	return nil
-}
-
 func updateInterfaceIP(iconfig InterfaceConfig) error {
 	//assumes iconfig has been sanitized
 	Interfacesmtx.Lock()
@@ -552,11 +487,25 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 	for i, iface := range interfaces {
 		if iface.Name == iconfig.Name {
 			found = true
+			domainsChanged := false
+			if len(interfaces[i].CaptivePortalDomains) != len(iconfig.CaptivePortalDomains) {
+				domainsChanged = true
+			} else {
+				for j, domain := range interfaces[i].CaptivePortalDomains {
+					if j >= len(iconfig.CaptivePortalDomains) || domain != iconfig.CaptivePortalDomains[j] {
+						domainsChanged = true
+						break
+					}
+				}
+			}
+
 			if interfaces[i].Enabled != iconfig.Enabled ||
 				interfaces[i].Type != iconfig.Type ||
 				interfaces[i].MACRandomize != iconfig.MACRandomize ||
 				interfaces[i].MACCloak != iconfig.MACCloak ||
-				interfaces[i].MACOverride != iconfig.MACOverride {
+				interfaces[i].MACOverride != iconfig.MACOverride ||
+				interfaces[i].CaptivePortalPassthrough != iconfig.CaptivePortalPassthrough ||
+				domainsChanged {
 				prev_type = interfaces[i].Type
 				prev_subtype = interfaces[i].Subtype
 				prev_enabled = interfaces[i].Enabled
@@ -569,6 +518,8 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 				interfaces[i].MACOverride = iconfig.MACOverride
 				interfaces[i].MACRandomize = iconfig.MACRandomize
 				interfaces[i].MACCloak = iconfig.MACCloak
+				interfaces[i].CaptivePortalPassthrough = iconfig.CaptivePortalPassthrough
+				interfaces[i].CaptivePortalDomains = iconfig.CaptivePortalDomains
 			}
 			break
 		}
@@ -598,6 +549,19 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 		}
 
 		refreshDownlinksLocked()
+
+		// If captive portal settings changed and it's an uplink, restart DNS
+		if iconfig.Type == "Uplink" && (iconfig.CaptivePortalPassthrough || len(iconfig.CaptivePortalDomains) > 0) {
+			go func() {
+				// Need to regenerate DNS config with new captive portal settings
+				Configmtx.Lock()
+				dns := parseDNSCorefile()
+				updateDNSCorefileMulti(dns)
+				Configmtx.Unlock()
+				callSuperdRestart("", "dns")
+			}()
+		}
+
 		return err
 	}
 
@@ -1011,16 +975,22 @@ func updateLinkConfig(w http.ResponseWriter, r *http.Request) {
 
 	// Validate captive portal domains
 	validatedDomains := []string{}
-	for _, domain := range iconfig.CaptivePortalDomains {
-		domain = strings.TrimSpace(domain)
-		if domain == "" {
-			continue
+	for _, domainEntry := range iconfig.CaptivePortalDomains {
+		// Split by spaces, commas, and newlines in case a single entry contains multiple domains
+		domains := strings.FieldsFunc(domainEntry, func(r rune) bool {
+			return r == ' ' || r == ',' || r == '\n' || r == '\r' || r == '\t'
+		})
+		for _, domain := range domains {
+			domain = strings.TrimSpace(domain)
+			if domain == "" {
+				continue
+			}
+			if !isValidDomain(domain) {
+				http.Error(w, fmt.Sprintf("Invalid domain: %s", domain), 400)
+				return
+			}
+			validatedDomains = append(validatedDomains, domain)
 		}
-		if !isValidDomain(domain) {
-			http.Error(w, fmt.Sprintf("Invalid domain: %s", domain), 400)
-			return
-		}
-		validatedDomains = append(validatedDomains, domain)
 	}
 
 	i := InterfaceConfig{}
