@@ -1453,7 +1453,98 @@ func DeleteMACVerdictElement(family, tableName, mapName, ip, iface, mac, verdict
 
 // AddIPIfaceVerdictElement adds an element with IP.Interface:Verdict format
 func AddIPIfaceVerdictElement(family, tableName, mapName, ip, iface, verdict string) error {
+	// Check if this is a CIDR notation and the map supports intervals
+	if strings.Contains(ip, "/") && (mapName == "dns_access" || mapName == "fwd_iface_lan" || mapName == "fwd_iface_wan") {
+		return AddIPIfaceCIDRVerdictElement(family, tableName, mapName, ip, iface, verdict)
+	}
 	return AddElementToMapComplex(family, tableName, mapName, []string{ip, iface}, verdict)
+}
+
+// AddIPIfaceCIDRVerdictElement adds an element with CIDR IP.Interface:Verdict format to interval maps
+func AddIPIfaceCIDRVerdictElement(family, tableName, mapName, cidr, iface, verdict string) error {
+	client := GetNFTClient()
+	var f TableFamily
+	if family == "inet" {
+		f = TableFamilyInet
+	} else {
+		f = TableFamilyIP
+	}
+
+	set, err := client.GetMap(f, tableName, mapName)
+	if err != nil {
+		return fmt.Errorf("failed to get map %s/%s/%s: %w", family, tableName, mapName, err)
+	}
+
+	if !set.Interval {
+		return fmt.Errorf("map %s is not an interval map, cannot add CIDR", mapName)
+	}
+
+	// Parse CIDR to get network and range
+	ipAddr, ipNet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return fmt.Errorf("invalid CIDR: %s", cidr)
+	}
+
+	// Get the network address (start of range)
+	startIP := ipAddr.Mask(ipNet.Mask).To4()
+	if startIP == nil {
+		return fmt.Errorf("invalid IPv4 CIDR: %s", cidr)
+	}
+
+	// Calculate end IP of the CIDR range
+	endIP := make(net.IP, 4)
+	for i := range startIP {
+		endIP[i] = startIP[i] | ^ipNet.Mask[i]
+	}
+
+	// Build the key with interface
+	ifaceBytes := InterfaceToBytes(iface)
+
+	// Key is start IP + interface
+	key := make([]byte, 0, 20)
+	key = append(key, startIP...)
+	key = append(key, ifaceBytes...)
+
+	// KeyEnd is end IP + interface
+	keyEnd := make([]byte, 0, 20)
+	keyEnd = append(keyEnd, endIP.To4()...)
+	keyEnd = append(keyEnd, ifaceBytes...)
+
+	element := nftables.SetElement{
+		Key:         key,
+		KeyEnd:      keyEnd,
+		IntervalEnd: false,
+	}
+
+	// Handle verdict
+	verdictData, err := createVerdictData(verdict)
+	if err != nil {
+		return err
+	}
+	element.VerdictData = verdictData
+
+	err = client.conn.SetAddElements(set, []nftables.SetElement{element})
+	if err != nil {
+		return fmt.Errorf("failed to add CIDR element: %w", err)
+	}
+
+	return client.conn.Flush()
+}
+
+// createVerdictData creates verdict data for nftables elements
+func createVerdictData(verdict string) (*expr.Verdict, error) {
+	switch verdict {
+	case "accept":
+		return &expr.Verdict{Kind: expr.VerdictAccept}, nil
+	case "drop":
+		return &expr.Verdict{Kind: expr.VerdictDrop}, nil
+	case "continue":
+		return &expr.Verdict{Kind: expr.VerdictContinue}, nil
+	case "return":
+		return &expr.Verdict{Kind: expr.VerdictReturn}, nil
+	default:
+		return nil, fmt.Errorf("unknown verdict: %s", verdict)
+	}
 }
 
 // GetIPIfaceVerdictElement checks if element with IP.Interface:Verdict format exists
@@ -1546,6 +1637,75 @@ func DeleteIPFromSet(family, tableName, setName, ip string) error {
 	}
 
 	return client.DeleteSetElement(f, tableName, setName, IPToBytes(ip))
+}
+
+// AddCIDRToSet adds a CIDR range to an interval set
+func AddCIDRToSet(family, tableName, setName, cidr string) error {
+	client := GetNFTClient()
+	var f TableFamily
+	switch family {
+	case "inet":
+		f = TableFamilyInet
+	case "ip":
+		f = TableFamilyIP
+	default:
+		return fmt.Errorf("unsupported family: %s", family)
+	}
+
+	// Parse CIDR to get network and range
+	_, ipNet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return fmt.Errorf("invalid CIDR: %v", err)
+	}
+
+	// Calculate start and end IPs
+	startIP := ipNet.IP.To4()
+	if startIP == nil {
+		return fmt.Errorf("not an IPv4 CIDR")
+	}
+
+	endIP := make(net.IP, 4)
+	for i := range startIP {
+		endIP[i] = startIP[i] | ^ipNet.Mask[i]
+	}
+
+	// For interval sets, we need to increment the end IP by 1
+	// because IntervalEnd: true marks the element AFTER the last included element
+	nextIP := make(net.IP, 4)
+	copy(nextIP, endIP)
+
+	// Increment the IP address
+	for i := 3; i >= 0; i-- {
+		if nextIP[i] < 255 {
+			nextIP[i]++
+			break
+		}
+		nextIP[i] = 0
+	}
+
+	// Create interval element
+	elem := nftables.SetElement{
+		Key:         startIP,
+		IntervalEnd: false,
+	}
+
+	// Also need the end marker
+	endElem := nftables.SetElement{
+		Key:         nextIP,
+		IntervalEnd: true,
+	}
+
+	set, err := client.GetMap(f, tableName, setName)
+	if err != nil {
+		return err
+	}
+
+	err = client.conn.SetAddElements(set, []nftables.SetElement{elem, endElem})
+	if err != nil {
+		return err
+	}
+
+	return client.conn.Flush()
 }
 
 // CheckChainExists checks if a chain exists

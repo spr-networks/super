@@ -704,19 +704,38 @@ func modifySupernetworkEntry(supernet, action string) {
 	var err error
 
 	if action == "add" {
-		err = AddIPToSet("inet", "mangle", "supernetworks", supernet)
-		if err != nil {
-			log.Println("failed to add mangle supernetworks element", err)
-		}
+		// Check if it's a CIDR notation
+		if strings.Contains(supernet, "/") {
+			err = AddCIDRToSet("inet", "mangle", "supernetworks", supernet)
+			if err != nil {
+				log.Println("failed to add mangle supernetworks element", err)
+			}
 
-		err = AddIPToSet("inet", "filter", "supernetworks", supernet)
-		if err != nil {
-			log.Println("failed to add filter supernetworks element", err)
-		}
+			err = AddCIDRToSet("inet", "filter", "supernetworks", supernet)
+			if err != nil {
+				log.Println("failed to add filter supernetworks element", err)
+			}
 
-		err = AddIPToSet("ip", "accounting", "local_lan", supernet)
-		if err != nil {
-			log.Println("failed to add ip accounting local_lan element", err)
+			err = AddCIDRToSet("ip", "accounting", "local_lan", supernet)
+			if err != nil {
+				log.Println("failed to add ip accounting local_lan element", err)
+			}
+		} else {
+			// Single IP address
+			err = AddIPToSet("inet", "mangle", "supernetworks", supernet)
+			if err != nil {
+				log.Println("failed to add mangle supernetworks element", err)
+			}
+
+			err = AddIPToSet("inet", "filter", "supernetworks", supernet)
+			if err != nil {
+				log.Println("failed to add filter supernetworks element", err)
+			}
+
+			err = AddIPToSet("ip", "accounting", "local_lan", supernet)
+			if err != nil {
+				log.Println("failed to add ip accounting local_lan element", err)
+			}
 		}
 	} else if action == "delete" {
 		err = DeleteIPFromSet("inet", "mangle", "supernetworks", supernet)
@@ -1617,7 +1636,7 @@ func applyContainerInterfaces() {
 		}
 
 		// Also add docker to dns_access to match what base container does
-		err = AddElementToMapComplex("inet", "filter", "dns_access", []string{dockernet, dockerif}, "accept")
+		err = AddIPIfaceVerdictElement("inet", "filter", "dns_access", dockernet, dockerif, "accept")
 		if err != nil {
 			log.Println("failed to populate "+dockerif+" "+dockernet+" on dns_access", err)
 		}
@@ -2292,11 +2311,11 @@ func addCustomVerdict(ZoneName string, IP string, Iface string) {
 }
 
 func hasCustomVerdict(ZoneName string, IP string, Iface string) bool {
-	key1 := IP + "." + Iface + ":continue"
-	err := GetElementFromMap("inet", "filter", ZoneName+"_dst_access", key1)
+	// Check if the element exists in dst_access map
+	err := GetElementFromMapComplex("inet", "filter", ZoneName+"_dst_access", []string{IP, Iface})
 	if err == nil {
-		key2 := IP + "." + Iface + ":accept"
-		err = GetElementFromMap("inet", "filter", ZoneName+"_src_access", key2)
+		// Check if the element exists in src_access map
+		err = GetElementFromMapComplex("inet", "filter", ZoneName+"_src_access", []string{IP, Iface})
 		return err == nil
 	}
 	return false
