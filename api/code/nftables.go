@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -182,6 +183,22 @@ func (c *NFTClient) GetMap(family TableFamily, tableName, mapName string) (*nfta
 	return nil, fmt.Errorf("map %s not found in table %s", mapName, tableName)
 }
 
+// GetTableByName retrieves a table by name
+func (c *NFTClient) GetTableByName(family TableFamily, tableName string) (*nftables.Table, error) {
+	tables, err := c.conn.ListTables()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, table := range tables {
+		if table.Family == nftables.TableFamily(family) && table.Name == tableName {
+			return table, nil
+		}
+	}
+
+	return nil, fmt.Errorf("table %s not found in family %v", tableName, family)
+}
+
 // ListMapElements lists all elements in a map and returns them as JSON
 func (c *NFTClient) ListMapElements(family TableFamily, tableName, mapName string) ([]byte, error) {
 	set, err := c.GetMap(family, tableName, mapName)
@@ -256,7 +273,7 @@ func (c *NFTClient) AddMapElement(family TableFamily, tableName, mapName string,
 
 	// Check if this is a verdict map first
 	isVerdictMap := set.IsMap && set.DataType.Name == "verdict"
-	
+
 	// For interval maps, we need to set KeyEnd = Key to prevent range merging
 	if set.Interval {
 		element.IntervalEnd = false
@@ -666,7 +683,7 @@ func PortToBytes(port string) []byte {
 
 // PortToBytesForConcatenated returns 4 bytes for concatenated maps
 func PortToBytesForConcatenated(port string) []byte {
-	// Handle port ranges like "5000-6000" 
+	// Handle port ranges like "5000-6000"
 	if strings.Contains(port, "-") {
 		parts := strings.Split(port, "-")
 		if len(parts) == 2 {
@@ -680,7 +697,7 @@ func PortToBytesForConcatenated(port string) []byte {
 		}
 		return nil
 	}
-	
+
 	// Handle single port
 	p, err := strconv.Atoi(port)
 	if err != nil || p <= 0 || p > 65535 {
@@ -978,7 +995,7 @@ func AddEndpoint(protocol, srcIP, dstIP, port string) error {
 		key = append(append(IPToBytes(srcIP), IPToBytes(dstIP)...), PortToBytes(port)...)
 	}
 
-	value := []byte("accept")
+	value := VerdictToBytes("accept")
 
 	return client.AddMapElement(TableFamilyInet, "filter", mapName, key, value)
 }
@@ -1429,6 +1446,11 @@ func GetMACVerdictElement(family, tableName, mapName, ip, iface, mac, verdict st
 	return GetElementFromMapComplex(family, tableName, mapName, []string{ip, iface, mac})
 }
 
+// DeleteMACVerdictElement deletes an element with IP.Interface.MAC:Verdict format
+func DeleteMACVerdictElement(family, tableName, mapName, ip, iface, mac, verdict string) error {
+	return DeleteElementFromMapComplex(family, tableName, mapName, []string{ip, iface, mac})
+}
+
 // AddIPIfaceVerdictElement adds an element with IP.Interface:Verdict format
 func AddIPIfaceVerdictElement(family, tableName, mapName, ip, iface, verdict string) error {
 	return AddElementToMapComplex(family, tableName, mapName, []string{ip, iface}, verdict)
@@ -1455,25 +1477,42 @@ func CheckMapExists(family, tableName, mapName string) error {
 
 // CreateIPIfaceVerdictMap creates a map with type ipv4_addr.ifname:verdict
 func CreateIPIfaceVerdictMap(family, tableName, mapName string) error {
-	// Note: google/nftables doesn't directly support creating maps with specific types
-	// This is a placeholder - in practice, maps should be pre-created in nftables rules
-	// For now, we'll return nil (assume map exists)
+	// Use exec to create the map - TBD google/nftables support
+	// creating maps with concatenated types
+	cmd := exec.Command("nft", "add", "map", family, tableName, mapName,
+		"{", "type", "ipv4_addr", ".", "ifname", ":", "verdict", ";", "}")
+
+	_, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to create map %s: %v", mapName, err)
+	}
+
 	return nil
 }
 
 // AddRuleToChain adds a rule to a chain (simplified version)
 func AddRuleToChain(family, tableName, chainName, rule string) error {
-	// Note: google/nftables doesn't support adding arbitrary rule strings
-	// This would need to be implemented with proper rule construction
-	// For now, we'll return nil (placeholder)
+	// Use exec to add rules - TBD google/nftables support
+	cmd := exec.Command("nft", "add", "rule", family, tableName, chainName, rule)
+
+	_, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to add rule to chain %s: %v", chainName, err)
+	}
+
 	return nil
 }
 
 // InsertRuleToChain inserts a rule to a chain (simplified version)
 func InsertRuleToChain(family, tableName, chainName, rule string) error {
-	// Note: google/nftables doesn't support inserting arbitrary rule strings
-	// This would need to be implemented with proper rule construction
-	// For now, we'll return nil (placeholder)
+	// Use exec to insert rules - TBD  google/nftables support
+	cmd := exec.Command("nft", "insert", "rule", family, tableName, chainName, rule)
+
+	_, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to insert rule into chain %s: %v", chainName, err)
+	}
+
 	return nil
 }
 
@@ -1489,7 +1528,7 @@ func AddIPToSet(family, tableName, setName, ip string) error {
 	default:
 		return fmt.Errorf("unsupported family: %s", family)
 	}
-	
+
 	return client.AddSetElement(f, tableName, setName, IPToBytes(ip))
 }
 
@@ -1505,23 +1544,67 @@ func DeleteIPFromSet(family, tableName, setName, ip string) error {
 	default:
 		return fmt.Errorf("unsupported family: %s", family)
 	}
-	
+
 	return client.DeleteSetElement(f, tableName, setName, IPToBytes(ip))
 }
 
 // CheckChainExists checks if a chain exists
 func CheckChainExists(family, tableName, chainName string) error {
-	// Note: google/nftables doesn't have a direct way to check chain existence
-	// For now, we'll return nil (assume chain exists)
-	return nil
+	client := GetNFTClient()
+	var f TableFamily
+	switch family {
+	case "inet":
+		f = TableFamilyInet
+	case "ip":
+		f = TableFamilyIP
+	default:
+		return fmt.Errorf("unsupported family: %s", family)
+	}
+
+	table := client.GetTable(f, tableName)
+	if table == nil {
+		return fmt.Errorf("table %s not found", tableName)
+	}
+
+	chains, err := client.conn.ListChains()
+	if err != nil {
+		return err
+	}
+
+	for _, chain := range chains {
+		if chain.Table.Name == tableName && chain.Table.Family == nftables.TableFamily(f) && chain.Name == chainName {
+			return nil // Chain exists
+		}
+	}
+
+	return fmt.Errorf("chain %s not found in table %s", chainName, tableName)
 }
 
 // AddChain adds a new chain
 func AddChain(family, tableName, chainName string) error {
-	// Note: google/nftables doesn't support creating chains directly
-	// Chains should be pre-created in nftables rules
-	// For now, we'll return nil (placeholder)
-	return nil
+	client := GetNFTClient()
+	var f TableFamily
+	switch family {
+	case "inet":
+		f = TableFamilyInet
+	case "ip":
+		f = TableFamilyIP
+	default:
+		return fmt.Errorf("unsupported family: %s", family)
+	}
+
+	table := client.GetTable(f, tableName)
+	if table == nil {
+		return fmt.Errorf("table %s not found", tableName)
+	}
+
+	chain := &nftables.Chain{
+		Table: table,
+		Name:  chainName,
+	}
+
+	client.conn.AddChain(chain)
+	return client.conn.Flush()
 }
 
 // DeleteChain deletes a chain

@@ -1874,7 +1874,7 @@ func getNFTVerdictMap(map_name string) []verdictEntry {
 	for _, d := range data5 {
 		// Handle both array format and direct map format
 		var f map[string]interface{}
-		
+
 		// Try direct map format first (newer format)
 		if direct_map, ok := d.(map[string]interface{}); ok {
 			f = direct_map
@@ -1942,14 +1942,14 @@ func getNFTVerdictMap(map_name string) []verdictEntry {
 					} else {
 						ifname = string(ifname_bytes)
 					}
-					
+
 					// Extract MAC address (next 6 bytes)
 					if len(key) >= 22 {
 						mac_bytes := []byte(key[16:22])
-						mac := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", 
-							mac_bytes[0], mac_bytes[1], mac_bytes[2], 
+						mac := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x",
+							mac_bytes[0], mac_bytes[1], mac_bytes[2],
 							mac_bytes[3], mac_bytes[4], mac_bytes[5])
-						
+
 						entry := verdictEntry{"", ifname, mac}
 						existing = append(existing, entry)
 					}
