@@ -106,7 +106,7 @@ func teardownFirewallTest(t *testing.T) {
 	// Flush nftables maps that tests may have populated
 	maps := []string{
 		"ethernet_filter",
-		"internet_access", 
+		"internet_access",
 		"dns_access",
 		"lan_access",
 		"dhcp_access",
@@ -124,7 +124,7 @@ func teardownFirewallTest(t *testing.T) {
 		"tcpanyfwd",
 		"udpanyfwd",
 	}
-	
+
 	for _, mapName := range maps {
 		_ = FlushMapByName("inet", "filter", mapName)
 		_ = FlushMapByName("inet", "nat", mapName)
@@ -203,7 +203,7 @@ func checkBlockRuleInNFT(t *testing.T, rule BlockRule, shouldExist bool) {
 	// Check for the exact entry or common CIDR variations
 	expectedEntry := fmt.Sprintf("%s . %s . %s : drop", srcIP, dstIP, rule.Protocol)
 	exists := strings.Contains(string(output), expectedEntry)
-	
+
 	// Also check for common CIDR variations that nftables might display
 	if !exists && srcIP == "10.0.0.0" {
 		cidrEntry := fmt.Sprintf("10.0.0.0/8 . %s . %s : drop", dstIP, rule.Protocol)
@@ -265,7 +265,7 @@ func checkOutputBlockRuleInNFT(t *testing.T, rule OutputBlockRule, shouldExist b
 	// For exact match check
 	expectedEntry := fmt.Sprintf("%s . %s . %s : drop", srcIP, dstIP, rule.Protocol)
 	exactMatch := strings.Contains(outputStr, expectedEntry)
-	
+
 	// Also check for common CIDR variations that nftables might display
 	if !exactMatch && srcIP == "10.0.0.0" {
 		cidrEntry := fmt.Sprintf("10.0.0.0/8 . %s . %s : drop", dstIP, rule.Protocol)
@@ -1947,6 +1947,9 @@ func TestDHCPDevicePolicyApplication(t *testing.T) {
 		disabledMAC := "11:22:33:44:55:66"
 		disabledIP := "192.168.1.101"
 
+		// First ensure this device is not in ethernet_filter from any previous test
+		_ = DeleteMACVerdictElement("inet", "filter", "ethernet_filter", disabledIP, testIface, disabledMAC, "return")
+
 		// Create a disabled device
 		disabledDevice := DeviceEntry{
 			MAC:            disabledMAC,
@@ -1988,7 +1991,7 @@ func TestDHCPDevicePolicyApplication(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to add MAC to dhcp_access map: %v", err)
 		}
-		
+
 		// Debug: verify the MAC was added to dhcp_access
 		entries := getNFTVerdictMap("dhcp_access")
 		t.Logf("dhcp_access entries after addition: %+v", entries)
@@ -2118,10 +2121,10 @@ func TestDockerDNSAccessIntegration(t *testing.T) {
 			os.Unsetenv("DOCKERIF")
 			os.Unsetenv("DOCKERNET")
 		}()
-		
+
 		// Call applyContainerInterfaces which should add docker to dns_access
 		applyContainerInterfaces()
-		
+
 		// Check if Docker was added to dns_access
 		err := GetIPIfaceVerdictElement("inet", "filter", "dns_access", dockerNet, dockerIf, "accept")
 		if err != nil {
@@ -2139,35 +2142,35 @@ func TestDNSAccessMapPreservation(t *testing.T) {
 		// First, manually add an entry to dns_access (simulating what base does)
 		testIP := "172.17.0.0/16"
 		testIface := "container0"
-		
+
 		err := AddIPIfaceVerdictElement("inet", "filter", "dns_access", testIP, testIface, "accept")
 		if err != nil {
 			// If we can't add to dns_access, the map might not exist in test environment
 			t.Skipf("Cannot test - failed to add to dns_access: %v", err)
 		}
-		
+
 		// Verify it was added
 		err = GetIPIfaceVerdictElement("inet", "filter", "dns_access", testIP, testIface, "accept")
 		if err != nil {
 			t.Fatalf("Entry not found in dns_access after adding: %v", err)
 		}
-		
+
 		// Get the initial map contents
 		output1, _ := exec.Command("nft", "list", "map", "inet", "filter", "dns_access").Output()
 		t.Logf("dns_access contents before init:\n%s", string(output1))
-		
+
 		// Now simulate API startup by calling applyFirewallRulesLocked
 		// This is what happens during initFirewallRules
 		FWmtx.Lock()
 		applyFirewallRulesLocked()
 		FWmtx.Unlock()
-		
+
 		// Check if the entry is still in dns_access
 		err = GetIPIfaceVerdictElement("inet", "filter", "dns_access", testIP, testIface, "accept")
 		if err != nil {
 			t.Errorf("Entry was removed from dns_access during applyFirewallRulesLocked: %v", err)
 		}
-		
+
 		// Also check by listing the map
 		output2, err := exec.Command("nft", "list", "map", "inet", "filter", "dns_access").Output()
 		if err != nil {
@@ -2175,12 +2178,14 @@ func TestDNSAccessMapPreservation(t *testing.T) {
 		} else {
 			outputStr := string(output2)
 			t.Logf("dns_access contents after init:\n%s", outputStr)
-			if !strings.Contains(outputStr, testIface) || !strings.Contains(outputStr, testIP) {
+			// Check for the IP without CIDR notation since nftables may display it differently
+			ipBase := strings.Split(testIP, "/")[0]
+			if !strings.Contains(outputStr, testIface) || !strings.Contains(outputStr, ipBase) {
 				t.Errorf("Entry not found in dns_access map output after init")
 			}
 		}
 	})
-	
+
 	t.Run("Multiple DNS access entries preservation", func(t *testing.T) {
 		// Add multiple entries
 		entries := []struct {
@@ -2191,7 +2196,7 @@ func TestDNSAccessMapPreservation(t *testing.T) {
 			{"192.168.100.0/24", "vlan100"},
 			{"172.16.0.0/16", "bridge0"},
 		}
-		
+
 		// Add all entries
 		for _, entry := range entries {
 			err := AddIPIfaceVerdictElement("inet", "filter", "dns_access", entry.ip, entry.iface, "accept")
@@ -2199,12 +2204,12 @@ func TestDNSAccessMapPreservation(t *testing.T) {
 				t.Skipf("Cannot test - failed to add %s/%s to dns_access: %v", entry.ip, entry.iface, err)
 			}
 		}
-		
+
 		// Run firewall rules application
 		FWmtx.Lock()
 		applyFirewallRulesLocked()
 		FWmtx.Unlock()
-		
+
 		// Check all entries are still present
 		for _, entry := range entries {
 			err := GetIPIfaceVerdictElement("inet", "filter", "dns_access", entry.ip, entry.iface, "accept")
@@ -2223,7 +2228,7 @@ func TestSupernetworkOperations(t *testing.T) {
 		// Test adding supernetwork entries
 		supernet := "10.0.0.0/8"
 		addSupernetworkEntry(supernet)
-		
+
 		// Note: We can't easily verify the actual nftables entries without proper mocking
 		// This test ensures the functions don't crash
 	})
@@ -2232,9 +2237,9 @@ func TestSupernetworkOperations(t *testing.T) {
 		// Test updating firewall subnets
 		dnsIP := "10.10.10.1"
 		tinyNets := []string{"10.10.10.0/24", "192.168.1.0/24"}
-		
+
 		updateFirewallSubnets(dnsIP, tinyNets)
-		
+
 		// Note: We can't easily verify the actual nftables entries without proper mocking
 		// This test ensures the functions don't crash
 	})
@@ -2242,7 +2247,7 @@ func TestSupernetworkOperations(t *testing.T) {
 	t.Run("Flush supernetwork entries", func(t *testing.T) {
 		// Test flushing supernetwork entries
 		flushSupernetworkEntries()
-		
+
 		// Note: We can't easily verify the actual nftables entries without proper mocking
 		// This test ensures the functions don't crash
 	})
@@ -2250,13 +2255,13 @@ func TestSupernetworkOperations(t *testing.T) {
 	t.Run("Modify supernetwork entry", func(t *testing.T) {
 		// Test the modifySupernetworkEntry function which uses set operations
 		supernet := "172.16.0.0/12"
-		
+
 		// Test adding
 		modifySupernetworkEntry(supernet, "add")
-		
+
 		// Test deleting
 		modifySupernetworkEntry(supernet, "delete")
-		
+
 		// Test invalid action (should be handled gracefully)
 		modifySupernetworkEntry(supernet, "invalid")
 	})
