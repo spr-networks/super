@@ -944,9 +944,7 @@ const UplinkInfo = (props) => {
       new_entry = { 
         Iface: iface, 
         Enabled: enable, 
-        Networks: [item], 
-        CaptivePortalPassthrough: captivePortal !== undefined ? captivePortal : true,
-        CaptivePortalDomains: captiveDomains || DEFAULT_CAPTIVE_DOMAINS
+        Networks: [item]
       }
     } else if (type == 'ppp') {
       new_entry = { ...item, Enabled: enable, Iface: iface }
@@ -967,6 +965,21 @@ const UplinkInfo = (props) => {
     api
       .put(path, new_entry)
       .then((res2) => {
+        // For wifi type, also update captive portal settings
+        if (type == 'wifi' && (captivePortal !== undefined || captiveDomains !== undefined)) {
+          const captiveConfig = {
+            Name: iface,
+            Type: 'Uplink',
+            Enabled: enable,
+            CaptivePortalPassthrough: captivePortal !== undefined ? captivePortal : true,
+            CaptivePortalDomains: captiveDomains || DEFAULT_CAPTIVE_DOMAINS
+          }
+          
+          return api.put('/link/config', captiveConfig)
+        }
+        return Promise.resolve()
+      })
+      .then(() => {
         fetchInfo()
         setShowModal(false)
       })
