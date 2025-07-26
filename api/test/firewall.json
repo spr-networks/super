@@ -1,0 +1,40 @@
+{
+ "ForwardingRules": [],
+ "BlockRules": [],
+ "ForwardingBlockRules": [],
+ "ServicePorts": [
+  {
+   "Protocol": "tcp",
+   "Port": "22",
+   "UpstreamEnabled": true
+  },
+  {
+   "Protocol": "udp",
+   "Port": "68",
+   "UpstreamEnabled": true
+  },
+  {
+   "Protocol": "tcp",
+   "Port": "80",
+   "UpstreamEnabled": true
+  },
+  {
+   "Protocol": "tcp",
+   "Port": "443",
+   "UpstreamEnabled": true
+  }
+ ],
+ "Endpoints": [],
+ "MulticastPorts": [
+  {
+   "Port": "5353",
+   "Upstream": false
+  },
+  {
+   "Port": "1900",
+   "Upstream": false
+  }
+ ],
+ "PingLan": true,
+ "PingWan": false
+}
