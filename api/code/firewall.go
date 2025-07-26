@@ -1614,14 +1614,27 @@ func applyContainerInterfaces() {
 
 	if dockerif != "" && dockernet != "" {
 		//prepopulate default docker0
-		err = AddElementToMapComplex("inet", "filter", "fwd_iface_wan", []string{dockerif, dockernet}, "accept")
-		if err != nil {
-			log.Println("failed to populate "+dockerif+" "+dockernet+" on fwd_iface_wan", err)
-		}
+		// Check if dockernet is CIDR notation
+		if strings.Contains(dockernet, "/") {
+			err = AddIfaceIPCIDRVerdictElement("inet", "filter", "fwd_iface_wan", dockerif, dockernet, "accept")
+			if err != nil {
+				log.Println("failed to populate "+dockerif+" "+dockernet+" on fwd_iface_wan", err)
+			}
 
-		err = AddElementToMapComplex("inet", "filter", "fwd_iface_lan", []string{dockerif, dockernet}, "accept")
-		if err != nil {
-			log.Println("failed to populate "+dockerif+" "+dockernet+" on fwd_iface_lan", err)
+			err = AddIfaceIPCIDRVerdictElement("inet", "filter", "fwd_iface_lan", dockerif, dockernet, "accept")
+			if err != nil {
+				log.Println("failed to populate "+dockerif+" "+dockernet+" on fwd_iface_lan", err)
+			}
+		} else {
+			err = AddElementToMapComplex("inet", "filter", "fwd_iface_wan", []string{dockerif, dockernet}, "accept")
+			if err != nil {
+				log.Println("failed to populate "+dockerif+" "+dockernet+" on fwd_iface_wan", err)
+			}
+
+			err = AddElementToMapComplex("inet", "filter", "fwd_iface_lan", []string{dockerif, dockernet}, "accept")
+			if err != nil {
+				log.Println("failed to populate "+dockerif+" "+dockernet+" on fwd_iface_lan", err)
+			}
 		}
 
 		// Also add docker to dns_access to match what base container does
@@ -2963,6 +2976,20 @@ func dynamicRouteLoop() {
 		return
 	}
 
+	/*
+	* SPR uses a self-organized network informed by hostapd,
+	*  wireguard, and DHCP.
+	*
+	* The route to an IP can dynamically change if the MAC address
+	* shows up over a new interface.
+	*
+	* With Wired Downhaul a WiFi MAC address will show up on the downhaul
+	* wired link, for example.
+	*
+	* With Wireguard devices keep the same IP as with DHCP over any other interface.
+	*
+	 */
+
 	ticker := time.NewTicker(1 * time.Second)
 
 	for {
@@ -2977,36 +3004,23 @@ func dynamicRouteLoop() {
 			Devicesmtx.Unlock()
 			Groupsmtx.Unlock()
 
-			// TBD: need to handle multiple trunk ports, lan ports
-			// that a device can arrive on.
-			// SPR currently assumes one named LANIF.
+			// Get all downlink interfaces
+			downlinks := getDownlinkInterfaces()
 
-			lanif := getFirstDownlink()
-			lanif_vlan_trunk := false
 			meshPluginEnabled := isMeshPluginEnabled()
-			meshDownlink := ""
-			if meshPluginEnabled {
-				meshDownlink = meshPluginDownlink()
-			}
 
 			wireguard_peers, remote_endpoints := getWireguardActivePeers()
 			wifi_peers := getWifiPeers()
 
 			notifyVpnActivity(wireguard_peers, remote_endpoints)
 
+			//this will inform what interface to route a device's IP to.
+			//
 			suggested_device := map[string]string{}
 
 			Interfacesmtx.Lock()
 			interfaces := loadInterfacesConfigLocked()
 			Interfacesmtx.Unlock()
-
-			for _, ifconfig := range interfaces {
-				if ifconfig.Name == lanif {
-					if ifconfig.Subtype == "VLAN-Trunk" {
-						lanif_vlan_trunk = true
-					}
-				}
-			}
 
 			FWmtx.Lock()
 
@@ -3053,31 +3067,40 @@ func dynamicRouteLoop() {
 					new_iface, exists = suggested_device[entry.RecentIP]
 				}
 
-				//update the iface map with the designated interface
-				newIfaceMap[entry.RecentIP] = new_iface
+				// Check if the suggested interface is valid
+				if exists && new_iface != "" {
+					// For VLAN interfaces, check the base interface
+					baseIface := new_iface
+					if strings.Contains(new_iface, ".") {
+						baseIface = strings.Split(new_iface, ".")[0]
+					}
 
-				if !exists {
-					wifiDevice := isWifiDevice(entry)
-					if lanif != "" && !wifiDevice {
-						// when mesh plugin is off and not a wifi device, then go for lanif
-
-						//no new_iface and a LAN interface is set, use that.
-						if lanif_vlan_trunk == false || entry.VLANTag == "" {
-							new_iface = lanif
-						} else {
-							new_iface = lanif + "." + entry.VLANTag
+					// Verify the interface is a valid downlink
+					isValidDownlink := false
+					for _, dl := range downlinks {
+						if baseIface == dl {
+							isValidDownlink = true
+							break
 						}
-						newIfaceMap[entry.RecentIP] = new_iface
-					} else if meshPluginEnabled && wifiDevice {
-						//mesh plugin was enabled and it was a wifi device
-						new_iface = meshDownlink
-						newIfaceMap[entry.RecentIP] = new_iface
-					} else {
+					}
 
-						// disconnected devices will have empty new_iface, skip
-						continue
+					// If it's not a downlink, it might be wg0 or a WiFi interface
+					if !isValidDownlink && new_iface != "wg0" && !strings.HasPrefix(new_iface, "wlan") {
+						// Interface is not valid, treat as if not found
+						exists = false
+						new_iface = ""
 					}
 				}
+
+				if !exists {
+					// We don't know which interface to use
+					// The device wasn't in suggested_device map (from DHCP/WiFi/WireGuard)
+					// Without DHCP information, we can't route the device
+					continue
+				}
+
+				//update the iface map with the designated interface
+				newIfaceMap[entry.RecentIP] = new_iface
 
 				//happy state -- the established interface matches the calculated interface to route to
 				if established_route_device != "" && established_route_device == new_iface {
