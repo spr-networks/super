@@ -183,22 +183,6 @@ func (c *NFTClient) GetMap(family TableFamily, tableName, mapName string) (*nfta
 	return nil, fmt.Errorf("map %s not found in table %s", mapName, tableName)
 }
 
-// GetTableByName retrieves a table by name
-func (c *NFTClient) GetTableByName(family TableFamily, tableName string) (*nftables.Table, error) {
-	tables, err := c.conn.ListTables()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, table := range tables {
-		if table.Family == nftables.TableFamily(family) && table.Name == tableName {
-			return table, nil
-		}
-	}
-
-	return nil, fmt.Errorf("table %s not found in family %v", tableName, family)
-}
-
 // ListMapElements lists all elements in a map and returns them as JSON
 func (c *NFTClient) ListMapElements(family TableFamily, tableName, mapName string) ([]byte, error) {
 	set, err := c.GetMap(family, tableName, mapName)
@@ -653,6 +637,42 @@ func compareKeys(key1, key2 []byte) bool {
 
 // Helper functions to convert common types to bytes
 
+// Helper function to parse family string and get client
+func withFamily(family string) (TableFamily, *NFTClient, error) {
+	var f TableFamily
+	switch family {
+	case "inet":
+		f = TableFamilyInet
+	case "ip":
+		f = TableFamilyIP
+	default:
+		return 0, nil, fmt.Errorf("unsupported family: %s", family)
+	}
+	return f, GetNFTClient(), nil
+}
+
+// Helper functions for building common key patterns
+
+// buildIPIPProtocolKey builds a key from src IP, dst IP, and protocol
+func buildIPIPProtocolKey(srcIP, dstIP, protocol string) []byte {
+	return append(append(IPToBytes(srcIP), IPToBytes(dstIP)...), ProtocolToBytesForConcatenated(protocol)...)
+}
+
+// buildIPIPKey builds a key from src IP and dst IP
+func buildIPIPKey(srcIP, dstIP string) []byte {
+	return append(IPToBytes(srcIP), IPToBytes(dstIP)...)
+}
+
+// buildIPIPPortKey builds a key from src IP, dst IP, and port
+func buildIPIPPortKey(srcIP, dstIP, port string) []byte {
+	return append(append(IPToBytes(srcIP), IPToBytes(dstIP)...), PortToBytes(port)...)
+}
+
+// buildIPIfaceKey builds a key from IP and interface
+func buildIPIfaceKey(ip, iface string) []byte {
+	return append(IPToBytes(ip), InterfaceToBytes(iface)...)
+}
+
 // IPToBytes converts an IP address string to bytes
 func IPToBytes(ip string) []byte {
 	// Handle CIDR notation by extracting just the IP part
@@ -877,7 +897,7 @@ func AddBlockRule(srcIP, dstIP, protocol string) error {
 func DeleteBlockRule(srcIP, dstIP, protocol string) error {
 	client := GetNFTClient()
 
-	key := append(append(IPToBytes(srcIP), IPToBytes(dstIP)...), ProtocolToBytesForConcatenated(protocol)...)
+	key := buildIPIPProtocolKey(srcIP, dstIP, protocol)
 
 	return client.DeleteMapElement(TableFamilyInet, "nat", "block", key)
 }
@@ -886,7 +906,7 @@ func DeleteBlockRule(srcIP, dstIP, protocol string) error {
 func AddOutputBlockRule(srcIP, dstIP, protocol string) error {
 	client := GetNFTClient()
 
-	key := append(append(IPToBytes(srcIP), IPToBytes(dstIP)...), ProtocolToBytesForConcatenated(protocol)...)
+	key := buildIPIPProtocolKey(srcIP, dstIP, protocol)
 	value := []byte("drop")
 
 	return client.AddMapElement(TableFamilyInet, "filter", "output_block", key, value)
@@ -896,7 +916,7 @@ func AddOutputBlockRule(srcIP, dstIP, protocol string) error {
 func DeleteOutputBlockRule(srcIP, dstIP, protocol string) error {
 	client := GetNFTClient()
 
-	key := append(append(IPToBytes(srcIP), IPToBytes(dstIP)...), ProtocolToBytesForConcatenated(protocol)...)
+	key := buildIPIPProtocolKey(srcIP, dstIP, protocol)
 
 	return client.DeleteMapElement(TableFamilyInet, "filter", "output_block", key)
 }
@@ -990,9 +1010,9 @@ func AddEndpoint(protocol, srcIP, dstIP, port string) error {
 
 	var key []byte
 	if port == "any" {
-		key = append(IPToBytes(srcIP), IPToBytes(dstIP)...)
+		key = buildIPIPKey(srcIP, dstIP)
 	} else {
-		key = append(append(IPToBytes(srcIP), IPToBytes(dstIP)...), PortToBytes(port)...)
+		key = buildIPIPPortKey(srcIP, dstIP, port)
 	}
 
 	value := VerdictToBytes("accept")
@@ -1008,9 +1028,9 @@ func DeleteEndpoint(protocol, srcIP, dstIP, port string) error {
 
 	var key []byte
 	if port == "any" {
-		key = append(IPToBytes(srcIP), IPToBytes(dstIP)...)
+		key = buildIPIPKey(srcIP, dstIP)
 	} else {
-		key = append(append(IPToBytes(srcIP), IPToBytes(dstIP)...), PortToBytes(port)...)
+		key = buildIPIPPortKey(srcIP, dstIP, port)
 	}
 
 	return client.DeleteMapElement(TableFamilyInet, "filter", mapName, key)
@@ -1024,9 +1044,9 @@ func HasEndpoint(protocol, srcIP, dstIP, port string) bool {
 
 	var key []byte
 	if port == "any" {
-		key = append(IPToBytes(srcIP), IPToBytes(dstIP)...)
+		key = buildIPIPKey(srcIP, dstIP)
 	} else {
-		key = append(append(IPToBytes(srcIP), IPToBytes(dstIP)...), PortToBytes(port)...)
+		key = buildIPIPPortKey(srcIP, dstIP, port)
 	}
 
 	err := client.GetMapElement(TableFamilyInet, "filter", mapName, key)
@@ -1058,7 +1078,7 @@ func DeleteMulticastPort(port, iface string) error {
 func AddPingRule(ip, iface string) error {
 	client := GetNFTClient()
 
-	key := append(IPToBytes(ip), InterfaceToBytes(iface)...)
+	key := buildIPIfaceKey(ip, iface)
 	value := []byte("accept")
 
 	return client.AddMapElement(TableFamilyInet, "filter", "ping_rules", key, value)
@@ -1068,7 +1088,7 @@ func AddPingRule(ip, iface string) error {
 func DeletePingRule(ip, iface string) error {
 	client := GetNFTClient()
 
-	key := append(IPToBytes(ip), InterfaceToBytes(iface)...)
+	key := buildIPIfaceKey(ip, iface)
 
 	return client.DeleteMapElement(TableFamilyInet, "filter", "ping_rules", key)
 }
@@ -1148,24 +1168,18 @@ func DeleteInterfaceFromSet(setName, iface string) error {
 
 // AddInterfaceToSetWithTable adds an interface to a set in a specific table
 func AddInterfaceToSetWithTable(family, table, setName, iface string) error {
-	client := GetNFTClient()
-	var f TableFamily
-	if family == "inet" {
-		f = TableFamilyInet
-	} else {
-		f = TableFamilyIP
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
 	}
 	return client.AddSetElement(f, table, setName, InterfaceToBytes(iface))
 }
 
 // DeleteInterfaceFromSetWithTable removes an interface from a set in a specific table
 func DeleteInterfaceFromSetWithTable(family, table, setName, iface string) error {
-	client := GetNFTClient()
-	var f TableFamily
-	if family == "inet" {
-		f = TableFamilyInet
-	} else {
-		f = TableFamilyIP
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
 	}
 	return client.DeleteSetElement(f, table, setName, InterfaceToBytes(iface))
 }
@@ -1174,24 +1188,18 @@ func DeleteInterfaceFromSetWithTable(family, table, setName, iface string) error
 
 // ListMapJSON lists a map and returns JSON (replacement for nft -j list map)
 func ListMapJSON(family, tableName, mapName string) ([]byte, error) {
-	client := GetNFTClient()
-	var f TableFamily
-	if family == "inet" {
-		f = TableFamilyInet
-	} else {
-		f = TableFamilyIP
+	f, client, err := withFamily(family)
+	if err != nil {
+		return nil, err
 	}
 	return client.ListMapElements(f, tableName, mapName)
 }
 
 // ListSetJSON lists a set and returns JSON (replacement for nft -j list set)
 func ListSetJSON(family, tableName, setName string) ([]byte, error) {
-	client := GetNFTClient()
-	var f TableFamily
-	if family == "inet" {
-		f = TableFamilyInet
-	} else {
-		f = TableFamilyIP
+	f, client, err := withFamily(family)
+	if err != nil {
+		return nil, err
 	}
 	return client.ListSetElements(f, tableName, setName)
 }
@@ -1204,12 +1212,9 @@ func ListTablesJSON() ([]byte, error) {
 
 // CheckTableExists checks if a table exists (replacement for nft list table)
 func CheckTableExists(family, tableName string) error {
-	client := GetNFTClient()
-	var f TableFamily
-	if family == "inet" {
-		f = TableFamilyInet
-	} else {
-		f = TableFamilyIP
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
 	}
 	return client.CheckTable(f, tableName)
 }
@@ -1227,36 +1232,27 @@ func ListTableText(family, tableName string) (string, error) {
 
 // FlushChainByName flushes a chain by name
 func FlushChainByName(family, tableName, chainName string) error {
-	client := GetNFTClient()
-	var f TableFamily
-	if family == "inet" {
-		f = TableFamilyInet
-	} else {
-		f = TableFamilyIP
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
 	}
 	return client.FlushChain(f, tableName, chainName)
 }
 
 // FlushMapByName flushes a map by name
 func FlushMapByName(family, tableName, mapName string) error {
-	client := GetNFTClient()
-	var f TableFamily
-	if family == "inet" {
-		f = TableFamilyInet
-	} else {
-		f = TableFamilyIP
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
 	}
 	return client.FlushMap(f, tableName, mapName)
 }
 
 // AddElementToMap adds element with key-value to a map
 func AddElementToMap(family, tableName, mapName, key, value string) error {
-	client := GetNFTClient()
-	var f TableFamily
-	if family == "inet" {
-		f = TableFamilyInet
-	} else {
-		f = TableFamilyIP
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
 	}
 
 	var keyBytes []byte
@@ -1283,28 +1279,20 @@ func AddElementToMap(family, tableName, mapName, key, value string) error {
 
 // DeleteElementFromMap deletes element with key from a map
 func DeleteElementFromMap(family, tableName, mapName, key string) error {
-	client := GetNFTClient()
-	var f TableFamily
-	if family == "inet" {
-		f = TableFamilyInet
-	} else {
-		f = TableFamilyIP
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
 	}
-
 	keyBytes := []byte(key)
 	return client.DeleteMapElement(f, tableName, mapName, keyBytes)
 }
 
 // GetElementFromMap checks if element exists in a map (replacement for nft get element)
 func GetElementFromMap(family, tableName, mapName, key string) error {
-	client := GetNFTClient()
-	var f TableFamily
-	if family == "inet" {
-		f = TableFamilyInet
-	} else {
-		f = TableFamilyIP
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
 	}
-
 	keyBytes := []byte(key)
 	return client.GetMapElement(f, tableName, mapName, keyBytes)
 }
@@ -1376,12 +1364,9 @@ func buildConcatenatedKey(mapName string, keyParts []string) ([]byte, error) {
 
 // AddElementToMapComplex adds element with complex key to a map
 func AddElementToMapComplex(family, tableName, mapName string, keyParts []string, value string) error {
-	client := GetNFTClient()
-	var f TableFamily
-	if family == "inet" {
-		f = TableFamilyInet
-	} else {
-		f = TableFamilyIP
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
 	}
 
 	// Build the concatenated key
@@ -1391,21 +1376,14 @@ func AddElementToMapComplex(family, tableName, mapName string, keyParts []string
 	}
 
 	valueBytes := []byte(value)
-	err = client.AddMapElement(f, tableName, mapName, keyBytes, valueBytes)
-	if err != nil {
-		return err
-	}
-	return nil
+	return client.AddMapElement(f, tableName, mapName, keyBytes, valueBytes)
 }
 
 // DeleteElementFromMapComplex deletes element with complex key from a map
 func DeleteElementFromMapComplex(family, tableName, mapName string, keyParts []string) error {
-	client := GetNFTClient()
-	var f TableFamily
-	if family == "inet" {
-		f = TableFamilyInet
-	} else {
-		f = TableFamilyIP
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
 	}
 
 	// Build the concatenated key
@@ -1419,12 +1397,9 @@ func DeleteElementFromMapComplex(family, tableName, mapName string, keyParts []s
 
 // GetElementFromMapComplex checks if element with complex key exists in a map
 func GetElementFromMapComplex(family, tableName, mapName string, keyParts []string) error {
-	client := GetNFTClient()
-	var f TableFamily
-	if family == "inet" {
-		f = TableFamilyInet
-	} else {
-		f = TableFamilyIP
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
 	}
 
 	// Build the concatenated key
@@ -1460,14 +1435,75 @@ func AddIPIfaceVerdictElement(family, tableName, mapName, ip, iface, verdict str
 	return AddElementToMapComplex(family, tableName, mapName, []string{ip, iface}, verdict)
 }
 
+// AddIfaceIPCIDRVerdictElement adds a CIDR range element for maps with ifname.ipv4_addr key order
+func AddIfaceIPCIDRVerdictElement(family, tableName, mapName, iface, cidr, verdict string) error {
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
+	}
+
+	// Parse CIDR to get network and range
+	_, ipNet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return fmt.Errorf("invalid CIDR: %v", err)
+	}
+
+	// Get the network address (start of range)
+	startIP := ipNet.IP.To4()
+	if startIP == nil {
+		return fmt.Errorf("not an IPv4 CIDR")
+	}
+
+	// Calculate end IP of the CIDR range
+	endIP := make(net.IP, 4)
+	for i := range startIP {
+		endIP[i] = startIP[i] | ^ipNet.Mask[i]
+	}
+
+	// Build the key with interface FIRST (for fwd_iface_wan/lan maps)
+	ifaceBytes := InterfaceToBytes(iface)
+
+	// Key is interface + start IP
+	key := make([]byte, 0, 20)
+	key = append(key, ifaceBytes...)
+	key = append(key, startIP...)
+
+	// KeyEnd is interface + end IP
+	keyEnd := make([]byte, 0, 20)
+	keyEnd = append(keyEnd, ifaceBytes...)
+	keyEnd = append(keyEnd, endIP.To4()...)
+
+	element := nftables.SetElement{
+		Key:         key,
+		KeyEnd:      keyEnd,
+		IntervalEnd: false,
+	}
+
+	// Convert verdict to proper data
+	verdictData, err := createVerdictData(verdict)
+	if err != nil {
+		return err
+	}
+	element.VerdictData = verdictData
+
+	set, err := client.GetMap(f, tableName, mapName)
+	if err != nil {
+		return err
+	}
+
+	err = client.conn.SetAddElements(set, []nftables.SetElement{element})
+	if err != nil {
+		return err
+	}
+
+	return client.conn.Flush()
+}
+
 // AddIPIfaceCIDRVerdictElement adds an element with CIDR IP.Interface:Verdict format to interval maps
 func AddIPIfaceCIDRVerdictElement(family, tableName, mapName, cidr, iface, verdict string) error {
-	client := GetNFTClient()
-	var f TableFamily
-	if family == "inet" {
-		f = TableFamilyInet
-	} else {
-		f = TableFamilyIP
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
 	}
 
 	set, err := client.GetMap(f, tableName, mapName)
@@ -1554,15 +1590,12 @@ func GetIPIfaceVerdictElement(family, tableName, mapName, ip, iface, verdict str
 
 // CheckMapExists checks if a map exists (replacement for nft list map)
 func CheckMapExists(family, tableName, mapName string) error {
-	client := GetNFTClient()
-	var f TableFamily
-	if family == "inet" {
-		f = TableFamilyInet
-	} else {
-		f = TableFamilyIP
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
 	}
 
-	_, err := client.GetMap(f, tableName, mapName)
+	_, err = client.GetMap(f, tableName, mapName)
 	return err
 }
 
@@ -1609,15 +1642,9 @@ func InsertRuleToChain(family, tableName, chainName, rule string) error {
 
 // AddIPToSet adds an IP address to a set
 func AddIPToSet(family, tableName, setName, ip string) error {
-	client := GetNFTClient()
-	var f TableFamily
-	switch family {
-	case "inet":
-		f = TableFamilyInet
-	case "ip":
-		f = TableFamilyIP
-	default:
-		return fmt.Errorf("unsupported family: %s", family)
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
 	}
 
 	return client.AddSetElement(f, tableName, setName, IPToBytes(ip))
@@ -1625,15 +1652,9 @@ func AddIPToSet(family, tableName, setName, ip string) error {
 
 // DeleteIPFromSet deletes an IP address from a set
 func DeleteIPFromSet(family, tableName, setName, ip string) error {
-	client := GetNFTClient()
-	var f TableFamily
-	switch family {
-	case "inet":
-		f = TableFamilyInet
-	case "ip":
-		f = TableFamilyIP
-	default:
-		return fmt.Errorf("unsupported family: %s", family)
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
 	}
 
 	return client.DeleteSetElement(f, tableName, setName, IPToBytes(ip))
@@ -1641,15 +1662,9 @@ func DeleteIPFromSet(family, tableName, setName, ip string) error {
 
 // AddCIDRToSet adds a CIDR range to an interval set
 func AddCIDRToSet(family, tableName, setName, cidr string) error {
-	client := GetNFTClient()
-	var f TableFamily
-	switch family {
-	case "inet":
-		f = TableFamilyInet
-	case "ip":
-		f = TableFamilyIP
-	default:
-		return fmt.Errorf("unsupported family: %s", family)
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
 	}
 
 	// Parse CIDR to get network and range
@@ -1710,15 +1725,9 @@ func AddCIDRToSet(family, tableName, setName, cidr string) error {
 
 // CheckChainExists checks if a chain exists
 func CheckChainExists(family, tableName, chainName string) error {
-	client := GetNFTClient()
-	var f TableFamily
-	switch family {
-	case "inet":
-		f = TableFamilyInet
-	case "ip":
-		f = TableFamilyIP
-	default:
-		return fmt.Errorf("unsupported family: %s", family)
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
 	}
 
 	table := client.GetTable(f, tableName)
@@ -1742,15 +1751,9 @@ func CheckChainExists(family, tableName, chainName string) error {
 
 // AddChain adds a new chain
 func AddChain(family, tableName, chainName string) error {
-	client := GetNFTClient()
-	var f TableFamily
-	switch family {
-	case "inet":
-		f = TableFamilyInet
-	case "ip":
-		f = TableFamilyIP
-	default:
-		return fmt.Errorf("unsupported family: %s", family)
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
 	}
 
 	table := client.GetTable(f, tableName)
@@ -1769,12 +1772,9 @@ func AddChain(family, tableName, chainName string) error {
 
 // DeleteChain deletes a chain
 func DeleteChain(family, tableName, chainName string) error {
-	client := GetNFTClient()
-	var f TableFamily
-	if family == "inet" {
-		f = TableFamilyInet
-	} else {
-		f = TableFamilyIP
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
 	}
 
 	table := client.GetTable(f, tableName)

@@ -317,6 +317,10 @@ func AddIPIfaceCIDRVerdictElement(family, tableName, mapName, cidr, iface, verdi
 	return fmt.Errorf("nftables not supported on macOS")
 }
 
+func AddIfaceIPCIDRVerdictElement(family, tableName, mapName, iface, cidr, verdict string) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
 // Verdict element operations
 func DeleteMACVerdictElement(family, tableName, mapName, ip, iface, mac, verdict string) error {
 	return fmt.Errorf("nftables not supported on macOS")
