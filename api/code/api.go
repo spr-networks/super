@@ -108,22 +108,23 @@ type DeviceStyle struct {
 }
 
 type DeviceEntry struct {
-	Name             string
-	MAC              string
-	WGPubKey         string
-	VLANTag          string
-	RecentIP         string
-	DNSCustom        string
-	PSKEntry         PSKEntry
-	Policies         []string
-	Groups           []string
-	DeviceTags       []string
-	DHCPFirstTime    string
-	DHCPLastTime     string
-	Style            DeviceStyle
-	DeviceExpiration int64
-	DeleteExpiration bool
-	DeviceDisabled   bool //tbd deprecate this in favor of only using the policy name.
+	Name              string
+	MAC               string
+	WGPubKey          string
+	VLANTag           string
+	RecentIP          string
+	DNSCustom         string
+	PSKEntry          PSKEntry
+	Policies          []string
+	Groups            []string
+	DeviceTags        []string
+	DHCPFirstTime     string
+	DHCPLastTime      string
+	DHCPLastInterface string
+	Style             DeviceStyle
+	DeviceExpiration  int64
+	DeleteExpiration  bool
+	DeviceDisabled    bool //tbd deprecate this in favor of only using the policy name.
 }
 
 var ValidPolicyStrings = []string{"wan", "lan", "dns", "api", "lan_upstream", "noapi", "guestonly", "disabled", "quarantine", "dns:family"}
