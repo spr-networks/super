@@ -665,7 +665,7 @@ func buildIPIPKey(srcIP, dstIP string) []byte {
 
 // buildIPIPPortKey builds a key from src IP, dst IP, and port
 func buildIPIPPortKey(srcIP, dstIP, port string) []byte {
-	return append(append(IPToBytes(srcIP), IPToBytes(dstIP)...), PortToBytes(port)...)
+	return append(append(IPToBytes(srcIP), IPToBytes(dstIP)...), PortToBytesForConcatenated(port)...)
 }
 
 // buildIPIfaceKey builds a key from IP and interface
@@ -1007,15 +1007,10 @@ func AddEndpoint(protocol, srcIP, dstIP, port string) error {
 	client := GetNFTClient()
 
 	mapName := "ept_" + protocol + "fwd"
+	key := buildIPIPPortKey(srcIP, dstIP, port)
 
-	var key []byte
-	if port == "any" {
-		key = buildIPIPKey(srcIP, dstIP)
-	} else {
-		key = buildIPIPPortKey(srcIP, dstIP, port)
-	}
-
-	value := VerdictToBytes("accept")
+	// Pass verdict as string - AddMapElement will handle the conversion for verdict maps
+	value := []byte("accept")
 
 	return client.AddMapElement(TableFamilyInet, "filter", mapName, key, value)
 }
@@ -1025,13 +1020,7 @@ func DeleteEndpoint(protocol, srcIP, dstIP, port string) error {
 	client := GetNFTClient()
 
 	mapName := "ept_" + protocol + "fwd"
-
-	var key []byte
-	if port == "any" {
-		key = buildIPIPKey(srcIP, dstIP)
-	} else {
-		key = buildIPIPPortKey(srcIP, dstIP, port)
-	}
+	key := buildIPIPPortKey(srcIP, dstIP, port)
 
 	return client.DeleteMapElement(TableFamilyInet, "filter", mapName, key)
 }
@@ -1041,13 +1030,7 @@ func HasEndpoint(protocol, srcIP, dstIP, port string) bool {
 	client := GetNFTClient()
 
 	mapName := "ept_" + protocol + "fwd"
-
-	var key []byte
-	if port == "any" {
-		key = buildIPIPKey(srcIP, dstIP)
-	} else {
-		key = buildIPIPPortKey(srcIP, dstIP, port)
-	}
+	key := buildIPIPPortKey(srcIP, dstIP, port)
 
 	err := client.GetMapElement(TableFamilyInet, "filter", mapName, key)
 	return err == nil
