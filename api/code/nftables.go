@@ -1255,23 +1255,7 @@ func AddElementToMap(family, tableName, mapName, key, value string) error {
 		return err
 	}
 
-	var keyBytes []byte
-
-	// Check if this is a port-based map (inet_service type)
-	// For maps like lan_tcp_accept, wan_tcp_accept, etc.
-	if strings.Contains(mapName, "_tcp_accept") || strings.Contains(mapName, "_udp_accept") {
-		// Key is a port number
-		keyBytes = PortToBytes(key)
-		if keyBytes == nil {
-			return fmt.Errorf("invalid port: %s", key)
-		}
-	} else {
-		// For other maps, use simple string conversion for now
-		keyBytes = []byte(key)
-	}
-
-	// For verdict values, we rely on the nftables library to handle the encoding
-	// The recent fix handles verdict encoding properly
+	keyBytes := []byte(key)
 	valueBytes := []byte(value)
 
 	return client.AddMapElement(f, tableName, mapName, keyBytes, valueBytes)
@@ -1721,6 +1705,52 @@ func AddCIDRToSet(family, tableName, setName, cidr string) error {
 	}
 
 	return client.conn.Flush()
+}
+
+// AddIPVerdictToMap adds an IP address with verdict to a map
+func AddIPVerdictToMap(family, tableName, mapName, ip, verdict string) error {
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
+	}
+
+	keyBytes := IPToBytes(ip)
+	if keyBytes == nil {
+		return fmt.Errorf("invalid IP address: %s", ip)
+	}
+
+	valueBytes := []byte(verdict)
+	return client.AddMapElement(f, tableName, mapName, keyBytes, valueBytes)
+}
+
+// DeleteIPFromMap deletes an IP address from a verdict map
+func DeleteIPFromMap(family, tableName, mapName, ip string) error {
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
+	}
+
+	keyBytes := IPToBytes(ip)
+	if keyBytes == nil {
+		return fmt.Errorf("invalid IP address: %s", ip)
+	}
+
+	return client.DeleteMapElement(f, tableName, mapName, keyBytes)
+}
+
+// GetIPFromMap checks if an IP exists in a verdict map
+func GetIPFromMap(family, tableName, mapName, ip string) error {
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
+	}
+
+	keyBytes := IPToBytes(ip)
+	if keyBytes == nil {
+		return fmt.Errorf("invalid IP address: %s", ip)
+	}
+
+	return client.GetMapElement(f, tableName, mapName, keyBytes)
 }
 
 // CheckChainExists checks if a chain exists

@@ -746,6 +746,118 @@ func TestInterfaceRanges(t *testing.T) {
 	})
 }
 
+func TestUpstreamPrivateRFC1918(t *testing.T) {
+	InitNFTClient()
+
+	tests := []struct {
+		name    string
+		ip      string
+		wantErr bool
+	}{
+		{
+			name:    "Add private IP 10.0.0.1",
+			ip:      "10.0.0.1",
+			wantErr: false,
+		},
+		{
+			name:    "Add private IP 172.16.0.1",
+			ip:      "172.16.0.1",
+			wantErr: false,
+		},
+		{
+			name:    "Add private IP 192.168.1.1",
+			ip:      "192.168.1.1",
+			wantErr: false,
+		},
+		{
+			name:    "Add invalid IP",
+			ip:      "not.an.ip",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test adding IP with verdict
+			err := AddIPVerdictToMap("inet", "filter", "upstream_private_rfc1918_allowed", tt.ip, "return")
+			if (err != nil) != tt.wantErr {
+				t.Errorf("AddIPVerdictToMap() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if err == nil {
+				// Test checking if IP exists
+				checkErr := GetIPFromMap("inet", "filter", "upstream_private_rfc1918_allowed", tt.ip)
+				if checkErr != nil {
+					t.Errorf("GetIPFromMap() error = %v, IP should exist after adding", checkErr)
+				}
+
+				// Test deleting IP
+				delErr := DeleteIPFromMap("inet", "filter", "upstream_private_rfc1918_allowed", tt.ip)
+				if delErr != nil {
+					t.Errorf("DeleteIPFromMap() error = %v", delErr)
+				}
+
+				// Verify IP was deleted
+				checkErr2 := GetIPFromMap("inet", "filter", "upstream_private_rfc1918_allowed", tt.ip)
+				if checkErr2 == nil {
+					t.Error("GetIPFromMap() should return error after deletion, but returned nil")
+				}
+			}
+		})
+	}
+}
+
+func TestDropPrivateRFC1918(t *testing.T) {
+	InitNFTClient()
+
+	// The drop_private_rfc1918 map is an interval map with CIDR ranges
+	// Let's verify it exists and has the expected structure
+	client := GetNFTClient()
+	dropMap, err := client.GetMap(TableFamilyInet, "filter", "drop_private_rfc1918")
+	if err != nil {
+		t.Fatalf("Failed to get drop_private_rfc1918 map: %v", err)
+	}
+
+	t.Logf("drop_private_rfc1918 map found: KeyType=%v, DataType=%v, IsMap=%v, Interval=%v",
+		dropMap.KeyType, dropMap.DataType, dropMap.IsMap, dropMap.Interval)
+
+	// Test listing the map contents
+	jsonData, err := client.ListMapElements(TableFamilyInet, "filter", "drop_private_rfc1918")
+	if err != nil {
+		t.Logf("Failed to list drop_private_rfc1918 elements: %v", err)
+		// This is expected due to interval maps, use nft command instead
+		cmd := exec.Command("nft", "list", "map", "inet", "filter", "drop_private_rfc1918")
+		output, cmdErr := cmd.Output()
+		if cmdErr != nil {
+			t.Fatalf("Failed to list map with nft command: %v", cmdErr)
+		}
+		t.Logf("drop_private_rfc1918 map contents:\n%s", string(output))
+
+		// Verify it contains expected RFC1918 ranges
+		mapOutput := string(output)
+		expectedRanges := []string{
+			"10.0.0.0/8",
+			"172.16.0.0/12",
+			"192.168.0.0/16",
+		}
+		for _, cidr := range expectedRanges {
+			if !strings.Contains(mapOutput, cidr) {
+				t.Errorf("Expected CIDR range %s not found in drop_private_rfc1918 map", cidr)
+			}
+		}
+
+		// Verify the verdict jumps to restrict_upstream_private_addresses
+		if !strings.Contains(mapOutput, "restrict_upstream_private_addresses") {
+			t.Error("Expected verdict 'jump restrict_upstream_private_addresses' not found")
+		}
+	} else {
+		t.Logf("drop_private_rfc1918 elements (JSON): %s", string(jsonData))
+	}
+
+	// Since this is a pre-populated map with static ranges, we won't modify it in tests
+	// Just verify its structure and contents
+}
+
 func TestDeleteDebug(t *testing.T) {
 	InitNFTClient()
 	client := GetNFTClient()

@@ -1128,13 +1128,12 @@ func applyEndpointRules(device DeviceEntry) {
 }
 
 func hasPrivateUpstreamAccess(ip string) bool {
-	key := ip + ":return"
-	err := GetElementFromMap("inet", "filter", "upstream_private_rfc1918_allowed", key)
+	err := GetIPFromMap("inet", "filter", "upstream_private_rfc1918_allowed", ip)
 	return err == nil
 }
 
 func allowPrivateUpstreamAccess(ip string) error {
-	err := AddElementToMap("inet", "filter", "upstream_private_rfc1918_allowed", ip, "return")
+	err := AddIPVerdictToMap("inet", "filter", "upstream_private_rfc1918_allowed", ip, "return")
 	if err != nil {
 		log.Println("failed to add element to upstream_private_rfc1918_allowed", err)
 	}
@@ -1142,8 +1141,7 @@ func allowPrivateUpstreamAccess(ip string) error {
 }
 
 func removePrivateUpstreamAccess(ip string) error {
-	key := ip + ":return"
-	err := DeleteElementFromMap("inet", "filter", "upstream_private_rfc1918_allowed", key)
+	err := DeleteIPFromMap("inet", "filter", "upstream_private_rfc1918_allowed", ip)
 	if err != nil {
 		log.Println("failed to remove element from upstream_private_rfc1918_allowed", err)
 	}
@@ -2648,7 +2646,7 @@ func getMeshPeerInterfaces() map[string]string {
 
 	leafStations, err := fetchAllLeafStations()
 	if err != nil {
-		log.Println("Failed to fetch leaf stations: %v\n", err)
+		log.Printf("Failed to fetch leaf stations: %v\n", err)
 		return result
 	}
 
@@ -2674,7 +2672,7 @@ func getMeshPeerInterfaces() map[string]string {
 			routeInterfaceCache[leafIP] = leafRouteInterface
 		}
 		if leafRouteInterface == "" {
-			log.Println("Could not determine route interface for leaf %s\n", leafIP)
+			log.Printf("Could not determine route interface for leaf %s\n", leafIP)
 			continue
 		}
 
