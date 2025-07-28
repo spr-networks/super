@@ -858,6 +858,74 @@ func TestDropPrivateRFC1918(t *testing.T) {
 	// Just verify its structure and contents
 }
 
+func TestEndpointMaps(t *testing.T) {
+	InitNFTClient()
+
+	tests := []struct {
+		name     string
+		protocol string
+		srcIP    string
+		dstIP    string
+		port     string
+		wantErr  bool
+	}{
+		{
+			name:     "Add TCP endpoint with port",
+			protocol: "tcp",
+			srcIP:    "192.168.1.100",
+			dstIP:    "10.0.0.100",
+			port:     "80",
+			wantErr:  false,
+		},
+		{
+			name:     "Add UDP endpoint with port",
+			protocol: "udp",
+			srcIP:    "192.168.1.100",
+			dstIP:    "10.0.0.100",
+			port:     "53",
+			wantErr:  false,
+		},
+		{
+			name:     "Add TCP endpoint specific port",
+			protocol: "tcp",
+			srcIP:    "192.168.1.200",
+			dstIP:    "10.0.0.200",
+			port:     "443",
+			wantErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test adding endpoint
+			err := AddEndpoint(tt.protocol, tt.srcIP, tt.dstIP, tt.port)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("AddEndpoint() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if err == nil {
+				// Test checking if endpoint exists
+				exists := HasEndpoint(tt.protocol, tt.srcIP, tt.dstIP, tt.port)
+				if !exists {
+					t.Error("HasEndpoint() returned false, expected true after adding")
+				}
+
+				// Test deleting endpoint
+				delErr := DeleteEndpoint(tt.protocol, tt.srcIP, tt.dstIP, tt.port)
+				if delErr != nil {
+					t.Errorf("DeleteEndpoint() error = %v", delErr)
+				}
+
+				// Verify endpoint was deleted
+				exists2 := HasEndpoint(tt.protocol, tt.srcIP, tt.dstIP, tt.port)
+				if exists2 {
+					t.Error("HasEndpoint() returned true after deletion, expected false")
+				}
+			}
+		})
+	}
+}
+
 func TestDeleteDebug(t *testing.T) {
 	InitNFTClient()
 	client := GetNFTClient()
