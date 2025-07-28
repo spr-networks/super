@@ -913,32 +913,22 @@ func applyForwardBlocking(blockRules []ForwardingBlockRule) error {
 }
 
 func deletePortVmap(port string, vmap string) error {
-	//check if it exists
-	key := port + ":accept"
-	err := GetElementFromMap("inet", "filter", vmap, key)
-
-	if err == nil {
-		err = DeleteElementFromMap("inet", "filter", vmap, key)
-		if err != nil {
-			log.Println("failed to delete element from "+vmap, err)
-		}
+	// Just try to delete it - ignore if it doesn't exist
+	err := DeletePortFromMap("inet", "filter", vmap, port)
+	if err != nil && !strings.Contains(err.Error(), "no such file or directory") {
+		log.Println("failed to delete element from "+vmap, err)
+		return err
 	}
 
-	return err
+	return nil
 }
 
 func addPortVmap(port string, vmap string) error {
-	//check if it exists
-	key := port + ":accept"
-	err := GetElementFromMap("inet", "filter", vmap, key)
-
+	// Just add it - nftables handles duplicates gracefully
+	err := AddPortVerdictToMap("inet", "filter", vmap, port, "accept")
 	if err != nil {
-		//entry did not already exist, add it.
-		err = AddElementToMap("inet", "filter", vmap, port, "accept")
-		if err != nil {
-			log.Println("failed to add element to "+vmap, err)
-			return err
-		}
+		log.Printf("failed to add port %s to %s: %v", port, vmap, err)
+		return err
 	}
 
 	return nil
@@ -1024,7 +1014,7 @@ func addMulticastPort(port MulticastPort) error {
 		return addPortVmap(port.Port, "multicast_wan_udp_accept")
 	} else {
 		//ensure deleted
-		err = deletePortVmap(port.Port, "Multicast_wan_udp_accept")
+		err = deletePortVmap(port.Port, "multicast_wan_udp_accept")
 	}
 
 	return err
@@ -3062,6 +3052,8 @@ func dynamicRouteLoop() {
 			RecentDHCPIface[mac] = iface_dst
 		}
 	}
+
+
 
 	ticker := time.NewTicker(1 * time.Second)
 

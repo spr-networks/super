@@ -584,9 +584,9 @@ func TestAddVmap(t *testing.T) {
 	InitNFTClient()
 
 	// Test 1: Simple verdict map (working)
-	err := AddElementToMap("inet", "filter", "lan_tcp_accept", "4040", "accept")
+	err := AddPortVerdictToMap("inet", "filter", "lan_tcp_accept", "4040", "accept")
 	if err != nil {
-		t.Fatalf("AddElementToMap() error = %v", err)
+		t.Fatalf("AddPortVerdictToMap() error = %v", err)
 	}
 
 	// Try to verify the element was added
@@ -920,6 +920,82 @@ func TestEndpointMaps(t *testing.T) {
 				exists2 := HasEndpoint(tt.protocol, tt.srcIP, tt.dstIP, tt.port)
 				if exists2 {
 					t.Error("HasEndpoint() returned true after deletion, expected false")
+				}
+			}
+		})
+	}
+}
+
+func TestPortVerdictMaps(t *testing.T) {
+	InitNFTClient()
+
+	tests := []struct {
+		name     string
+		mapName  string
+		port     string
+		verdict  string
+		wantErr  bool
+	}{
+		{
+			name:     "Add port 22 to lan_tcp_accept",
+			mapName:  "lan_tcp_accept",
+			port:     "22",
+			verdict:  "accept",
+			wantErr:  false,
+		},
+		{
+			name:     "Add port 53 to lan_udp_accept",
+			mapName:  "lan_udp_accept",
+			port:     "53",
+			verdict:  "accept",
+			wantErr:  false,
+		},
+		{
+			name:     "Add port 443 to wan_tcp_accept",
+			mapName:  "wan_tcp_accept",
+			port:     "443",
+			verdict:  "accept",
+			wantErr:  false,
+		},
+		{
+			name:     "Add invalid port",
+			mapName:  "lan_tcp_accept",
+			port:     "not-a-port",
+			verdict:  "accept",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test adding port with verdict
+			err := AddPortVerdictToMap("inet", "filter", tt.mapName, tt.port, tt.verdict)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("AddPortVerdictToMap() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if err == nil {
+				// Check via nft command
+				cmd := exec.Command("nft", "list", "map", "inet", "filter", tt.mapName)
+				output, _ := cmd.Output()
+				t.Logf("Map %s after add: %s", tt.mapName, string(output))
+				
+				// Test checking if port exists
+				checkErr := GetPortFromMap("inet", "filter", tt.mapName, tt.port)
+				if checkErr != nil {
+					t.Errorf("GetPortFromMap() error = %v, port should exist after adding", checkErr)
+				}
+
+				// Test deleting port
+				delErr := DeletePortFromMap("inet", "filter", tt.mapName, tt.port)
+				if delErr != nil {
+					t.Errorf("DeletePortFromMap() error = %v", delErr)
+				}
+
+				// Verify port was deleted
+				checkErr2 := GetPortFromMap("inet", "filter", tt.mapName, tt.port)
+				if checkErr2 == nil {
+					t.Error("GetPortFromMap() should return error after deletion, but returned nil")
 				}
 			}
 		})
