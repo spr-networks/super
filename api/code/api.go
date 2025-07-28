@@ -3118,6 +3118,9 @@ func main() {
 		panic(err)
 	}
 
+	//wait for base  container to run
+	SyncBaseContainer()
+
 	initAuth()
 	//set up dhcp
 	initDHCP()
