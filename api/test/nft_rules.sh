@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Create dummy interfaces for testing
+ip link add docker0 type dummy 2>/dev/null || true
+ip link set docker0 up
+ip addr add 172.17.0.1/16 dev docker0 2>/dev/null || true
+
+ip link add eth1 type dummy 2>/dev/null || true
+ip link set eth1 up
+
 # Disable forwarding
 sysctl net.ipv4.ip_forward=0
 
