@@ -2637,6 +2637,63 @@ func isMeshPluginEnabled() bool {
 	return false
 }
 
+// getMeshPeerInterfaces returns a map of MAC addresses to their mesh route interfaces
+// for all authorized stations connected via mesh leaf routers
+func getMeshPeerInterfaces() map[string]string {
+	result := make(map[string]string)
+
+	if !isMeshPluginEnabled() || isLeafRouter() {
+		return result
+	}
+
+	leafStations, err := fetchAllLeafStations()
+	if err != nil {
+		log.Println("Failed to fetch leaf stations: %v\n", err)
+		return result
+	}
+
+	if leafStations == nil {
+		return result
+	}
+
+	// Cache route interfaces to avoid redundant calls
+	routeInterfaceCache := make(map[string]string)
+
+	// Process the leaf stations data
+	for leafIP, leafData := range leafStations {
+		if leafData.Error != nil {
+			fmt.Printf("Error from leaf %s: %v\n", leafIP, leafData.Error)
+			continue
+		}
+
+		// Get the route interface for this leaf IP from cache or fetch it
+		leafRouteInterface, exists := routeInterfaceCache[leafIP]
+		if !exists {
+			leafRouteInterface = getRouteInterface(leafIP)
+			// Cache the result even if empty to avoid redundant calls
+			routeInterfaceCache[leafIP] = leafRouteInterface
+		}
+		if leafRouteInterface == "" {
+			log.Println("Could not determine route interface for leaf %s\n", leafIP)
+			continue
+		}
+
+		// Process stations for this leaf
+		for mac, stationInfo := range leafData.Stations {
+			// Check if station is authorized
+			flags, exists := stationInfo["flags"]
+			if !exists || !strings.Contains(flags, "[AUTHORIZED]") {
+				continue
+			}
+
+			// Add to result map
+			result[strings.ToLower(mac)] = leafRouteInterface
+		}
+	}
+
+	return result
+}
+
 func meshPluginDownlink() string {
 	//tbd this should be a paramter in mesh setup.
 	//query config and get it
@@ -2971,10 +3028,6 @@ func clearConntrackSrcIP(peer string) {
 }
 
 func dynamicRouteLoop() {
-	//mesh APs do not need routes, as they use the bridge
-	if isLeafRouter() {
-		return
-	}
 
 	/*
 	* SPR uses a self-organized network informed by hostapd,
@@ -2989,6 +3042,28 @@ func dynamicRouteLoop() {
 	* With Wireguard devices keep the same IP as with DHCP over any other interface.
 	*
 	 */
+
+	meshPluginEnabled := isMeshPluginEnabled()
+
+	//mesh APs do not need routes, as they use the bridge
+	if meshPluginEnabled {
+		if isLeafRouter() {
+			return
+		}
+		//on first start, the mesh nodes might already have clients connected,
+		//that had DHCP'd earlier. They would not get disconnected and know to DHCP
+		// again if the API goes down
+
+		//for this scenario, we can inform the API immediately by polling their state.
+		//during continuous operation the mesh nodes should not need to be polled
+		//since clients will DHCP if they reconnect.
+		meshPeerInterfaces := getMeshPeerInterfaces()
+
+		//update recent dhcp with this info
+		for mac, iface_dst := range meshPeerInterfaces {
+			RecentDHCPIface[mac] = iface_dst
+		}
+	}
 
 	ticker := time.NewTicker(1 * time.Second)
 
@@ -3007,20 +3082,19 @@ func dynamicRouteLoop() {
 			// Get all downlink interfaces
 			downlinks := getDownlinkInterfaces()
 
-			meshPluginEnabled := isMeshPluginEnabled()
-
+			//add wg0 as a valid sink
+			downlinks = append(downlinks, "wg0")
 			wireguard_peers, remote_endpoints := getWireguardActivePeers()
 			wifi_peers := getWifiPeers()
 
 			notifyVpnActivity(wireguard_peers, remote_endpoints)
 
-			//this will inform what interface to route a device's IP to.
-			//
+			//this structure informs what interface to route a device through
 			suggested_device := map[string]string{}
 
-			Interfacesmtx.Lock()
-			interfaces := loadInterfacesConfigLocked()
-			Interfacesmtx.Unlock()
+			//The PublicIfaceMapFile will also be updated
+			//for plugins to have network state information
+			newIfaceMap := map[string]string{}
 
 			FWmtx.Lock()
 
@@ -3037,18 +3111,14 @@ func dynamicRouteLoop() {
 			}
 			FWmtx.Unlock()
 
-			//next, if wireguard is there, place that as priority
-			// if it is not already a wifi peer
+			//next, create an IP mapping for wireguard devices
+			//that are currently connected.
 			for _, ip := range wireguard_peers {
 				_, exists := suggested_device[ip]
 				if !exists {
 					suggested_device[ip] = "wg0"
 				}
 			}
-
-			//PublicIfaceMapFile
-
-			newIfaceMap := map[string]string{}
 
 			//now get the existing route and make an update if needed
 			for ident, entry := range devices {
@@ -3060,15 +3130,16 @@ func dynamicRouteLoop() {
 				// this gets the current device destination for this entry (LANIF, wifi vlan, )
 				established_route_device := getRouteInterface(entry.RecentIP)
 
-				//try the ident (MAC) first for what the new route should be
+				// try the ident (MAC) first for what the new route should be
 				new_iface, exists := suggested_device[ident]
+
 				if !exists {
 					// if that failed, try looking it up by IP address (for wireguard)
 					new_iface, exists = suggested_device[entry.RecentIP]
 				}
 
 				// Check if the suggested interface is valid
-				if exists && new_iface != "" {
+				if exists && new_iface != "" && !strings.HasPrefix(new_iface, "wlan") {
 					// For VLAN interfaces, check the base interface
 					baseIface := new_iface
 					if strings.Contains(new_iface, ".") {
@@ -3076,16 +3147,10 @@ func dynamicRouteLoop() {
 					}
 
 					// Verify the interface is a valid downlink
-					isValidDownlink := false
-					for _, dl := range downlinks {
-						if baseIface == dl {
-							isValidDownlink = true
-							break
-						}
-					}
+					isValidDownlink := slices.Contains(downlinks, baseIface)
 
-					// If it's not a downlink, it might be wg0 or a WiFi interface
-					if !isValidDownlink && new_iface != "wg0" && !strings.HasPrefix(new_iface, "wlan") {
+					// If it's not a downlink, was not wg0, or a wlan
+					if !isValidDownlink {
 						// Interface is not valid, treat as if not found
 						exists = false
 						new_iface = ""
@@ -3093,6 +3158,7 @@ func dynamicRouteLoop() {
 				}
 
 				if !exists {
+
 					// We don't know which interface to use
 					// The device wasn't in suggested_device map (from DHCP/WiFi/WireGuard)
 					// Without DHCP information, we can't route the device
