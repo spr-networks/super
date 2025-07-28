@@ -1736,6 +1736,53 @@ func GetIPFromMap(family, tableName, mapName, ip string) error {
 	return client.GetMapElement(f, tableName, mapName, keyBytes)
 }
 
+// AddPortVerdictToMap adds a port with verdict to a map (inet_service : verdict)
+func AddPortVerdictToMap(family, tableName, mapName, port, verdict string) error {
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
+	}
+	
+	keyBytes := PortToBytes(port)
+	if keyBytes == nil {
+		return fmt.Errorf("invalid port: %s", port)
+	}
+	
+	valueBytes := []byte(verdict)
+	return client.AddMapElement(f, tableName, mapName, keyBytes, valueBytes)
+}
+
+// DeletePortFromMap deletes a port from a verdict map
+func DeletePortFromMap(family, tableName, mapName, port string) error {
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
+	}
+	
+	keyBytes := PortToBytes(port)
+	if keyBytes == nil {
+		return fmt.Errorf("invalid port: %s", port)
+	}
+	
+	return client.DeleteMapElement(f, tableName, mapName, keyBytes)
+}
+
+// GetPortFromMap checks if a port exists in a verdict map  
+func GetPortFromMap(family, tableName, mapName, port string) error {
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
+	}
+	
+	keyBytes := PortToBytes(port)
+	if keyBytes == nil {
+		return fmt.Errorf("invalid port: %s", port)
+	}
+	
+	err = client.GetMapElement(f, tableName, mapName, keyBytes)
+	return err
+}
+
 // CheckChainExists checks if a chain exists
 func CheckChainExists(family, tableName, chainName string) error {
 	f, client, err := withFamily(family)
