@@ -3323,8 +3323,6 @@ func systemDNSOverride(w http.ResponseWriter, r *http.Request) {
 }
 
 func initFirewallRules() {
-	SyncBaseContainer()
-
 	loadFirewallRules()
 
 	FWmtx.Lock()
