@@ -118,7 +118,16 @@ func (h *HostapdCtrl) detach() error {
 func (h *HostapdCtrl) readLoop() {
 	buf := make([]byte, 4096)
 	for {
-		n, _, err := h.conn.ReadFrom(buf)
+		// Check if connection is closed
+		h.mu.Lock()
+		if h.conn == nil {
+			h.mu.Unlock()
+			return
+		}
+		conn := h.conn
+		h.mu.Unlock()
+
+		n, _, err := conn.ReadFrom(buf)
 		if err != nil {
 			// Connection closed
 			return
