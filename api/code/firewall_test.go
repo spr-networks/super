@@ -2378,6 +2378,9 @@ func TestAPIBlockFixVerification(t *testing.T) {
 	setupFirewallTest(t)
 	defer teardownFirewallTest(t)
 
+	// Initialize NFT client for this test
+	InitNFTClient()
+
 	testIP := "172.16.1.50"
 
 	// This test verifies that api_block uses AddIPToSet/DeleteIPFromSet/GetIPFromSet
@@ -2390,17 +2393,120 @@ func TestAPIBlockFixVerification(t *testing.T) {
 		if strings.Contains(err.Error(), "unknown verdict") {
 			t.Fatal("api_block is still using map functions instead of set functions")
 		}
-		// Other errors might be OK (e.g., set doesn't exist in test environment)
-		t.Logf("addNoAPIAccess() error (may be expected in test env): %v", err)
+		// Check for the specific "invalid argument" error that indicates interval set issue
+		if strings.Contains(err.Error(), "invalid argument") {
+			t.Fatal("api_block interval set handling is broken - got 'invalid argument' error")
+		}
+		// Other errors might be OK (e.g., test environment issues)
+		t.Skipf("Cannot test api_block in this environment: %v", err)
 	}
+
+	// If we got here, the add succeeded
+	t.Log("Successfully added IP to api_block interval set")
 
 	// Check if IP exists (should use GetIPFromSet internally)
 	hasNoAccess := hasNoAPIAccess(testIP)
-	t.Logf("hasNoAPIAccess(%s) = %v", testIP, hasNoAccess)
+	if !hasNoAccess {
+		t.Error("Expected hasNoAPIAccess to return true after adding IP")
+	}
 
 	// Remove IP (should use DeleteIPFromSet internally)
 	err = removeNoAPIAccess(testIP)
 	if err != nil {
-		t.Logf("removeNoAPIAccess() error (may be expected in test env): %v", err)
+		t.Errorf("Failed to remove IP from api_block: %v", err)
+	}
+
+	// Verify removal
+	hasNoAccess = hasNoAPIAccess(testIP)
+	if hasNoAccess {
+		t.Error("Expected hasNoAPIAccess to return false after removing IP")
+	}
+}
+
+func TestAPIBlockComprehensive(t *testing.T) {
+	setupFirewallTest(t)
+	defer teardownFirewallTest(t)
+
+	// Initialize NFT client
+	InitNFTClient()
+
+	// Clear api_block first
+	exec.Command("nft", "flush", "set", "inet", "filter", "api_block").Run()
+
+	// Test single IP addition
+	testIP := "192.168.23.30"
+	err := addNoAPIAccess(testIP)
+	if err != nil {
+		t.Fatalf("Failed to add IP %s: %v", testIP, err)
+	}
+
+	// Check the set contents
+	cmd := exec.Command("nft", "list", "set", "inet", "filter", "api_block")
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("Failed to list api_block: %v", err)
+	}
+
+	outputStr := string(output)
+	t.Logf("api_block contents after adding %s:\n%s", testIP, outputStr)
+
+	// Check if elements section exists at all
+	if !strings.Contains(outputStr, "elements = {") {
+		t.Fatal("No elements section found in api_block - IP was not actually added!")
+	}
+
+	// Verify the IP is present
+	if !strings.Contains(outputStr, testIP) {
+		t.Errorf("IP %s not found in api_block", testIP)
+	}
+
+	// Verify no unwanted range expansion
+	if strings.Contains(outputStr, "255.255.255.255") {
+		t.Error("api_block contains unwanted range expansion to 255.255.255.255")
+	}
+
+	// Add more IPs to test they don't merge incorrectly
+	moreIPs := []string{"10.0.0.50", "172.16.1.100"}
+	for _, ip := range moreIPs {
+		err = addNoAPIAccess(ip)
+		if err != nil && !strings.Contains(err.Error(), "file exists") {
+			t.Errorf("Failed to add IP %s: %v", ip, err)
+		}
+	}
+
+	// Check final state
+	cmd2 := exec.Command("nft", "list", "set", "inet", "filter", "api_block")
+	output2, _ := cmd2.Output()
+	outputStr2 := string(output2)
+	t.Logf("Final api_block contents:\n%s", outputStr2)
+
+	// Verify all IPs are present
+	allIPs := append([]string{testIP}, moreIPs...)
+	for _, ip := range allIPs {
+		if !strings.Contains(outputStr2, ip) {
+			t.Errorf("IP %s not found in final api_block", ip)
+		}
+	}
+
+	// Test removal
+	err = removeNoAPIAccess(testIP)
+	if err != nil {
+		t.Errorf("Failed to remove IP %s: %v", testIP, err)
+	}
+
+	// Verify removal
+	cmd3 := exec.Command("nft", "list", "set", "inet", "filter", "api_block")
+	output3, _ := cmd3.Output()
+	outputStr3 := string(output3)
+	
+	if strings.Contains(outputStr3, testIP) {
+		t.Errorf("IP %s still present after removal", testIP)
+	}
+
+	// Verify other IPs remain
+	for _, ip := range moreIPs {
+		if !strings.Contains(outputStr3, ip) {
+			t.Errorf("IP %s was accidentally removed", ip)
+		}
 	}
 }
