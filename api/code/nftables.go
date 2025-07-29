@@ -738,6 +738,10 @@ func ProtocolToBytes(protocol string) []byte {
 		return []byte{1}
 	default:
 		if p, err := strconv.Atoi(protocol); err == nil {
+			// Ensure protocol number is within valid range for byte (0-255)
+			if p < 0 || p > 255 {
+				return nil
+			}
 			return []byte{byte(p)}
 		}
 		return nil
@@ -757,6 +761,10 @@ func ProtocolToBytesForConcatenated(protocol string) []byte {
 		return []byte{1, 0, 0, 0}
 	default:
 		if p, err := strconv.Atoi(protocol); err == nil {
+			// Ensure protocol number is within valid range for byte (0-255)
+			if p < 0 || p > 255 {
+				return nil
+			}
 			return []byte{byte(p), 0, 0, 0}
 		}
 		return nil
@@ -1742,12 +1750,12 @@ func AddPortVerdictToMap(family, tableName, mapName, port, verdict string) error
 	if err != nil {
 		return err
 	}
-	
+
 	keyBytes := PortToBytes(port)
 	if keyBytes == nil {
 		return fmt.Errorf("invalid port: %s", port)
 	}
-	
+
 	valueBytes := []byte(verdict)
 	return client.AddMapElement(f, tableName, mapName, keyBytes, valueBytes)
 }
@@ -1758,27 +1766,27 @@ func DeletePortFromMap(family, tableName, mapName, port string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	keyBytes := PortToBytes(port)
 	if keyBytes == nil {
 		return fmt.Errorf("invalid port: %s", port)
 	}
-	
+
 	return client.DeleteMapElement(f, tableName, mapName, keyBytes)
 }
 
-// GetPortFromMap checks if a port exists in a verdict map  
+// GetPortFromMap checks if a port exists in a verdict map
 func GetPortFromMap(family, tableName, mapName, port string) error {
 	f, client, err := withFamily(family)
 	if err != nil {
 		return err
 	}
-	
+
 	keyBytes := PortToBytes(port)
 	if keyBytes == nil {
 		return fmt.Errorf("invalid port: %s", port)
 	}
-	
+
 	err = client.GetMapElement(f, tableName, mapName, keyBytes)
 	return err
 }

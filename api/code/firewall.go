@@ -3053,8 +3053,6 @@ func dynamicRouteLoop() {
 		}
 	}
 
-
-
 	ticker := time.NewTicker(1 * time.Second)
 
 	for {

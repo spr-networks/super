@@ -129,6 +129,15 @@ func teardownFirewallTest(t *testing.T) {
 		_ = FlushMapByName("inet", "filter", mapName)
 		_ = FlushMapByName("inet", "nat", mapName)
 	}
+	
+	// Also flush sets
+	sets := []string{
+		"supernetworks",
+	}
+	for _, setName := range sets {
+		_ = FlushSetWithTable("inet", "filter", setName)
+		_ = FlushSetWithTable("inet", "mangle", setName)
+	}
 }
 
 func checkNFTRuleExists(t *testing.T, rule string) bool {
