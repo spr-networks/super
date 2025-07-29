@@ -25,7 +25,7 @@ type HostapdCtrl struct {
 func NewHostapdCtrl(iface string) (*HostapdCtrl, error) {
 	h := &HostapdCtrl{
 		iface:          iface,
-		socketPath:     fmt.Sprintf("/state/wifi/control_%s", iface),
+		socketPath:     fmt.Sprintf("%s/state/wifi/control_%s/%s", TEST_PREFIX, iface, iface),
 		responseBuffer: make(chan string, 10),
 	}
 
@@ -101,7 +101,8 @@ func (h *HostapdCtrl) attach() error {
 // detach sends DETACH command
 func (h *HostapdCtrl) detach() error {
 	// Don't check response as we're closing anyway
-	h.sendRaw("DETACH")
+	// Note: caller must hold h.mu lock
+	h.sendRawUnlocked("DETACH")
 	return nil
 }
 
@@ -129,11 +130,8 @@ func (h *HostapdCtrl) readLoop() {
 	}
 }
 
-// sendRaw sends raw command without waiting for response
-func (h *HostapdCtrl) sendRaw(cmd string) error {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
+// sendRawUnlocked sends raw command without waiting for response (caller must hold lock)
+func (h *HostapdCtrl) sendRawUnlocked(cmd string) error {
 	if h.conn == nil {
 		return fmt.Errorf("connection closed")
 	}
@@ -145,6 +143,14 @@ func (h *HostapdCtrl) sendRaw(cmd string) error {
 
 	_, err = h.conn.WriteTo([]byte(cmd), serverAddr)
 	return err
+}
+
+// sendRaw sends raw command without waiting for response
+func (h *HostapdCtrl) sendRaw(cmd string) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	return h.sendRawUnlocked(cmd)
 }
 
 // SendCommand sends a command and waits for response

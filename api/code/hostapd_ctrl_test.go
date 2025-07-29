@@ -56,6 +56,7 @@ func TestHostapdCtrlManager(t *testing.T) {
 	}
 
 	// Test getting multiple connections
+	var validConnections []string
 	for _, iface := range ifaces {
 		ctrl, err := hostapdCtrlManager.GetConnection(iface)
 		if err != nil {
@@ -69,12 +70,19 @@ func TestHostapdCtrlManager(t *testing.T) {
 			t.Errorf("Failed to send PING to %s: %v", iface, err)
 		} else if resp != "PONG" {
 			t.Errorf("Expected PONG from %s, got: %s", iface, resp)
+		} else {
+			validConnections = append(validConnections, iface)
 		}
 	}
 
+	if len(validConnections) == 0 {
+		t.Skip("No valid hostapd connections available")
+		return
+	}
+
 	// Test that we reuse connections
-	ctrl1, _ := hostapdCtrlManager.GetConnection(ifaces[0])
-	ctrl2, _ := hostapdCtrlManager.GetConnection(ifaces[0])
+	ctrl1, _ := hostapdCtrlManager.GetConnection(validConnections[0])
+	ctrl2, _ := hostapdCtrlManager.GetConnection(validConnections[0])
 	if ctrl1 != ctrl2 {
 		t.Error("Manager should reuse existing connections")
 	}
