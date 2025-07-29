@@ -1248,6 +1248,56 @@ func updateMeshPluginGlobalSSID(SSID string) {
 	go updateMeshPluginPut("setSSID", jsonValue)
 }
 
+// StationInfo represents the parsed hostapd station information
+type StationInfo map[string]string
+
+// LeafStations represents all stations from a leaf router
+type LeafStations struct {
+	LeafIP   string
+	Stations map[string]StationInfo // MAC -> station info
+	Error    error
+}
+
+// fetchAllLeafStations fetches station information from all leaf routers via mesh plugin
+func fetchAllLeafStations() (map[string]LeafStations, error) {
+	if !PlusEnabled() {
+		return nil, nil
+	}
+
+	if !PluginEnabled("MESH") {
+		return nil, nil
+	}
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/allLeafStations", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	c := getMeshdClient()
+	defer c.CloseIdleConnections()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		fmt.Println("meshd request failed", err, "allLeafStations")
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("meshd request failed", resp.StatusCode, "allLeafStations")
+		return nil, fmt.Errorf("meshd request failed with status %d", resp.StatusCode)
+	}
+
+	var result map[string]LeafStations
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 func modifyCustomComposePaths(w http.ResponseWriter, r *http.Request) {
 	Configmtx.Lock()
 	defer Configmtx.Unlock()
