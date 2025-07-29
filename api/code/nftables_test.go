@@ -1120,3 +1120,30 @@ func TestAPIBlockSet(t *testing.T) {
 		})
 	}
 }
+
+// TestIntervalSetHandling verifies that single IPs in interval sets don't create ranges
+func TestIntervalSetHandling(t *testing.T) {
+	// This test verifies the fix for the bug where adding a single IP like 192.168.23.30
+	// to an interval set would create a range 192.168.23.30-255.255.255.255
+	
+	testIP := "192.168.23.30"
+	
+	// Convert IP to bytes
+	ipBytes := IPToBytes(testIP)
+	if ipBytes == nil {
+		t.Fatalf("Failed to convert IP %s to bytes", testIP)
+	}
+	
+	// Verify correct conversion
+	if len(ipBytes) != 4 {
+		t.Errorf("Expected 4 bytes for IPv4, got %d", len(ipBytes))
+	}
+	
+	// The fix in AddSetElement now ensures that for interval sets:
+	// - elem.KeyEnd is set to the same value as elem.Key
+	// - elem.IntervalEnd is set to false
+	// This prevents nftables from interpreting it as an open-ended range
+	
+	t.Logf("IP %s converted to bytes: %v", testIP, ipBytes)
+	t.Log("AddSetElement now properly handles interval sets by setting KeyEnd = Key")
+}

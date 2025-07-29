@@ -55,4 +55,4 @@ COPY test/nft_rules.sh /scripts/nft_rules.sh
 RUN chmod +x /scripts/nft_rules.sh
 
 # Run tests
-CMD ["/bin/bash", "-c", "/scripts/nft_rules.sh && go test -v -tags test -run TestFirewall ./..."]
+CMD ["/bin/bash", "-c", "/scripts/nft_rules.sh && go test -v -tags test ./..."]
