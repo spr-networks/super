@@ -68,8 +68,8 @@ func MACToBytes(mac string) []byte {
 	return []byte(mac)
 }
 
-func VerdictToBytes(verdict string) []byte {
-	return []byte(verdict)
+func VerdictToBytes(verdict string) ([]byte, error) {
+	return []byte(verdict), nil
 }
 
 // Forwarding rules
@@ -196,6 +196,28 @@ func ListSetJSON(family, tableName, setName string) ([]byte, error) {
 
 func ListTablesJSON() ([]byte, error) {
 	return nil, fmt.Errorf("nftables not supported on macOS")
+}
+
+// IP verdict map functions
+func AddIPVerdictToMap(family, tableName, mapName, ip, verdict string) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
+func DeleteIPFromMap(family, tableName, mapName, ip string) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
+func GetIPFromMap(family, tableName, mapName, ip string) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
+// Port verdict map functions
+func AddPortVerdictToMap(family, tableName, mapName, port, verdict string) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
+func DeletePortFromMap(family, tableName, mapName, port string) error {
+	return fmt.Errorf("nftables not supported on macOS")
 }
 
 func CheckTableExists(family, tableName string) error {
