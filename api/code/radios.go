@@ -111,6 +111,15 @@ func doReloadPSKFiles() {
 
 	for _, iface := range getAP_Ifaces() {
 		//reload the hostapd passwords
+		// Try direct method first
+		ctrl, err := hostapdCtrlManager.GetConnection(iface)
+		if err == nil {
+			err = ctrl.ReloadWPAPSK()
+			if err == nil {
+				continue
+			}
+		}
+		// Fallback to exec method
 		cmd := exec.Command("hostapd_cli", "-p", "/state/wifi/control_"+iface, "-s", "/state/wifi/", "reload_wpa_psk")
 		err = cmd.Run()
 		if err != nil {
@@ -188,6 +197,13 @@ func (h *HostapdConfigEntry) Validate() error {
 }
 
 func RunHostapdAllStations(iface string) (map[string]map[string]string, error) {
+	// Try direct method first
+	stations, err := RunHostapdAllStationsDirect(iface)
+	if err == nil {
+		return stations, nil
+	}
+
+	// Fallback to exec method
 	m := map[string]map[string]string{}
 	out, err := RunHostapdCommand(iface, "all_sta")
 	if err != nil {
@@ -452,7 +468,13 @@ func RunHostapdCommandArray(iface string, cmd []string) (string, error) {
 }
 
 func RunHostapdCommand(iface string, cmd string) (string, error) {
+	// Try direct method first
+	result, err := RunHostapdCommandDirect(iface, cmd)
+	if err == nil {
+		return result, nil
+	}
 
+	// Fallback to exec method
 	outb, err := exec.Command("hostapd_cli", "-p", "/state/wifi/control_"+iface, "-s", "/state/wifi", cmd).Output()
 	if err != nil {
 		return "", fmt.Errorf("Failed to execute command %s", cmd)
