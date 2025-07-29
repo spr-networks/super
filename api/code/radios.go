@@ -111,16 +111,7 @@ func doReloadPSKFiles() {
 
 	for _, iface := range getAP_Ifaces() {
 		//reload the hostapd passwords
-		// Try direct method first
-		ctrl, err := hostapdCtrlManager.GetConnection(iface)
-		if err == nil {
-			err = ctrl.ReloadWPAPSK()
-			if err == nil {
-				continue
-			}
-		}
-		// Fallback to exec method
-		cmd := exec.Command("hostapd_cli", "-p", "/state/wifi/control_"+iface, "-s", "/state/wifi/", "reload_wpa_psk")
+		cmd := exec.Command("hostapd_cli", "-p", TEST_PREFIX+"/state/wifi/control_"+iface, "-s", TEST_PREFIX+"/state/wifi/", "reload_wpa_psk")
 		err = cmd.Run()
 		if err != nil {
 			fmt.Println(err)
@@ -197,13 +188,6 @@ func (h *HostapdConfigEntry) Validate() error {
 }
 
 func RunHostapdAllStations(iface string) (map[string]map[string]string, error) {
-	// Try direct method first
-	stations, err := RunHostapdAllStationsDirect(iface)
-	if err == nil {
-		return stations, nil
-	}
-
-	// Fallback to exec method
 	m := map[string]map[string]string{}
 	out, err := RunHostapdCommand(iface, "all_sta")
 	if err != nil {
@@ -457,15 +441,8 @@ func hostapdChannelCalc(w http.ResponseWriter, r *http.Request) {
 }
 
 func RunHostapdCommandArray(iface string, cmd []string) (string, error) {
-	// Try direct method first
-	cmdStr := strings.Join(cmd, " ")
-	result, err := RunHostapdCommandDirect(iface, cmdStr)
-	if err == nil {
-		return result, nil
-	}
 
-	// Fallback to exec method
-	args := append([]string{"-p", "/state/wifi/control_" + iface, "-s", "/state/wifi"}, cmd...)
+	args := append([]string{"-p", TEST_PREFIX + "/state/wifi/control_" + iface, "-s", TEST_PREFIX + "/state/wifi"}, cmd...)
 
 	outb, err := exec.Command("hostapd_cli", args...).Output()
 	if err != nil {
@@ -475,14 +452,7 @@ func RunHostapdCommandArray(iface string, cmd []string) (string, error) {
 }
 
 func RunHostapdCommand(iface string, cmd string) (string, error) {
-	// Try direct method first
-	result, err := RunHostapdCommandDirect(iface, cmd)
-	if err == nil {
-		return result, nil
-	}
-
-	// Fallback to exec method
-	outb, err := exec.Command("hostapd_cli", "-p", "/state/wifi/control_"+iface, "-s", "/state/wifi", cmd).Output()
+	outb, err := exec.Command("hostapd_cli", "-p", TEST_PREFIX+"/state/wifi/control_"+iface, "-s", TEST_PREFIX+"/state/wifi", cmd).Output()
 	if err != nil {
 		return "", fmt.Errorf("Failed to execute command %s", cmd)
 	}
