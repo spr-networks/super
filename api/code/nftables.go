@@ -260,7 +260,8 @@ func (c *NFTClient) AddMapElement(family TableFamily, tableName, mapName string,
 	// Check if this is a verdict map first
 	isVerdictMap := set.IsMap && set.DataType.Name == "verdict"
 
-	// For interval maps, we need to set KeyEnd = Key to prevent range merging
+	// For interval maps, single elements need special handling to prevent range merging.
+	// We set KeyEnd = Key to indicate this is a single element, not a range start.
 	if set.Interval {
 		element.IntervalEnd = false
 		element.KeyEnd = make([]byte, len(key))
@@ -371,6 +372,14 @@ func (c *NFTClient) DeleteMapElement(family TableFamily, tableName, mapName stri
 		Key: key,
 	}
 
+	// For interval maps, single elements need special handling to prevent range merging.
+	// We set KeyEnd = Key to indicate this is a single element, not a range start.
+	if set.Interval {
+		element.IntervalEnd = false
+		element.KeyEnd = make([]byte, len(key))
+		copy(element.KeyEnd, key)
+	}
+
 	// Note: There is a known issue with google/nftables where GetSetElements
 	// fails for concatenated types, which can cause issues with delete operations.
 	// The delete operation itself should work, but verification might fail.
@@ -450,11 +459,47 @@ func (c *NFTClient) AddSetElement(family TableFamily, tableName, setName string,
 		return err
 	}
 
-	elem := nftables.SetElement{
-		Key: element,
+	var elements []nftables.SetElement
+
+	// For interval sets, we need to add both start and end elements
+	if set.Interval {
+		// Start element
+		startElem := nftables.SetElement{
+			Key:         element,
+			IntervalEnd: false,
+		}
+		elements = append(elements, startElem)
+
+		// End element: increment IP by 1 to create a single-IP range
+		endBytes := make([]byte, len(element))
+		copy(endBytes, element)
+		
+		// Increment the last byte if it's an IPv4 address
+		if len(endBytes) == 4 {
+			// Increment the IP address
+			for i := 3; i >= 0; i-- {
+				if endBytes[i] < 255 {
+					endBytes[i]++
+					break
+				}
+				endBytes[i] = 0
+			}
+		}
+		
+		endElem := nftables.SetElement{
+			Key:         endBytes,
+			IntervalEnd: true,
+		}
+		elements = append(elements, endElem)
+	} else {
+		// Non-interval set: just add the single element
+		elem := nftables.SetElement{
+			Key: element,
+		}
+		elements = append(elements, elem)
 	}
 
-	err = c.conn.SetAddElements(set, []nftables.SetElement{elem})
+	err = c.conn.SetAddElements(set, elements)
 	if err != nil {
 		return err
 	}
@@ -469,11 +514,47 @@ func (c *NFTClient) DeleteSetElement(family TableFamily, tableName, setName stri
 		return err
 	}
 
-	elem := nftables.SetElement{
-		Key: element,
+	var elements []nftables.SetElement
+
+	// For interval sets, we need to delete both start and end elements
+	if set.Interval {
+		// Start element
+		startElem := nftables.SetElement{
+			Key:         element,
+			IntervalEnd: false,
+		}
+		elements = append(elements, startElem)
+
+		// End element: must match what was added (IP + 1)
+		endBytes := make([]byte, len(element))
+		copy(endBytes, element)
+		
+		// Increment the last byte if it's an IPv4 address
+		if len(endBytes) == 4 {
+			// Increment the IP address
+			for i := 3; i >= 0; i-- {
+				if endBytes[i] < 255 {
+					endBytes[i]++
+					break
+				}
+				endBytes[i] = 0
+			}
+		}
+		
+		endElem := nftables.SetElement{
+			Key:         endBytes,
+			IntervalEnd: true,
+		}
+		elements = append(elements, endElem)
+	} else {
+		// Non-interval set: just delete the single element
+		elem := nftables.SetElement{
+			Key: element,
+		}
+		elements = append(elements, elem)
 	}
 
-	err = c.conn.SetDeleteElements(set, []nftables.SetElement{elem})
+	err = c.conn.SetDeleteElements(set, elements)
 	if err != nil {
 		return err
 	}
