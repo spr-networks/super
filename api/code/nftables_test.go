@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"os/exec"
 	"strings"
 	"testing"
@@ -294,37 +295,58 @@ func TestInterfaceToBytes(t *testing.T) {
 
 func TestVerdictToBytes(t *testing.T) {
 	tests := []struct {
-		name     string
-		verdict  string
-		expected []byte
+		name      string
+		verdict   string
+		wantBytes []byte
+		wantErr   bool
 	}{
 		{
-			name:     "Accept verdict",
-			verdict:  "accept",
-			expected: []byte{1},
+			name:      "Accept verdict",
+			verdict:   "accept",
+			wantBytes: []byte{0, 0, 0, 1}, // VerdictAccept = 1
+			wantErr:   false,
 		},
 		{
-			name:     "Drop verdict",
-			verdict:  "drop",
-			expected: []byte{0},
+			name:      "Drop verdict",
+			verdict:   "drop",
+			wantBytes: []byte{0, 0, 0, 0}, // VerdictDrop = 0
+			wantErr:   false,
 		},
 		{
-			name:     "Continue verdict",
-			verdict:  "continue",
-			expected: []byte{2},
+			name:      "Continue verdict",
+			verdict:   "continue",
+			wantBytes: []byte{255, 255, 255, 255}, // VerdictContinue = -1
+			wantErr:   false,
 		},
 		{
-			name:     "Unknown verdict defaults to accept",
-			verdict:  "unknown",
-			expected: []byte{1},
+			name:      "Return verdict",
+			verdict:   "return",
+			wantBytes: []byte{255, 255, 255, 251}, // VerdictReturn = -5
+			wantErr:   false,
+		},
+		{
+			name:      "Jump verdict",
+			verdict:   "jump",
+			wantBytes: []byte{255, 255, 255, 253}, // VerdictJump = -3
+			wantErr:   false,
+		},
+		{
+			name:      "Unknown verdict returns error",
+			verdict:   "unknown",
+			wantBytes: nil,
+			wantErr:   true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := VerdictToBytes(tt.verdict)
-			if len(result) != 1 || result[0] != tt.expected[0] {
-				t.Errorf("VerdictToBytes(%s) = %v, want %v", tt.verdict, result, tt.expected)
+			result, err := VerdictToBytes(tt.verdict)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("VerdictToBytes(%s) error = %v, wantErr %v", tt.verdict, err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && !bytes.Equal(result, tt.wantBytes) {
+				t.Errorf("VerdictToBytes(%s) = %v, want %v", tt.verdict, result, tt.wantBytes)
 			}
 		})
 	}

@@ -129,7 +129,7 @@ func teardownFirewallTest(t *testing.T) {
 		_ = FlushMapByName("inet", "filter", mapName)
 		_ = FlushMapByName("inet", "nat", mapName)
 	}
-	
+
 	// Also flush sets
 	sets := []string{
 		"supernetworks",
