@@ -220,6 +220,11 @@ func DeletePortFromMap(family, tableName, mapName, port string) error {
 	return fmt.Errorf("nftables not supported on macOS")
 }
 
+// Set functions
+func GetIPFromSet(family, tableName, setName, ip string) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
 func CheckTableExists(family, tableName string) error {
 	return fmt.Errorf("nftables not supported on macOS")
 }

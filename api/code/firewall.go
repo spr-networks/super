@@ -1157,12 +1157,12 @@ func applyPrivateNetworkUpstreamDevice(device DeviceEntry) {
 }
 
 func hasNoAPIAccess(ip string) bool {
-	err := GetElementFromMap("inet", "filter", "api_block", ip)
+	err := GetIPFromSet("inet", "filter", "api_block", ip)
 	return err == nil
 }
 
 func addNoAPIAccess(ip string) error {
-	err := AddElementToMap("inet", "filter", "api_block", ip, "")
+	err := AddIPToSet("inet", "filter", "api_block", ip)
 	if err != nil {
 		log.Println("failed to add element to api_block", err)
 	}
@@ -1170,7 +1170,7 @@ func addNoAPIAccess(ip string) error {
 }
 
 func removeNoAPIAccess(ip string) error {
-	err := DeleteElementFromMap("inet", "filter", "api_block", ip)
+	err := DeleteIPFromSet("inet", "filter", "api_block", ip)
 	if err != nil {
 		log.Println("failed to remove element from api_block", err)
 	}
@@ -2233,8 +2233,7 @@ func addCustomDNSElement(IP, DNSCustom string) {
 }
 
 func delCustomDNSElement(IP, DNSCustom string) {
-	key := IP + ":" + DNSCustom
-	err := DeleteElementFromMap("inet", "nat", "custom_dns_devices", key)
+	err := DeleteElementFromMap("inet", "nat", "custom_dns_devices", IP)
 	if err != nil {
 		log.Println("remove custom dns server failed", IP, DNSCustom, err)
 	}

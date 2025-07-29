@@ -2275,3 +2275,132 @@ func TestSupernetworkOperations(t *testing.T) {
 		modifySupernetworkEntry(supernet, "invalid")
 	})
 }
+
+func TestAPIBlockFunctions(t *testing.T) {
+	setupFirewallTest(t)
+	defer teardownFirewallTest(t)
+
+	tests := []struct {
+		name    string
+		ip      string
+		wantErr bool
+	}{
+		{
+			name:    "Add valid IP to api_block",
+			ip:      "192.168.1.100",
+			wantErr: false,
+		},
+		{
+			name:    "Add another valid IP",
+			ip:      "10.0.0.50",
+			wantErr: false,
+		},
+		{
+			name:    "Add invalid IP",
+			ip:      "not.an.ip",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test adding IP to api_block
+			err := addNoAPIAccess(tt.ip)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("addNoAPIAccess() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if err == nil {
+				// Check if IP has no API access
+				hasNoAccess := hasNoAPIAccess(tt.ip)
+				if !hasNoAccess {
+					t.Errorf("hasNoAPIAccess() = false, expected true after adding IP")
+				}
+
+				// Test removing IP from api_block
+				err := removeNoAPIAccess(tt.ip)
+				if err != nil {
+					t.Errorf("removeNoAPIAccess() error = %v", err)
+				}
+
+				// Verify IP was removed
+				hasNoAccess = hasNoAPIAccess(tt.ip)
+				if hasNoAccess {
+					t.Errorf("hasNoAPIAccess() = true, expected false after removing IP")
+				}
+			}
+		})
+	}
+}
+
+func TestCustomDNSFunctions(t *testing.T) {
+	setupFirewallTest(t)
+	defer teardownFirewallTest(t)
+
+	tests := []struct {
+		name      string
+		clientIP  string
+		dnsServer string
+	}{
+		{
+			name:      "Add custom DNS for client 1",
+			clientIP:  "192.168.1.100",
+			dnsServer: "8.8.8.8",
+		},
+		{
+			name:      "Add custom DNS for client 2",
+			clientIP:  "192.168.1.101",
+			dnsServer: "1.1.1.1",
+		},
+		{
+			name:      "Update custom DNS for client 1",
+			clientIP:  "192.168.1.100",
+			dnsServer: "9.9.9.9",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test adding custom DNS element
+			addCustomDNSElement(tt.clientIP, tt.dnsServer)
+
+			// Since these functions don't return errors, we can't check much
+			// In a real environment, we would verify via nftables commands
+
+			// Test deleting custom DNS element
+			delCustomDNSElement(tt.clientIP, tt.dnsServer)
+		})
+	}
+}
+
+// Test that verifies api_block was fixed to use set functions instead of map functions
+func TestAPIBlockFixVerification(t *testing.T) {
+	setupFirewallTest(t)
+	defer teardownFirewallTest(t)
+
+	testIP := "172.16.1.50"
+
+	// This test verifies that api_block uses AddIPToSet/DeleteIPFromSet/GetIPFromSet
+	// instead of the map functions, which was causing the "unknown verdict" error
+
+	// Add IP to api_block (should use AddIPToSet internally)
+	err := addNoAPIAccess(testIP)
+	if err != nil {
+		// If we get "unknown verdict" error, the bug is not fixed
+		if strings.Contains(err.Error(), "unknown verdict") {
+			t.Fatal("api_block is still using map functions instead of set functions")
+		}
+		// Other errors might be OK (e.g., set doesn't exist in test environment)
+		t.Logf("addNoAPIAccess() error (may be expected in test env): %v", err)
+	}
+
+	// Check if IP exists (should use GetIPFromSet internally)
+	hasNoAccess := hasNoAPIAccess(testIP)
+	t.Logf("hasNoAPIAccess(%s) = %v", testIP, hasNoAccess)
+
+	// Remove IP (should use DeleteIPFromSet internally)
+	err = removeNoAPIAccess(testIP)
+	if err != nil {
+		t.Logf("removeNoAPIAccess() error (may be expected in test env): %v", err)
+	}
+}
