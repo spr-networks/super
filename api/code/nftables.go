@@ -3,6 +3,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -310,7 +311,11 @@ func (c *NFTClient) AddMapElement(family TableFamily, tableName, mapName string,
 		// and convert it to bytes if needed
 		if len(value) == 0 || (len(value) < 10 && isVerdictString(string(value))) {
 			// This looks like a verdict string, convert it
-			value = VerdictToBytes(string(value))
+			verdictBytes, err := VerdictToBytes(string(value))
+			if err != nil {
+				return fmt.Errorf("failed to convert verdict: %w", err)
+			}
+			value = verdictBytes
 		}
 
 		// Check if we need to pad the value as well
@@ -695,10 +700,13 @@ func IPToBytes(ip string) []byte {
 // PortToBytes converts a port string to bytes
 func PortToBytes(port string) []byte {
 	p, err := strconv.Atoi(port)
-	if err != nil {
+	if err != nil || p < 0 || p > 65535 {
 		return nil
 	}
-	return []byte{byte(p >> 8), byte(p & 0xff)}
+	// Use network byte order (big-endian) for port
+	buf := make([]byte, 2)
+	binary.BigEndian.PutUint16(buf, uint16(p))
+	return buf
 }
 
 // PortToBytesForConcatenated returns 4 bytes for concatenated maps
@@ -712,7 +720,10 @@ func PortToBytesForConcatenated(port string) []byte {
 			if err1 == nil && err2 == nil && startPort <= endPort && startPort > 0 && endPort <= 65535 {
 				// For interval maps, we use the start port for the key
 				// The nftables library will handle the range internally
-				return []byte{byte(startPort >> 8), byte(startPort & 0xff), 0, 0}
+				buf := make([]byte, 4)
+				binary.BigEndian.PutUint16(buf, uint16(startPort))
+				// Last 2 bytes remain 0 for padding
+				return buf
 			}
 		}
 		return nil
@@ -724,7 +735,10 @@ func PortToBytesForConcatenated(port string) []byte {
 		return nil
 	}
 	// Return 4 bytes for inet_service in concatenated types - big endian
-	return []byte{byte(p >> 8), byte(p & 0xff), 0, 0}
+	buf := make([]byte, 4)
+	binary.BigEndian.PutUint16(buf, uint16(p))
+	// Last 2 bytes remain 0 for padding
+	return buf
 }
 
 // ProtocolToBytes converts a protocol string to bytes
@@ -792,17 +806,46 @@ func MACToBytes(mac string) []byte {
 }
 
 // VerdictToBytes converts a verdict string to bytes
-func VerdictToBytes(verdict string) []byte {
+func VerdictToBytes(verdict string) ([]byte, error) {
+	// NFT verdict codes are 32-bit integers in network byte order
+	// Based on expr.VerdictKind constants:
+	// VerdictReturn = -5, VerdictGoto = -4, VerdictJump = -3,
+	// VerdictBreak = -2, VerdictContinue = -1, VerdictDrop = 0,
+	// VerdictAccept = 1, VerdictStolen = 2, VerdictQueue = 3,
+	// VerdictRepeat = 4, VerdictStop = 5
+	buf := make([]byte, 4)
+
+	var val int32
 	switch verdict {
-	case "accept":
-		return []byte{1} // Simplified for now
-	case "drop":
-		return []byte{0} // Simplified for now
+	case "return":
+		val = -5 // expr.VerdictReturn
+	case "goto":
+		val = -4 // expr.VerdictGoto
+	case "jump":
+		val = -3 // expr.VerdictJump
+	case "break":
+		val = -2 // expr.VerdictBreak
 	case "continue":
-		return []byte{2} // Simplified for now
+		val = -1 // expr.VerdictContinue
+	case "drop":
+		val = 0 // expr.VerdictDrop
+	case "accept":
+		val = 1 // expr.VerdictAccept
+	case "stolen":
+		val = 2 // expr.VerdictStolen
+	case "queue":
+		val = 3 // expr.VerdictQueue
+	case "repeat":
+		val = 4 // expr.VerdictRepeat
+	case "stop":
+		val = 5 // expr.VerdictStop
 	default:
-		return []byte{1} // Default to accept
+		return nil, fmt.Errorf("unknown verdict: %s", verdict)
 	}
+
+	binary.BigEndian.PutUint32(buf, uint32(val))
+
+	return buf, nil
 }
 
 // High-level wrapper functions for common operations
