@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -1676,6 +1677,38 @@ func DeleteIPFromSet(family, tableName, setName, ip string) error {
 	}
 
 	return client.DeleteSetElement(f, tableName, setName, IPToBytes(ip))
+}
+
+// GetIPFromSet checks if an IP exists in a set
+func GetIPFromSet(family, tableName, setName, ip string) error {
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
+	}
+
+	set, err := client.GetMap(f, tableName, setName)
+	if err != nil {
+		return fmt.Errorf("failed to get set %s/%s/%s: %w", familyToString(f), tableName, setName, err)
+	}
+
+	elements, err := client.conn.GetSetElements(set)
+	if err != nil {
+		return fmt.Errorf("failed to get set elements: %w", err)
+	}
+
+	keyBytes := IPToBytes(ip)
+	if keyBytes == nil {
+		return fmt.Errorf("invalid IP address: %s", ip)
+	}
+
+	// Check if the IP exists in the set
+	for _, elem := range elements {
+		if bytes.Equal(elem.Key, keyBytes) {
+			return nil // Found
+		}
+	}
+
+	return fmt.Errorf("element not found in set")
 }
 
 // AddCIDRToSet adds a CIDR range to an interval set

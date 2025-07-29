@@ -1064,3 +1064,59 @@ func TestDeleteDebug(t *testing.T) {
 	}
 	t.Log("Delete successful")
 }
+
+func TestAPIBlockSet(t *testing.T) {
+	InitNFTClient()
+
+	tests := []struct {
+		name    string
+		ip      string
+		wantErr bool
+	}{
+		{
+			name:    "Add valid IP to api_block",
+			ip:      "192.168.1.100",
+			wantErr: false,
+		},
+		{
+			name:    "Add another valid IP",
+			ip:      "10.0.0.50",
+			wantErr: false,
+		},
+		{
+			name:    "Add invalid IP",
+			ip:      "not.an.ip",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test adding IP to api_block set
+			err := AddIPToSet("inet", "filter", "api_block", tt.ip)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("AddIPToSet() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if err == nil {
+				// Check if IP exists in set
+				checkErr := GetIPFromSet("inet", "filter", "api_block", tt.ip)
+				if checkErr != nil {
+					t.Errorf("GetIPFromSet() error = %v, IP should exist after adding", checkErr)
+				}
+
+				// Test deleting IP from set
+				delErr := DeleteIPFromSet("inet", "filter", "api_block", tt.ip)
+				if delErr != nil {
+					t.Errorf("DeleteIPFromSet() error = %v", delErr)
+				}
+
+				// Verify IP was deleted
+				checkErr2 := GetIPFromSet("inet", "filter", "api_block", tt.ip)
+				if checkErr2 == nil {
+					t.Error("GetIPFromSet() should return error after deletion, but returned nil")
+				}
+			}
+		})
+	}
+}
