@@ -29,11 +29,12 @@ func NewHostapdCtrl(iface string) (*HostapdCtrl, error) {
 		return nil, fmt.Errorf("hostapd socket not found at %s: %v", socketPath, err)
 	}
 	
-	// Create a unique local socket path
-	localPath := fmt.Sprintf("/tmp/hostapd_ctrl_%s_%d_%d", iface, os.Getpid(), time.Now().UnixNano())
+	// Create a unique local socket path in the same namespace as hostapd
+	// Put it under /state/wifi/ so it's accessible from hostapd's namespace
+	localPath := fmt.Sprintf("%s/state/wifi/client_%s_%d_%d", TEST_PREFIX, iface, os.Getpid(), time.Now().UnixNano())
 	
-	// Clean up any existing socket
-	os.Remove(localPath)
+	// Clean up any existing socket (ignore errors)
+	_ = os.Remove(localPath)
 	
 	// Create local address
 	laddr, err := net.ResolveUnixAddr("unixgram", localPath)
@@ -106,8 +107,8 @@ func (h *HostapdCtrl) Close() error {
 		err := h.conn.Close()
 		h.conn = nil
 		
-		// Clean up local socket
-		os.Remove(h.localPath)
+		// Clean up local socket (ignore errors)
+		_ = os.Remove(h.localPath)
 		
 		return err
 	}
@@ -277,11 +278,13 @@ var hostapdCtrlManager = NewHostapdCtrlManager()
 
 // init performs cleanup of stale socket files on startup
 func init() {
-	// Clean up any stale hostapd control sockets from previous runs
-	pattern := fmt.Sprintf("/tmp/hostapd_ctrl_*_%d_*", os.Getpid())
-	matches, _ := filepath.Glob(pattern)
-	for _, match := range matches {
-		os.Remove(match)
+	// Clean up any stale client sockets from previous runs
+	if TEST_PREFIX != "" {
+		pattern := fmt.Sprintf("%s/state/wifi/client_*_%d_*", TEST_PREFIX, os.Getpid())
+		matches, _ := filepath.Glob(pattern)
+		for _, match := range matches {
+			os.Remove(match)
+		}
 	}
 }
 
