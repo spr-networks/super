@@ -930,39 +930,39 @@ func TestPortVerdictMaps(t *testing.T) {
 	InitNFTClient()
 
 	tests := []struct {
-		name     string
-		mapName  string
-		port     string
-		verdict  string
-		wantErr  bool
+		name    string
+		mapName string
+		port    string
+		verdict string
+		wantErr bool
 	}{
 		{
-			name:     "Add port 22 to lan_tcp_accept",
-			mapName:  "lan_tcp_accept",
-			port:     "22",
-			verdict:  "accept",
-			wantErr:  false,
+			name:    "Add port 22 to lan_tcp_accept",
+			mapName: "lan_tcp_accept",
+			port:    "22",
+			verdict: "accept",
+			wantErr: false,
 		},
 		{
-			name:     "Add port 53 to lan_udp_accept",
-			mapName:  "lan_udp_accept",
-			port:     "53",
-			verdict:  "accept",
-			wantErr:  false,
+			name:    "Add port 53 to lan_udp_accept",
+			mapName: "lan_udp_accept",
+			port:    "53",
+			verdict: "accept",
+			wantErr: false,
 		},
 		{
-			name:     "Add port 443 to wan_tcp_accept",
-			mapName:  "wan_tcp_accept",
-			port:     "443",
-			verdict:  "accept",
-			wantErr:  false,
+			name:    "Add port 443 to wan_tcp_accept",
+			mapName: "wan_tcp_accept",
+			port:    "443",
+			verdict: "accept",
+			wantErr: false,
 		},
 		{
-			name:     "Add invalid port",
-			mapName:  "lan_tcp_accept",
-			port:     "not-a-port",
-			verdict:  "accept",
-			wantErr:  true,
+			name:    "Add invalid port",
+			mapName: "lan_tcp_accept",
+			port:    "not-a-port",
+			verdict: "accept",
+			wantErr: true,
 		},
 	}
 
@@ -979,7 +979,7 @@ func TestPortVerdictMaps(t *testing.T) {
 				cmd := exec.Command("nft", "list", "map", "inet", "filter", tt.mapName)
 				output, _ := cmd.Output()
 				t.Logf("Map %s after add: %s", tt.mapName, string(output))
-				
+
 				// Test checking if port exists
 				checkErr := GetPortFromMap("inet", "filter", tt.mapName, tt.port)
 				if checkErr != nil {
