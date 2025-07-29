@@ -1,0 +1,57 @@
+{
+ "InfluxDB": {
+  "URL": "",
+  "Org": "",
+  "Bucket": "",
+  "Token": ""
+ },
+ "Plugins": [
+  {
+   "Name": "dns-block-extension",
+   "URI": "dns/block",
+   "UnixPath": "/state/dns/dns_block_plugin",
+   "Enabled": true
+  },
+  {
+   "Name": "dns-log-extension",
+   "URI": "dns/log",
+   "UnixPath": "/state/dns/dns_log_plugin",
+   "Enabled": true
+  },
+  {
+   "Name": "plugin-lookup",
+   "URI": "lookup",
+   "UnixPath": "/state/plugins/plugin-lookup/lookup_plugin",
+   "Enabled": true
+  },
+  {
+   "Name": "wireguard",
+   "URI": "wireguard",
+   "UnixPath": "/state/plugins/wireguard/wireguard_plugin",
+   "Enabled": true
+  },
+  {
+   "Name": "dyndns",
+   "URI": "dyndns",
+   "UnixPath": "/state/plugins/dyndns/dyndns_plugin",
+   "Enabled": false,
+   "ComposeFilePath": "dyndns/docker-compose.yml"
+  },
+  {
+   "Name": "db",
+   "URI": "db",
+   "UnixPath": "/state/plugins/db/socket",
+   "Enabled": true
+  },
+  {
+    "Name": "PPP",
+    "Enabled": false,
+    "ComposeFilePath": "ppp/docker-compose.yml"
+  },
+  {
+    "Name": "WIFIUPLINK",
+    "Enabled": false,
+    "ComposeFilePath": "wifi_uplink/docker-compose.yml"
+  }
+ ]
+}
