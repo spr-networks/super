@@ -56,14 +56,25 @@ func NewHostapdCtrl(iface string) (*HostapdCtrl, error) {
 
 	h.conn = clientConn
 
+	// Start reading responses before sending commands
+	go h.readLoop()
+
+	// Test connection with PING before ATTACH
+	resp, err := h.SendCommand("PING")
+	if err != nil {
+		h.Close()
+		return nil, fmt.Errorf("hostapd not responding: %v", err)
+	}
+	if resp != "PONG" {
+		h.Close()
+		return nil, fmt.Errorf("unexpected PING response: %s", resp)
+	}
+
 	// Send ATTACH command to receive unsolicited messages
 	if err := h.attach(); err != nil {
 		h.Close()
 		return nil, err
 	}
-
-	// Start reading responses
-	go h.readLoop()
 
 	return h, nil
 }
