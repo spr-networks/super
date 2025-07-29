@@ -1,0 +1,58 @@
+FROM ubuntu:24.04 AS builder
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update
+RUN apt-get install -y --no-install-recommends nftables iproute2 netcat-traditional inetutils-ping net-tools nano ca-certificates git curl wget iptables conntrack iproute2  jq
+
+ARG TARGETARCH
+RUN wget https://dl.google.com/go/go1.24.2.linux-${TARGETARCH}.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.24.2.linux-${TARGETARCH}.tar.gz
+ENV PATH="/usr/local/go/bin:$PATH"
+
+RUN mkdir /code
+WORKDIR /code
+RUN git clone https://github.com/spr-networks/sprbus --depth 1
+WORKDIR /code/sprbus/cmd/
+
+ARG USE_TMPFS=false
+RUN --mount=type=tmpfs,target=/tmpfs \
+    [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
+    go build -ldflags "-s -w" -o /sprbus
+
+WORKDIR /code
+COPY code/ /code/
+
+
+# Build with test tags
+RUN --mount=type=tmpfs,target=/tmpfs \
+    [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
+    go build -tags test -ldflags "-s -w" -o /api
+
+COPY code/ /code/
+WORKDIR /code
+
+# Set test environment variables
+ENV TEST_PREFIX="/test"
+ENV LANIF="eth0"
+ENV WANIF="eth1"
+ENV LANIP="10.10.10.1"
+ENV DOCKERIF="docker0"
+ENV DOCKERNET="172.17.0.0/16"
+
+# Create required directories
+RUN mkdir -p /test/configs/base /test/state/api /test/configs/interfaces /test/configs/wifi /test/configs/devices /test/state/public/
+
+# Copy all test config files to the correct locations
+COPY test/alerts.json /test/configs/base/
+COPY test/api.json /test/configs/base/
+COPY test/devices.json /test/configs/devices/
+COPY test/dhcp.json /test/configs/base/
+COPY test/groups.json /test/configs/devices/
+COPY test/interfaces.json /test/configs/base/
+COPY test/firewall.json /test/configs/base/
+
+# Copy nft_rules.sh for test environment
+COPY test/nft_rules.sh /scripts/nft_rules.sh
+RUN chmod +x /scripts/nft_rules.sh
+
+# Run tests
+CMD ["/bin/bash", "-c", "/scripts/nft_rules.sh && go test -v -tags test -run TestFirewall ./..."]
