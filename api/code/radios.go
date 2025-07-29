@@ -457,7 +457,14 @@ func hostapdChannelCalc(w http.ResponseWriter, r *http.Request) {
 }
 
 func RunHostapdCommandArray(iface string, cmd []string) (string, error) {
+	// Try direct method first
+	cmdStr := strings.Join(cmd, " ")
+	result, err := RunHostapdCommandDirect(iface, cmdStr)
+	if err == nil {
+		return result, nil
+	}
 
+	// Fallback to exec method
 	args := append([]string{"-p", "/state/wifi/control_" + iface, "-s", "/state/wifi"}, cmd...)
 
 	outb, err := exec.Command("hostapd_cli", args...).Output()
