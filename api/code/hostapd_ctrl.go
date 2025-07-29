@@ -35,22 +35,14 @@ func NewHostapdCtrl(iface string) (*HostapdCtrl, error) {
 	// Remove any existing client socket
 	os.Remove(h.clientPath)
 
-	// Create Unix domain socket
-	conn, err := net.Dial("unixgram", h.socketPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to hostapd: %v", err)
-	}
-
-	// Bind to our client socket
+	// Create client socket for unixgram communication
 	clientAddr, err := net.ResolveUnixAddr("unixgram", h.clientPath)
 	if err != nil {
-		conn.Close()
 		return nil, fmt.Errorf("failed to resolve client address: %v", err)
 	}
 
 	clientConn, err := net.ListenUnixgram("unixgram", clientAddr)
 	if err != nil {
-		conn.Close()
 		return nil, fmt.Errorf("failed to create client socket: %v", err)
 	}
 
@@ -87,6 +79,11 @@ func (h *HostapdCtrl) Close() error {
 	if h.conn != nil {
 		// Send DETACH command
 		h.detach()
+		
+		// Set deadline to unblock any pending reads
+		h.conn.SetDeadline(time.Now())
+		
+		// Now close the connection
 		h.conn.Close()
 		h.conn = nil
 	}
