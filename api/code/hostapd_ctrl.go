@@ -24,6 +24,11 @@ type HostapdCtrl struct {
 func NewHostapdCtrl(iface string) (*HostapdCtrl, error) {
 	socketPath := fmt.Sprintf("%s/state/wifi/control_%s/%s", TEST_PREFIX, iface, iface)
 	
+	// Check if the hostapd socket exists
+	if _, err := os.Stat(socketPath); err != nil {
+		return nil, fmt.Errorf("hostapd socket not found at %s: %v", socketPath, err)
+	}
+	
 	// Create a unique local socket path
 	localPath := fmt.Sprintf("/tmp/hostapd_ctrl_%s_%d_%d", iface, os.Getpid(), time.Now().UnixNano())
 	
@@ -48,6 +53,9 @@ func NewHostapdCtrl(iface string) (*HostapdCtrl, error) {
 		os.Remove(localPath)
 		return nil, fmt.Errorf("failed to connect to hostapd: %v", err)
 	}
+	
+	// Set initial timeout for connection test
+	conn.SetDeadline(time.Now().Add(1 * time.Second))
 	
 	h := &HostapdCtrl{
 		conn:       conn,
