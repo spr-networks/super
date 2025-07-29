@@ -13,181 +13,138 @@ import (
 
 // HostapdCtrl represents a connection to hostapd control interface
 type HostapdCtrl struct {
-	iface          string
-	conn           *net.UnixConn
-	socketPath     string
-	clientPath     string
-	mu             sync.Mutex
-	responseBuffer chan string
+	conn       net.Conn
+	socketPath string
+	localPath  string
+	mu         sync.Mutex
 }
 
 // NewHostapdCtrl creates a new hostapd control interface connection
+// Based on patterns from github.com/hdiniz/wpa_supplicant-go
 func NewHostapdCtrl(iface string) (*HostapdCtrl, error) {
+	socketPath := fmt.Sprintf("%s/state/wifi/control_%s/%s", TEST_PREFIX, iface, iface)
+	
+	// Create a unique local socket path
+	localPath := fmt.Sprintf("/tmp/hostapd_ctrl_%s_%d_%d", iface, os.Getpid(), time.Now().UnixNano())
+	
+	// Clean up any existing socket
+	os.Remove(localPath)
+	
+	// Create local address
+	laddr, err := net.ResolveUnixAddr("unixgram", localPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve local address: %v", err)
+	}
+	
+	// Create remote address
+	raddr, err := net.ResolveUnixAddr("unixgram", socketPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve remote address: %v", err)
+	}
+	
+	// Connect
+	conn, err := net.DialUnix("unixgram", laddr, raddr)
+	if err != nil {
+		os.Remove(localPath)
+		return nil, fmt.Errorf("failed to connect to hostapd: %v", err)
+	}
+	
 	h := &HostapdCtrl{
-		iface:          iface,
-		socketPath:     fmt.Sprintf("%s/state/wifi/control_%s/%s", TEST_PREFIX, iface, iface),
-		responseBuffer: make(chan string, 10),
+		conn:       conn,
+		socketPath: socketPath,
+		localPath:  localPath,
 	}
-
-	// Create a unique client socket path with timestamp to avoid conflicts
-	h.clientPath = fmt.Sprintf("/tmp/hostapd_ctrl_%s_%d_%d", iface, os.Getpid(), time.Now().UnixNano())
-
-	// Remove any existing client socket
-	os.Remove(h.clientPath)
-
-	// Create client socket for unixgram communication
-	clientAddr, err := net.ResolveUnixAddr("unixgram", h.clientPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve client address: %v", err)
-	}
-
-	clientConn, err := net.ListenUnixgram("unixgram", clientAddr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create client socket: %v", err)
-	}
-
-	h.conn = clientConn
-
-	// Start reading responses before sending commands
-	go h.readLoop()
-
-	// Test connection with PING before ATTACH
+	
+	// Test connection
 	resp, err := h.SendCommand("PING")
 	if err != nil {
-		h.Close()
+		conn.Close()
+		os.Remove(localPath)
 		return nil, fmt.Errorf("hostapd not responding: %v", err)
 	}
 	if resp != "PONG" {
-		h.Close()
+		conn.Close()
+		os.Remove(localPath)
 		return nil, fmt.Errorf("unexpected PING response: %s", resp)
 	}
-
-	// Send ATTACH command to receive unsolicited messages
-	if err := h.attach(); err != nil {
-		h.Close()
-		return nil, err
+	
+	// Attach to receive events
+	resp, err = h.SendCommand("ATTACH")
+	if err != nil {
+		conn.Close()
+		os.Remove(localPath)
+		return nil, fmt.Errorf("failed to attach: %v", err)
 	}
-
+	if resp != "OK" {
+		conn.Close()
+		os.Remove(localPath)
+		return nil, fmt.Errorf("ATTACH failed: %s", resp)
+	}
+	
 	return h, nil
 }
 
-// Close closes the hostapd control interface connection
+// Close closes the connection
 func (h *HostapdCtrl) Close() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-
+	
 	if h.conn != nil {
-		// Send DETACH command
-		h.detach()
+		// Send DETACH (ignore errors)
+		h.conn.SetDeadline(time.Now().Add(100 * time.Millisecond))
+		h.conn.Write([]byte("DETACH"))
 		
-		// Set deadline to unblock any pending reads
-		h.conn.SetDeadline(time.Now())
-		
-		// Now close the connection
-		h.conn.Close()
+		// Close connection
+		err := h.conn.Close()
 		h.conn = nil
-	}
-
-	// Clean up client socket
-	os.Remove(h.clientPath)
-
-	return nil
-}
-
-// attach sends ATTACH command to receive unsolicited messages
-func (h *HostapdCtrl) attach() error {
-	resp, err := h.SendCommand("ATTACH")
-	if err != nil {
+		
+		// Clean up local socket
+		os.Remove(h.localPath)
+		
 		return err
 	}
-	if resp != "OK" {
-		return fmt.Errorf("ATTACH failed: %s", resp)
-	}
+	
 	return nil
-}
-
-// detach sends DETACH command
-func (h *HostapdCtrl) detach() error {
-	// Don't check response as we're closing anyway
-	// Note: caller must hold h.mu lock
-	h.sendRawUnlocked("DETACH")
-	return nil
-}
-
-// readLoop continuously reads responses from hostapd
-func (h *HostapdCtrl) readLoop() {
-	buf := make([]byte, 4096)
-	for {
-		// Check if connection is closed
-		h.mu.Lock()
-		if h.conn == nil {
-			h.mu.Unlock()
-			return
-		}
-		conn := h.conn
-		h.mu.Unlock()
-
-		n, _, err := conn.ReadFrom(buf)
-		if err != nil {
-			// Connection closed
-			return
-		}
-
-		resp := string(buf[:n])
-		// Filter out unsolicited messages (they start with <priority>)
-		if !strings.HasPrefix(resp, "<") {
-			select {
-			case h.responseBuffer <- resp:
-			default:
-				// Buffer full, drop oldest
-				<-h.responseBuffer
-				h.responseBuffer <- resp
-			}
-		}
-	}
-}
-
-// sendRawUnlocked sends raw command without waiting for response (caller must hold lock)
-func (h *HostapdCtrl) sendRawUnlocked(cmd string) error {
-	if h.conn == nil {
-		return fmt.Errorf("connection closed")
-	}
-
-	serverAddr, err := net.ResolveUnixAddr("unixgram", h.socketPath)
-	if err != nil {
-		return err
-	}
-
-	_, err = h.conn.WriteTo([]byte(cmd), serverAddr)
-	return err
-}
-
-// sendRaw sends raw command without waiting for response
-func (h *HostapdCtrl) sendRaw(cmd string) error {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	return h.sendRawUnlocked(cmd)
 }
 
 // SendCommand sends a command and waits for response
 func (h *HostapdCtrl) SendCommand(cmd string) (string, error) {
-	// Clear response buffer
-	for len(h.responseBuffer) > 0 {
-		<-h.responseBuffer
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	
+	if h.conn == nil {
+		return "", fmt.Errorf("connection closed")
 	}
-
-	if err := h.sendRaw(cmd); err != nil {
-		return "", err
+	
+	// Set a reasonable timeout
+	h.conn.SetDeadline(time.Now().Add(5 * time.Second))
+	defer h.conn.SetDeadline(time.Time{})
+	
+	// Send command
+	_, err := h.conn.Write([]byte(cmd))
+	if err != nil {
+		return "", fmt.Errorf("failed to send command: %v", err)
 	}
-
-	// Wait for response with timeout
-	select {
-	case resp := <-h.responseBuffer:
-		return strings.TrimSpace(resp), nil
-	case <-time.After(5 * time.Second):
-		return "", fmt.Errorf("timeout waiting for response")
+	
+	// Read response
+	buf := make([]byte, 4096)
+	n, err := h.conn.Read(buf)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response: %v", err)
 	}
+	
+	resp := strings.TrimSpace(string(buf[:n]))
+	
+	// Skip event messages (they start with <priority>)
+	for strings.HasPrefix(resp, "<") {
+		n, err = h.conn.Read(buf)
+		if err != nil {
+			return "", fmt.Errorf("failed to read response: %v", err)
+		}
+		resp = strings.TrimSpace(string(buf[:n]))
+	}
+	
+	return resp, nil
 }
 
 // GetAllStations returns all connected stations
