@@ -8,7 +8,7 @@ on:
       - completed
     branches: [main]
   push:
-    branches: [dev]
+    branches: [dev, experimental]
   workflow_dispatch:
 
 jobs:
@@ -33,6 +33,10 @@ jobs:
         name: Set release channel for dev
         run: echo "RELEASE_CHANNEL=-dev" >> $GITHUB_ENV
         if: ${{ github.ref_name == 'dev' }}
+      -
+        name: Set release channel for experimental
+        run: echo "RELEASE_CHANNEL=-experimental" >> $GITHUB_ENV
+        if: ${{ github.ref_name == 'experimental' }}
       -
         name: Test release tag version and channel
         run: echo "RELEASE_VERSION == $RELEASE_VERSION  CHANNEL == $RELEASE_CHANNEL"
