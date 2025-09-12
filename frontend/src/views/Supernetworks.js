@@ -155,7 +155,7 @@ const Supernetworks = (props) => {
             action="primary"
             variant="solid"
             rounded="$none"
-            onPress={handleUpdate}
+            onPress={() => handleUpdate()}
             isDisabled={!isUnsaved}
           >
             <ButtonText>

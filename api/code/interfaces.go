@@ -31,29 +31,33 @@ var gAPIInterfacesPath = TEST_PREFIX + "/configs/base/interfaces.json"
 var gAPIInterfacesPublicPath = TEST_PREFIX + "/state/public/interfaces.json"
 
 type InterfaceConfig struct {
-	Name         string
-	Type         string
-	Subtype      string
-	Enabled      bool
-	ExtraBSS     []ExtraBSS `json:",omitempty"`
-	DisableDHCP  bool       `json:",omitempty"`
-	IP           string     `json:",omitempty"`
-	Router       string     `json:",omitempty"`
-	VLAN         string     `json:",omitempty"`
-	MACOverride  string     `json:",omitempty"`
-	MACRandomize bool       `json:",omitempty"`
-	MACCloak     bool       `json:",omitempty"`
+	Name                     string
+	Type                     string
+	Subtype                  string
+	Enabled                  bool
+	ExtraBSS                 []ExtraBSS `json:",omitempty"`
+	DisableDHCP              bool       `json:",omitempty"`
+	IP                       string     `json:",omitempty"`
+	Router                   string     `json:",omitempty"`
+	VLAN                     string     `json:",omitempty"`
+	MACOverride              string     `json:",omitempty"`
+	MACRandomize             bool       `json:",omitempty"`
+	MACCloak                 bool       `json:",omitempty"`
+	CaptivePortalPassthrough bool       `json:",omitempty"`
+	CaptivePortalDomains     []string   `json:",omitempty"`
 }
 
 // this will be exported to all containers in public/interfaces.json
 type PublicInterfaceConfig struct {
-	Name         string
-	Type         string
-	Subtype      string
-	Enabled      bool
-	MACOverride  string `json:",omitempty"`
-	MACRandomize bool   `json:",omitempty"`
-	MACCloak     bool   `json:",omitempty"`
+	Name                     string
+	Type                     string
+	Subtype                  string
+	Enabled                  bool
+	MACOverride              string   `json:",omitempty"`
+	MACRandomize             bool     `json:",omitempty"`
+	MACCloak                 bool     `json:",omitempty"`
+	CaptivePortalPassthrough bool     `json:",omitempty"`
+	CaptivePortalDomains     []string `json:",omitempty"`
 }
 
 func isValidMAC(MAC string) bool {
@@ -218,7 +222,7 @@ func configureInterface(interfaceType string, subType string, name string, MACRa
 
 	}
 
-	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, "", "", "", "", MACRandomize, MACCloak}
+	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, "", "", "", "", MACRandomize, MACCloak, false, []string{}}
 
 	config := loadInterfacesConfigLocked()
 
@@ -368,6 +372,43 @@ func updateInterfaceType(Iface string, Type string, Subtype string, Enabled bool
 	return interfaces, nil
 }
 
+// isValidDomain validates a domain name to prevent injection attacks
+func isValidDomain(domain string) bool {
+	// Check for empty domain
+	if domain == "" {
+		return false
+	}
+
+	// Check for newlines, carriage returns, or other control characters
+	for _, r := range domain {
+		if r < 32 || r == 127 {
+			return false
+		}
+	}
+
+	// Basic domain validation regex
+	// Allows subdomains, hyphens, and international domains
+	domainRegex := regexp.MustCompile(`^([a-zA-Z0-9][a-zA-Z0-9-]*\.)*[a-zA-Z0-9][a-zA-Z0-9-]*\.[a-zA-Z]{2,}$`)
+	if !domainRegex.MatchString(domain) {
+		return false
+	}
+
+	// Check domain length (max 253 characters)
+	if len(domain) > 253 {
+		return false
+	}
+
+	// Check each label length (max 63 characters)
+	labels := strings.Split(domain, ".")
+	for _, label := range labels {
+		if len(label) > 63 || len(label) == 0 {
+			return false
+		}
+	}
+
+	return true
+}
+
 func updateInterfaceIP(iconfig InterfaceConfig) error {
 	//assumes iconfig has been sanitized
 	Interfacesmtx.Lock()
@@ -446,11 +487,25 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 	for i, iface := range interfaces {
 		if iface.Name == iconfig.Name {
 			found = true
+			domainsChanged := false
+			if len(interfaces[i].CaptivePortalDomains) != len(iconfig.CaptivePortalDomains) {
+				domainsChanged = true
+			} else {
+				for j, domain := range interfaces[i].CaptivePortalDomains {
+					if j >= len(iconfig.CaptivePortalDomains) || domain != iconfig.CaptivePortalDomains[j] {
+						domainsChanged = true
+						break
+					}
+				}
+			}
+
 			if interfaces[i].Enabled != iconfig.Enabled ||
 				interfaces[i].Type != iconfig.Type ||
 				interfaces[i].MACRandomize != iconfig.MACRandomize ||
 				interfaces[i].MACCloak != iconfig.MACCloak ||
-				interfaces[i].MACOverride != iconfig.MACOverride {
+				interfaces[i].MACOverride != iconfig.MACOverride ||
+				interfaces[i].CaptivePortalPassthrough != iconfig.CaptivePortalPassthrough ||
+				domainsChanged {
 				prev_type = interfaces[i].Type
 				prev_subtype = interfaces[i].Subtype
 				prev_enabled = interfaces[i].Enabled
@@ -463,6 +518,8 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 				interfaces[i].MACOverride = iconfig.MACOverride
 				interfaces[i].MACRandomize = iconfig.MACRandomize
 				interfaces[i].MACCloak = iconfig.MACCloak
+				interfaces[i].CaptivePortalPassthrough = iconfig.CaptivePortalPassthrough
+				interfaces[i].CaptivePortalDomains = iconfig.CaptivePortalDomains
 			}
 			break
 		}
@@ -492,6 +549,19 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 		}
 
 		refreshDownlinksLocked()
+
+		// If captive portal settings changed and it's an uplink, restart DNS
+		if iconfig.Type == "Uplink" && (iconfig.CaptivePortalPassthrough || len(iconfig.CaptivePortalDomains) > 0) {
+			go func() {
+				// Need to regenerate DNS config with new captive portal settings
+				Configmtx.Lock()
+				dns := parseDNSCorefile()
+				updateDNSCorefileMulti(dns)
+				Configmtx.Unlock()
+				callSuperdRestart("", "dns")
+			}()
+		}
+
 		return err
 	}
 
@@ -604,33 +674,33 @@ func getVLANInterfaces(parent string) ([]net.Interface, error) {
 }
 
 func addApiInterface(iface string) {
-	exec.Command("nft", "add", "element", "inet", "filter", "api_interfaces", "{", iface, "}").Run()
+	AddInterfaceToSet("api_interfaces", iface)
 }
 
 func deleteApiInterface(iface string) {
-	exec.Command("nft", "add", "element", "inet", "filter", "api_interfaces", "{", iface, "}").Run()
+	DeleteInterfaceFromSet("api_interfaces", iface)
 }
 
 func addSetupInterface(iface string) {
-	exec.Command("nft", "add", "element", "inet", "filter", "setup_interfaces", "{", iface, "}").Run()
+	AddInterfaceToSet("setup_interfaces", iface)
 }
 
 func deleteSetupInterface(iface string) {
-	exec.Command("nft", "add", "element", "inet", "filter", "setup_interfaces", "{", iface, "}").Run()
+	DeleteInterfaceFromSet("setup_interfaces", iface)
 }
 
 func addLanInterface(iface string) {
-	exec.Command("nft", "add", "element", "inet", "filter", "lan_interfaces", "{", iface, "}").Run()
-	exec.Command("nft", "add", "element", "inet", "nat", "lan_interfaces", "{", iface, "}").Run()
+	AddInterfaceToSetWithTable("inet", "filter", "lan_interfaces", iface)
+	AddInterfaceToSetWithTable("inet", "nat", "lan_interfaces", iface)
 }
 
 func addWiredLanInterface(iface string) {
-	exec.Command("nft", "add", "element", "inet", "filter", "wired_lan_interfaces", "{", iface, "}").Run()
+	AddInterfaceToSet("wired_lan_interfaces", iface)
 }
 
 func deleteLanInterface(iface string) {
-	exec.Command("nft", "delete", "element", "inet", "filter", "lan_interfaces", "{", iface, "}").Run()
-	exec.Command("nft", "delete", "element", "inet", "nat", "lan_interfaces", "{", iface, "}").Run()
+	DeleteInterfaceFromSetWithTable("inet", "filter", "lan_interfaces", iface)
+	DeleteInterfaceFromSetWithTable("inet", "nat", "lan_interfaces", iface)
 }
 
 func refreshVlanTrunk(iface string, enable bool) {
@@ -688,7 +758,7 @@ func refreshVlanTrunk(iface string, enable bool) {
 
 			addLanInterface(vlanIface)
 			// add vlan to dhcp_access
-			exec.Command("nft", "add", "element", "inet", "filter", "dhcp_access", "{", vlanIface, ".", dev.MAC, ":", "accept", "}").Run()
+			AddElementToMapComplex("inet", "filter", "dhcp_access", []string{vlanIface, dev.MAC}, "accept")
 		}
 	}
 }
@@ -850,25 +920,47 @@ func refreshDownlinks() {
 	refreshDownlinksLocked()
 }
 
-func refreshDownlinksLocked() {
+// getDownlinkInterfacesLocked returns all enabled downlink interfaces
+// Must be called with Interfacesmtx locked
+func getDownlinkInterfacesLocked() []string {
 	interfaces := loadInterfacesConfigLocked()
+	downlinks := []string{}
 
-	//empty the wired lan interfaces list
-	exec.Command("nft", "flush", "set", "inet", "filter", "wired_lan_interfaces").Run()
-
-	// and repopulate it
+	// LANIF env var takes priority if set
 	lanif := os.Getenv("LANIF")
 	if lanif != "" {
-		addWiredLanInterface(lanif)
+		downlinks = append(downlinks, lanif)
 	}
+
+	// Add all configured downlink interfaces
 	for _, ifconfig := range interfaces {
-		if ifconfig.Type == "Downlink" {
+		if ifconfig.Type == "Downlink" && ifconfig.Enabled {
+			// Skip if already added via LANIF
 			if lanif != "" && ifconfig.Name == lanif {
-				//already covered
 				continue
 			}
-			addWiredLanInterface(ifconfig.Name)
+			downlinks = append(downlinks, ifconfig.Name)
 		}
+	}
+
+	return downlinks
+}
+
+// getDownlinkInterfaces returns all enabled downlink interfaces
+func getDownlinkInterfaces() []string {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+	return getDownlinkInterfacesLocked()
+}
+
+func refreshDownlinksLocked() {
+	//empty the wired lan interfaces list
+	FlushSetWithTable("inet", "filter", "wired_lan_interfaces")
+
+	// Get all downlink interfaces and add them
+	downlinks := getDownlinkInterfacesLocked()
+	for _, iface := range downlinks {
+		addWiredLanInterface(iface)
 	}
 }
 
@@ -903,6 +995,26 @@ func updateLinkConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate captive portal domains
+	validatedDomains := []string{}
+	for _, domainEntry := range iconfig.CaptivePortalDomains {
+		// Split by spaces, commas, and newlines in case a single entry contains multiple domains
+		domains := strings.FieldsFunc(domainEntry, func(r rune) bool {
+			return r == ' ' || r == ',' || r == '\n' || r == '\r' || r == '\t'
+		})
+		for _, domain := range domains {
+			domain = strings.TrimSpace(domain)
+			if domain == "" {
+				continue
+			}
+			if !isValidDomain(domain) {
+				http.Error(w, fmt.Sprintf("Invalid domain: %s", domain), 400)
+				return
+			}
+			validatedDomains = append(validatedDomains, domain)
+		}
+	}
+
 	i := InterfaceConfig{}
 	i.Name = iconfig.Name
 	i.Type = iconfig.Type
@@ -910,6 +1022,8 @@ func updateLinkConfig(w http.ResponseWriter, r *http.Request) {
 	i.MACRandomize = iconfig.MACRandomize
 	i.MACCloak = iconfig.MACCloak
 	i.MACOverride = iconfig.MACOverride
+	i.CaptivePortalPassthrough = iconfig.CaptivePortalPassthrough
+	i.CaptivePortalDomains = validatedDomains
 
 	err = updateInterfaceConfig(i)
 	if err != nil {

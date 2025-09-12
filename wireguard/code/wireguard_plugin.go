@@ -63,7 +63,14 @@ type ClientConfig struct {
 
 // generate a new keypair for a client
 func genKeyPair() (KeyPair, error) {
-	keypair := KeyPair{}
+	// Try direct method first
+	keypair, err := genKeyPairDirect()
+	if err == nil {
+		return keypair, nil
+	}
+
+	// Fall back to exec method
+	keypair = KeyPair{}
 
 	cmd := exec.Command("wg", "genkey")
 	stdout, err := cmd.Output()
@@ -98,6 +105,13 @@ func genKeyPair() (KeyPair, error) {
 }
 
 func genPresharedKey() (string, error) {
+	// Try direct method first
+	key, err := genPresharedKeyDirect()
+	if err == nil {
+		return key, nil
+	}
+
+	// Fall back to exec method
 	cmd := exec.Command("wg", "genpsk")
 	stdout, err := cmd.Output()
 	if err != nil {
@@ -110,7 +124,14 @@ func genPresharedKey() (string, error) {
 }
 
 func getPeers() ([]ClientPeer, error) {
-	peers := []ClientPeer{}
+	// Try direct method first
+	peers, err := getPeersDirect()
+	if err == nil {
+		return peers, nil
+	}
+
+	// Fall back to exec method
+	peers = []ClientPeer{}
 
 	cmd := exec.Command("wg", "show", WireguardInterface, "dump")
 	data, err := cmd.Output()
@@ -203,6 +224,13 @@ func getEndpoint() (string, error) {
 
 // get wireguard endpoint from the environment
 func getPublicKey() (string, error) {
+	// Try direct method first
+	pubKey, err := getPublicKeyDirect()
+	if err == nil {
+		return pubKey, nil
+	}
+
+	// Fall back to exec method
 	cmd := exec.Command("wg", "show", WireguardInterface, "public-key")
 	stdout, err := cmd.Output()
 	if err != nil {
@@ -230,8 +258,15 @@ func saveConfig() error {
 }
 
 func removePeer(peer ClientPeer) error {
+	// Try direct method first
+	err := removePeerDirect(peer.PublicKey)
+	if err == nil {
+		return saveConfig()
+	}
+
+	// Fall back to exec method
 	cmd := exec.Command("wg", "set", WireguardInterface, "peer", peer.PublicKey, "remove")
-	_, err := cmd.Output()
+	_, err = cmd.Output()
 	if err != nil {
 		return err
 	}
@@ -435,25 +470,30 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cmd := exec.Command("wg", "set", WireguardInterface, "peer", peer.PublicKey, "preshared-key", "/dev/stdin", "allowed-ips", AllowedIPs)
-
-	stdin, err := cmd.StdinPipe()
+	// Try direct method first
+	err = setPeerDirect(peer.PublicKey, PresharedKey, AllowedIPs)
 	if err != nil {
-		fmt.Println("wg set stdin pipe error:", err)
-		http.Error(w, err.Error(), 400)
-		return
-	}
+		// Fall back to exec method
+		cmd := exec.Command("wg", "set", WireguardInterface, "peer", peer.PublicKey, "preshared-key", "/dev/stdin", "allowed-ips", AllowedIPs)
 
-	go func() {
-		defer stdin.Close()
-		io.WriteString(stdin, PresharedKey+"\n")
-	}()
+		stdin, err := cmd.StdinPipe()
+		if err != nil {
+			fmt.Println("wg set stdin pipe error:", err)
+			http.Error(w, err.Error(), 400)
+			return
+		}
 
-	_, err = cmd.Output()
-	if err != nil {
-		fmt.Println("wg set stdout error:", err)
-		http.Error(w, err.Error(), 400)
-		return
+		go func() {
+			defer stdin.Close()
+			io.WriteString(stdin, PresharedKey+"\n")
+		}()
+
+		_, err = cmd.Output()
+		if err != nil {
+			fmt.Println("wg set stdout error:", err)
+			http.Error(w, err.Error(), 400)
+			return
+		}
 	}
 
 	// save config
@@ -552,8 +592,17 @@ func pluginGetStatus(w http.ResponseWriter, r *http.Request) {
 	Configmtx.Lock()
 	defer Configmtx.Unlock()
 
+	// Try direct method first
+	data, err := getWireGuardStatusDirect()
+	if err == nil {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, data)
+		return
+	}
+
+	// Fall back to exec method
 	cmd := exec.Command("/scripts/wg-json")
-	data, err := cmd.Output()
+	data2, err := cmd.Output()
 	if err != nil {
 		fmt.Println("wg-json failed", err)
 		http.Error(w, "Not found", 404)
@@ -561,7 +610,7 @@ func pluginGetStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprint(w, string(data))
+	fmt.Fprint(w, string(data2))
 }
 
 func pluginUp(w http.ResponseWriter, r *http.Request) {

@@ -34,18 +34,25 @@ var OldMeshGitURL = "github.com/spr-networks/mesh_extension"
 var MeshdSocketPath = TEST_PREFIX + "/state/plugins/mesh/socket"
 var CustomComposeAllowPath = TEST_PREFIX + "/configs/base/custom_compose_paths.json"
 
+type NetworkCapabilities struct {
+	Interface string
+	Policies  []string
+	Groups    []string
+}
+
 type PluginConfig struct {
-	Name             string
-	URI              string
-	UnixPath         string
-	Enabled          bool
-	Plus             bool
-	GitURL           string
-	ComposeFilePath  string
-	HasUI            bool
-	SandboxedUI      bool
-	InstallTokenPath string
-	ScopedPaths      []string
+	Name                string
+	URI                 string
+	UnixPath            string
+	Enabled             bool
+	Plus                bool
+	GitURL              string
+	ComposeFilePath     string
+	HasUI               bool
+	SandboxedUI         bool
+	InstallTokenPath    string
+	ScopedPaths         []string
+	NetworkCapabilities NetworkCapabilities
 }
 
 func (p PluginConfig) MatchesData(q PluginConfig) bool {
@@ -59,12 +66,15 @@ func (p PluginConfig) MatchesData(q PluginConfig) bool {
 		p.HasUI == q.HasUI &&
 		p.SandboxedUI == q.SandboxedUI &&
 		p.InstallTokenPath == q.InstallTokenPath &&
-		slices.Compare(p.ScopedPaths, q.ScopedPaths) == 0
+		slices.Compare(p.ScopedPaths, q.ScopedPaths) == 0 &&
+		p.NetworkCapabilities.Interface == q.NetworkCapabilities.Interface &&
+		slices.Compare(p.NetworkCapabilities.Policies, q.NetworkCapabilities.Policies) == 0 &&
+		slices.Compare(p.NetworkCapabilities.Groups, q.NetworkCapabilities.Groups) == 0
 }
 
 var gPlusExtensionDefaults = []PluginConfig{
-	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", false, false, "", []string{}},
-	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", false, false, "", []string{}},
+	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", false, false, "", []string{}, NetworkCapabilities{}},
+	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", false, false, "", []string{}, NetworkCapabilities{}},
 }
 
 var gPluginTemplates = []PluginConfig{
@@ -288,6 +298,8 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 
 					// plugin was deleted, stop it
 					stopExtension(entry.ComposeFilePath)
+					// Remove network capabilities firewall rules
+					removePluginNetworkCapabilities(entry)
 					// also remove if its a custom plugin
 					dirName := filepath.Dir(entry.ComposeFilePath)
 					isUserPlugin := regexp.MustCompile(`^plugins/user/[A-Za-z0-9\-]+$`).MatchString
@@ -377,8 +389,10 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 				config.Plugins = append(config.Plugins, plugin)
 			} else {
 				if plugin.Enabled == false {
-					//plugin is on longer enabled, send stop
+					//plugin is no longer enabled, send stop
 					stopExtension(oldComposeFilePath)
+					// Remove network capabilities firewall rules
+					removePluginNetworkCapabilities(config.Plugins[idx])
 				}
 				config.Plugins[idx] = plugin
 			}
@@ -744,6 +758,116 @@ func startExtension(composeFilePath string) bool {
 	return true
 }
 
+func applyPluginNetworkCapabilities(plugin PluginConfig) error {
+	// Only apply if NetworkCapabilities are defined
+	if plugin.NetworkCapabilities.Interface == "" || len(plugin.NetworkCapabilities.Policies) == 0 {
+		return nil
+	}
+
+	// Get container IP for this plugin
+	containerIP, err := getPluginContainerIP(plugin.NetworkCapabilities.Interface)
+	if err != nil {
+		fmt.Printf("Failed to get container IP for plugin %s: %v\n", plugin.Name, err)
+		return err
+	}
+
+	// Create CustomInterfaceRule for the plugin container
+	rule := CustomInterfaceRule{
+		BaseRule: BaseRule{
+			RuleName: "Plugin-" + plugin.Name,
+			Disabled: false,
+		},
+		Interface: plugin.NetworkCapabilities.Interface,
+		SrcIP:     containerIP,
+		RouteDst:  "", // Not needed for basic container access
+		Policies:  plugin.NetworkCapabilities.Policies,
+		Groups:    plugin.NetworkCapabilities.Groups,
+		Tags:      []string{}, // Not used
+	}
+
+	// Apply the rule directly via firewall function
+	FWmtx.Lock()
+	err = modifyCustomInterfaceRulesImpl(rule, false) // false = add rule
+	FWmtx.Unlock()
+
+	if err != nil {
+		fmt.Printf("Failed to apply network capabilities for plugin %s: %v\n", plugin.Name, err)
+		return err
+	}
+
+	fmt.Printf("Applied network capabilities for plugin %s\n", plugin.Name)
+	return nil
+}
+
+func removePluginNetworkCapabilities(plugin PluginConfig) error {
+	// Only remove if NetworkCapabilities are defined
+	if plugin.NetworkCapabilities.Interface == "" || len(plugin.NetworkCapabilities.Policies) == 0 {
+		return nil
+	}
+
+	// We need to get the actual rule to delete it properly
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
+
+	var ruleToDelete *CustomInterfaceRule
+	ruleName := "Plugin-" + plugin.Name
+
+	// Find the rule by name
+	for _, rule := range gFirewallConfig.CustomInterfaceRules {
+		if rule.RuleName == ruleName {
+			// Make a copy of the rule
+			ruleCopy := rule
+			ruleToDelete = &ruleCopy
+			break
+		}
+	}
+
+	if ruleToDelete == nil {
+		// Rule not found, which is ok (might have been manually removed)
+		return nil
+	}
+
+	// Remove the rule using the exact rule data
+	err := modifyCustomInterfaceRulesImpl(*ruleToDelete, true) // true = delete rule
+	if err != nil {
+		fmt.Printf("Failed to remove network capabilities for plugin %s: %v\n", plugin.Name, err)
+		return err
+	}
+
+	fmt.Printf("Removed network capabilities for plugin %s\n", plugin.Name)
+	return nil
+}
+
+func getPluginContainerIP(interfaceName string) (string, error) {
+	// Use the shared dockerRequest function to inspect the network
+	data, err := dockerRequest("GET", "/v1.41/networks/"+interfaceName, nil)
+	if err != nil {
+		return "", err
+	}
+
+	var networkInfo struct {
+		Containers map[string]struct {
+			IPv4Address string `json:"IPv4Address"`
+		} `json:"Containers"`
+	}
+
+	err = json.Unmarshal(data, &networkInfo)
+	if err != nil {
+		return "", err
+	}
+
+	// Find the first container on this network
+	for _, container := range networkInfo.Containers {
+		if container.IPv4Address != "" {
+			// Extract IP from CIDR notation (e.g., "172.20.0.2/16" -> "172.20.0.2")
+			ip := strings.Split(container.IPv4Address, "/")[0]
+			return ip, nil
+		}
+	}
+
+	return "", fmt.Errorf("no container found on network %s", interfaceName)
+}
+
 func restartExtension(composeFilePath string) bool {
 	if composeFilePath == "" {
 		//no-op
@@ -916,6 +1040,15 @@ func startExtensionServices() error {
 					return errors.New("Could not start Extension at " + entry.ComposeFilePath)
 				}
 			}
+
+			// Apply network capabilities after plugin is started
+			go func(plugin PluginConfig) {
+				// Give the container time to start up
+				time.Sleep(5 * time.Second)
+				if err := applyPluginNetworkCapabilities(plugin); err != nil {
+					fmt.Printf("Warning: Failed to apply network capabilities for plugin %s: %v\n", plugin.Name, err)
+				}
+			}(entry)
 
 		}
 	}
@@ -1115,6 +1248,56 @@ func updateMeshPluginGlobalSSID(SSID string) {
 	go updateMeshPluginPut("setSSID", jsonValue)
 }
 
+// StationInfo represents the parsed hostapd station information
+type StationInfo map[string]string
+
+// LeafStations represents all stations from a leaf router
+type LeafStations struct {
+	LeafIP   string
+	Stations map[string]StationInfo // MAC -> station info
+	Error    error
+}
+
+// fetchAllLeafStations fetches station information from all leaf routers via mesh plugin
+func fetchAllLeafStations() (map[string]LeafStations, error) {
+	if !PlusEnabled() {
+		return nil, nil
+	}
+
+	if !PluginEnabled("MESH") {
+		return nil, nil
+	}
+
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/allLeafStations", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	c := getMeshdClient()
+	defer c.CloseIdleConnections()
+
+	resp, err := c.Do(req)
+	if err != nil {
+		fmt.Println("meshd request failed", err, "allLeafStations")
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("meshd request failed", resp.StatusCode, "allLeafStations")
+		return nil, fmt.Errorf("meshd request failed with status %d", resp.StatusCode)
+	}
+
+	var result map[string]LeafStations
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 func modifyCustomComposePaths(w http.ResponseWriter, r *http.Request) {
 	Configmtx.Lock()
 	defer Configmtx.Unlock()
@@ -1183,6 +1366,77 @@ func installUserPluginGitUrl(router *mux.Router, router_public *mux.Router) func
 		}
 
 		//2. save and update routes
+		saveConfigLocked()
+		PluginRoutes(router, router_public)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(config.Plugins)
+	})
+}
+
+// Phase 1: Download plugin and return permissions info
+func downloadUserPluginInfo(w http.ResponseWriter, r *http.Request) {
+	gitURL := ""
+	err := json.NewDecoder(r.Body).Decode(&gitURL)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	// Download the plugin without auto-config
+	success := downloadUserExtension(gitURL, false)
+	if !success {
+		http.Error(w, "Failed to download plugin", 400)
+		return
+	}
+
+	// Read the plugin.json from the downloaded plugin
+	params := url.Values{}
+	params.Set("git_url", gitURL)
+	creds := GitOptions{"", "", false, false}
+	jsonValue, _ := json.Marshal(creds)
+
+	data, err := superdRequest("get_plugin_config", params, bytes.NewBuffer(jsonValue))
+	if err != nil {
+		http.Error(w, "Failed to read plugin configuration", 400)
+		return
+	}
+
+	plugin := PluginConfig{}
+	err = json.Unmarshal(data, &plugin)
+	if err != nil {
+		http.Error(w, "Invalid plugin configuration", 400)
+		return
+	}
+
+	// Override GitURL to match what was requested
+	plugin.GitURL = gitURL
+
+	// Return plugin info with permissions
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(plugin)
+}
+
+// Phase 2: Complete plugin installation after user confirms permissions
+func completeUserPluginInstall(router *mux.Router, router_public *mux.Router) func(http.ResponseWriter, *http.Request) {
+	return applyJwtOtpCheck(func(w http.ResponseWriter, r *http.Request) {
+		plugin := PluginConfig{}
+		err := json.NewDecoder(r.Body).Decode(&plugin)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		Configmtx.Lock()
+		defer Configmtx.Unlock()
+
+		// Install the plugin configuration
+		success := installUserPluginConfig(plugin)
+		if !success {
+			http.Error(w, "Failed to install plugin", 400)
+			return
+		}
+
+		// Save and update routes
 		saveConfigLocked()
 		PluginRoutes(router, router_public)
 		w.Header().Set("Content-Type", "application/json")

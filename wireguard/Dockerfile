@@ -13,7 +13,7 @@ COPY code/ /code/
 ARG USE_TMPFS=true
 RUN --mount=type=tmpfs,target=/tmpfs \
     [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
-    go build -ldflags "-s -w" -o /wireguard_plugin /code/wireguard_plugin.go
+    go build -ldflags "-s -w" -o /wireguard_plugin .
 
 FROM ghcr.io/spr-networks/container_template:latest
 ENV DEBIAN_FRONTEND=noninteractive

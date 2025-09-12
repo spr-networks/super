@@ -111,7 +111,7 @@ func doReloadPSKFiles() {
 
 	for _, iface := range getAP_Ifaces() {
 		//reload the hostapd passwords
-		cmd := exec.Command("hostapd_cli", "-p", "/state/wifi/control_"+iface, "-s", "/state/wifi/", "reload_wpa_psk")
+		cmd := exec.Command("hostapd_cli", "-p", TEST_PREFIX+"/state/wifi/control_"+iface, "-s", TEST_PREFIX+"/state/wifi/", "reload_wpa_psk")
 		err = cmd.Run()
 		if err != nil {
 			fmt.Println(err)
@@ -442,7 +442,7 @@ func hostapdChannelCalc(w http.ResponseWriter, r *http.Request) {
 
 func RunHostapdCommandArray(iface string, cmd []string) (string, error) {
 
-	args := append([]string{"-p", "/state/wifi/control_" + iface, "-s", "/state/wifi"}, cmd...)
+	args := append([]string{"-p", TEST_PREFIX + "/state/wifi/control_" + iface, "-s", TEST_PREFIX + "/state/wifi"}, cmd...)
 
 	outb, err := exec.Command("hostapd_cli", args...).Output()
 	if err != nil {
@@ -452,8 +452,7 @@ func RunHostapdCommandArray(iface string, cmd []string) (string, error) {
 }
 
 func RunHostapdCommand(iface string, cmd string) (string, error) {
-
-	outb, err := exec.Command("hostapd_cli", "-p", "/state/wifi/control_"+iface, "-s", "/state/wifi", cmd).Output()
+	outb, err := exec.Command("hostapd_cli", "-p", TEST_PREFIX+"/state/wifi/control_"+iface, "-s", TEST_PREFIX+"/state/wifi", cmd).Output()
 	if err != nil {
 		return "", fmt.Errorf("Failed to execute command %s", cmd)
 	}
