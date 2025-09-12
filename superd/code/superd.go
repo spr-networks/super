@@ -587,7 +587,7 @@ func logRequest(handler http.Handler) http.Handler {
 }
 
 func getHostSuperDir() string {
-
+	default_dir := "/home/spr/super/"
 	f := "'{{index .Config.Labels \"com.docker.compose.project.working_dir\"}}'"
 
 	cmd := exec.Command("docker", "inspect", "--format="+f, "superd")
@@ -595,8 +595,9 @@ func getHostSuperDir() string {
 
 	if err != nil {
 		fmt.Println("[-]", err)
-		return ""
+		return default_dir
 	}
+
 	return strings.Trim(string(stdout), "'\n") + "/"
 }
 
