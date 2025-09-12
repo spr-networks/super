@@ -158,15 +158,14 @@ rm -rf /usr/lib/firmware/amdgpu
 rm -rf /usr/lib/firmware/nvidia
 rm -rf /usr/lib/firmware/i915
 
-
-#apt-get autoremove -y && apt-get clean
-#rm -rf \
-#    /tmp/* \
-#    /var/backups/* \
-#    /var/log/* \
-#    /var/run/* \
-#    /var/lib/apt/lists/* \
-#    ~/.bash_history
+apt-get autoremove -y && apt-get clean
+rm -rf \
+    /tmp/* \
+    /var/backups/* \
+    /var/log/* \
+    /var/run/* \
+    /var/lib/apt/lists/* \
+    ~/.bash_history
 
 # launch dockerd
 mkdir -p /sys/fs/cgroup
