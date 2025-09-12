@@ -141,14 +141,14 @@ sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/" /etc/ssh/sshd_c
 sed -i "s/#PasswordAuthentication yes/PasswordAuthentication yes/" /etc/ssh/sshd_config
 
 # cleanup
-#apt-get autoremove -y && apt-get clean
-#rm -rf \
-#    /tmp/* \
-#    /var/backups/* \
-#    /var/log/* \
-#    /var/run/* \
-#    /var/lib/apt/lists/* \
-#    ~/.bash_history
+apt-get autoremove -y && apt-get clean
+rm -rf \
+    /tmp/* \
+    /var/backups/* \
+    /var/log/* \
+    /var/run/* \
+    /var/lib/apt/lists/* \
+    ~/.bash_history
 
 ### TBD: move spr-environment.sh to /boot/ . VFAT = easy to modify
 ###   wizard?

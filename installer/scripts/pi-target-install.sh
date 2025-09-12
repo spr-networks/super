@@ -107,28 +107,6 @@ EOF
 
 chmod +x /etc/udev/wlan0-swap.sh
 
-# Suport for Netgear A8000-100PAS
-cat > /etc/udev/rules.d/90-usb-3574:6211-mt7921u.rules << EOF
-ACTION=="add",
-SUBSYSTEM=="usb",
-ENV{ID_VENDOR_ID}=="3574",
-ENV{ID_MODEL_ID}=="6211",
-ENV{DRIVER}!="mt7921u",
-RUN+="/usr/sbin/modprobe mt7921u",
-RUN+="/bin/sh -c 'echo 3574 6211 > /sys/bus/usb/drivers/mt7921u/new_id'"
-EOF
-
-# Suport for Netgear A8000-100PAS
-cat > /etc/udev/rules.d/90-usb-0846:9060-mt7921u.rules << EOF
-ACTION=="add",
-SUBSYSTEM=="usb",
-ENV{ID_VENDOR_ID}=="0846",
-ENV{ID_MODEL_ID}=="9060",
-ENV{DRIVER}!="mt7921u",
-RUN+="/usr/sbin/modprobe mt7921u",
-RUN+="/bin/sh -c 'echo 0846 9060 > /sys/bus/usb/drivers/mt7921u/new_id'"
-EOF
-
 mkdir /boot/firmware
 mount /dev/vda1 /boot/firmware
 # we need the pcie-32bit-dma enabled for the mediatek cards
@@ -159,14 +137,14 @@ rm -rf /usr/lib/firmware/nvidia
 rm -rf /usr/lib/firmware/i915
 
 
-#apt-get autoremove -y && apt-get clean
-#rm -rf \
-#    /tmp/* \
-#    /var/backups/* \
-#    /var/log/* \
-#    /var/run/* \
-#    /var/lib/apt/lists/* \
-#    ~/.bash_history
+apt-get autoremove -y && apt-get clean
+rm -rf \
+    /tmp/* \
+    /var/backups/* \
+    /var/log/* \
+    /var/run/* \
+    /var/lib/apt/lists/* \
+    ~/.bash_history
 
 # launch dockerd
 mkdir -p /sys/fs/cgroup
