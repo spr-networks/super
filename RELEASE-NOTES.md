@@ -1,4 +1,10 @@
 # Secure Programmable Router (SPR) Release Notes
+## v1.0.18
+
+**Improvements*
+Switch to LTS 24.04.3 for base image
+
+
 ## v1.0.17
 **Fixes**
 - Fix builds for multi node, self-hosted
