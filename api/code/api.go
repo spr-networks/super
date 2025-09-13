@@ -1240,6 +1240,9 @@ func syncDevices(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&devices)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		processingSyncMtx.Lock()
+		isProcessingSync = false
+		processingSyncMtx.Unlock()
 		return
 	}
 
