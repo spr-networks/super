@@ -17,5 +17,5 @@ elif [ "$EVENT" = "AP-STA-DISCONNECTED" ]; then
 elif [ "$EVENT" = "AP-STA-POSSIBLE-PSK-MISMATCH" ]; then
    TYPE=$4
    REASON=$5
-   curl --unix-socket /state/wifi/apisock http://localhost/reportPSKAuthFailure -X PUT -d "{\"Type\": \"$TYPE\", \"Mac\": \"$MAC\", \"Reason\": \"$REASON\"}"
+   curl --unix-socket /state/wifi/apisock http://localhost/reportPSKAuthFailure -X PUT -d "{\"Type\": \"$TYPE\", \"Mac\": \"$MAC\", \"Reason\": \"$REASON\", \"Iface\": \"$IFACE\"}"
 fi

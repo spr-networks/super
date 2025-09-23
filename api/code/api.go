@@ -2115,10 +2115,12 @@ func showARP(w http.ResponseWriter, r *http.Request) {
 }
 
 type PSKAuthFailure struct {
+	Iface  string
 	Type   string
 	MAC    string
 	Reason string
 	Status string
+	Router string
 }
 
 type PSKAuthSuccess struct {
