@@ -131,6 +131,12 @@ rmdir /boot/firmware
 
 # cleanup
 
+#remove old kernel from base image (update available)
+apt-get remove -y linux-image-6.8.0-1031-raspi linux-modules-6.8.0-1031-raspi
+
+# remove large default packages
+apt-get remove -y python3-botocore
+
 #remove linux-firmware rarely used files, that are huge
 rm -rf /usr/lib/firmware/mrvl
 rm -rf /usr/lib/firmware/mellanox
@@ -140,6 +146,8 @@ rm -rf /usr/lib/firmware/amdgpu
 rm -rf /usr/lib/firmware/nvidia
 rm -rf /usr/lib/firmware/i915
 
+#remove snapd
+apt purge -y snapd
 
 apt-get autoremove -y && apt-get clean
 rm -rf \
