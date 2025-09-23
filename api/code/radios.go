@@ -147,6 +147,7 @@ type HostapdConfigEntry struct {
 	Time_advertisement           int
 	Rrm_neighbor_report          int
 	Rrm_beacon_report            int
+	Rrm_link_measurement_report  int
 	Op_class                     int
 	Rsn_pairwise                 string
 	Rssi_reject_assoc_rssi       int
@@ -806,6 +807,10 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	if _, ok := newInput["Rrm_beacon_report"]; ok {
 		conf["rrm_beacon_report"] = newConf.Rrm_beacon_report
+	}
+
+	if _, ok := newInput["Rrm_link_measurement_report"]; ok {
+		conf["Rrm_link_measurement_report"] = newConf.Rrm_link_measurement_report
 	}
 
 	if _, ok := newInput["Bss_transition"]; ok {

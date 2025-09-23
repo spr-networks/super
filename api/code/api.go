@@ -1257,7 +1257,7 @@ func syncDevices(w http.ResponseWriter, r *http.Request) {
 		}()
 
 		Groupsmtx.Lock()
-		defer Groupsmtx.Lock()
+		defer Groupsmtx.Unlock()
 		Devicesmtx.Lock()
 		defer Devicesmtx.Unlock()
 
@@ -1303,15 +1303,10 @@ func deleteDeviceLocked(devices map[string]DeviceEntry, groups []GroupEntry, ide
 	saveDevicesJson(devices)
 	refreshDeviceGroupsAndPolicy(devices, groups, val)
 	doReloadPSKFiles()
-
 	//if the device had a VLAN Tag, also refresh vlans
 	// upon deletion
 	if val.VLANTag != "" {
-		Groupsmtx.Unlock()
-		Devicesmtx.Unlock()
 		refreshVLANTrunks()
-		Groupsmtx.Lock()
-		Devicesmtx.Lock()
 	}
 
 	//notify the bus
@@ -1559,14 +1554,8 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 		}
 
-		//locks no longer needed
-
 		if refreshVlanTrunks {
-			Groupsmtx.Unlock()
-			Devicesmtx.Unlock()
 			refreshVLANTrunks()
-			Groupsmtx.Lock()
-			Devicesmtx.Lock()
 		}
 
 		//mask the PSK if set and not generated
@@ -1649,11 +1638,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 	// create vlans
 	if refreshVlanTrunks {
-		Groupsmtx.Unlock()
-		Devicesmtx.Unlock()
 		refreshVLANTrunks()
-		Groupsmtx.Lock()
-		Devicesmtx.Lock()
 	}
 
 	w.Header().Set("Content-Type", "application/json")

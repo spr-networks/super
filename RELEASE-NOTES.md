@@ -1,4 +1,10 @@
 # Secure Programmable Router (SPR) Release Notes
+
+## v1.0.19-20
+**Improvements**
+- Fix mesh deadlocks
+- Enable neighbor reports by default
+
 ## v1.0.18
 
 **Improvements*
