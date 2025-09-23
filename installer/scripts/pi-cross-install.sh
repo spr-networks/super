@@ -38,8 +38,8 @@ apty update
 # NOTE: also check /scripts/install.sh when making updates
 apty -y upgrade --download-only
 apty -y install linux-firmware
-apty -y install --download-only nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack jq inotify-tools
+apty -y install --download-only --no-install-recommends nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack jq inotify-tools
 # install docker and buildx
-apty -y install --download-only docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+apty -y install --download-only --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-apty -y install --download-only r8125-dkms linux-headers-raspi
+apty -y install --download-only --no-install-recommends r8125-dkms linux-headers-raspi
