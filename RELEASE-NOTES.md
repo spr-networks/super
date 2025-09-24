@@ -4,6 +4,7 @@
 **Improvements**
 - Fix mesh deadlocks
 - Enable neighbor reports by default
+- Installer fixes
 
 ## v1.0.18
 
