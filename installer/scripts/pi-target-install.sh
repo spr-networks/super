@@ -9,6 +9,34 @@ export DEBIAN_FRONTEND=noninteractive
 
 dhcpcd eth0
 
+# install docker
+apt -y install --no-download --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# SPR setup
+if [ ! -d /home/spr ]; then
+  mkdir /home/spr
+fi
+
+cd /home/spr
+mv /setup.sh .
+mv /run.sh .
+git clone --depth 1 https://github.com/spr-networks/super
+
+# launch dockerd
+mkdir -p /sys/fs/cgroup
+mount -t cgroup -o all cgroup /sys/fs/cgroup
+mkdir -p /sys/fs/cgroup/devices
+mount -t cgroup -o devices devices /sys/fs/cgroup/devices
+
+dockerd  &
+containerd &
+
+cd /home/spr/super
+
+# pull in default containers
+docker compose -f docker-compose.yml  -f dyndns/docker-compose.yml -f ppp/docker-compose.yml -f wifi_uplink/docker-compose.yml pull
+
+
 # finish downloaded install
 apt-get -y --fix-broken --fix-missing --no-download --no-install-recommends install
 dpkg --configure -a
@@ -17,7 +45,6 @@ dpkg --configure -a
 apt -y upgrade --no-download
 apt -y install --no-download --no-install-recommends nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack jq inotify-tools
 # install docker and buildx
-apt -y install --no-download --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 apt -y install --no-download --no-install-recommends r8125-dkms linux-headers-raspi
 
 
@@ -46,15 +73,6 @@ echo "network: {config: disabled}" > /etc/cloud/cloud.cfg.d/99-disable-network-c
 # Add a bug fix for scatter/gather bugs with USB:
 echo "options mt76_usb disable_usb_sg=1" > /etc/modprobe.d/mt76_usb.conf
 
-# SPR setup
-if [ ! -d /home/spr ]; then
-  mkdir /home/spr
-fi
-
-cd /home/spr
-mv /setup.sh .
-mv /run.sh .
-git clone --depth 1 https://github.com/spr-networks/super
 cd /home/spr/super
 cp -R base/template_configs configs
 
@@ -158,12 +176,6 @@ rm -rf \
     /var/lib/apt/lists/* \
     ~/.bash_history
 
-# launch dockerd
-mkdir -p /sys/fs/cgroup
-mount -t cgroup -o all cgroup /sys/fs/cgroup
-mkdir -p /sys/fs/cgroup/devices
-mount -t cgroup -o devices devices /sys/fs/cgroup/devices
-
 
 set -e
 ARCH=$(uname -m)
@@ -175,15 +187,9 @@ rm -f *.sha512
 chmod a+rx runsc containerd-shim-runsc-v1
 sudo mv runsc containerd-shim-runsc-v1 /usr/local/bin
 
-dockerd  &
-containerd &
 
-cd /home/spr/super
 
-# pull in default containers
-docker compose -f docker-compose.yml  -f dyndns/docker-compose.yml -f ppp/docker-compose.yml -f wifi_uplink/docker-compose.yml pull
-
-# prepare dockerk for SPR with nftables
+# prepare docker for SPR with nftables
 
 cat > /etc/docker/daemon.json << EOF
 {
