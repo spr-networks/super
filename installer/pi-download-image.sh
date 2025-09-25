@@ -21,5 +21,5 @@ if [ "$(sha256sum "$IMG" | cut -d' ' -f1)" != "$HASH" ]; then
   exit 1
 fi
 
-xzcat $IMG > spr.clean.img
+xzcat -T 0 $IMG > spr.clean.img
 echo "[+] Extracted pi arm64 ubuntu image"

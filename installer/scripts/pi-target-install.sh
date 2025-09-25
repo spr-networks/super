@@ -164,8 +164,26 @@ mount -t cgroup -o all cgroup /sys/fs/cgroup
 mkdir -p /sys/fs/cgroup/devices
 mount -t cgroup -o devices devices /sys/fs/cgroup/devices
 
-# disable iptables for docker
-echo -ne "{\n  \"iptables\": false\n}" > /etc/docker/daemon.json
+
+set -e
+ARCH=$(uname -m)
+URL=https://storage.googleapis.com/gvisor/releases/release/latest/${ARCH}
+wget ${URL}/runsc ${URL}/runsc.sha512 ${URL}/containerd-shim-runsc-v1 ${URL}/containerd-shim-runsc-v1.sha512
+sha512sum -c runsc.sha512
+sha512sum -c containerd-shim-runsc-v1.sha512
+rm -f *.sha512
+chmod a+rx runsc containerd-shim-runsc-v1
+sudo mv runsc containerd-shim-runsc-v1 /usr/local/bin
+
+dockerd  &
+containerd &
+
+cd /home/spr/super
+
+# pull in default containers
+docker compose -f docker-compose.yml  -f dyndns/docker-compose.yml -f ppp/docker-compose.yml -f wifi_uplink/docker-compose.yml pull
+
+# prepare dockerk for SPR with nftables
 
 cat > /etc/docker/daemon.json << EOF
 {
@@ -189,24 +207,6 @@ cat > /etc/docker/daemon.json << EOF
 }
 EOF
 
-
-#set -e
-#ARCH=$(uname -m)
-#URL=https://storage.googleapis.com/gvisor/releases/release/latest/${ARCH}
-#wget ${URL}/runsc ${URL}/runsc.sha512 ${URL}/containerd-shim-runsc-v1 ${URL}/containerd-shim-runsc-v1.sha512
-#sha512sum -c runsc.sha512
-#sha512sum -c containerd-shim-runsc-v1.sha512
-#rm -f *.sha512
-#chmod a+rx runsc containerd-shim-runsc-v1
-#sudo mv runsc containerd-shim-runsc-v1 /usr/local/bin
-
-dockerd  &
-containerd &
-
-cd /home/spr/super
-
-# pull in default containers
-docker compose -f docker-compose.yml  -f dyndns/docker-compose.yml -f ppp/docker-compose.yml -f wifi_uplink/docker-compose.yml pull
 
 # remove script
 rm /pi-target-install.sh

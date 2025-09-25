@@ -40,7 +40,7 @@ jobs:
         working-directory: ./installer
         run: sudo ./pi-arm64-image-build.sh
       - name: Compress image
-        run: sudo xz ./installer/data/spr.img
+        run: sudo xz -T 0 -9 -z ./installer/data/spr.img
       - name: Create Release
         id: create_release
         if: ${{ github.ref_name == 'main' }}

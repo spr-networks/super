@@ -38,7 +38,7 @@ jobs:
         working-directory: ./installer
         run: ./clearfog-arm64-image-build.sh
       - name: Compress image
-        run: xz ./installer/data/spr.img
+        run: xz -T 0 -9 -z ./installer/data/spr.img
       - name: Create Release
         if: ${{ github.ref_name == 'main' }}
         id: create_release
