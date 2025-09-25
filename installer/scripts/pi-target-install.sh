@@ -9,6 +9,11 @@ export DEBIAN_FRONTEND=noninteractive
 
 dhcpcd eth0
 
+# do not use systemd-resolvd, we will use our own container later
+systemctl disable systemd-resolved
+rm -f /etc/resolv.conf
+echo nameserver 1.1.1.1 > /etc/resolv.conf
+
 # install docker
 apt -y install --no-download --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin git
 
@@ -51,11 +56,6 @@ apt -y install --no-download --no-install-recommends r8125-dkms linux-headers-ra
 touch /etc/cloud/cloud-init.disabled
 # slow commands
 apt-get -y purge cloud-init
-
-# do not use systemd-resolvd, we will use our own container later
-systemctl disable systemd-resolved
-rm -f /etc/resolv.conf
-echo nameserver 1.1.1.1 > /etc/resolv.conf
 
 useradd -m -s /bin/bash ubuntu
 echo "ubuntu:ubuntu" | chpasswd
