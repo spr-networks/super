@@ -21,7 +21,7 @@ apt -y install --no-download docker-ce docker-ce-cli containerd.io docker-buildx
 apt -y install --no-download r8125-dkms linux-headers-raspi
 
 
-touch /mnt/fs/etc/cloud/cloud-init.disabled
+touch /etc/cloud/cloud-init.disabled
 # slow commands
 apt-get -y purge cloud-init
 
