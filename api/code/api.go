@@ -1979,7 +1979,7 @@ func updateLocalMappings(IP string, Name string) {
 	var localMappingsPath = TEST_PREFIX + "/state/dns/local_mappings"
 	data, err := ioutil.ReadFile(localMappingsPath)
 	if err != nil {
-		return
+		data = []byte{}
 	}
 	entryName := Name + ".lan"
 	new_data := ""

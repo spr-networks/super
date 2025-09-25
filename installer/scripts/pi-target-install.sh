@@ -10,18 +10,18 @@ export DEBIAN_FRONTEND=noninteractive
 dhcpcd eth0
 
 # finish downloaded install
-apt-get -y --fix-broken --fix-missing --no-download install
+apt-get -y --fix-broken --fix-missing --no-download --no-install-recommends install
 dpkg --configure -a
 
 # sync with install.sh and cross-install.sh
 apt -y upgrade --no-download
-apt -y install --no-download nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack jq inotify-tools
+apt -y install --no-download --no-install-recommends nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack jq inotify-tools
 # install docker and buildx
-apt -y install --no-download docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-apt -y install --no-download r8125-dkms linux-headers-raspi
+apt -y install --no-download --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+apt -y install --no-download --no-install-recommends r8125-dkms linux-headers-raspi
 
 
-touch /mnt/fs/etc/cloud/cloud-init.disabled
+touch /etc/cloud/cloud-init.disabled
 # slow commands
 apt-get -y purge cloud-init
 
