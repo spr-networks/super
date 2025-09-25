@@ -124,7 +124,7 @@ EOF
 # make sure to update the kernel / initrd in this qemu environment
 # since apt install may have updated it but not set it
 cp /boot/vmlinuz /boot/firmware/vmlinuz
-cp /boot/initrd.img /boot/firmare/initrd.img
+cp /boot/initrd.img /boot/firmware/initrd.img
 
 umount /boot/firmware
 rmdir /boot/firmware
