@@ -78,6 +78,7 @@ const WifiChannelParameters = ({
   const [errors, setErrors] = useState({})
   const [disable160, setDisable160] = useState(true)
   const [disableWifi6, setDisableWifi6] = useState(true)
+  const [disableDFS, setDisableDFS] = useState(true)
   const [groupValues, setGroupValues] = useState([])
 
   //some wifi devices were reported to crash during auth if GCMP was enabled,
@@ -195,6 +196,17 @@ const WifiChannelParameters = ({
         let cur_device = iw.devices[iface]
         if (!cur_device) continue
 
+        //check for radar background support (DFS)
+        if (iw.supported_extended_features) {
+
+          for (let feature of iw.supported_extended_features) {
+            if (feature.includes('RADAR_BACKGROUND')) {
+              setDisableDFS(false)
+              break
+            }
+          }
+        }
+
         //enable 160 MHz if supported by the card
         for (let band of iw.bands) {
           if (band.vht_capabilities) {
@@ -273,8 +285,14 @@ const WifiChannelParameters = ({
             channelLabel += ' No Initial Radiation (No-IR)'
           } else if (freq.includes('radar')) {
             channelLabel += ' DFS'
-            if (config.ieee80211h !== 1) {
+            // Disable DFS channels if:
+            // 1. IEEE 802.11h is not enabled, OR
+            // 2. Hardware doesn't support radar background detection
+            if (config.ieee80211h !== 1 || disableDFS) {
               isDisabled = true
+              if (disableDFS && config.ieee80211h === 1) {
+                channelLabel += ' (no radar support)'
+              }
             }
           }
 
@@ -436,6 +454,14 @@ const WifiChannelParameters = ({
           Use the Channel Selection to make sure the correct Frequency,
           Bandwidth &amp; Channel is set. This will update your HostAP config.
         </Text>
+
+        {disableDFS && mode == 'a' ? (
+          <Text pb="$4" color="$warning600" flexWrap="wrap" size="sm">
+            ⚠️ DFS channels are disabled: This WiFi card does not support radar
+            background detection (RADAR_BACKGROUND feature). DFS channels require
+            hardware support for detecting radar signals to comply with regulations.
+          </Text>
+        ) : null}
 
         <VStack
           sx={{ '@md': { flexDirection: 'row', alignItems: 'center' } }}

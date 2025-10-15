@@ -1134,6 +1134,7 @@ export default function MockAPI(props = null) {
             supported_extended_features: [
               '[ VHT_IBSS ]: VHT-IBSS',
               '[ RRM ]: RRM',
+              '[ RADAR_BACKGROUND ]: Radar background support',
               '[ FILS_STA ]: STA FILS (Fast Initial Link Setup)',
               '[ CQM_RSSI_LIST ]: multiple CQM_RSSI_THOLD records',
               '[ CONTROL_PORT_OVER_NL80211 ]: control port over nl80211',
@@ -1338,6 +1339,23 @@ export default function MockAPI(props = null) {
               'P2P-client: 0x40 0xd0',
               'P2P-GO: 0x00 0x20 0x40 0xa0 0xb0 0xc0 0xd0',
               'P2P-device: 0x40 0xd0'
+            ],
+            supported_extended_features: [
+              '[ VHT_IBSS ]: VHT-IBSS',
+              '[ RRM ]: RRM',
+              '[ RADAR_BACKGROUND ]: Radar background support',
+              '[ FILS_STA ]: STA FILS (Fast Initial Link Setup)',
+              '[ CQM_RSSI_LIST ]: multiple CQM_RSSI_THOLD records',
+              '[ CONTROL_PORT_OVER_NL80211 ]: control port over nl80211',
+              '[ TXQS ]: FQ-CoDel-enabled intermediate TXQs',
+              '[ AIRTIME_FAIRNESS ]: airtime fairness scheduling',
+              '[ AQL ]: Airtime Queue Limits (AQL)',
+              '[ SCAN_RANDOM_SN ]: use random sequence numbers in scans',
+              '[ SCAN_MIN_PREQ_CONTENT ]: use probe request with only rate IEs in scans',
+              '[ CONTROL_PORT_NO_PREAUTH ]: disable pre-auth over nl80211 control port support',
+              '[ DEL_IBSS_STA ]: deletion of IBSS station support',
+              '[ SCAN_FREQ_KHZ ]: scan on kHz frequency support',
+              '[ CONTROL_PORT_OVER_NL80211_TX_STATUS ]: tx status for nl80211 control port support'
             ]
           },
           {
@@ -1584,6 +1602,7 @@ export default function MockAPI(props = null) {
             supported_extended_features: [
               '[ VHT_IBSS ]: VHT-IBSS',
               '[ RRM ]: RRM',
+              '[ RADAR_BACKGROUND ]: Radar background support',
               '[ FILS_STA ]: STA FILS (Fast Initial Link Setup)',
               '[ CQM_RSSI_LIST ]: multiple CQM_RSSI_THOLD records',
               '[ CONTROL_PORT_OVER_NL80211 ]: control port over nl80211',
@@ -2073,8 +2092,12 @@ export default function MockAPI(props = null) {
         }
       })
 
-      this.get('/hostapd/:dev/failsafe', (schema) => {
-        return 'ok'
+      this.get('/hostapd/:dev/failsafe', (schema, request) => {
+        let dev = request.params.dev
+        // Return 'ok' for most devices, but could return 'fail' for testing
+        // wlan0/phy0 returns 'ok' (no failsafe)
+        // wlan1/phy1 could return something else if we want to test failsafe mode
+        return '"ok"'
       })
 
       // plugins
