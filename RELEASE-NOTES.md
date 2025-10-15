@@ -1,6 +1,15 @@
 # Secure Programmable Router (SPR) Release Notes
 
-## v1.0.19-20
+## v1.0.23
+**Improvements**
+- Link view now supports additional IP/routes
+
+**Fixes**
+- fix ipv4 parsing exception for link views with ipv6
+- do not enable bss randomization by default
+
+
+## v1.0.19-22
 **Improvements**
 - Fix mesh deadlocks
 - Enable neighbor reports by default

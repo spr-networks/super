@@ -30,19 +30,25 @@ var Interfacesmtx sync.Mutex
 var gAPIInterfacesPath = TEST_PREFIX + "/configs/base/interfaces.json"
 var gAPIInterfacesPublicPath = TEST_PREFIX + "/state/public/interfaces.json"
 
+type AdditionalIP struct {
+	IP     string
+	Router string `json:",omitempty"` // optional gateway for this additional IP
+}
+
 type InterfaceConfig struct {
-	Name         string
-	Type         string
-	Subtype      string
-	Enabled      bool
-	ExtraBSS     []ExtraBSS `json:",omitempty"`
-	DisableDHCP  bool       `json:",omitempty"`
-	IP           string     `json:",omitempty"`
-	Router       string     `json:",omitempty"`
-	VLAN         string     `json:",omitempty"`
-	MACOverride  string     `json:",omitempty"`
-	MACRandomize bool       `json:",omitempty"`
-	MACCloak     bool       `json:",omitempty"`
+	Name          string
+	Type          string
+	Subtype       string
+	Enabled       bool
+	ExtraBSS      []ExtraBSS     `json:",omitempty"`
+	DisableDHCP   bool           `json:",omitempty"`
+	IP            string         `json:",omitempty"`
+	Router        string         `json:",omitempty"`
+	VLAN          string         `json:",omitempty"`
+	MACOverride   string         `json:",omitempty"`
+	MACRandomize  bool           `json:",omitempty"`
+	MACCloak      bool           `json:",omitempty"`
+	AdditionalIPs []AdditionalIP `json:",omitempty"`
 }
 
 // this will be exported to all containers in public/interfaces.json
@@ -218,7 +224,7 @@ func configureInterface(interfaceType string, subType string, name string, MACRa
 
 	}
 
-	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, "", "", "", "", MACRandomize, MACCloak}
+	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, "", "", "", "", MACRandomize, MACCloak, []AdditionalIP{}}
 
 	config := loadInterfacesConfigLocked()
 
@@ -368,6 +374,19 @@ func updateInterfaceType(Iface string, Type string, Subtype string, Enabled bool
 	return interfaces, nil
 }
 
+// compareAdditionalIPs checks if two AdditionalIP slices are equal
+func compareAdditionalIPs(a, b []AdditionalIP) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].IP != b[i].IP || a[i].Router != b[i].Router {
+			return false
+		}
+	}
+	return true
+}
+
 func updateInterfaceIP(iconfig InterfaceConfig) error {
 	//assumes iconfig has been sanitized
 	Interfacesmtx.Lock()
@@ -376,6 +395,7 @@ func updateInterfaceIP(iconfig InterfaceConfig) error {
 
 	found := false
 	changed := false
+	additionalIPsChanged := false
 
 	for i, iface := range interfaces {
 		if iface.Name == iconfig.Name {
@@ -392,13 +412,34 @@ func updateInterfaceIP(iconfig InterfaceConfig) error {
 				interfaces[i].Router = iconfig.Router
 				interfaces[i].VLAN = iconfig.VLAN
 			}
+
+			// Check if AdditionalIPs changed
+			if !compareAdditionalIPs(interfaces[i].AdditionalIPs, iconfig.AdditionalIPs) {
+				changed = true
+				additionalIPsChanged = true
+				interfaces[i].AdditionalIPs = iconfig.AdditionalIPs
+			}
 		}
 	}
 
 	if !found {
 		return fmt.Errorf("interface not found")
-	} else if changed {
-		return writeInterfacesConfigLocked(interfaces)
+	}
+
+	if changed {
+		err := writeInterfacesConfigLocked(interfaces)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Apply additional IPs if they changed and interface is enabled
+	if iconfig.Enabled && additionalIPsChanged {
+		err := applyAdditionalIPs(iconfig.Name, iconfig.AdditionalIPs)
+		if err != nil {
+			log.Println("Warning: failed to apply additional IPs to "+iconfig.Name, err)
+			// Don't return error - configuration was saved successfully
+		}
 	}
 
 	if iconfig.Enabled {
@@ -872,6 +913,107 @@ func refreshDownlinksLocked() {
 	}
 }
 
+// IPAddrInfo represents the JSON output from `ip -j addr show`
+type IPAddrInfo struct {
+	AddrInfo []struct {
+		Family    string `json:"family"`
+		Local     string `json:"local"`
+		Prefixlen int    `json:"prefixlen"`
+		Scope     string `json:"scope"`
+		Label     string `json:"label"`
+		Secondary bool   `json:"secondary,omitempty"`
+	} `json:"addr_info"`
+}
+
+// applyAdditionalIPs applies additional IP addresses to an interface
+// This adds secondary IPs without affecting the primary IP managed by DHCP
+func applyAdditionalIPs(ifaceName string, additionalIPs []AdditionalIP) error {
+	if !isValidIface(ifaceName) {
+		return fmt.Errorf("Invalid interface name: " + ifaceName)
+	}
+
+	// Get current IP addresses on the interface using JSON output
+	cmd := exec.Command("ip", "-j", "addr", "show", "dev", ifaceName)
+	output, err := cmd.Output()
+	if err != nil {
+		log.Println("Warning: could not query existing IPs for "+ifaceName, err)
+		// Continue anyway - interface might not be up yet
+	}
+
+	// Parse JSON output to get existing secondary IPs
+	currentSecondaryIPs := make(map[string]bool)
+	if len(output) > 0 {
+		var addrInfos []IPAddrInfo
+		err := json.Unmarshal(output, &addrInfos)
+		if err == nil && len(addrInfos) > 0 {
+			for _, addr := range addrInfos[0].AddrInfo {
+				// Only track secondary IPv4 addresses
+				if addr.Family == "inet" && addr.Secondary {
+					ipWithPrefix := fmt.Sprintf("%s/%d", addr.Local, addr.Prefixlen)
+					currentSecondaryIPs[ipWithPrefix] = true
+				}
+			}
+		}
+	}
+
+	// Remove old secondary IPs that are no longer in the configuration
+	configuredIPs := make(map[string]bool)
+	for _, addIP := range additionalIPs {
+		configuredIPs[addIP.IP] = true
+	}
+
+	for ip := range currentSecondaryIPs {
+		if !configuredIPs[ip] {
+			// Remove this IP as it's no longer in configuration
+			cmd := exec.Command("ip", "addr", "del", ip, "dev", ifaceName)
+			err := cmd.Run()
+			if err != nil {
+				log.Println("Warning: failed to remove old IP "+ip+" from "+ifaceName, err)
+			} else {
+				log.Println("Removed old secondary IP "+ip+" from "+ifaceName)
+			}
+		}
+	}
+
+	// Add new additional IPs
+	for _, addIP := range additionalIPs {
+		if addIP.IP == "" {
+			continue
+		}
+
+		// Add the IP address (ip addr add will ignore if it already exists)
+		cmd := exec.Command("ip", "addr", "add", addIP.IP, "dev", ifaceName)
+		err := cmd.Run()
+		if err != nil {
+			// Check if error is because address already exists
+			if !strings.Contains(err.Error(), "RTNETLINK answers: File exists") {
+				log.Println("Warning: failed to add IP "+addIP.IP+" to "+ifaceName, err)
+			}
+		} else {
+			log.Println("Added additional IP "+addIP.IP+" to "+ifaceName)
+		}
+
+		// Add route if specified
+		if addIP.Router != "" {
+			// Extract network from IP for route (e.g., "192.168.2.1/24" -> "192.168.2.0/24")
+			// For now, add a default route via this gateway
+			// Note: Multiple default routes will need policy routing or metric-based selection
+			cmd := exec.Command("ip", "route", "add", "default", "via", addIP.Router, "dev", ifaceName, "metric", "100")
+			err := cmd.Run()
+			if err != nil {
+				// Ignore if route already exists
+				if !strings.Contains(err.Error(), "RTNETLINK answers: File exists") {
+					log.Println("Warning: failed to add route via "+addIP.Router+" for "+ifaceName, err)
+				}
+			} else {
+				log.Println("Added route via "+addIP.Router+" for "+ifaceName)
+			}
+		}
+	}
+
+	return nil
+}
+
 /* Setting basic settings */
 func updateLinkConfig(w http.ResponseWriter, r *http.Request) {
 	iconfig := PublicInterfaceConfig{}
@@ -912,6 +1054,47 @@ func updateLinkConfig(w http.ResponseWriter, r *http.Request) {
 	i.MACOverride = iconfig.MACOverride
 
 	err = updateInterfaceConfig(i)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), 400)
+		return
+	}
+}
+
+/* Update IP configuration for LAN/Downlink interfaces */
+func updateLANLinkIPConfig(w http.ResponseWriter, r *http.Request) {
+	iconfig := InterfaceConfig{}
+	err := json.NewDecoder(r.Body).Decode(&iconfig)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if !isValidIface(iconfig.Name) {
+		http.Error(w, "Invalid iface name", 400)
+		return
+	}
+
+	// Validate additional IPs
+	for _, addIP := range iconfig.AdditionalIPs {
+		if addIP.IP != "" {
+			err = CIDRorIP(addIP.IP)
+			if err != nil {
+				http.Error(w, "Invalid additional IP: "+err.Error(), 400)
+				return
+			}
+		}
+
+		if addIP.Router != "" {
+			ip := net.ParseIP(addIP.Router)
+			if ip == nil {
+				http.Error(w, "Invalid router IP for additional IP: "+addIP.Router, 400)
+				return
+			}
+		}
+	}
+
+	err = updateInterfaceIP(iconfig)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), 400)

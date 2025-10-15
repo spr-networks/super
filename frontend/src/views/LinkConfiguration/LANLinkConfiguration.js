@@ -11,6 +11,7 @@ import {
   BadgeText,
   Box,
   Button,
+  ButtonIcon,
   ButtonText,
   Checkbox,
   CheckboxIcon,
@@ -25,6 +26,9 @@ import {
   Icon,
   Input,
   InputField,
+  Menu,
+  MenuItem,
+  MenuItemLabel,
   Modal,
   ModalBackdrop,
   ModalBody,
@@ -38,6 +42,8 @@ import {
   ThreeDotsIcon
 } from '@gluestack-ui/themed'
 
+import { TrashIcon } from 'lucide-react-native'
+
 import { wifiAPI, api } from 'api'
 import { AlertContext } from 'AppContext'
 import { Address4 } from 'ip-address'
@@ -45,6 +51,149 @@ import { Address4 } from 'ip-address'
 import { Select } from 'components/Select'
 import { ListHeader, ListItem } from 'components/List'
 import { InterfaceTypeItem } from 'components/TagItem'
+
+const LANLinkSetIP = ({ curItem, iface, onSubmit, ...props }) => {
+  const type = 'ip'
+  const context = useContext(AlertContext)
+
+  const [additionalIPs, setAdditionalIPs] = useState(
+    curItem.AdditionalIPs || []
+  )
+
+  const [errors, setErrors] = useState({})
+
+  const validate = () => {
+    const ipv4Regex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/
+    const ipv6Regex = /([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}/
+
+    for (let i = 0; i < additionalIPs.length; i++) {
+      const addIP = additionalIPs[i]
+
+      if (!addIP.IP || addIP.IP === '') {
+        continue
+      }
+
+      let ip = addIP.IP
+      let ip_invalid = true
+      if (ip.includes('/')) {
+        let pieces = ip.split('/')
+        if (pieces.length == 2) {
+          let netSplit = parseInt(pieces[1])
+          if (netSplit >= 8 && netSplit <= 32) {
+            if (ipv4Regex.test(pieces[0]) || ipv6Regex.test(pieces[0])) {
+              ip_invalid = false
+            }
+          }
+        }
+      }
+
+      if (ip_invalid) {
+        context.error('Failed to validate additional IP #' + (i + 1))
+        return false
+      }
+
+      if (addIP.Router && addIP.Router !== '') {
+        if (!ipv4Regex.test(addIP.Router) && !ipv6Regex.test(addIP.Router)) {
+          context.error('Failed to validate Router IP for additional IP #' + (i + 1))
+          return false
+        }
+      }
+    }
+
+    return true
+  }
+
+  const doSubmit = () => {
+    if (validate()) {
+      const item = {
+        Name: iface,
+        AdditionalIPs: additionalIPs.filter(ip => ip.IP !== '')
+      }
+      onSubmit(item, type, true)
+    }
+  }
+
+  const addAdditionalIP = () => {
+    setAdditionalIPs([...additionalIPs, { IP: '', Router: '' }])
+  }
+
+  const removeAdditionalIP = (index) => {
+    const newIPs = additionalIPs.filter((_, i) => i !== index)
+    setAdditionalIPs(newIPs)
+  }
+
+  const updateAdditionalIP = (index, field, value) => {
+    const newIPs = [...additionalIPs]
+    newIPs[index][field] = value
+    setAdditionalIPs(newIPs)
+  }
+
+  return (
+    <VStack space="lg">
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Additional IP Addresses</FormControlLabelText>
+        </FormControlLabel>
+        <Text size="sm" color="$muted500" pb="$2">
+          Add secondary IP addresses to this interface. These are in addition to
+          any DHCP-assigned IP.
+        </Text>
+      </FormControl>
+
+      {additionalIPs.map((addIP, index) => (
+        <VStack key={index} space="md" p="$3" borderWidth="$1" borderColor="$borderLight200" borderRadius="$md">
+          <HStack justifyContent="space-between" alignItems="center">
+            <Text bold size="sm">
+              Additional IP #{index + 1}
+            </Text>
+            <Button
+              size="xs"
+              variant="link"
+              onPress={() => removeAdditionalIP(index)}
+            >
+              <ButtonIcon as={TrashIcon} color="$red700" mr="$1" />
+              <ButtonText color="$red700">Delete</ButtonText>
+            </Button>
+          </HStack>
+
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText>IP Address</FormControlLabelText>
+            </FormControlLabel>
+            <Input variant="underlined">
+              <InputField
+                placeholder="192.168.2.1/24"
+                value={addIP.IP}
+                onChangeText={(value) => updateAdditionalIP(index, 'IP', value)}
+              />
+            </Input>
+          </FormControl>
+
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText>Gateway (Optional)</FormControlLabelText>
+            </FormControlLabel>
+            <Input variant="underlined">
+              <InputField
+                placeholder="192.168.2.254"
+                value={addIP.Router}
+                onChangeText={(value) => updateAdditionalIP(index, 'Router', value)}
+              />
+            </Input>
+          </FormControl>
+        </VStack>
+      ))}
+
+      <Button action="secondary" variant="outline" onPress={addAdditionalIP}>
+        <ButtonText>Add Additional IP</ButtonText>
+      </Button>
+
+      <Button action="primary" onPress={doSubmit}>
+        <ButtonText>Save</ButtonText>
+      </Button>
+    </VStack>
+  )
+}
 
 const LANLinkSetConfig = ({ curItem, iface, onSubmit, ...props }) => {
   const type = 'config'
@@ -331,26 +480,31 @@ const LANLinkInfo = (props) => {
   }
 
   const moreMenu = (iface, item) => (
-    <Button
-      variant="link"
-      ml="auto"
-      onPress={() => {
+    <Menu
+      trigger={trigger}
+      selectionMode="single"
+      onSelectionChange={(e) => {
         setIface(iface)
         setCurrentItem(item)
-        setModal('config')
+        setModal(e.currentKey)
         setShowModal(true)
       }}
     >
-      <ThreeDotsIcon />
-    </Button>
+      <MenuItem key="config" textValue="config">
+        <MenuItemLabel size="sm">Modify Interface</MenuItemLabel>
+      </MenuItem>
+      <MenuItem key="ip" textValue="ip">
+        <MenuItemLabel size="sm">Modify IP Settings</MenuItemLabel>
+      </MenuItem>
+    </Menu>
   )
 
   const onSubmit = (item, type, enable) => {
-    //
-
     let new_entry
 
     if (type == 'config') {
+      new_entry = { ...item, Name: iface, Enabled: enable }
+    } else if (type == 'ip') {
       new_entry = { ...item, Name: iface, Enabled: enable }
     } else {
       context.error('Unknown type ' + type)
@@ -374,16 +528,18 @@ const LANLinkInfo = (props) => {
         context.error(err)
       })
 
-    //update VLAN Subtype
-    api
-      .put(`link/vlan/${iface}/${state}`)
-      .then((res2) => {
-        fetchInfo()
-        setShowModal(false)
-      })
-      .catch((err) => {
-        context.error(err)
-      })
+    //update VLAN Subtype (only for config type)
+    if (type == 'config') {
+      api
+        .put(`link/vlan/${iface}/${state}`)
+        .then((res2) => {
+          fetchInfo()
+          setShowModal(false)
+        })
+        .catch((err) => {
+          context.error(err)
+        })
+    }
   }
 
   return (
@@ -493,6 +649,13 @@ const LANLinkInfo = (props) => {
             <ModalBody pb="$6">
               {iface && modal == 'config' ? (
                 <LANLinkSetConfig
+                  curItem={currentItem}
+                  iface={iface}
+                  onSubmit={onSubmit}
+                />
+              ) : null}
+              {iface && modal == 'ip' ? (
+                <LANLinkSetIP
                   curItem={currentItem}
                   iface={iface}
                   onSubmit={onSubmit}

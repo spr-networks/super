@@ -56,7 +56,8 @@ import {
   CableIcon,
   CheckIcon,
   NetworkIcon,
-  WifiIcon
+  WifiIcon,
+  TrashIcon
 } from 'lucide-react-native'
 import { InterfaceTypeItem } from 'components/TagItem'
 
@@ -443,12 +444,54 @@ const UplinkSetIP = ({ curItem, iface, onSubmit, ...props }) => {
     VLAN: curItem.VLAN || ''
   })
 
+  const [additionalIPs, setAdditionalIPs] = useState(
+    curItem.AdditionalIPs || []
+  )
+
   const [errors, setErrors] = useState({})
 
   const [enable, setEnable] = useState(true)
 
   const validate = () => {
     if (item.DisableDHCP == false) {
+      // Only validate additional IPs when DHCP is enabled
+      const ipv4Regex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/
+      const ipv6Regex = /([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}/
+
+      for (let i = 0; i < additionalIPs.length; i++) {
+        const addIP = additionalIPs[i]
+
+        if (!addIP.IP || addIP.IP === '') {
+          continue
+        }
+
+        let ip = addIP.IP
+        let ip_invalid = true
+        if (ip.includes('/')) {
+          let pieces = ip.split('/')
+          if (pieces.length == 2) {
+            let netSplit = parseInt(pieces[1])
+            if (netSplit >= 8 && netSplit <= 32) {
+              if (ipv4Regex.test(pieces[0]) || ipv6Regex.test(pieces[0])) {
+                ip_invalid = false
+              }
+            }
+          }
+        }
+
+        if (ip_invalid) {
+          context.error('Failed to validate additional IP #' + (i + 1))
+          return false
+        }
+
+        if (addIP.Router && addIP.Router !== '') {
+          if (!ipv4Regex.test(addIP.Router) && !ipv6Regex.test(addIP.Router)) {
+            context.error('Failed to validate Router IP for additional IP #' + (i + 1))
+            return false
+          }
+        }
+      }
+
       return true
     }
 
@@ -482,8 +525,29 @@ const UplinkSetIP = ({ curItem, iface, onSubmit, ...props }) => {
     return true
   }
 
-  const doSubmit = (item) => {
-    validate() ? onSubmit(item, type, enable) : null
+  const addAdditionalIP = () => {
+    setAdditionalIPs([...additionalIPs, { IP: '', Router: '' }])
+  }
+
+  const removeAdditionalIP = (index) => {
+    const newIPs = additionalIPs.filter((_, i) => i !== index)
+    setAdditionalIPs(newIPs)
+  }
+
+  const updateAdditionalIP = (index, field, value) => {
+    const newIPs = [...additionalIPs]
+    newIPs[index][field] = value
+    setAdditionalIPs(newIPs)
+  }
+
+  const doSubmit = (submitItem) => {
+    if (validate()) {
+      const finalItem = {
+        ...submitItem,
+        AdditionalIPs: additionalIPs.filter(ip => ip.IP !== '')
+      }
+      onSubmit(finalItem, type, enable)
+    }
   }
 
   useEffect(() => {}, [])
@@ -539,6 +603,64 @@ const UplinkSetIP = ({ curItem, iface, onSubmit, ...props }) => {
           </FormControl>
         </>
       ) : null}
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Additional IP Addresses</FormControlLabelText>
+        </FormControlLabel>
+        <Text size="sm" color="$muted500" pb="$2">
+          Add secondary IP addresses to this interface. These are in addition to
+          any DHCP-assigned or manually configured primary IP.
+        </Text>
+      </FormControl>
+
+      {additionalIPs.map((addIP, index) => (
+        <VStack key={index} space="md" p="$3" borderWidth="$1" borderColor="$borderLight200" borderRadius="$md">
+          <HStack justifyContent="space-between" alignItems="center">
+            <Text bold size="sm">
+              Additional IP #{index + 1}
+            </Text>
+            <Button
+              size="xs"
+              variant="link"
+              onPress={() => removeAdditionalIP(index)}
+            >
+              <ButtonIcon as={TrashIcon} color="$red700" mr="$1" />
+              <ButtonText color="$red700">Delete</ButtonText>
+            </Button>
+          </HStack>
+
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText>IP Address</FormControlLabelText>
+            </FormControlLabel>
+            <Input variant="underlined">
+              <InputField
+                placeholder="192.168.2.1/24"
+                value={addIP.IP}
+                onChangeText={(value) => updateAdditionalIP(index, 'IP', value)}
+              />
+            </Input>
+          </FormControl>
+
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText>Gateway (Optional)</FormControlLabelText>
+            </FormControlLabel>
+            <Input variant="underlined">
+              <InputField
+                placeholder="192.168.2.254"
+                value={addIP.Router}
+                onChangeText={(value) => updateAdditionalIP(index, 'Router', value)}
+              />
+            </Input>
+          </FormControl>
+        </VStack>
+      ))}
+
+      <Button action="secondary" variant="outline" onPress={addAdditionalIP}>
+        <ButtonText>Add Additional IP</ButtonText>
+      </Button>
 
       <Button action="primary" onPress={() => doSubmit(item)}>
         <ButtonText>Save</ButtonText>

@@ -394,6 +394,10 @@ export default function MockAPI(props = null) {
         return { status: 'ok' }
       })
 
+      this.put('/link/ip', (schema, request) => {
+        return { status: 'ok' }
+      })
+
       this.get('/status', (schema, request) => {
         return authOK(request) ? '"Online"' : '"Error"'
       })
@@ -514,7 +518,10 @@ export default function MockAPI(props = null) {
           {
             Name: 'eth0',
             Type: 'Uplink',
-            Enabled: true
+            Enabled: true,
+            AdditionalIPs: [
+              { IP: '10.0.0.1/24', Router: '' }
+            ]
           },
           {
             Name: 'wlan1',
@@ -529,7 +536,10 @@ export default function MockAPI(props = null) {
           {
             Name: 'eth0.123',
             Type: 'Other',
-            Enabled: true
+            Enabled: true,
+            AdditionalIPs: [
+              { IP: '192.168.5.1/24', Router: '192.168.5.254' }
+            ]
           }
         ]
       })
