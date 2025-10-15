@@ -772,6 +772,9 @@ const UplinkInfo = (props) => {
     let count = 0
     //check if ips all belong in supernets
     for (let ip of ips) {
+      if (ip.includes(":")) {
+        continue
+      }
       let local_addr = new Address4(ip)
       for (let subnet of supernets) {
         let sub_addr = new Address4(subnet)

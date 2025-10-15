@@ -864,6 +864,24 @@ export default function MockAPI(props = null) {
                 scope: 'global',
                 valid_life_time: 4294967295,
                 preferred_life_time: 'preferred_life_time'
+              },
+              {
+                family: 'inet6',
+                local: 'fd00:1234:5678:2:aabb:ccff:fedd:eeff',
+                prefixlen: 64,
+                scope: 'global',
+                flags: ['dynamic', 'mngtmpaddr', 'noprefixroute'],
+                valid_life_time: 42633,
+                preferred_life_time: 42633
+              },
+              {
+                family: 'inet6',
+                local: '2001:db8:1234:5678:aabb:ccff:fedd:eeff',
+                prefixlen: 64,
+                scope: 'global',
+                flags: ['dynamic', 'mngtmpaddr', 'noprefixroute'],
+                valid_life_time: 42633,
+                preferred_life_time: 42633
               }
             ]
           }
