@@ -5,6 +5,7 @@
 # Get current subnet from dhcp.json if it exists, default to 192.168.2.0/24
 SUBNET_BASE="192.168"
 START_OCTET=2
+CURRENT_SUBNET=""
 if [ -f "configs/base/dhcp.json" ]; then
     CURRENT_SUBNET=$(jq -r '.TinyNets[0]' configs/base/dhcp.json 2>/dev/null)
     if [[ "$CURRENT_SUBNET" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)\.0/24$ ]]; then
@@ -13,35 +14,45 @@ if [ -f "configs/base/dhcp.json" ]; then
     fi
 fi
 
-find_available_subnet() {
-    # Get current routes to check for conflicts
-    local routes=$(ip route)
+# Get current routes to check for conflicts
+routes=$(ip route)
 
-    # Try subnets starting from the current dhcp.json value, then increment
-    for i in $(seq $START_OCTET 254); do
-        local subnet="${SUBNET_BASE}.${i}.0/24"
-        local gateway="${SUBNET_BASE}.${i}.1"
-
-        # Check if this subnet conflicts with existing routes
-        local escaped_base=$(echo "$SUBNET_BASE" | sed 's/\./\\./g')
-        if ! echo "$routes" | grep -q "${escaped_base}\.${i}\."; then
-            # Found non-conflicting subnet
-            echo "$subnet|$gateway"
-            return 0
-        fi
-    done
-
-    # Fallback to 192.168.2.0/24 if somehow we checked everything
-    echo "192.168.2.0/24|192.168.2.1"
-    return 1
+# Check if current subnet conflicts with uplink routes
+check_conflict() {
+    local i="$1"
+    local escaped_base=$(echo "$SUBNET_BASE" | sed 's/\./\\./g')
+    echo "$routes" | grep -q "${escaped_base}\.${i}\."
 }
 
-# Get available subnet and gateway
-result=$(find_available_subnet)
-SUBNET=$(echo "$result" | cut -d'|' -f1)
-GATEWAY=$(echo "$result" | cut -d'|' -f2)
+# If we have a current subnet, check if it conflicts
+if [ -n "$CURRENT_SUBNET" ]; then
+    if ! check_conflict "$START_OCTET"; then
+        # Current subnet is fine, keep it
+        SUBNET="$CURRENT_SUBNET"
+        GATEWAY="${SUBNET_BASE}.${START_OCTET}.1"
+        echo "Keeping existing LAN subnet: $SUBNET with gateway: $GATEWAY (no conflict)"
+    fi
+fi
 
-echo "Selected LAN subnet: $SUBNET with gateway: $GATEWAY"
+# If no current subnet or it conflicts, find a new one
+if [ -z "$SUBNET" ]; then
+    for i in $(seq $START_OCTET 254); do
+        if ! check_conflict "$i"; then
+            # Found non-conflicting subnet
+            SUBNET="${SUBNET_BASE}.${i}.0/24"
+            GATEWAY="${SUBNET_BASE}.${i}.1"
+            echo "Selected LAN subnet: $SUBNET with gateway: $GATEWAY"
+            break
+        fi
+    done
+fi
+
+# Fallback to 192.168.2.0/24 if somehow we couldn't find anything
+if [ -z "$SUBNET" ]; then
+    SUBNET="192.168.2.0/24"
+    GATEWAY="192.168.2.1"
+    echo "Using fallback LAN subnet: $SUBNET with gateway: $GATEWAY"
+fi
 
 # Update dhcp.json
 if [ -f "configs/base/dhcp.json" ]; then
