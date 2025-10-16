@@ -1,19 +1,30 @@
 #!/bin/bash
 # Find a non-conflicting LAN subnet
-# Checks the current uplink routes and selects an available 192.168.x.0/24 subnet
+# Checks the current uplink routes and selects an available subnet
+
+# Get current subnet from dhcp.json if it exists, default to 192.168.2.0/24
+SUBNET_BASE="192.168"
+START_OCTET=2
+if [ -f "configs/base/dhcp.json" ]; then
+    CURRENT_SUBNET=$(jq -r '.TinyNets[0]' configs/base/dhcp.json 2>/dev/null)
+    if [[ "$CURRENT_SUBNET" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)\.0/24$ ]]; then
+        SUBNET_BASE="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+        START_OCTET="${BASH_REMATCH[3]}"
+    fi
+fi
 
 find_available_subnet() {
     # Get current routes to check for conflicts
     local routes=$(ip route)
 
-    # Try subnets starting from 192.168.2.0/24, 192.168.3.0/24, etc.
-    for i in {2..254}; do
-        local subnet="192.168.${i}.0/24"
-        local gateway="192.168.${i}.1"
+    # Try subnets starting from the current dhcp.json value, then increment
+    for i in $(seq $START_OCTET 254); do
+        local subnet="${SUBNET_BASE}.${i}.0/24"
+        local gateway="${SUBNET_BASE}.${i}.1"
 
         # Check if this subnet conflicts with existing routes
-        # Look for any route that starts with 192.168.x.
-        if ! echo "$routes" | grep -q "192\.168\.${i}\."; then
+        local escaped_base=$(echo "$SUBNET_BASE" | sed 's/\./\\./g')
+        if ! echo "$routes" | grep -q "${escaped_base}\.${i}\."; then
             # Found non-conflicting subnet
             echo "$subnet|$gateway"
             return 0
