@@ -648,6 +648,24 @@ func updateLinkIPConfig(w http.ResponseWriter, r *http.Request) {
 		*/
 	}
 
+	// Validate additional IPs
+	for _, addIP := range iconfig.AdditionalIPs {
+		if addIP.IP != "" {
+			err = CIDRorIP(addIP.IP)
+			if err != nil {
+				http.Error(w, "Invalid additional IP: "+err.Error(), 400)
+				return
+			}
+		}
+		if addIP.Router != "" {
+			ip := net.ParseIP(addIP.Router)
+			if ip == nil {
+				http.Error(w, "Invalid router IP for additional IP: "+addIP.Router, 400)
+				return
+			}
+		}
+	}
+
 	err = updateInterfaceIP(iconfig)
 	if err != nil {
 		log.Println(err)

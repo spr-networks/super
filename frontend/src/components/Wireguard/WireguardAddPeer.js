@@ -192,6 +192,9 @@ export default class WireguardAddPeer extends React.Component {
         for (let entry of data) {
           next: for (let address of entry.addr_info) {
             if (address.scope == 'global') {
+              if (address.local.includes(":")) {
+                continue
+              }
               //filter out any tiny net ips
               let local_addr = new Address4(address.local)
               for (let net of config.TinyNets) {

@@ -177,13 +177,10 @@ const WifiHostapd = (props) => {
         .catch((e) => {})
 
       wifiAPI.iwList().then(async (iws) => {
-        iws = await Promise.all(
-          iws.map(async (iw) => {
-            iw.devices = devs[iw.wiphy]
-            iw.failsafeStatus = await wifiAPI.checkFailsafe(iw.wiphy)
-            return iw
-          })
-        )
+        // Assign devices to each phy
+        iws.forEach((iw) => {
+          iw.devices = devs[iw.wiphy]
+        })
 
         //make a phy to iws map and devname to iw map
         let iwMap = {}
@@ -206,6 +203,7 @@ const WifiHostapd = (props) => {
             return iw
           })
         )
+
 
         setIwMap(iwMap)
         setIws(iws)

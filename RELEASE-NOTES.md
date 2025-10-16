@@ -1,6 +1,19 @@
 # Secure Programmable Router (SPR) Release Notes
 
-## v1.0.19-20
+## v1.0.23
+**Improvements**
+- Link view now supports additional IP/routes
+- New experimental installer terminal UI
+
+**Fixes**
+- fix ipv4 parsing exception for link views with ipv6
+- do not enable bss randomization by default
+- auto assign addresses to floating hardware macs
+- pick a subnet better
+- fix the wifi renaming script as it was buggy
+- add more sanitization since the interface names can have shell metacharacters (yay linux)
+
+## v1.0.19-22
 **Improvements**
 - Fix mesh deadlocks
 - Enable neighbor reports by default

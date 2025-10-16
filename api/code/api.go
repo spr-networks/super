@@ -2915,6 +2915,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/uplink/ppp", updatePPPConfig).Methods("PUT")
 	external_router_authenticated.HandleFunc("/uplink/ip", updateLinkIPConfig).Methods("PUT")
 	external_router_authenticated.HandleFunc("/link/config", updateLinkConfig).Methods("PUT")
+	external_router_authenticated.HandleFunc("/link/ip", updateLANLinkIPConfig).Methods("PUT")
 	external_router_authenticated.HandleFunc("/link/vlan/{interface}/{state}", updateLinkVlanTrunk).Methods("PUT")
 
 	//	external_router_authenticated.HandleFunc("/uplink/{interface}/bond", mangeBondInterface).Methods("PUT", "DELETE")

@@ -1,0 +1,1 @@
+base/scripts/spr-setup-tui.sh

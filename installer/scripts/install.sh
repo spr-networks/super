@@ -29,7 +29,7 @@ apt-get update
 #https://bugs.launchpad.net/ubuntu/+source/linux-raspi/+bug/2048862
 # NOTE: also check pi-cross-install when making updates
 apt-get -y install --download-only linux-firmware
-apt-get -y install --no-install-recommends nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack jq inotify-tools
+apt-get -y install --no-install-recommends nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack jq inotify-tools dialog
 # install docker and buildx
 apt-get -y install --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
@@ -127,11 +127,6 @@ cp /tmp/run.sh .
 git clone --depth 1 https://github.com/spr-networks/super
 cd /home/spr/super
 cp -R base/template_configs configs
-
-if [ ! -f configs/dhcp/coredhcp.yml ]; then
-  ./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
-  ./configs/scripts/gen_watchdog.sh  > configs/watchdog/watchdog.conf
-fi
 
 mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
 ln -s /dev/null /lib/udev/rules.d/80-net-setup-link.rules

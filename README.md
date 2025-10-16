@@ -110,6 +110,7 @@ For performance and to minimize wear on SD cards, the build uses a memory-backed
 #### Using prebuilt containers
 ```bash
 docker-compose pull
+./setup.sh # (optional)
 docker-compose up -d
 ```
 

@@ -29,6 +29,14 @@ fi
 
 cd /home/spr/super/
 
+# Find non-conflicting LAN subnet based on current uplink routes
+chmod +x ./base/scripts/find_lan_subnet.sh
+./base/scripts/find_lan_subnet.sh
+
+# Fix interfaces without permanent MAC addresses
+chmod +x ./base/scripts/fix_mac_addresses.sh
+./base/scripts/fix_mac_addresses.sh
+
 # Generate self signed SSL certificates
 SKIPPASS="-password pass:1234" ./api/scripts/generate-certificate.sh
 
