@@ -3,6 +3,7 @@
 ## v1.0.23
 **Improvements**
 - Link view now supports additional IP/routes
+- New experimental installer terminal UI
 
 **Fixes**
 - fix ipv4 parsing exception for link views with ipv6

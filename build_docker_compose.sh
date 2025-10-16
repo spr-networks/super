@@ -40,12 +40,6 @@ if [ "$FOUND_PREBUILT_IMAGE" = "true" ]; then
     docker image prune -f
 fi
 
-# gen configs
-if [ ! -f configs/dhcp/coredhcp.yml ]; then
-  ./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
-  ./configs/scripts/gen_watchdog.sh  > configs/watchdog/watchdog.conf
-fi
-
 # set version
 # NOTE if we rebuild a single container could still be old version
 #git tag -l --sort=-creatordate  | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 > ./version.txt

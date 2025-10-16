@@ -1,7 +1,7 @@
 #!/bin/bash
 apt-get update
 apt-get -y upgrade
-apt-get -y install nftables wireless-regdb conntrack ethtool jq
+apt-get -y install nftables wireless-regdb conntrack ethtool jq dialog
 
 # install upstream docker
 apt-get -y install ca-certificates curl gnupg

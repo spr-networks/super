@@ -76,10 +76,6 @@ echo "options mt76_usb disable_usb_sg=1" > /etc/modprobe.d/mt76_usb.conf
 cd /home/spr/super
 cp -R base/template_configs configs
 
-if [ ! -f configs/dhcp/coredhcp.yml ]; then
-  ./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
-fi
-
 mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
 ln -s /dev/null /lib/udev/rules.d/80-net-setup-link.rules
 
