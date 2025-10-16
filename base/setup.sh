@@ -1,7 +1,7 @@
 #!/bin/bash
 apt-get update
 apt-get -y upgrade
-apt-get -y install nftables wireless-regdb conntrack
+apt-get -y install nftables wireless-regdb conntrack ethtool jq
 
 # install upstream docker
 apt-get -y install ca-certificates curl gnupg
@@ -47,6 +47,10 @@ echo -e "{\n  \"iptables\": false\n}" > /etc/docker/daemon.json
 
 cp -R base/template_configs configs
  ./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
+
+ # Fix interfaces without permanent MAC addresses
+ chmod +x ./base/scripts/fix_mac_addresses.sh
+ ./base/scripts/fix_mac_addresses.sh
 
  #generate self signed certificate
  SKIPPASS="-password pass:1234" ./api/scripts/generate-certificate.sh
