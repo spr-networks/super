@@ -29,6 +29,10 @@ fi
 
 cd /home/spr/super/
 
+# Fix interfaces without permanent MAC addresses
+chmod +x ./base/scripts/fix_mac_addresses.sh
+./base/scripts/fix_mac_addresses.sh
+
 # Generate self signed SSL certificates
 SKIPPASS="-password pass:1234" ./api/scripts/generate-certificate.sh
 
