@@ -46,6 +46,11 @@ echo -e "{\n  \"iptables\": false\n}" > /etc/docker/daemon.json
 
 
 cp -R base/template_configs configs
+
+ # Find non-conflicting LAN subnet based on current uplink routes
+ chmod +x ./base/scripts/find_lan_subnet.sh
+ ./base/scripts/find_lan_subnet.sh
+
  ./configs/scripts/gen_coredhcp_yaml.sh > configs/dhcp/coredhcp.yml
 
  # Fix interfaces without permanent MAC addresses
