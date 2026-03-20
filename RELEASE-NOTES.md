@@ -1,5 +1,10 @@
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.0.24
+**Fixes**
+Fix interface naming race condition for cm5 devices 
+Update to 24.04.4 LTS 
+
 ## v1.0.23
 **Improvements**
 - Link view now supports additional IP/routes
