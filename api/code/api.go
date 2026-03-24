@@ -1306,7 +1306,7 @@ func deleteDeviceLocked(devices map[string]DeviceEntry, groups []GroupEntry, ide
 	//if the device had a VLAN Tag, also refresh vlans
 	// upon deletion
 	if val.VLANTag != "" {
-		refreshVLANTrunks()
+		refreshVLANTrunks(devices)
 	}
 
 	//notify the bus
@@ -1555,7 +1555,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		}
 
 		if refreshVlanTrunks {
-			refreshVLANTrunks()
+			refreshVLANTrunks(devices)
 		}
 
 		//mask the PSK if set and not generated
@@ -1638,7 +1638,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 	// create vlans
 	if refreshVlanTrunks {
-		refreshVLANTrunks()
+		refreshVLANTrunks(devices)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
