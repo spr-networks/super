@@ -971,7 +971,7 @@ func applyAdditionalIPs(ifaceName string, additionalIPs []AdditionalIP) error {
 			if err != nil {
 				log.Println("Warning: failed to remove old IP "+ip+" from "+ifaceName, err)
 			} else {
-				log.Println("Removed old secondary IP "+ip+" from "+ifaceName)
+				log.Println("Removed old secondary IP " + ip + " from " + ifaceName)
 			}
 		}
 	}
@@ -991,7 +991,7 @@ func applyAdditionalIPs(ifaceName string, additionalIPs []AdditionalIP) error {
 				log.Println("Warning: failed to add IP "+addIP.IP+" to "+ifaceName, err)
 			}
 		} else {
-			log.Println("Added additional IP "+addIP.IP+" to "+ifaceName)
+			log.Println("Added additional IP " + addIP.IP + " to " + ifaceName)
 		}
 
 		// Add route if specified
@@ -1007,7 +1007,7 @@ func applyAdditionalIPs(ifaceName string, additionalIPs []AdditionalIP) error {
 					log.Println("Warning: failed to add route via "+addIP.Router+" for "+ifaceName, err)
 				}
 			} else {
-				log.Println("Added route via "+addIP.Router+" for "+ifaceName)
+				log.Println("Added route via " + addIP.Router + " for " + ifaceName)
 			}
 		}
 	}

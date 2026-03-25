@@ -77,9 +77,16 @@ const WifiChannelParameters = ({
   const [modeLabel, setModeLabel] = useState('5/6 GHz')
   const [errors, setErrors] = useState({})
   const [disable160, setDisable160] = useState(true)
+  const [disable320, setDisable320] = useState(true)
   const [disableWifi6, setDisableWifi6] = useState(true)
+  const [disableWifi7, setDisableWifi7] = useState(true)
   const [disableDFS, setDisableDFS] = useState(true)
   const [groupValues, setGroupValues] = useState([])
+
+  // MLO Link 1 state
+  const [mloChannel, setMloChannel] = useState(0)
+  const [mloBandwidth, setMloBandwidth] = useState(80)
+  const [mloBandwidthLabel, setMloBandwidthLabel] = useState('')
 
   //some wifi devices were reported to crash during auth if GCMP was enabled,
   // disable this less common cipher by default but let people enable it
@@ -91,6 +98,7 @@ const WifiChannelParameters = ({
     { label: '40 MHz', value: 40 },
     { label: '80 MHz', value: 80 },
     { label: '160 MHz', disabled: disable160, value: 160 },
+    { label: '320 MHz (WiFi 7)', disabled: disable320, value: 320 },
     { label: '80+80 MHz', disabled: true, value: 8080 }
   ]
 
@@ -190,17 +198,36 @@ const WifiChannelParameters = ({
       }
     }
 
+    if (config.ieee80211be == 1) {
+      if (!groupValues.includes('wifi7')) {
+        setGroupValues((prev) => prev.includes('wifi7') ? prev : [...prev, 'wifi7'])
+      }
+    }
+
+    if (config.mld_ap == 1) {
+      if (!groupValues.includes('mlo')) {
+        setGroupValues((prev) => prev.includes('mlo') ? prev : [...prev, 'mlo'])
+      }
+    }
+
+    // Load MLO link config
+    if (config.mlo_channel) {
+      setMloChannel(config.mlo_channel)
+    }
+    if (config.mlo_bandwidth) {
+      setMloBandwidth(config.mlo_bandwidth)
+    }
+
     //set bw and channels
     for (let iw of iws) {
       if (iw.devices[iface]) {
         let cur_device = iw.devices[iface]
         if (!cur_device) continue
 
-        //check for radar background support (DFS)
+        //check for radar/DFS support (RADAR_BACKGROUND or DFS_OFFLOAD)
         if (iw.supported_extended_features) {
-
           for (let feature of iw.supported_extended_features) {
-            if (feature.includes('RADAR_BACKGROUND')) {
+            if (feature.includes('RADAR_BACKGROUND') || feature.includes('DFS_OFFLOAD')) {
               setDisableDFS(false)
               break
             }
@@ -224,6 +251,14 @@ const WifiChannelParameters = ({
 
           if (band.he_phy_capabilities) {
             setDisableWifi6(false)
+          }
+
+          if (band.eht_phy_capabilities) {
+            setDisableWifi7(false)
+            //6 GHz bands support 320 MHz with WiFi 7
+            if (band.band && band.band.includes('Band 4')) {
+              setDisable320(false)
+            }
           }
         }
 
@@ -299,7 +334,16 @@ const WifiChannelParameters = ({
           //bandwith check, do not list start indices that
           // are nonsense for 5/6ghz.
           if (mode == 'a') {
-            if (bandwidth == 160) {
+            if (bandwidth == 320) {
+              //320 MHz only valid for 6 GHz
+              if (frequency < 5900) {
+                continue
+              }
+              //6ghz 320 MHz valid start channels
+              if (frequency % 320 != 195 && frequency % 320 != 35) {
+                continue
+              }
+            } else if (bandwidth == 160) {
               //5 ghz and 6ghz offsets
               if (frequency % 160 != 60 && frequency % 160 != 35) {
                 continue
@@ -403,6 +447,8 @@ const WifiChannelParameters = ({
     }
 
 
+    let ehtEnabled = groupValues.includes('wifi7')
+
     let wifiParameters = {
       //Interface: iface,
       Channel: channel,
@@ -410,7 +456,8 @@ const WifiChannelParameters = ({
       Bandwidth: bandwidth,
       HT_Enable: true,
       VHT_Enable: mode == 'a' ? true : false,
-      HE_Enable: true
+      HE_Enable: true,
+      EHT_Enable: ehtEnabled
     }
 
     if (groupValues.includes('gcmpon')) {
@@ -431,10 +478,26 @@ const WifiChannelParameters = ({
       wifiParameters.Ieee80211ax = 0
     }
 
+    if (ehtEnabled) {
+      wifiParameters.Ieee80211be = 1
+    } else {
+      wifiParameters.Ieee80211be = 0
+    }
+
+    if (groupValues.includes('mlo')) {
+      wifiParameters.Mld_ap = 1
+      wifiParameters.Mlo_channel = parseInt(mloChannel)
+      wifiParameters.Mlo_bandwidth = parseInt(mloBandwidth)
+    } else {
+      wifiParameters.Mld_ap = 0
+    }
+
     onSubmit(wifiParameters)
   }
 
   let checkboxProps = disableWifi6 ? { isDisabled: true } : {}
+  let wifi7CheckboxProps = disableWifi7 ? { isDisabled: true } : {}
+  let mloCheckboxProps = disableWifi7 ? { isDisabled: true } : {}
   let gcmpCheckboxProps = disableGCMP ? { isDisabled: false } : {}
 
   return (
@@ -457,9 +520,10 @@ const WifiChannelParameters = ({
 
         {disableDFS && mode == 'a' ? (
           <Text pb="$4" color="$warning600" flexWrap="wrap" size="sm">
-            ⚠️ DFS channels are disabled: This WiFi card does not support radar
-            background detection (RADAR_BACKGROUND feature). DFS channels require
-            hardware support for detecting radar signals to comply with regulations.
+            ⚠️ DFS channels are disabled: This WiFi card does not support
+            radar detection (RADAR_BACKGROUND or DFS_OFFLOAD feature). DFS
+            channels require hardware support for detecting radar signals to
+            comply with regulations.
           </Text>
         ) : null}
 
@@ -592,8 +656,81 @@ const WifiChannelParameters = ({
               <CheckboxLabel>Enable GCMP Encryption</CheckboxLabel>
             </Checkbox>
 
+            <Checkbox {...wifi7CheckboxProps} value={'wifi7'}>
+              <CheckboxIndicator mr="$2">
+                <CheckboxIcon />
+              </CheckboxIndicator>
+              <CheckboxLabel>WiFi 7 (BE)</CheckboxLabel>
+            </Checkbox>
+
+            <Checkbox {...mloCheckboxProps} value={'mlo'}>
+              <CheckboxIndicator mr="$2">
+                <CheckboxIcon />
+              </CheckboxIndicator>
+              <CheckboxLabel>MLO</CheckboxLabel>
+            </Checkbox>
+
           </HStack>
         </CheckboxGroup>
+
+        {groupValues.includes('mlo') ? (
+          <VStack space="md" mt="$4">
+            <Heading size="xs">MLO Link 1</Heading>
+            <HStack
+              sx={{ '@md': { flexDirection: 'row', alignItems: 'center' } }}
+              space="md"
+            >
+              <FormControl flex={1}>
+                <FormControlLabel>
+                  <FormControlLabelText>Link 1 Bandwidth</FormControlLabelText>
+                </FormControlLabel>
+                <Select
+                  selectedValue={mloBandwidthLabel || `${mloBandwidth} MHz`}
+                  onValueChange={(value) => {
+                    setMloBandwidthLabel(value)
+                    let bw = parseInt(value)
+                    if (!isNaN(bw)) setMloBandwidth(bw)
+                  }}
+                >
+                  <Select.Item label="80 MHz" value="80 MHz" />
+                  <Select.Item label="160 MHz" value="160 MHz" />
+                  <Select.Item label="320 MHz" value="320 MHz" />
+                </Select>
+              </FormControl>
+
+              <FormControl flex={1}>
+                <FormControlLabel>
+                  <FormControlLabelText>Link 1 Channel</FormControlLabelText>
+                </FormControlLabel>
+                <Select
+                  selectedValue={mloChannel?.toString()}
+                  onValueChange={(value) => setMloChannel(parseInt(value))}
+                >
+                  {enumerateChannelOptions().filter((ch) => {
+                    // Show channels from the other band (not primary link's band)
+                    if (!ch.toolTip) return false
+                    let freq = parseInt(ch.toolTip)
+                    if (isNaN(freq)) return false
+                    let primaryFreq = convertChannelToFrequency(
+                      channel > 0 && channel < 15 ? '2.4' : '5', parseInt(channel)
+                    ) || 0
+                    // If primary is 5 GHz (<5900), show 6 GHz (>5900), and vice versa
+                    let chIs6e = freq > 5900
+                    let primaryIs6e = primaryFreq > 5900
+                    return chIs6e !== primaryIs6e
+                  }).map((item) => (
+                    <Select.Item
+                      key={item.value}
+                      label={item.label}
+                      value={item.value}
+                      isDisabled={item.disabled}
+                    />
+                  ))}
+                </Select>
+              </FormControl>
+            </HStack>
+          </VStack>
+        ) : null}
 
       </VStack>
     </>

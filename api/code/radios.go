@@ -137,6 +137,12 @@ type HostapdConfigEntry struct {
 	He_su_beamformer             int
 	He_su_beamformee             int
 	He_mu_beamformer             int
+	Ieee80211be                  int
+	Eht_oper_chwidth             int
+	Eht_oper_centr_freq_seg0_idx int
+	Mld_ap                       int
+	Mlo_channel                  int
+	Mlo_bandwidth                int
 	Ssid                         string
 	Channel                      int
 	Vht_oper_centr_freq_seg0_idx int
@@ -237,13 +243,16 @@ type ChannelParameters struct {
 	HT_Enable  bool
 	VHT_Enable bool
 	HE_Enable  bool
+	EHT_Enable bool
 }
 
 type CalculatedChannelParameters struct {
 	Vht_oper_centr_freq_seg0_idx int
 	He_oper_centr_freq_seg0_idx  int
+	Eht_oper_centr_freq_seg0_idx int
 	Vht_oper_chwidth             int
 	He_oper_chwidth              int
+	Eht_oper_chwidth             int
 	Op_class                     int
 	Is_6e                        bool
 	Freq1                        int
@@ -251,14 +260,15 @@ type CalculatedChannelParameters struct {
 	Freq3                        int
 }
 
-func ChanCalc(mode string, channel int, bw int, ht_enabled bool, vht_enabled bool, he_enabled bool) CalculatedChannelParameters {
+func ChanCalc(mode string, channel int, bw int, ht_enabled bool, vht_enabled bool, he_enabled bool, eht_enabled ...bool) CalculatedChannelParameters {
 	freq1 := 0
 	freq2 := 0
 	freq3 := 0 //for 80+80, not supported right now
 
 	is_6e := false
+	eht := len(eht_enabled) > 0 && eht_enabled[0]
 
-	calculated := CalculatedChannelParameters{-1, -1, 0, 0, 0, false, 0, 0, 0}
+	calculated := CalculatedChannelParameters{-1, -1, -1, 0, 0, 0, 0, false, 0, 0, 0}
 
 	//in the future consider always providing Op_class
 	//https://android.googlesource.com/platform/external/wpa_supplicant_8/+/master/src/common/ieee802_11_common.c#1889
@@ -319,9 +329,14 @@ func ChanCalc(mode string, channel int, bw int, ht_enabled bool, vht_enabled boo
 		if he_enabled {
 			calculated.He_oper_chwidth = 1
 		}
+		if eht {
+			calculated.Eht_oper_chwidth = 1
+		}
 
 		if is_6e {
 			calculated.Op_class = 133
+		} else {
+			calculated.Op_class = 128
 		}
 	case 160:
 		center_channel = channel + 14
@@ -331,13 +346,21 @@ func ChanCalc(mode string, channel int, bw int, ht_enabled bool, vht_enabled boo
 		if he_enabled {
 			calculated.He_oper_chwidth = 2
 		}
+		if eht {
+			calculated.Eht_oper_chwidth = 2
+		}
 		if is_6e {
 			calculated.Op_class = 134
+		} else {
+			calculated.Op_class = 129
 		}
 	case 320:
 		if is_6e {
-			center_channel = channel + 30
-			calculated.Op_class = 135
+			center_channel = ((channel-1)/32)*32 + 31
+			calculated.Op_class = 137
+			if eht {
+				calculated.Eht_oper_chwidth = 9
+			}
 		}
 	case 8080:
 		if is_6e {
@@ -352,6 +375,9 @@ func ChanCalc(mode string, channel int, bw int, ht_enabled bool, vht_enabled boo
 		}
 		if he_enabled {
 			calculated.He_oper_centr_freq_seg0_idx = center_channel
+		}
+		if eht {
+			calculated.Eht_oper_centr_freq_seg0_idx = center_channel
 		}
 	}
 
@@ -413,7 +439,7 @@ func hostapdChannelSwitch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	calculated := ChanCalc(channelParams.Mode, channelParams.Channel, channelParams.Bandwidth, channelParams.HT_Enable, channelParams.VHT_Enable, channelParams.HE_Enable)
+	calculated := ChanCalc(channelParams.Mode, channelParams.Channel, channelParams.Bandwidth, channelParams.HT_Enable, channelParams.VHT_Enable, channelParams.HE_Enable, channelParams.EHT_Enable)
 	err = ChanSwitch(iface, channelParams.Bandwidth, calculated.Freq1, calculated.Freq2, channelParams.HT_Enable, channelParams.VHT_Enable, channelParams.HE_Enable)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
@@ -434,7 +460,7 @@ func hostapdChannelCalc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	calculated := ChanCalc(channelParams.Mode, channelParams.Channel, channelParams.Bandwidth, channelParams.HT_Enable, channelParams.VHT_Enable, channelParams.HE_Enable)
+	calculated := ChanCalc(channelParams.Mode, channelParams.Channel, channelParams.Bandwidth, channelParams.HT_Enable, channelParams.VHT_Enable, channelParams.HE_Enable, channelParams.EHT_Enable)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(calculated)
@@ -568,6 +594,38 @@ func hostapdConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Include MLO link config if it exists
+	mloPath := getHostapdMloConfigPath(iface)
+	if _, statErr := os.Stat(mloPath); statErr == nil {
+		mloData, readErr := ioutil.ReadFile(mloPath)
+		if readErr == nil {
+			for _, line := range strings.Split(string(mloData), "\n") {
+				if strings.HasPrefix(line, "channel=") {
+					pieces := strings.Split(line, "=")
+					val, _ := strconv.ParseUint(pieces[1], 10, 64)
+					conf["mlo_channel"] = val
+				}
+				if strings.HasPrefix(line, "op_class=") {
+					pieces := strings.Split(line, "=")
+					val, _ := strconv.ParseUint(pieces[1], 10, 64)
+					// Derive bandwidth from op_class
+					switch val {
+					case 131, 136:
+						conf["mlo_bandwidth"] = 20
+					case 132:
+						conf["mlo_bandwidth"] = 40
+					case 128, 133:
+						conf["mlo_bandwidth"] = 80
+					case 129, 134:
+						conf["mlo_bandwidth"] = 160
+					case 137:
+						conf["mlo_bandwidth"] = 320
+					}
+				}
+			}
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(conf)
 }
@@ -686,6 +744,108 @@ func relax6e(conf map[string]interface{}) {
 	conf["wpa_key_mgmt"] = "WPA-PSK WPA-PSK-SHA256 SAE"
 }
 
+func getHostapdMloConfigPath(iface string) string {
+	if !isValidIface(iface) {
+		return ""
+	}
+	return TEST_PREFIX + "/configs/wifi/hostapd_" + iface + "_mlo.conf"
+}
+
+// generateMloLinkConfig creates the MLO Link 1 config from the primary config
+func generateMloLinkConfig(primaryConf map[string]interface{}, iface string, channel int, bandwidth int) string {
+	// Calculate channel parameters for the MLO link
+	is_6e := false
+	if channel%2 == 1 && channel != 149 && channel != 165 {
+		is_6e = true
+	} else if channel == 2 {
+		is_6e = true
+	}
+
+	calculated := ChanCalc("a", channel, bandwidth, !is_6e, !is_6e, true, true)
+
+	// Build MLO link config from primary, keeping shared settings
+	mloConf := map[string]interface{}{}
+
+	// Copy shared settings from primary
+	sharedKeys := []string{
+		"interface", "driver", "ssid", "utf8_ssid", "country_code",
+		"ieee80211d", "ieee80211h",
+		"auth_algs", "wpa", "wpa_key_mgmt", "rsn_pairwise",
+		"ieee80211w", "beacon_prot", "sae_require_mfp", "sae_pwe",
+		"sae_psk_file", "wpa_psk_file", "sae_track_password",
+		"wmm_enabled", "wpa_disable_eapol_key_retries",
+		"ap_isolate", "multicast_to_unicast", "tdls_prohibit", "per_sta_vif",
+		"ctrl_interface",
+	}
+
+	for _, key := range sharedKeys {
+		if val, ok := primaryConf[key]; ok {
+			mloConf[key] = val
+		}
+	}
+
+	// Set MLO link specific parameters
+	mloConf["hw_mode"] = "a"
+	mloConf["channel"] = channel
+	mloConf["ieee80211ax"] = 1
+	mloConf["ieee80211be"] = 1
+	mloConf["mld_ap"] = 1
+
+	if calculated.Op_class > 0 {
+		mloConf["op_class"] = calculated.Op_class
+	}
+
+	if calculated.He_oper_centr_freq_seg0_idx > 0 {
+		mloConf["he_oper_centr_freq_seg0_idx"] = calculated.He_oper_centr_freq_seg0_idx
+	}
+
+	if calculated.Eht_oper_centr_freq_seg0_idx > 0 {
+		mloConf["eht_oper_centr_freq_seg0_idx"] = calculated.Eht_oper_centr_freq_seg0_idx
+	}
+
+	if calculated.Eht_oper_chwidth > 0 {
+		mloConf["eht_oper_chwidth"] = calculated.Eht_oper_chwidth
+	}
+
+	if is_6e {
+		// 6 GHz specific settings
+		mloConf["he_6ghz_reg_pwr_type"] = 0
+		mloConf["unsol_bcast_probe_resp_interval"] = 20
+		// Force SAE-only and mandatory PMF for 6 GHz
+		mloConf["wpa_key_mgmt"] = "SAE"
+		mloConf["ieee80211w"] = 2
+		// No legacy 802.11n/ac/VHT/HT on 6 GHz
+		delete(mloConf, "ieee80211n")
+		delete(mloConf, "ieee80211ac")
+	} else {
+		// 5 GHz link — include VHT/HT
+		mloConf["ieee80211n"] = 1
+		mloConf["ieee80211ac"] = 1
+		if calculated.Vht_oper_centr_freq_seg0_idx > 0 {
+			mloConf["vht_oper_centr_freq_seg0_idx"] = calculated.Vht_oper_centr_freq_seg0_idx
+		}
+		if calculated.Vht_oper_chwidth > 0 {
+			mloConf["vht_oper_chwidth"] = calculated.Vht_oper_chwidth
+		}
+		if calculated.He_oper_chwidth > 0 {
+			mloConf["he_oper_chwidth"] = calculated.He_oper_chwidth
+		}
+		// Copy HT/VHT capab from primary if available
+		if val, ok := primaryConf["ht_capab"]; ok {
+			mloConf["ht_capab"] = val
+		}
+		if val, ok := primaryConf["vht_capab"]; ok {
+			mloConf["vht_capab"] = val
+		}
+	}
+
+	data := ""
+	for key, value := range mloConf {
+		data += fmt.Sprint(key, "=", value, "\n")
+	}
+	return data
+}
+
 func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
 	if !isValidIface(iface) {
@@ -801,6 +961,30 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		conf["he_mu_beamformer"] = newConf.He_mu_beamformer
 	}
 
+	if _, ok := newInput["Ieee80211be"]; ok {
+		conf["ieee80211be"] = newConf.Ieee80211be
+	}
+
+	if _, ok := newInput["Eht_oper_centr_freq_seg0_idx"]; ok {
+		if newConf.Eht_oper_centr_freq_seg0_idx == -1 {
+			delete(conf, "eht_oper_centr_freq_seg0_idx")
+		} else {
+			conf["eht_oper_centr_freq_seg0_idx"] = newConf.Eht_oper_centr_freq_seg0_idx
+		}
+	}
+
+	if _, ok := newInput["Eht_oper_chwidth"]; ok {
+		conf["eht_oper_chwidth"] = newConf.Eht_oper_chwidth
+	}
+
+	if _, ok := newInput["Mld_ap"]; ok {
+		if newConf.Mld_ap == 0 {
+			delete(conf, "mld_ap")
+		} else {
+			conf["mld_ap"] = newConf.Mld_ap
+		}
+	}
+
 	if _, ok := newInput["Rrm_neighbor_report"]; ok {
 		conf["rrm_neighbor_report"] = newConf.Rrm_neighbor_report
 	}
@@ -877,6 +1061,48 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 		http.Error(w, err.Error(), 400)
 		return
+	}
+
+	// Handle MLO link config
+	mloPath := getHostapdMloConfigPath(iface)
+	mloChannel := newConf.Mlo_channel
+	mloBandwidth := newConf.Mlo_bandwidth
+
+	// If MLO channel not provided but MLO config already exists, read existing values
+	// so we can regenerate with updated shared settings (SSID, security, etc.)
+	if mloChannel == 0 {
+		if existingMlo, readErr := ioutil.ReadFile(mloPath); readErr == nil {
+			for _, line := range strings.Split(string(existingMlo), "\n") {
+				if strings.HasPrefix(line, "channel=") {
+					pieces := strings.Split(line, "=")
+					mloChannel, _ = strconv.Atoi(pieces[1])
+				}
+				if strings.HasPrefix(line, "op_class=") {
+					pieces := strings.Split(line, "=")
+					opVal, _ := strconv.Atoi(pieces[1])
+					switch opVal {
+					case 128, 133:
+						mloBandwidth = 80
+					case 129, 134:
+						mloBandwidth = 160
+					case 137:
+						mloBandwidth = 320
+					}
+				}
+			}
+		}
+	}
+
+	if conf["mld_ap"] == 1 && mloChannel > 0 {
+		mloData := generateMloLinkConfig(conf, iface, mloChannel, mloBandwidth)
+		err = ioutil.WriteFile(mloPath, []byte(mloData), 0600)
+		if err != nil {
+			fmt.Println(err)
+			http.Error(w, err.Error(), 400)
+			return
+		}
+		conf["mlo_channel"] = mloChannel
+		conf["mlo_bandwidth"] = mloBandwidth
 	}
 
 	if !needRestart {

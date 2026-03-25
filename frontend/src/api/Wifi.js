@@ -373,6 +373,7 @@ export const generateCapabilitiesString = (iwmap, iface, wanted_band) => {
 export const generateConfigForBand = (iwmap, iface, wanted_band) => {
   let iwinfo = iwmap[iface]
   let has_wifi6 = false
+  let has_wifi7 = false
   let ht_capstr = ''
   let vht_capstr = ''
 
@@ -382,6 +383,9 @@ export const generateConfigForBand = (iwmap, iface, wanted_band) => {
     let band = iwinfo.bands[i]
     if (band.he_phy_capabilities) {
       has_wifi6 = true
+    }
+    if (band.eht_phy_capabilities) {
+      has_wifi7 = true
     }
 
     let ht_capstr = ''
@@ -440,6 +444,13 @@ export const generateConfigForBand = (iwmap, iface, wanted_band) => {
     defaultConfig.ieee80211ax = '0'
   }
 
+  //enable wifi 7 by default
+  if (has_wifi7 == true) {
+    defaultConfig.ieee80211be = '1'
+  } else {
+    defaultConfig.ieee80211be = '0'
+  }
+
   return defaultConfig
 }
 
@@ -496,6 +507,8 @@ const canEditInt = [
   'he_su_beamformer',
   'he_su_beamformee',
   'he_mu_beamformer',
+  'ieee80211be',
+  'mld_ap',
   'rssi_reject_assoc_rssi',
   'rssi_reject_assoc_timeout',
   'rssi_ignore_probe_request'
