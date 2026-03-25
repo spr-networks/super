@@ -25,7 +25,6 @@ DOCKER_DEFAULT_PLATFORM=linux/arm64 docker run --rm \
 # opens the image.  spr-pi-builder already has qemu-system-aarch64.
 docker run --privileged -v /dev:/dev -v $PWD/data:/data -v $PWD/scripts:/scripts/ -v $PWD/firmware:/firmware/ spr-pi-builder bash -c '
   /scripts/go-pi.sh
-  cp /data/spr.img /data/spr.preqemu.img
   qemu-system-aarch64 -machine virt -cpu cortex-a72 -smp 2 -m 1G \
     -initrd /data/initrd -kernel /data/vmlinuz \
     -append "root=/dev/vda2 rootfstype=ext4 rw panic=0 net.ifnames=0 biosdevname=0 init=/pi-target-install.sh" \
