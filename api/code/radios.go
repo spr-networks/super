@@ -794,7 +794,7 @@ func generateMloLinkConfig(primaryConf map[string]interface{}, iface string, cha
 	}
 
 	// Set MLO link specific parameters
-	mloConf["hw_mode"] = mode
+	mloConf["hw_mode"] = hwMode
 	mloConf["channel"] = channel
 	mloConf["ieee80211be"] = 1
 	mloConf["mld_ap"] = 1
