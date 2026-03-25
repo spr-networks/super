@@ -1112,7 +1112,8 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if conf["mld_ap"] == 1 && mloChannel > 0 && mloHwMode != "" {
+	mldEnabled := newConf.Mld_ap == 1 || fmt.Sprint(conf["mld_ap"]) == "1"
+	if mldEnabled && mloChannel > 0 && mloHwMode != "" {
 		mloData := generateMloLinkConfig(conf, iface, mloChannel, mloBandwidth, mloHwMode)
 		err = ioutil.WriteFile(mloPath, []byte(mloData), 0600)
 		if err != nil {
