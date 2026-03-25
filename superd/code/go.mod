@@ -1,8 +1,6 @@
 module superd
 
-go 1.24
-
-toolchain go1.24.2
+go 1.25.0
 
 require (
 	github.com/gorilla/mux v1.8.1
@@ -11,11 +9,11 @@ require (
 
 require (
 	github.com/moby/pubsub v1.0.0 // indirect
-	github.com/sirupsen/logrus v1.9.3 // indirect
-	golang.org/x/net v0.42.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
-	golang.org/x/text v0.27.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250715232539-7130f93afb79 // indirect
-	google.golang.org/grpc v1.73.0 // indirect
-	google.golang.org/protobuf v1.36.6 // indirect
+	github.com/sirupsen/logrus v1.9.4 // indirect
+	golang.org/x/net v0.52.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260319201613-d00831a3d3e7 // indirect
+	google.golang.org/grpc v1.79.3 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 )
