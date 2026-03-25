@@ -2504,8 +2504,13 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	FWmtx.Unlock()
 	//
 
-	// write to auth_users.json
-	users := fmt.Sprintf("{%q: %q}", "admin", conf.AdminPassword)
+	// write to auth_users.json with PBKDF2 hashed password
+	hashedPassword, err := hashPassword(conf.AdminPassword)
+	if err != nil {
+		http.Error(w, "Failed to hash password", 500)
+		return
+	}
+	users := fmt.Sprintf("{%q: %q}", "admin", hashedPassword)
 	err = ioutil.WriteFile(AuthUsersFile, []byte(users), 0600)
 	if err != nil {
 		http.Error(w, "Failed to write user auth file", 400)
