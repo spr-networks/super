@@ -10,7 +10,7 @@ export DEBIAN_FRONTEND=noninteractive
 dhcpcd eth0
 
 # do not use systemd-resolvd, we will use our own container later
-systemctl disable systemd-resolved
+systemctl disable systemd-resolved 2>/dev/null || true
 rm -f /etc/resolv.conf
 echo nameserver 1.1.1.1 > /etc/resolv.conf
 
@@ -33,13 +33,17 @@ mount -t cgroup -o all cgroup /sys/fs/cgroup
 mkdir -p /sys/fs/cgroup/devices
 mount -t cgroup -o devices devices /sys/fs/cgroup/devices
 
-dockerd  &
+dockerd --iptables=false --ip6tables=false --bridge=none &
+DOCKERD_PID=$!
 containerd &
 
 cd /home/spr/super
 
+# wait for dockerd to be ready before pulling
+until docker info >/dev/null 2>&1; do sleep 1; done
+
 # pull in default containers
-docker compose -f docker-compose.yml  -f dyndns/docker-compose.yml -f ppp/docker-compose.yml -f wifi_uplink/docker-compose.yml pull
+docker compose -f docker-compose.yml  -f dyndns/docker-compose.yml -f ppp/docker-compose.yml -f wifi_uplink/docker-compose.yml pull --quiet
 
 
 # finish downloaded install
@@ -48,14 +52,15 @@ dpkg --configure -a
 
 # sync with install.sh and cross-install.sh
 apt -y upgrade --no-download
-apt -y install --no-download --no-install-recommends nftables wireless-regdb ethtool nano iw cloud-utils fdisk tmux conntrack jq inotify-tools
-# install docker and buildx
-apt -y install --no-download --no-install-recommends r8125-dkms linux-headers-raspi
-
-
-touch /etc/cloud/cloud-init.disabled
-# slow commands
-apt-get -y purge cloud-init
+apt -y install --no-download --no-install-recommends nftables wireless-regdb ethtool nano iw fdisk tmux conntrack jq inotify-tools dhcpcd cloud-guest-utils
+# Install latest SPR custom kernel + headers from spr-debian-kernel
+pushd /tmp
+for url in $(wget -qO- "https://api.github.com/repos/spr-networks/spr-debian-kernel/releases/latest" | grep browser_download_url | grep -o 'https://[^"]*\.deb'); do
+  wget "$url"
+done
+dpkg -i linux-image-*.deb linux-headers-*.deb linux-libc-dev_*.deb
+rm -f /tmp/*.deb
+popd
 
 useradd -m -s /bin/bash ubuntu
 echo "ubuntu:ubuntu" | chpasswd
@@ -70,20 +75,29 @@ echo "127.0.0.1      spr" >> /etc/hosts
 # dont use this
 echo "network: {config: disabled}" > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
 
+# Unblock wifi — RPiOS rfkills wireless until a country is set
+rfkill unblock wifi 2>/dev/null || true
+echo "REGDOMAIN=US" > /etc/default/crda 2>/dev/null || true
+iw reg set US 2>/dev/null || true
+
 # Add a bug fix for scatter/gather bugs with USB:
 echo "options mt76_usb disable_usb_sg=1" > /etc/modprobe.d/mt76_usb.conf
 
 cd /home/spr/super
 cp -R base/template_configs configs
 
-mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
-ln -s /dev/null /lib/udev/rules.d/80-net-setup-link.rules
+[ -f /lib/udev/rules.d/80-net-setup-link.rules ] && mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
+ln -sf /dev/null /lib/udev/rules.d/80-net-setup-link.rules
+
+echo 'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="rp1", NAME="eth0"' > /etc/udev/rules.d/70-persistent-net.rules
 
 echo 'SUBSYSTEM=="net", ACTION=="add", DEVPATH=="*0001:01:00.0*", NAME="eth0"' > /etc/udev/rules.d/70-persistent-net.rules 
 
 # update sshd config to allow password login
 sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/" /etc/ssh/sshd_config
 sed -i "s/#PasswordAuthentication yes/PasswordAuthentication yes/" /etc/ssh/sshd_config
+# RPiOS disables SSH by default, enable it
+systemctl enable ssh
 
 cat > /etc/udev/rules.d/10-network.rules << EOF
 ACTION=="add", SUBSYSTEM=="net", SUBSYSTEMS=="sdio", DRIVERS=="brcmfmac", NAME!="wlan0", RUN+="/etc/udev/wlan0-swap.sh %k"
@@ -123,7 +137,7 @@ EOF
 
 chmod +x /etc/udev/wlan0-swap.sh
 
-mkdir /boot/firmware
+mkdir -p /boot/firmware
 mount /dev/vda1 /boot/firmware
 # we need the pcie-32bit-dma enabled for the mediatek cards
 # the other settings are to enable uart for the cm5
@@ -134,24 +148,18 @@ dtparam=uart0=on
 dtoverlay=uart0
 dtparam=uart0_console
 pciex4_reset=0
-dtoverlay=pcie-32bit-dma-pi5
+dtoverlay=pcie-32bit-dma
+dtoverlay=pciex1-compat-pi5,no-mip
 EOF
 
-# make sure to update the kernel / initrd in this qemu environment
-# since apt install may have updated it but not set it
-cp /boot/vmlinuz /boot/firmware/vmlinuz
-cp /boot/initrd.img /boot/firmware/initrd.img
+# regenerate initrd now that udev rules are in place so early boot
+# gets correct interface naming before the OS assigns names
+update-initramfs -u -k all
 
 umount /boot/firmware
 rmdir /boot/firmware
 
 # cleanup
-
-#remove old kernel from base image (update available)
-apt-get remove -y linux-image-6.8.0-1031-raspi linux-modules-6.8.0-1031-raspi
-
-# remove large default packages
-apt-get remove -y python3-botocore
 
 #remove linux-firmware rarely used files, that are huge
 rm -rf /usr/lib/firmware/mrvl
@@ -214,5 +222,9 @@ EOF
 
 # remove script
 rm /pi-target-install.sh
+
+# gracefully stop docker so its state is flushed before halt
+kill -TERM $DOCKERD_PID
+wait $DOCKERD_PID
 sync
-halt -f
+poweroff -f

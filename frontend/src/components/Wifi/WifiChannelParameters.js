@@ -85,7 +85,7 @@ const WifiChannelParameters = ({
 
   // MLO Link 1 state
   const [mloChannel, setMloChannel] = useState(0)
-  const [mloBandwidth, setMloBandwidth] = useState(80)
+  const [mloBandwidth, setMloBandwidth] = useState(40)
   const [mloBandwidthLabel, setMloBandwidthLabel] = useState('')
 
   //some wifi devices were reported to crash during auth if GCMP was enabled,
