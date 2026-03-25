@@ -3328,7 +3328,10 @@ func initFirewallRules() {
 
 	refreshInterfaceOverrides()
 
-	refreshVLANTrunks()
+	Devicesmtx.Lock()
+	devices := getDevicesJson()
+	Devicesmtx.Unlock()
+	refreshVLANTrunks(devices)
 
 	refreshDownlinks()
 

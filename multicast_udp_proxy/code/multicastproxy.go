@@ -319,11 +319,6 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool,
 		//join all existing interfaces for mdns
 		for _, iface := range ifaces {
 
-			if iface.Index == oob.IfIndex {
-				//dont replay on the same interface
-				continue
-			}
-
 			if relayableInterface(iface.Name) {
 				//if theres tags, make sure the receiver has the tag
 

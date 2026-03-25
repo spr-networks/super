@@ -674,7 +674,7 @@ func deleteLanInterface(iface string) {
 	exec.Command("nft", "delete", "element", "inet", "nat", "lan_interfaces", "{", iface, "}").Run()
 }
 
-func refreshVlanTrunk(iface string, enable bool) {
+func doRefreshVlanTrunk(iface string, enable bool, devices map[string]DeviceEntry) {
 	//first clear any vlan interfaces that already exist
 	ifaces, err := getVLANInterfaces(iface)
 	if err != nil {
@@ -702,10 +702,6 @@ func refreshVlanTrunk(iface string, enable bool) {
 	}
 
 	//next create vlans
-	Devicesmtx.Lock()
-	defer Devicesmtx.Unlock()
-
-	devices := getDevicesJson()
 	for _, dev := range devices {
 		if dev.VLANTag != "" {
 			//create interface
@@ -734,8 +730,14 @@ func refreshVlanTrunk(iface string, enable bool) {
 	}
 }
 
-// expects to hold interfacesmtx, devicesmtx
-func refreshVLANTrunks() {
+func refreshVlanTrunk(iface string, enable bool) {
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+	devices := getDevicesJson()
+	doRefreshVlanTrunk(iface, enable, devices)
+}
+
+func refreshVLANTrunks(devices map[string]DeviceEntry) {
 	Interfacesmtx.Lock()
 	defer Interfacesmtx.Unlock()
 	interfaces := loadInterfacesConfigLocked()
@@ -746,12 +748,11 @@ func refreshVLANTrunks() {
 		}
 
 		if ifconfig.Subtype == "VLAN-Trunk" {
-			refreshVlanTrunk(ifconfig.Name, true)
+			doRefreshVlanTrunk(ifconfig.Name, true, devices)
 		} else {
-			refreshVlanTrunk(ifconfig.Name, false)
+			doRefreshVlanTrunk(ifconfig.Name, false, devices)
 		}
 	}
-
 }
 
 var rand_oui_prefixes []string
