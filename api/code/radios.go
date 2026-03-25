@@ -143,6 +143,7 @@ type HostapdConfigEntry struct {
 	Mld_ap                       int
 	Mlo_channel                  int
 	Mlo_bandwidth                int
+	Mlo_hw_mode                  string
 	Ssid                         string
 	Channel                      int
 	Vht_oper_centr_freq_seg0_idx int
@@ -605,6 +606,10 @@ func hostapdConfig(w http.ResponseWriter, r *http.Request) {
 					val, _ := strconv.ParseUint(pieces[1], 10, 64)
 					conf["mlo_channel"] = val
 				}
+				if strings.HasPrefix(line, "hw_mode=") {
+					pieces := strings.Split(line, "=")
+					conf["mlo_hw_mode"] = pieces[1]
+				}
 				if strings.HasPrefix(line, "op_class=") {
 					pieces := strings.Split(line, "=")
 					val, _ := strconv.ParseUint(pieces[1], 10, 64)
@@ -752,16 +757,20 @@ func getHostapdMloConfigPath(iface string) string {
 }
 
 // generateMloLinkConfig creates the MLO Link 1 config from the primary config
-func generateMloLinkConfig(primaryConf map[string]interface{}, iface string, channel int, bandwidth int) string {
-	// Calculate channel parameters for the MLO link
+func generateMloLinkConfig(primaryConf map[string]interface{}, iface string, channel int, bandwidth int, hwMode string) string {
+	is_24ghz := hwMode == "g" || hwMode == "b"
 	is_6e := false
-	if channel%2 == 1 && channel != 149 && channel != 165 {
-		is_6e = true
-	} else if channel == 2 {
-		is_6e = true
+
+	if !is_24ghz {
+		// 5 GHz vs 6 GHz detection (same logic as ChanCalc)
+		if channel%2 == 1 && channel != 149 && channel != 165 {
+			is_6e = true
+		} else if channel == 2 {
+			is_6e = true
+		}
 	}
 
-	calculated := ChanCalc("a", channel, bandwidth, !is_6e, !is_6e, true, true)
+	calculated := ChanCalc(hwMode, channel, bandwidth, !is_6e, !is_6e && !is_24ghz, !is_24ghz, !is_24ghz)
 
 	// Build MLO link config from primary, keeping shared settings
 	mloConf := map[string]interface{}{}
@@ -785,18 +794,13 @@ func generateMloLinkConfig(primaryConf map[string]interface{}, iface string, cha
 	}
 
 	// Set MLO link specific parameters
-	mloConf["hw_mode"] = "a"
+	mloConf["hw_mode"] = mode
 	mloConf["channel"] = channel
-	mloConf["ieee80211ax"] = 1
 	mloConf["ieee80211be"] = 1
 	mloConf["mld_ap"] = 1
 
 	if calculated.Op_class > 0 {
 		mloConf["op_class"] = calculated.Op_class
-	}
-
-	if calculated.He_oper_centr_freq_seg0_idx > 0 {
-		mloConf["he_oper_centr_freq_seg0_idx"] = calculated.He_oper_centr_freq_seg0_idx
 	}
 
 	if calculated.Eht_oper_centr_freq_seg0_idx > 0 {
@@ -807,30 +811,40 @@ func generateMloLinkConfig(primaryConf map[string]interface{}, iface string, cha
 		mloConf["eht_oper_chwidth"] = calculated.Eht_oper_chwidth
 	}
 
-	if is_6e {
+	if is_24ghz {
+		// 2.4 GHz link
+		mloConf["ieee80211n"] = 1
+		mloConf["ieee80211ax"] = 1
+		if val, ok := primaryConf["ht_capab"]; ok {
+			mloConf["ht_capab"] = val
+		}
+	} else if is_6e {
 		// 6 GHz specific settings
+		mloConf["ieee80211ax"] = 1
 		mloConf["he_6ghz_reg_pwr_type"] = 0
 		mloConf["unsol_bcast_probe_resp_interval"] = 20
-		// Force SAE-only and mandatory PMF for 6 GHz
 		mloConf["wpa_key_mgmt"] = "SAE"
 		mloConf["ieee80211w"] = 2
-		// No legacy 802.11n/ac/VHT/HT on 6 GHz
-		delete(mloConf, "ieee80211n")
-		delete(mloConf, "ieee80211ac")
+		if calculated.He_oper_centr_freq_seg0_idx > 0 {
+			mloConf["he_oper_centr_freq_seg0_idx"] = calculated.He_oper_centr_freq_seg0_idx
+		}
 	} else {
-		// 5 GHz link — include VHT/HT
+		// 5 GHz link
 		mloConf["ieee80211n"] = 1
 		mloConf["ieee80211ac"] = 1
+		mloConf["ieee80211ax"] = 1
 		if calculated.Vht_oper_centr_freq_seg0_idx > 0 {
 			mloConf["vht_oper_centr_freq_seg0_idx"] = calculated.Vht_oper_centr_freq_seg0_idx
 		}
 		if calculated.Vht_oper_chwidth > 0 {
 			mloConf["vht_oper_chwidth"] = calculated.Vht_oper_chwidth
 		}
+		if calculated.He_oper_centr_freq_seg0_idx > 0 {
+			mloConf["he_oper_centr_freq_seg0_idx"] = calculated.He_oper_centr_freq_seg0_idx
+		}
 		if calculated.He_oper_chwidth > 0 {
 			mloConf["he_oper_chwidth"] = calculated.He_oper_chwidth
 		}
-		// Copy HT/VHT capab from primary if available
 		if val, ok := primaryConf["ht_capab"]; ok {
 			mloConf["ht_capab"] = val
 		}
@@ -1067,6 +1081,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	mloPath := getHostapdMloConfigPath(iface)
 	mloChannel := newConf.Mlo_channel
 	mloBandwidth := newConf.Mlo_bandwidth
+	mloHwMode := newConf.Mlo_hw_mode
 
 	// If MLO channel not provided but MLO config already exists, read existing values
 	// so we can regenerate with updated shared settings (SSID, security, etc.)
@@ -1076,6 +1091,10 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 				if strings.HasPrefix(line, "channel=") {
 					pieces := strings.Split(line, "=")
 					mloChannel, _ = strconv.Atoi(pieces[1])
+				}
+				if strings.HasPrefix(line, "hw_mode=") {
+					pieces := strings.Split(line, "=")
+					mloHwMode = pieces[1]
 				}
 				if strings.HasPrefix(line, "op_class=") {
 					pieces := strings.Split(line, "=")
@@ -1093,8 +1112,8 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if conf["mld_ap"] == 1 && mloChannel > 0 {
-		mloData := generateMloLinkConfig(conf, iface, mloChannel, mloBandwidth)
+	if conf["mld_ap"] == 1 && mloChannel > 0 && mloHwMode != "" {
+		mloData := generateMloLinkConfig(conf, iface, mloChannel, mloBandwidth, mloHwMode)
 		err = ioutil.WriteFile(mloPath, []byte(mloData), 0600)
 		if err != nil {
 			fmt.Println(err)
@@ -1103,6 +1122,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		}
 		conf["mlo_channel"] = mloChannel
 		conf["mlo_bandwidth"] = mloBandwidth
+		conf["mlo_hw_mode"] = mloHwMode
 	}
 
 	if !needRestart {

@@ -224,12 +224,26 @@ const WifiChannelParameters = ({
         let cur_device = iw.devices[iface]
         if (!cur_device) continue
 
-        //check for radar/DFS support (RADAR_BACKGROUND or DFS_OFFLOAD)
+        //check for radar/DFS support
+        // Check extended features first (RADAR_BACKGROUND or DFS_OFFLOAD)
         if (iw.supported_extended_features) {
           for (let feature of iw.supported_extended_features) {
             if (feature.includes('RADAR_BACKGROUND') || feature.includes('DFS_OFFLOAD')) {
               setDisableDFS(false)
               break
+            }
+          }
+        }
+
+        // Also check if any channels have radar detection capability
+        // — the driver supports DFS if it lists radar channels
+        for (let band of iw.bands) {
+          if (band.frequencies) {
+            for (let freq of band.frequencies) {
+              if (freq.includes('radar detection')) {
+                setDisableDFS(false)
+                break
+              }
             }
           }
         }
@@ -488,6 +502,23 @@ const WifiChannelParameters = ({
       wifiParameters.Mld_ap = 1
       wifiParameters.Mlo_channel = parseInt(mloChannel)
       wifiParameters.Mlo_bandwidth = parseInt(mloBandwidth)
+
+      // Determine hw_mode for MLO link from channel frequency
+      let mloMode = 'a'
+      for (let iw of iws) {
+        if (!iw.devices[iface]) continue
+        for (let band of iw.bands) {
+          if (!band.frequencies) continue
+          for (let freq of band.frequencies) {
+            let chNum = parseInt(freq.split(' ')[2].slice(1, -1))
+            if (chNum === parseInt(mloChannel)) {
+              let f = parseInt(freq.split(' ')[0])
+              if (f < 3000) mloMode = 'g'
+            }
+          }
+        }
+      }
+      wifiParameters.Mlo_hw_mode = mloMode
     } else {
       wifiParameters.Mld_ap = 0
     }
@@ -525,6 +556,10 @@ const WifiChannelParameters = ({
             channels require hardware support for detecting radar signals to
             comply with regulations.
           </Text>
+        ) : null}
+
+        {groupValues.includes('mlo') ? (
+          <Heading size="xs">Link 1</Heading>
         ) : null}
 
         <VStack
@@ -622,18 +657,6 @@ const WifiChannelParameters = ({
             ) : null}
           </FormControl>
 
-          <Button
-            size="md"
-            action="primary"
-            sx={{
-              '@base': { w: '$2/3', alignSelf: 'center' },
-              '@md': { w: 120, alignSelf: 'flex-end' }
-            }}
-            onPress={handleSubmit}
-          >
-            <ButtonText>Save</ButtonText>
-            <ButtonIcon as={CheckIcon} ml="$1" />
-          </Button>
         </VStack>
 
         <CheckboxGroup
@@ -675,14 +698,14 @@ const WifiChannelParameters = ({
 
         {groupValues.includes('mlo') ? (
           <VStack space="md" mt="$4">
-            <Heading size="xs">MLO Link 1</Heading>
+            <Heading size="xs">Link 2</Heading>
             <HStack
               sx={{ '@md': { flexDirection: 'row', alignItems: 'center' } }}
               space="md"
             >
               <FormControl flex={1}>
                 <FormControlLabel>
-                  <FormControlLabelText>Link 1 Bandwidth</FormControlLabelText>
+                  <FormControlLabelText>Bandwidth</FormControlLabelText>
                 </FormControlLabel>
                 <Select
                   selectedValue={mloBandwidthLabel || `${mloBandwidth} MHz`}
@@ -692,45 +715,143 @@ const WifiChannelParameters = ({
                     if (!isNaN(bw)) setMloBandwidth(bw)
                   }}
                 >
-                  <Select.Item label="80 MHz" value="80 MHz" />
-                  <Select.Item label="160 MHz" value="160 MHz" />
-                  <Select.Item label="320 MHz" value="320 MHz" />
+                  {(() => {
+                    // Determine what band Link 2 is on
+                    let getBand = (f) => f < 3000 ? 1 : f < 5900 ? 2 : 3
+
+                    // First pass: find primary band
+                    let primaryBand = 0
+                    for (let iw of iws) {
+                      if (!iw.devices[iface]) continue
+                      for (let band of iw.bands) {
+                        if (!band.frequencies) continue
+                        for (let freq of band.frequencies) {
+                          let ch = parseInt(freq.split(' ')[2].slice(1, -1))
+                          if (ch === parseInt(channel)) {
+                            primaryBand = getBand(parseInt(freq.split(' ')[0]))
+                          }
+                        }
+                      }
+                    }
+
+                    // Second pass: find a band that isn't the primary
+                    let link2Band = 0
+                    for (let iw of iws) {
+                      if (!iw.devices[iface]) continue
+                      for (let band of iw.bands) {
+                        if (!band.frequencies) continue
+                        let f0 = parseInt(band.frequencies[0].split(' ')[0])
+                        if (getBand(f0) !== primaryBand) {
+                          link2Band = getBand(f0)
+                          break
+                        }
+                      }
+                    }
+
+                    let bwOptions
+                    if (link2Band === 1) {
+                      bwOptions = ['20 MHz', '40 MHz']
+                    } else if (link2Band === 2) {
+                      bwOptions = ['20 MHz', '40 MHz', '80 MHz', '160 MHz']
+                    } else {
+                      bwOptions = ['20 MHz', '40 MHz', '80 MHz', '160 MHz', '320 MHz']
+                    }
+                    return bwOptions.map((bw) => (
+                      <Select.Item key={bw} label={bw} value={bw} />
+                    ))
+                  })()}
                 </Select>
               </FormControl>
 
               <FormControl flex={1}>
                 <FormControlLabel>
-                  <FormControlLabelText>Link 1 Channel</FormControlLabelText>
+                  <FormControlLabelText>Channel</FormControlLabelText>
                 </FormControlLabel>
                 <Select
                   selectedValue={mloChannel?.toString()}
                   onValueChange={(value) => setMloChannel(parseInt(value))}
                 >
-                  {enumerateChannelOptions().filter((ch) => {
-                    // Show channels from the other band (not primary link's band)
-                    if (!ch.toolTip) return false
-                    let freq = parseInt(ch.toolTip)
-                    if (isNaN(freq)) return false
-                    let primaryFreq = convertChannelToFrequency(
-                      channel > 0 && channel < 15 ? '2.4' : '5', parseInt(channel)
-                    ) || 0
-                    // If primary is 5 GHz (<5900), show 6 GHz (>5900), and vice versa
-                    let chIs6e = freq > 5900
-                    let primaryIs6e = primaryFreq > 5900
-                    return chIs6e !== primaryIs6e
-                  }).map((item) => (
-                    <Select.Item
-                      key={item.value}
-                      label={item.label}
-                      value={item.value}
-                      isDisabled={item.disabled}
-                    />
-                  ))}
+                  {(() => {
+                    // Enumerate channels for Link 2 from a different band
+                    let mloChannels = []
+                    // Categorize frequency into band: 1=2.4GHz, 2=5GHz, 3=6GHz
+                    let getBand = (f) => f < 3000 ? 1 : f < 5900 ? 2 : 3
+
+                    // Find primary link's frequency band
+                    let primaryBand = 0
+                    for (let iw of iws) {
+                      if (!iw.devices[iface]) continue
+                      for (let band of iw.bands) {
+                        if (!band.frequencies) continue
+                        for (let freq of band.frequencies) {
+                          let chNum = parseInt(freq.split(' ')[2].slice(1, -1))
+                          if (chNum === parseInt(channel)) {
+                            primaryBand = getBand(parseInt(freq.split(' ')[0]))
+                          }
+                        }
+                      }
+                    }
+
+                    for (let iw of iws) {
+                      if (!iw.devices[iface]) continue
+                      for (let band of iw.bands) {
+                        if (!band.frequencies) continue
+                        for (let freq of band.frequencies) {
+                          let frequency = parseInt(freq.split(' ')[0])
+                          let chNum = parseInt(freq.split(' ')[2].slice(1, -1))
+
+                          // Only show channels from a different band
+                          if (getBand(frequency) === primaryBand) continue
+                          if (freq.includes('disabled')) continue
+
+                          // Filter by MLO bandwidth for 5/6 GHz
+                          if (frequency > 5000) {
+                            if (mloBandwidth == 320) {
+                              if (frequency < 5900) continue
+                              if (frequency % 320 != 195 && frequency % 320 != 35) continue
+                            } else if (mloBandwidth == 160) {
+                              if (frequency % 160 != 60 && frequency % 160 != 35) continue
+                            } else if (mloBandwidth == 80) {
+                              if (frequency % 80 != 60 && frequency % 80 != 35 && frequency % 80 != 65) continue
+                            } else if (mloBandwidth == 40) {
+                              if (frequency % 40 != 20 && frequency % 40 != 35) continue
+                            }
+                          }
+
+                          mloChannels.push({
+                            value: chNum.toString(),
+                            label: chNum.toString(),
+                          })
+                        }
+                      }
+                    }
+                    return mloChannels.map((item) => (
+                      <Select.Item
+                        key={item.value}
+                        label={item.label}
+                        value={item.value}
+                      />
+                    ))
+                  })()}
                 </Select>
               </FormControl>
             </HStack>
           </VStack>
         ) : null}
+
+        <Button
+          size="md"
+          action="primary"
+          sx={{
+            '@base': { w: '$2/3', alignSelf: 'center' },
+            '@md': { w: 120, alignSelf: 'flex-end' }
+          }}
+          mt="$4"
+          onPress={handleSubmit}
+        >
+          <ButtonText>Save</ButtonText>
+          <ButtonIcon as={CheckIcon} ml="$1" />
+        </Button>
 
       </VStack>
     </>
