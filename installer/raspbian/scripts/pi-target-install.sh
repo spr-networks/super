@@ -139,9 +139,20 @@ chmod +x /etc/udev/wlan0-swap.sh
 
 mkdir -p /boot/firmware
 mount /dev/vda1 /boot/firmware
+
+KVER=$(ls -t /lib/modules/ | head -1)
+if [ -n "$KVER" ]; then
+  cp /boot/vmlinuz-${KVER} /boot/firmware/kernel8.img
+  cp /boot/initrd.img-${KVER} /boot/firmware/initramfs8
+  # Pi 5 (2712)
+  cp /boot/vmlinuz-${KVER} /boot/firmware/kernel_2712.img
+  cp /boot/initrd.img-${KVER} /boot/firmware/initramfs_2712
+fi
+
 # we need the pcie-32bit-dma enabled for the mediatek cards
 # the other settings are to enable uart for the cm5
-cat << EOF >> /boot/firmware/config.txt
+if ! grep -q "dtoverlay=pcie-32bit-dma" /boot/firmware/config.txt; then
+  cat << EOF >> /boot/firmware/config.txt
 dtparam=pciex1
 enable_uart=1
 dtparam=uart0=on
@@ -151,10 +162,10 @@ pciex4_reset=0
 dtoverlay=pcie-32bit-dma
 dtoverlay=pciex1-compat-pi5,no-mip
 EOF
+fi
 
-# regenerate initrd now that udev rules are in place so early boot
-# gets correct interface naming before the OS assigns names
-update-initramfs -u -k all
+# regenerate initrd with udev rules in place
+update-initramfs -u -k ${KVER:-all}
 
 umount /boot/firmware
 rmdir /boot/firmware
