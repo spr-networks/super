@@ -723,12 +723,22 @@ EOF
         fi
     fi
 
-    # Write admin password if set
+    # Write admin password if set, hashed with PBKDF2-SHA256
     if [ -n "$ADMIN_PASSWORD" ]; then
         # Ensure api config directory exists
         mkdir -p "$(dirname "$AUTH_USERS")"
-        # Create JSON with admin password (basic format for now)
-        echo "{\"admin\": \"$ADMIN_PASSWORD\"}" > "$AUTH_USERS"
+        # Hash password with PBKDF2-SHA256 (600000 iterations, 16-byte salt, 32-byte key)
+        HASHED_PASSWORD=$(printf '%s' "$ADMIN_PASSWORD" | python3 -c "
+import hashlib, os, base64, sys
+password = sys.stdin.buffer.read()
+salt = os.urandom(16)
+dk = hashlib.pbkdf2_hmac('sha256', password, salt, 600000, dklen=32)
+salt_b64 = base64.b64encode(salt).decode().rstrip('=')
+dk_b64 = base64.b64encode(dk).decode().rstrip('=')
+print(f'\$pbkdf2-sha256\$600000\${salt_b64}\${dk_b64}')
+")
+        # Write JSON with hashed password
+        printf '{"admin": "%s"}\n' "$HASHED_PASSWORD" > "$AUTH_USERS"
         chmod 600 "$AUTH_USERS"
     fi
 

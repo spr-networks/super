@@ -48,7 +48,14 @@ do
     echo "Warning: Invalid interface name '$IFACE' from API, skipping" >&2
     continue
   fi
-  hostapd -B "/configs/wifi/hostapd_${IFACE}.conf"
+  CONF="/configs/wifi/hostapd_${IFACE}.conf"
+  MLO_CONF="/configs/wifi/hostapd_${IFACE}_mlo.conf"
+  if [ -f "$MLO_CONF" ] && grep -q "^mld_ap=1" "$CONF" 2>/dev/null; then
+    echo "Starting MLO hostapd for ${IFACE}: $CONF $MLO_CONF"
+    hostapd -B "$CONF" "$MLO_CONF"
+  else
+    hostapd -B "$CONF"
+  fi
 done
 
 sleep 5
@@ -99,7 +106,7 @@ check_status() {
         else
             touch "/state/wifi/failsafe_${IFACE}" #mark failsafe started
             echo "Interface $IFACE has failed, starting failsafe"
-            pkill -f "hostapd -B /configs/wifi/hostapd_${IFACE}.conf"
+            pkill -f "hostapd_${IFACE}.conf"
 
             PHY=$(iw "$IFACE" info | grep -v ssid | grep wiphy | awk '{print $2}')
             BAND=$(iw phy "phy${PHY}" info | grep -m 1 Band | tr ':' ' '| awk '{print $2}')

@@ -55,8 +55,10 @@ if [ "$ret" -ne "0" ]; then
 fi
 
 if grep --quiet Raspberry /proc/cpuinfo; then
-  # pi related tasks
-  :
+  # update Pi firmware EEPROM
+  rpi-eeprom-update -a || true
+  # unblock wifi — RPiOS rfkills wireless until a country is set
+  rfkill unblock wifi
 else
   mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
   ln -s /dev/null /lib/udev/rules.d/80-net-setup-link.rules

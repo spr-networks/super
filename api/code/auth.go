@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/pbkdf2"
 	crand "crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -105,6 +106,104 @@ func migrateAuthAPI() {
 
 	makeDstIfMissing(AuthUsersFile, oldAuthUsersFile)
 	makeDstIfMissing(AuthTokensFile, oldAuthTokensFile)
+}
+
+const (
+	pbkdf2Iterations = 600000
+	pbkdf2SaltLen    = 16
+	pbkdf2KeyLen     = 32
+	pbkdf2Prefix     = "$pbkdf2-sha256$"
+)
+
+func hashPassword(password string) (string, error) {
+	salt := make([]byte, pbkdf2SaltLen)
+	if _, err := crand.Read(salt); err != nil {
+		return "", err
+	}
+
+	dk, err := pbkdf2.Key(sha256.New, password, salt, pbkdf2Iterations, pbkdf2KeyLen)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s%d$%s$%s",
+		pbkdf2Prefix,
+		pbkdf2Iterations,
+		base64.RawStdEncoding.EncodeToString(salt),
+		base64.RawStdEncoding.EncodeToString(dk)), nil
+}
+
+func verifyPBKDF2(password, encoded string) bool {
+	// format: $pbkdf2-sha256$iterations$salt$hash
+	if !strings.HasPrefix(encoded, pbkdf2Prefix) {
+		return false
+	}
+
+	parts := strings.Split(encoded[len(pbkdf2Prefix):], "$")
+	if len(parts) != 3 {
+		return false
+	}
+
+	iterations, err := strconv.Atoi(parts[0])
+	if err != nil || iterations < 100000 || iterations > 10000000 {
+		return false
+	}
+
+	salt, err := base64.RawStdEncoding.DecodeString(parts[1])
+	if err != nil {
+		return false
+	}
+
+	expectedHash, err := base64.RawStdEncoding.DecodeString(parts[2])
+	if err != nil {
+		return false
+	}
+
+	dk, err := pbkdf2.Key(sha256.New, password, salt, iterations, len(expectedHash))
+	if err != nil {
+		return false
+	}
+
+	return subtle.ConstantTimeCompare(dk, expectedHash) == 1
+}
+
+func isPBKDF2Hash(s string) bool {
+	return strings.HasPrefix(s, pbkdf2Prefix)
+}
+
+func migratePasswordsToHash() {
+	data, err := os.ReadFile(AuthUsersFile)
+	if err != nil {
+		return
+	}
+
+	users := map[string]string{}
+	if err := json.Unmarshal(data, &users); err != nil {
+		return
+	}
+
+	changed := false
+	for username, pwEntry := range users {
+		if isPBKDF2Hash(pwEntry) {
+			continue
+		}
+		hashed, err := hashPassword(pwEntry)
+		if err != nil {
+			log.Println("[-] Failed to hash password for migration:", err)
+			continue
+		}
+		users[username] = hashed
+		changed = true
+		log.Println("[+] Migrated password to PBKDF2 for user:", username)
+	}
+
+	if changed {
+		newData, err := json.Marshal(users)
+		if err != nil {
+			return
+		}
+		ioutil.WriteFile(AuthUsersFile, newData, 0600)
+	}
 }
 
 func loadOTPWebauthN() int {
@@ -239,6 +338,11 @@ func authenticateUser(username string, password string) bool {
 	pwEntry, exists := users[username]
 
 	if exists {
+		if isPBKDF2Hash(pwEntry) {
+			return verifyPBKDF2(password, pwEntry)
+		}
+
+		// Legacy plaintext fallback (should not happen after startup migration)
 		passwordHash := sha256.Sum256([]byte(password))
 		expectedPasswordHash := sha256.Sum256([]byte(pwEntry))
 		passwordMatch := (subtle.ConstantTimeCompare(passwordHash[:], expectedPasswordHash[:]) == 1)
@@ -771,6 +875,7 @@ func cleanupOTPAttemptsLocked() {
 }
 
 func initAuth() {
+	migratePasswordsToHash()
 	initJwtOtpSecret()
 	loadOTPLockouts()
 }

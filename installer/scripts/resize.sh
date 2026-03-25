@@ -22,7 +22,12 @@ export LOOP_BOOT="${LOOP}p1"
 
 echo "+ loop is $LOOP"
 
-RESIZE_CMD="e2fsck -f $LOOP_ROOT; e2fsck -f $LOOP_BOOT; resize2fs $LOOP_ROOT"
-DOCKER_DEFAULT_PLATFORM="" docker pull ubuntu:23.10
-DOCKER_DEFAULT_PLATFORM="" docker run --privileged -v $LOOP_ROOT:$LOOP_ROOT ubuntu:23.10 sh -c "$RESIZE_CMD"
+if command -v resize2fs >/dev/null 2>&1; then
+    e2fsck -fy $LOOP_ROOT || true
+    resize2fs $LOOP_ROOT
+else
+    RESIZE_CMD="e2fsck -f $LOOP_ROOT; resize2fs $LOOP_ROOT"
+    DOCKER_DEFAULT_PLATFORM="" docker pull ubuntu:24.04
+    DOCKER_DEFAULT_PLATFORM="" docker run --privileged -v $LOOP_ROOT:$LOOP_ROOT ubuntu:24.04 sh -c "$RESIZE_CMD"
+fi
 losetup -d $LOOP 2>/dev/null

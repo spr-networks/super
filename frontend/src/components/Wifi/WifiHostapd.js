@@ -128,6 +128,8 @@ const WifiHostapd = (props) => {
     'he_su_beamformer',
     'he_su_beamformee',
     'he_mu_beamformer',
+    'ieee80211be',
+    'mld_ap',
     'rssi_reject_assoc_rssi',
     'rssi_reject_assoc_timeout',
     'rssi_ignore_probe_request'
@@ -293,7 +295,9 @@ const WifiHostapd = (props) => {
       Ieee80211ax: parseInt(inconfig.ieee80211ax),
       He_su_beamformer: parseInt(inconfig.he_su_beamformer),
       He_su_beamformee: parseInt(inconfig.he_su_beamformee),
-      He_mu_beamformer: parseInt(inconfig.he_mu_beamformer)
+      He_mu_beamformer: parseInt(inconfig.he_mu_beamformer),
+      Ieee80211be: parseInt(inconfig.ieee80211be || 0),
+      Mld_ap: parseInt(inconfig.mld_ap || 0)
     }
 
     // Add RSSI fields if they exist
@@ -323,7 +327,9 @@ const WifiHostapd = (props) => {
       Ieee80211ax: parseInt(config.ieee80211ax),
       He_su_beamformer: parseInt(config.he_su_beamformer),
       He_su_beamformee: parseInt(config.he_su_beamformee),
-      He_mu_beamformer: parseInt(config.he_mu_beamformer)
+      He_mu_beamformer: parseInt(config.he_mu_beamformer),
+      Ieee80211be: parseInt(config.ieee80211be || 0),
+      Mld_ap: parseInt(config.mld_ap || 0)
     }
 
     // Add RSSI fields if they exist
