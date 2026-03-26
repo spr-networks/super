@@ -34,6 +34,17 @@ export default class WireguardAddSite extends React.Component {
     this.handleChange = this.handleChange.bind(this)
     this.handleClickGenerate = this.handleClickGenerate.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
+
+    if (props.site) {
+      this.state = {
+        Address: props.site.Address || '',
+        PeerPublicKey: props.site.PeerPublicKey || '',
+        PrivateKey: props.site.PrivateKey || '',
+        PresharedKey: props.site.PresharedKey || '',
+        Endpoint: props.site.Endpoint || '',
+        PublicKey: props.site.PublicKey || ''
+      }
+    }
   }
 
   handleChange(name, value) {
@@ -42,14 +53,20 @@ export default class WireguardAddSite extends React.Component {
   }
 
   handleSubmit() {
-    pfwAPI
-      .addSiteVPN({
-        Address: this.state.Address,
-        PeerPublicKey: this.state.PeerPublicKey,
-        PrivateKey: this.state.PrivateKey,
-        PresharedKey: this.state.PresharedKey,
-        Endpoint: this.state.Endpoint
-      })
+    const data = {
+      Address: this.state.Address,
+      PeerPublicKey: this.state.PeerPublicKey,
+      PrivateKey: this.state.PrivateKey,
+      PresharedKey: this.state.PresharedKey,
+      Endpoint: this.state.Endpoint
+    }
+
+    const isEdit = this.props.site != null
+    const apiCall = isEdit
+      ? pfwAPI.updateSiteVPN(data, this.props.site.Index)
+      : pfwAPI.addSiteVPN(data)
+
+    apiCall
       .then((ret) => {
         if (this.props.notifyChange) {
           this.props.notifyChange('sites')
@@ -72,6 +89,8 @@ export default class WireguardAddSite extends React.Component {
   componentDidMount() {}
 
   render() {
+    const isEdit = this.props.site != null
+
     return (
       <VStack space="md">
         <FormControl>
@@ -190,7 +209,7 @@ export default class WireguardAddSite extends React.Component {
         {this.state.PublicKey ? (
           <FormControl>
             <FormControlLabel>
-              <FormControlLabelText>Public Key</FormControlLabelText>
+              <FormControlLabelText>Local Public Key (derived)</FormControlLabelText>
             </FormControlLabel>
             <FormControlHelper>
               <FormControlHelperText size="xs">
@@ -201,7 +220,7 @@ export default class WireguardAddSite extends React.Component {
         ) : null}
 
         <Button action="primary" onPress={this.handleSubmit}>
-          <ButtonText>Save</ButtonText>
+          <ButtonText>{isEdit ? 'Update' : 'Save'}</ButtonText>
         </Button>
       </VStack>
     )
@@ -209,7 +228,8 @@ export default class WireguardAddSite extends React.Component {
 }
 
 WireguardAddSite.propTypes = {
-  notifyChange: PropTypes.func
+  notifyChange: PropTypes.func,
+  site: PropTypes.object
 }
 
 WireguardAddSite.contextType = AlertContext
