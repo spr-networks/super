@@ -1,4 +1,21 @@
+
 # Secure Programmable Router (SPR) Release Notes
+
+## v1.0.26
+
+**Features**
+- Introduce Raspbian Image with ath12k support for WiFi-7
+- MLO Support 
+- Allow editing site vpns without having to remove them first
+**Fixes**
+- Update golang dependencies
+
+## v1.0.25
+
+**Fixes**
+ * [api] Fix vlan trunk refresh deadlock   
+ * [multicast_udp_proxy] [mesh] in the mesh backhual case we do want to send back out over the same interface
+ * Upgrade Ubuntu ISO base image
 
 ## v1.0.24
 **Fixes**
