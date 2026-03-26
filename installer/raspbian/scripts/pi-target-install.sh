@@ -75,10 +75,8 @@ echo "127.0.0.1      spr" >> /etc/hosts
 # dont use this
 echo "network: {config: disabled}" > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
 
-# Unblock wifi — RPiOS rfkills wireless until a country is set
-rfkill unblock wifi 2>/dev/null || true
-echo "REGDOMAIN=US" > /etc/default/crda 2>/dev/null || true
-iw reg set US 2>/dev/null || true
+# Set wifi country so RPiOS does not rfkill wireless on boot
+raspi-config nonint do_wifi_country US
 
 # Add a bug fix for scatter/gather bugs with USB:
 echo "options mt76_usb disable_usb_sg=1" > /etc/modprobe.d/mt76_usb.conf
