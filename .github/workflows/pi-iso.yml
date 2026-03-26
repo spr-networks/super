@@ -14,13 +14,13 @@ permissions:
   contents: write
 
 jobs:
-  build_ubuntu_iso:
+  build_and_release:
     runs-on: self-hosted
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: '0'
       - name: Fetch tags
@@ -31,93 +31,47 @@ jobs:
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - name: Set up Qemu emulation
         run: ./installer/qemu-setup-linux.sh
-      - name: Download the image
+
+      # Build Ubuntu image
+      - name: Download Ubuntu base image
         working-directory: ./installer/ubuntu
         run: ./pi-download-image.sh
-      - name: Build install image
+      - name: Build Ubuntu install image
         working-directory: ./installer/ubuntu
         run: sudo ./pi-arm64-image-build.sh
-      - name: Compress image
+      - name: Compress Ubuntu image
         run: sudo xz -T 0 -9 -z ./installer/ubuntu/data/spr.img
-      - name: Attest ISO Provenance
-        uses: actions/attest-build-provenance@v1
+      - name: Attest Ubuntu ISO Provenance
+        uses: actions/attest-build-provenance@v2
         with:
           subject-path: "./installer/ubuntu/data/spr.img.xz"
           subject-name: "spr-ubuntu.img.xz"
 
-  build_debian_iso:
-    runs-on: self-hosted
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
-
-    steps:
-      - name: Check out the repo
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: '0'
-      - name: Fetch tags
-        run:  git fetch --tags
-      - name: Get version from git
-        run: echo "RELEASE_VERSION_TAG=$(git tag --contains $(git rev-parse HEAD) | grep -v clearfog)" >> $GITHUB_ENV
-      - name: Authenticate to ghcr
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-      - name: Set up Qemu emulation
-        run: ./installer/qemu-setup-linux.sh
+      # Build Debian image
       - name: Build pi-builder image
         working-directory: ./installer/raspbian
         run: docker build -t spr-pi-builder -f Dockerfile.pi-builder .
-      - name: Download the image
+      - name: Download Debian base image
         working-directory: ./installer/raspbian
         run: ./pi-download-image.sh
-      - name: Build install image
+      - name: Build Debian install image
         working-directory: ./installer/raspbian
         run: sudo ./pi-arm64-image-build.sh
-      - name: Compress image
+      - name: Compress Debian image
         run: sudo xz -T 0 -9 -z ./installer/raspbian/data/spr.img
-      - name: Attest ISO Provenance
-        uses: actions/attest-build-provenance@v1
+      - name: Attest Debian ISO Provenance
+        uses: actions/attest-build-provenance@v2
         with:
           subject-path: "./installer/raspbian/data/spr.img.xz"
           subject-name: "spr-debian.img.xz"
 
-  create_release:
-    runs-on: self-hosted
-    needs: [build_ubuntu_iso, build_debian_iso]
-    if: ${{ github.ref_name == 'main' }}
-
-    steps:
-      - name: Check out the repo
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: '0'
-      - name: Fetch tags
-        run:  git fetch --tags
-      - name: Get version from git
-        run: echo "RELEASE_VERSION_TAG=$(git tag --contains $(git rev-parse HEAD) | grep -v clearfog)" >> $GITHUB_ENV
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+      # Create release and upload
+      - name: Create Release and Upload Images
+        if: ${{ github.ref_name == 'main' }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          release_name: Release ${{ env.RELEASE_VERSION_TAG }}
-          tag_name: ${{ env.RELEASE_VERSION_TAG }}
-          draft: false
-          prerelease: false
-      - name: Upload Ubuntu Image
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./installer/ubuntu/data/spr.img.xz
-          asset_name: spr-ubuntu.img.xz
-          asset_content_type: application/x-xz
-      - name: Upload Debian Image
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./installer/raspbian/data/spr.img.xz
-          asset_name: spr-debian.img.xz
-          asset_content_type: application/x-xz
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$RELEASE_VERSION_TAG" \
+            --title "Release $RELEASE_VERSION_TAG" \
+            ./installer/ubuntu/data/spr.img.xz#spr-ubuntu.img.xz \
+            ./installer/raspbian/data/spr.img.xz#spr-debian.img.xz
