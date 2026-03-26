@@ -44,11 +44,6 @@ jobs:
         with:
           subject-path: "./installer/ubuntu/data/spr.img.xz"
           subject-name: "spr-ubuntu.img.xz"
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: spr-ubuntu.img.xz
-          path: ./installer/ubuntu/data/spr.img.xz
 
   build_debian_iso:
     runs-on: self-hosted
@@ -83,11 +78,6 @@ jobs:
         with:
           subject-path: "./installer/raspbian/data/spr.img.xz"
           subject-name: "spr-debian.img.xz"
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: spr-debian.img.xz
-          path: ./installer/raspbian/data/spr.img.xz
 
   create_release:
     runs-on: self-hosted
@@ -103,16 +93,6 @@ jobs:
         run:  git fetch --tags
       - name: Get version from git
         run: echo "RELEASE_VERSION_TAG=$(git tag --contains $(git rev-parse HEAD) | grep -v clearfog)" >> $GITHUB_ENV
-      - name: Download Ubuntu artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: spr-ubuntu.img.xz
-          path: ./artifacts/ubuntu
-      - name: Download Debian artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: spr-debian.img.xz
-          path: ./artifacts/debian
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -129,7 +109,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/ubuntu/spr.img.xz
+          asset_path: ./installer/ubuntu/data/spr.img.xz
           asset_name: spr-ubuntu.img.xz
           asset_content_type: application/x-xz
       - name: Upload Debian Image
@@ -138,6 +118,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/debian/spr.img.xz
+          asset_path: ./installer/raspbian/data/spr.img.xz
           asset_name: spr-debian.img.xz
           asset_content_type: application/x-xz
