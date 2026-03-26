@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 mkdir data
-# 26.04 lands april 23rd , 2026 -- tested working
-VERSION="24.04.4"
+# 25.04 is not yet ready due to mt7915e, r8125 driver bugs
+VERSION="24.04.3"
 IMG="ubuntu-${VERSION}-preinstalled-server-arm64+raspi.img.xz"
-HASH="790652faeb4f61ce7bb12f5cb61734595c61d3cd882915b8b5f9918106c80d37"
+HASH="9bb1799cee8965e6df0234c1c879dd35be1d87afe39b84951f278b6bd0433e56"
 
 cd ./data
 

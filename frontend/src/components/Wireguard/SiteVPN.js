@@ -21,13 +21,18 @@ import {
   VStack
 } from '@gluestack-ui/themed'
 
-import { ArrowUpCircleIcon, ArrowDownCircleIcon } from 'lucide-react-native'
+import {
+  ArrowUpCircleIcon,
+  ArrowDownCircleIcon,
+  PencilIcon
+} from 'lucide-react-native'
 
 import { ListHeader, ListItem } from 'components/List'
 
 const SiteVPN = (props) => {
   const [sites, setSites] = useState(null)
   const [siteStatus, setSiteStatus] = useState({})
+  const [editSite, setEditSite] = useState(null)
   const context = useContext(AlertContext)
 
   const refreshSites = () => {
@@ -59,7 +64,6 @@ const SiteVPN = (props) => {
             }
             setSiteStatus(newStatus)
             setSites(s)
-            //alert(JSON.stringify(newStatus["site0"].peers[]))
           })
         })
         .catch((e) => {
@@ -79,9 +83,19 @@ const SiteVPN = (props) => {
   }
 
   const refModal = useRef(null)
+  const refEditModal = useRef(null)
 
   const triggerModal = () => {
     refModal.current()
+  }
+
+  const handleEdit = (site) => {
+    setEditSite(site)
+    setTimeout(() => {
+      if (refEditModal.current) {
+        refEditModal.current()
+      }
+    }, 0)
   }
 
   const getOnlineStatus = (item) => {
@@ -138,6 +152,14 @@ const SiteVPN = (props) => {
     refreshSites()
   }
 
+  const notifyEditChange = (action) => {
+    setEditSite(null)
+    if (refEditModal.current) {
+      refEditModal.current()
+    }
+    refreshSites()
+  }
+
   return (
     <>
       <ListHeader title="Site-To-Site VPNs">
@@ -172,35 +194,50 @@ const SiteVPN = (props) => {
                 <Text>{item.Endpoint}</Text>
               </VStack>
               <VStack space="sm">
-                <Text
+                <HStack
+                  space="xs"
                   sx={{
                     '@base': { display: 'none' },
                     '@md': { display: 'flex' }
                   }}
-                  size="xs"
-                  isTruncated
+                  alignItems="center"
                 >
-                  {item.PeerPublicKey}
-                </Text>
-                <Text
+                  <Text size="xs" bold>Peer:</Text>
+                  <Text size="xs" isTruncated>
+                    {item.PeerPublicKey}
+                  </Text>
+                </HStack>
+                <HStack
+                  space="xs"
                   sx={{
                     '@base': { display: 'none' },
                     '@md': { display: 'flex' }
                   }}
-                  size="xs"
-                  isTruncated
+                  alignItems="center"
                 >
-                  {item.PublicKey}
-                </Text>
+                  <Text size="xs" bold>Local:</Text>
+                  <Text size="xs" isTruncated>
+                    {item.PublicKey}
+                  </Text>
+                </HStack>
               </VStack>
 
-              <Button
-                size="sm"
-                variant="link"
-                onPress={() => deleteListItem(item)}
-              >
-                <ButtonIcon as={CloseIcon} color="$red700" />
-              </Button>
+              <HStack space="sm">
+                <Button
+                  size="sm"
+                  variant="link"
+                  onPress={() => handleEdit(item)}
+                >
+                  <ButtonIcon as={PencilIcon} color="$muted500" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="link"
+                  onPress={() => deleteListItem(item)}
+                >
+                  <ButtonIcon as={CloseIcon} color="$red700" />
+                </Button>
+              </HStack>
             </ListItem>
           )}
           keyExtractor={(item, index) => `${item.Name}${index}`}
@@ -229,6 +266,19 @@ const SiteVPN = (props) => {
           <ButtonIcon as={AddIcon} />
         </Button>
       </VStack>
+
+      {editSite ? (
+        <ModalForm
+          title={`Edit ${editSite.Interface}`}
+          modalRef={refEditModal}
+        >
+          <WireguardAddSite
+            key={editSite.Index}
+            site={editSite}
+            notifyChange={notifyEditChange}
+          />
+        </ModalForm>
+      ) : null}
     </>
   )
 }
