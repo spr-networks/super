@@ -40,11 +40,13 @@ jobs:
         working-directory: ./installer/ubuntu
         run: sudo ./pi-arm64-image-build.sh
       - name: Compress Ubuntu image
-        run: sudo xz -T 0 -9 -z ./installer/ubuntu/data/spr.img
+        run: |
+          sudo mv ./installer/ubuntu/data/spr.img ./installer/ubuntu/data/spr-ubuntu.img
+          sudo xz -T 0 -9 -z ./installer/ubuntu/data/spr-ubuntu.img
       - name: Attest Ubuntu ISO Provenance
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: "./installer/ubuntu/data/spr.img.xz"
+          subject-path: "./installer/ubuntu/data/spr-ubuntu.img.xz"
           subject-name: "spr-ubuntu.img.xz"
 
       # Build Debian image
@@ -58,11 +60,13 @@ jobs:
         working-directory: ./installer/raspbian
         run: sudo ./pi-arm64-image-build.sh
       - name: Compress Debian image
-        run: sudo xz -T 0 -9 -z ./installer/raspbian/data/spr.img
+        run: |
+          sudo mv ./installer/raspbian/data/spr.img ./installer/raspbian/data/spr-debian.img
+          sudo xz -T 0 -9 -z ./installer/raspbian/data/spr-debian.img
       - name: Attest Debian ISO Provenance
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: "./installer/raspbian/data/spr.img.xz"
+          subject-path: "./installer/raspbian/data/spr-debian.img.xz"
           subject-name: "spr-debian.img.xz"
 
       # Create release and upload
@@ -73,5 +77,5 @@ jobs:
         run: |
           gh release create "$RELEASE_VERSION_TAG" \
             --title "Release $RELEASE_VERSION_TAG" \
-            ./installer/ubuntu/data/spr.img.xz#spr-ubuntu.img.xz \
-            ./installer/raspbian/data/spr.img.xz#spr-debian.img.xz
+            ./installer/ubuntu/data/spr-ubuntu.img.xz \
+            ./installer/raspbian/data/spr-debian.img.xz
