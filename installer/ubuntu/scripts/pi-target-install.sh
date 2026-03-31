@@ -83,6 +83,16 @@ ln -s /dev/null /lib/udev/rules.d/80-net-setup-link.rules
 sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/" /etc/ssh/sshd_config
 sed -i "s/#PasswordAuthentication yes/PasswordAuthentication yes/" /etc/ssh/sshd_config
 
+# SSH hardening: post-quantum key exchange, strong ciphers
+cat >> /etc/ssh/sshd_config <<'SSHEOF'
+
+# Post-quantum and modern crypto hardening
+KexAlgorithms mlkem768x25519-sha256,sntrup761x25519-sha512@openssh.com,curve25519-sha256,curve25519-sha256@libssh.org
+HostKeyAlgorithms ssh-ed25519,rsa-sha2-512,rsa-sha2-256
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
+SSHEOF
+
 cat > /etc/udev/rules.d/10-network.rules << EOF
 ACTION=="add", SUBSYSTEM=="net", SUBSYSTEMS=="sdio", DRIVERS=="brcmfmac", NAME!="wlan0", RUN+="/etc/udev/wlan0-swap.sh %k"
 EOF

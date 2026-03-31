@@ -96,6 +96,17 @@ echo 'SUBSYSTEM=="net", ACTION=="add", DEVPATH=="*0001:01:00.0*", NAME="eth0"' >
 # update sshd config to allow password login
 sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/" /etc/ssh/sshd_config
 sed -i "s/#PasswordAuthentication yes/PasswordAuthentication yes/" /etc/ssh/sshd_config
+
+# SSH hardening: post-quantum key exchange, strong ciphers
+cat >> /etc/ssh/sshd_config <<'SSHEOF'
+
+# Post-quantum and modern crypto hardening
+KexAlgorithms mlkem768x25519-sha256,sntrup761x25519-sha512@openssh.com,curve25519-sha256,curve25519-sha256@libssh.org
+HostKeyAlgorithms ssh-ed25519,rsa-sha2-512,rsa-sha2-256
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
+SSHEOF
+
 # RPiOS disables SSH by default, enable it
 systemctl enable ssh
 
