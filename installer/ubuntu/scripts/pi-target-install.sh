@@ -70,6 +70,13 @@ echo "127.0.0.1      spr" >> /etc/hosts
 # dont use this
 echo "network: {config: disabled}" > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
 
+#update mediatek firmware
+git clone --depth 1 --no-checkout https://github.com/openwrt/mt76 /root/mt76
+cd /root/mt76
+git fetch --depth 1 origin 65bbd4c394a9d51f1ca5a0531166c22ff07d4e56
+git checkout 65bbd4c394a9d51f1ca5a0531166c22ff07d4e56
+cp -R /root/mt76/firmware/. /lib/firmware/mediatek/
+
 # Add a bug fix for scatter/gather bugs with USB:
 echo "options mt76_usb disable_usb_sg=1" > /etc/modprobe.d/mt76_usb.conf
 
@@ -79,9 +86,22 @@ cp -R base/template_configs configs
 mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
 ln -s /dev/null /lib/udev/rules.d/80-net-setup-link.rules
 
+echo 'SUBSYSTEM=="net", ACTION=="add", DEVPATH=="*0001:01:00.0*", NAME="eth0"' > /etc/udev/rules.d/70-persistent-net.rules 
+echo 'SUBSYSTEM=="net", ACTION=="add", DEVPATH=="*0000:03:00.0*", NAME="eth1"' >> /etc/udev/rules.d/70-persistent-net.rules
+
 # update sshd config to allow password login
 sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/" /etc/ssh/sshd_config
 sed -i "s/#PasswordAuthentication yes/PasswordAuthentication yes/" /etc/ssh/sshd_config
+
+# SSH hardening: post-quantum key exchange, strong ciphers
+cat >> /etc/ssh/sshd_config <<'SSHEOF'
+
+# Post-quantum and modern crypto hardening
+KexAlgorithms mlkem768x25519-sha256,sntrup761x25519-sha512@openssh.com,curve25519-sha256,curve25519-sha256@libssh.org
+HostKeyAlgorithms ssh-ed25519,rsa-sha2-512,rsa-sha2-256
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
+SSHEOF
 
 cat > /etc/udev/rules.d/10-network.rules << EOF
 ACTION=="add", SUBSYSTEM=="net", SUBSYSTEMS=="sdio", DRIVERS=="brcmfmac", NAME!="wlan0", RUN+="/etc/udev/wlan0-swap.sh %k"

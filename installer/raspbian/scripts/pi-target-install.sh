@@ -53,6 +53,10 @@ dpkg --configure -a
 # sync with install.sh and cross-install.sh
 apt -y upgrade --no-download
 apt -y install --no-download --no-install-recommends nftables wireless-regdb ethtool nano iw fdisk tmux conntrack jq inotify-tools dhcpcd cloud-guest-utils
+# Mount boot firmware so kernel postinst hooks can update it
+mkdir -p /boot/firmware
+mount /dev/vda1 /boot/firmware
+
 # Install latest SPR custom kernel + headers from spr-debian-kernel
 pushd /tmp
 for url in $(wget -qO- "https://api.github.com/repos/spr-networks/spr-debian-kernel/releases/latest" | grep browser_download_url | grep -o 'https://[^"]*\.deb'); do
@@ -75,10 +79,15 @@ echo "127.0.0.1      spr" >> /etc/hosts
 # dont use this
 echo "network: {config: disabled}" > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
 
-# Unblock wifi — RPiOS rfkills wireless until a country is set
-rfkill unblock wifi 2>/dev/null || true
-echo "REGDOMAIN=US" > /etc/default/crda 2>/dev/null || true
-iw reg set US 2>/dev/null || true
+# Set wifi country so RPiOS does not rfkill wireless on boot
+raspi-config nonint do_wifi_country US
+
+#update mediatek firmware
+git clone --depth 1 --no-checkout https://github.com/openwrt/mt76 /root/mt76
+cd /root/mt76
+git fetch --depth 1 origin 65bbd4c394a9d51f1ca5a0531166c22ff07d4e56
+git checkout 65bbd4c394a9d51f1ca5a0531166c22ff07d4e56
+cp -R /root/mt76/firmware/. /lib/firmware/mediatek/
 
 # Add a bug fix for scatter/gather bugs with USB:
 echo "options mt76_usb disable_usb_sg=1" > /etc/modprobe.d/mt76_usb.conf
@@ -89,13 +98,24 @@ cp -R base/template_configs configs
 [ -f /lib/udev/rules.d/80-net-setup-link.rules ] && mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
 ln -sf /dev/null /lib/udev/rules.d/80-net-setup-link.rules
 
-echo 'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="rp1", NAME="eth0"' > /etc/udev/rules.d/70-persistent-net.rules
-
 echo 'SUBSYSTEM=="net", ACTION=="add", DEVPATH=="*0001:01:00.0*", NAME="eth0"' > /etc/udev/rules.d/70-persistent-net.rules 
+echo 'SUBSYSTEM=="net", ACTION=="add", DEVPATH=="*0000:03:00.0*", NAME="eth1"' >> /etc/udev/rules.d/70-persistent-net.rules
+
 
 # update sshd config to allow password login
 sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/" /etc/ssh/sshd_config
 sed -i "s/#PasswordAuthentication yes/PasswordAuthentication yes/" /etc/ssh/sshd_config
+
+# SSH hardening: post-quantum key exchange, strong ciphers
+cat >> /etc/ssh/sshd_config <<'SSHEOF'
+
+# Post-quantum and modern crypto hardening
+KexAlgorithms mlkem768x25519-sha256,sntrup761x25519-sha512@openssh.com,curve25519-sha256,curve25519-sha256@libssh.org
+HostKeyAlgorithms ssh-ed25519,rsa-sha2-512,rsa-sha2-256
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
+SSHEOF
+
 # RPiOS disables SSH by default, enable it
 systemctl enable ssh
 
@@ -137,10 +157,12 @@ EOF
 
 chmod +x /etc/udev/wlan0-swap.sh
 
-mkdir -p /boot/firmware
-mount /dev/vda1 /boot/firmware
+KVER=$(ls /lib/modules/ | sort -V | tail -1)
 
-KVER=$(ls -t /lib/modules/ | head -1)
+# regenerate initrd with udev rules in place before copying to firmware
+update-initramfs -u -k ${KVER:-all}
+
+# Copy SPR kernel + initrd to boot firmware partition
 if [ -n "$KVER" ]; then
   cp /boot/vmlinuz-${KVER} /boot/firmware/kernel8.img
   cp /boot/initrd.img-${KVER} /boot/firmware/initramfs8
@@ -164,9 +186,7 @@ dtoverlay=pciex1-compat-pi5,no-mip
 EOF
 fi
 
-# regenerate initrd with udev rules in place
-update-initramfs -u -k ${KVER:-all}
-
+sync
 umount /boot/firmware
 rmdir /boot/firmware
 

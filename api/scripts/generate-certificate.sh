@@ -68,18 +68,17 @@ if [ $GENERATE_CA -gt 0 ]; then
 
 echo "+ generating ca..."
 
-openssl genrsa -out $CA_KEY 4096
+openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -out $CA_KEY
 openssl req -x509 -new -subj "/C=US/ST=California/CN=${CN}" -nodes -key $CA_KEY -sha256 -days $DAYS_CA -out $CA_CRT
 
 fi
 
 echo "+ generating cert..."
 
-openssl genrsa -out $CERT_KEY 4096
+openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -out $CERT_KEY
 cat > /tmp/cert.conf <<__EOF
 [ req ]
 prompt             = no
-default_bits       = 4096
 distinguished_name = req_distinguished_name
 req_extensions     = req_ext
 [ req_distinguished_name ]

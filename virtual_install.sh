@@ -109,10 +109,12 @@ if [ ! -f $SPR_DIR/configs/auth/auth_users.json ]; then
 	echo "[+] generating admin password"
 	PASSWORD=$(cat /dev/urandom | tr -dc '[:alpha:]' | fold -w ${1:-16} | head -n 1)
 	echo "{\"admin\" : \"$PASSWORD\"}" > $SPR_DIR/configs/auth/auth_users.json
+	chmod 600 $SPR_DIR/configs/auth/auth_users.json
 
 	echo "[+] generating token..."
 	TOKEN=$(dd if=/dev/urandom bs=1 count=32 2>/dev/null | base64)
 	echo "[{\"Name\": \"admin\", \"Token\": \"$TOKEN\", \"Expire\": 0}]" > $SPR_DIR/configs/auth/auth_tokens.json
+	chmod 600 $SPR_DIR/configs/auth/auth_tokens.json
 else
 	PASSWORD=$(cat "$SPR_DIR/configs/auth/auth_users.json" | jq -r .admin)
 	TOKEN=$(cat "$SPR_DIR/configs/auth/auth_tokens.json" | jq -r '.[0].Token')

@@ -1,8 +1,17 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
-## v1.0.26
+## v1.0.27
+**Base Image Features**
+- Configure better PQ support for sshd 
+- Updated debian install configuration, interface naming
+- Rebuilt raspbian kernel with kernel hardening enabled
+- Add experimental AP/VLAN support for brcmfmac
+**SPR Features*
+- Shrunk CoreDNS build by disabling extras
+- Added support to hostapd for dynamic vlan assignment on fullmac 
 
+## v1.0.26
 **Features**
 - Introduce Raspbian Image with ath12k support for WiFi-7
 - MLO Support 
@@ -11,7 +20,6 @@
 - Update golang dependencies
 
 ## v1.0.25
-
 **Fixes**
  * [api] Fix vlan trunk refresh deadlock   
  * [multicast_udp_proxy] [mesh] in the mesh backhual case we do want to send back out over the same interface
