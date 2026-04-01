@@ -83,7 +83,7 @@ func makeDstIfMissing(destFilePath string, srcFilePath string) {
 		}
 		defer srcFile.Close()
 
-		destFile, err := os.Create(destFilePath)
+		destFile, err := os.OpenFile(destFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 		if err != nil {
 			log.Println("[-] Auth Migration: could not make destination " + destFilePath)
 			return
