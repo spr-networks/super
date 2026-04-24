@@ -70,6 +70,10 @@ useradd -m -s /bin/bash ubuntu
 echo "ubuntu:ubuntu" | chpasswd
 usermod -aG sudo ubuntu
 passwd --expire ubuntu
+
+# disable Pi OS first-boot user wizard (headless)
+systemctl disable userconfig.service 2>/dev/null || true
+systemctl mask userconfig.service 2>/dev/null || true
 # so that cd ~spr works
 useradd -m -s /bin/true spr
 echo spr > /etc/hostname

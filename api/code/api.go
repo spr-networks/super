@@ -27,11 +27,13 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/spr-networks/sprbus"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var TEST_PREFIX = os.Getenv("TEST_PREFIX")
 var ApiConfigPath = TEST_PREFIX + "/configs/base/api.json"
 var SetupDonePath = TEST_PREFIX + "/configs/base/.setup_done"
+var SetupSysHashPath = TEST_PREFIX + "/configs/base/.setup_syshash"
 var HostnameConfigPath = TEST_PREFIX + "/configs/base/hostname"
 
 var DevicesConfigPath = TEST_PREFIX + "/configs/devices/"
@@ -2515,6 +2517,12 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Failed to write user auth file", 400)
 		panic(err)
+	}
+
+	// bcrypt password for setup watcher on first install
+	sysHash, err := bcrypt.GenerateFromPassword([]byte(conf.AdminPassword), bcrypt.DefaultCost)
+	if err == nil {
+		ioutil.WriteFile(SetupSysHashPath, sysHash, 0600)
 	}
 
 	//write to config.sh
