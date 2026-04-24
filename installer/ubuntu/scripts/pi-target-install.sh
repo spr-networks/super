@@ -153,6 +153,7 @@ dtoverlay=uart0
 dtparam=uart0_console
 pciex4_reset=0
 dtoverlay=pcie-32bit-dma-pi5
+dtoverlay=pciex1-compat-pi5,no-mip
 EOF
 
 # make sure to update the kernel / initrd in this qemu environment
