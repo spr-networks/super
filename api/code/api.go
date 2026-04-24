@@ -2520,7 +2520,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// bcrypt password for setup watcher on first install
-	sysHash, err := bcrypt.GenerateFromPassword([]byte(conf.AdminPassword), bcrypt.DefaultCost)
+	sysHash, err := bcrypt.GenerateFromPassword([]byte(conf.AdminPassword), 12)
 	if err == nil {
 		ioutil.WriteFile(SetupSysHashPath, sysHash, 0600)
 	}
