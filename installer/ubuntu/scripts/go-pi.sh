@@ -11,6 +11,10 @@ mount --bind /dev/ /mnt/fs/dev/
 # the rest is done on an aarch64 conatiner with pi-target-install.sh
 bash /scripts/pi-cross-install.sh
 
+# ath12k firmware for QCN9274
+mkdir -p /mnt/fs/lib/firmware/ath12k/QCN9274/hw2.0
+cp /firmware/ath12k/* /mnt/fs/lib/firmware/ath12k/QCN9274/hw2.0/
+
 # disable iface renaming on the boot image.
 if ! grep -q "net.ifnames=0 biosdevname=0" /mnt/boot/firmware/cmdline.txt; then
   sed -i '$s/$/ net.ifnames=0 biosdevname=0/' /mnt/boot/firmware/cmdline.txt

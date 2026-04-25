@@ -28,6 +28,7 @@ import {
 } from '@gluestack-ui/themed'
 
 import { Select } from 'components/Select'
+import { generateCapabilitiesString } from 'api/Wifi'
 
 let modes = [
   { label: '5 & 6 GHz', value: 'a' },
@@ -503,8 +504,9 @@ const WifiChannelParameters = ({
       wifiParameters.Mlo_channel = parseInt(mloChannel)
       wifiParameters.Mlo_bandwidth = parseInt(mloBandwidth)
 
-      // Determine hw_mode for MLO link from channel frequency
+      // Determine hw_mode + band index for the MLO link from channel frequency
       let mloMode = 'a'
+      let mloBandIndex = null
       for (let iw of iws) {
         if (!iw.devices[iface]) continue
         for (let band of iw.bands) {
@@ -513,12 +515,39 @@ const WifiChannelParameters = ({
             let chNum = parseInt(freq.split(' ')[2].slice(1, -1))
             if (chNum === parseInt(mloChannel)) {
               let f = parseInt(freq.split(' ')[0])
-              if (f < 3000) mloMode = 'g'
+              if (f < 3000) {
+                mloMode = 'g'
+                mloBandIndex = 1
+              } else if (f < 5950) {
+                mloBandIndex = 2
+              } else {
+                mloBandIndex = 4
+              }
             }
           }
         }
       }
       wifiParameters.Mlo_hw_mode = mloMode
+
+      // Derive ht_capab/vht_capab from the MLO link's band (not primary's)
+      if (mloBandIndex !== null) {
+        let phy = iws.find((iw) => iw.devices && iw.devices[iface])
+        if (phy) {
+          let [htArr, vhtArr] = generateCapabilitiesString(
+            { [iface]: phy },
+            iface,
+            mloBandIndex
+          )
+          if (htArr && htArr.length) {
+            htArr.sort()
+            wifiParameters.Mlo_ht_capab = htArr.join('')
+          }
+          if (vhtArr && vhtArr.length) {
+            vhtArr.sort()
+            wifiParameters.Mlo_vht_capab = vhtArr.join('')
+          }
+        }
+      }
     } else {
       wifiParameters.Mld_ap = 0
     }
@@ -662,7 +691,15 @@ const WifiChannelParameters = ({
         <CheckboxGroup
           value={groupValues}
           accessibilityLabel="WiFi Settings"
-          onChange={setGroupValues}
+          onChange={(values) => {
+            // MLO requires WiFi 7 (hostapd: cannot enable mld_ap without ieee80211be)
+            let next = [...values]
+            const mloAdded = next.includes('mlo') && !groupValues.includes('mlo')
+            const wifi7Removed = !next.includes('wifi7') && groupValues.includes('wifi7')
+            if (mloAdded && !next.includes('wifi7')) next.push('wifi7')
+            if (wifi7Removed) next = next.filter((v) => v !== 'mlo')
+            setGroupValues(next)
+          }}
         >
           <HStack space="md">
             <Checkbox {...checkboxProps} value={'wifi6'}>

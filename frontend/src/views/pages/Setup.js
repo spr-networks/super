@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Platform } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { api, wifiAPI, saveLogin } from 'api'
-import { generateConfigForBand, getBestWifiConfig, isSPRCompat } from 'api/Wifi'
+import { generateConfigForBand, getBestWifiConfig, isSPRCompat, generateCapabilitiesString } from 'api/Wifi'
 import { useNavigate } from 'react-router-dom'
 import AddDevice from 'components/Setup/AddDevice'
 import { countryCodes } from 'utils'
@@ -458,10 +458,16 @@ const Setup = (props) => {
     for (let iface of wifiInterfaces) {
       if (iface.includes('.')) continue
 
-      let defaultConfig =
-        generateConfigForBand(iwMap, iface, 2) ||
-        generateConfigForBand(iwMap, iface, 1) ||
-        generateConfigForBand(iwMap, iface, 4)
+      let defaultConfig = null
+      let mainBand = null
+      for (let b of [2, 1, 4]) {
+        let c = generateConfigForBand(iwMap, iface, b)
+        if (c) {
+          defaultConfig = c
+          mainBand = b
+          break
+        }
+      }
 
       //max out the settings
       let bestConfig = getBestWifiConfig(iwMap, iface, defaultConfig)
@@ -474,9 +480,29 @@ const Setup = (props) => {
         Ht_capab: bestConfig.ht_capab,
         Hw_mode: bestConfig.hw_mode,
         Ieee80211ax: parseInt(bestConfig.ieee80211ax),
+        Ieee80211be: parseInt(bestConfig.ieee80211be) || 0,
         He_su_beamformer: parseInt(bestConfig.he_su_beamformer),
         He_su_beamformee: parseInt(bestConfig.he_su_beamformee),
         He_mu_beamformer: parseInt(bestConfig.he_mu_beamformer)
+      }
+
+      // MLO: only auto-enable the safe 2.4+5 pairing. Skip 5+6 (DFS/PSC issues).
+      if (mainBand === 2 && data.Ieee80211be === 1) {
+        let has_24_eht = (iwMap[iface]?.bands || []).some(
+          (b) => b.band?.includes('Band 1') && b.eht_phy_capabilities
+        )
+        if (has_24_eht) {
+          data.Mld_ap = 1
+          data.Mlo_channel = 1
+          data.Mlo_bandwidth = 20
+          data.Mlo_hw_mode = 'g'
+          // 2.4 GHz link caps must come from Band 1, not from the 5 GHz primary
+          let [mloHt] = generateCapabilitiesString(iwMap, iface, 1)
+          if (mloHt && mloHt.length) {
+            mloHt.sort()
+            data.Mlo_ht_capab = mloHt.join('')
+          }
+        }
       }
 
       wifiAPI

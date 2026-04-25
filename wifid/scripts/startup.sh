@@ -52,6 +52,9 @@ do
   MLO_CONF="/configs/wifi/hostapd_${IFACE}_mlo.conf"
   if [ -f "$MLO_CONF" ] && grep -q "^mld_ap=1" "$CONF" 2>/dev/null; then
     echo "Starting MLO hostapd for ${IFACE}: $CONF $MLO_CONF"
+    # Clear any wedged ath12k MLD state before starting MLO hostapd
+    ip link set "$IFACE" down 2>/dev/null
+    ip link set "$IFACE" up 2>/dev/null
     hostapd -B "$CONF" "$MLO_CONF"
   else
     hostapd -B "$CONF"

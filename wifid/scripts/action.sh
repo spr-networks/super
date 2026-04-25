@@ -21,15 +21,21 @@ is_valid_mac() {
     [[ "$mac" =~ ^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$ ]]
 }
 
-IFACE=$1
+RAW_IFACE=$1
 EVENT=$2
 MAC=$3
 
 # Validate interface name from hostapd
-if ! is_valid_ifname "$IFACE"; then
-    echo "Error: Invalid interface name '$IFACE' from hostapd" >&2
+if ! is_valid_ifname "$RAW_IFACE"; then
+    echo "Error: Invalid interface name '$RAW_IFACE' from hostapd" >&2
     exit 1
 fi
+
+# In MLO mode hostapd_cli reports per-link iface names (e.g. wlan3_link0).
+# The kernel's AP-VLAN device is on the MLD parent (wlan3), so strip the suffix
+# for the iface used in vlan/socket-dir paths. Keep RAW_IFACE for the per-link
+# sta query so we ask the right link socket.
+IFACE="${RAW_IFACE%_link[0-9]*}"
 
 # Validate MAC address
 if [ -n "$MAC" ] && ! is_valid_mac "$MAC"; then
@@ -38,7 +44,7 @@ if [ -n "$MAC" ] && ! is_valid_mac "$MAC"; then
 fi
 
 if [ "$EVENT" = "AP-STA-CONNECTED" ]; then
-  VLAN_ID=$(hostapd_cli -p "/state/wifi/control_${IFACE}" sta "$MAC" | grep vlan_id | cut -c 9-)
+  VLAN_ID=$(hostapd_cli -p "/state/wifi/control_${IFACE}" -i "$RAW_IFACE" sta "$MAC" | grep vlan_id | cut -c 9-)
   VLAN_IFACE="${IFACE}.${VLAN_ID}"
 
   # Validate constructed VLAN interface name
@@ -50,7 +56,7 @@ if [ "$EVENT" = "AP-STA-CONNECTED" ]; then
   /hostap_dhcp_helper add "$VLAN_IFACE" "$MAC"
   curl --unix-socket /state/wifi/apisock http://localhost/reportPSKAuthSuccess -X PUT -d "{\"Iface\": \"$VLAN_IFACE\", \"Event\": \"$EVENT\", \"Mac\": \"$MAC\"}"
 elif [ "$EVENT" = "AP-STA-DISCONNECTED" ]; then
-  VLAN_ID=$(hostapd_cli -p "/state/wifi/control_${IFACE}" sta "$MAC" | grep vlan_id | cut -c 9-)
+  VLAN_ID=$(hostapd_cli -p "/state/wifi/control_${IFACE}" -i "$RAW_IFACE" sta "$MAC" | grep vlan_id | cut -c 9-)
   VLAN_IFACE="${IFACE}.${VLAN_ID}"
 
   # Validate constructed VLAN interface name
