@@ -572,6 +572,10 @@ export default class APIWifi extends API {
     return this.get(`hostapd/${iface}/all_stations`);
   }
 
+  deauth(iface, mac) {
+    return this.put(`hostapd/${iface}/deauth`, mac);
+  }
+
   status(iface) {
     return this.get(`hostapd/${iface}/status`).then((status) => {
       if (status['ssid[0]']) {

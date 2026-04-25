@@ -1,6 +1,14 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.0.30
+**Features**
+- Add iperf3, tcpdump to host images
+- Add deauth to wireless devices menu 
+**Fixes**
+- Fix container cache
+- Fix setup defaults for MLO
+
 ## v1.0.29
 **Fixes**
 - Improved MLO support

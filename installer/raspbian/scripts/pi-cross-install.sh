@@ -48,7 +48,7 @@ apty update
 # NOTE: also check /scripts/install.sh when making updates
 apty -y upgrade --download-only
 apty -y install --download-only linux-firmware
-apty -y install --download-only --no-install-recommends nftables wireless-regdb ethtool git nano iw fdisk tmux conntrack jq inotify-tools dhcpcd cloud-guest-utils
+apty -y install --download-only --no-install-recommends nftables wireless-regdb ethtool git nano iw fdisk tmux conntrack jq inotify-tools dhcpcd cloud-guest-utils tcpdump iperf3
 # install docker and buildx
 apty -y install --download-only --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 

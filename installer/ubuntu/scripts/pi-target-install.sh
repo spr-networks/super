@@ -48,7 +48,7 @@ dpkg --configure -a
 
 # sync with install.sh and cross-install.sh
 apt -y upgrade --no-download
-apt -y install --no-download --no-install-recommends nftables wireless-regdb ethtool nano iw cloud-utils fdisk tmux conntrack jq inotify-tools
+apt -y install --no-download --no-install-recommends nftables wireless-regdb ethtool nano iw cloud-utils fdisk tmux conntrack jq inotify-tools tcpdump iperf3
 # install docker and buildx
 apt -y install --no-download --no-install-recommends r8125-dkms linux-headers-raspi
 

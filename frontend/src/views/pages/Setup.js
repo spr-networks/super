@@ -486,7 +486,22 @@ const Setup = (props) => {
         He_mu_beamformer: parseInt(bestConfig.he_mu_beamformer)
       }
 
-      // MLO: only auto-enable the safe 2.4+5 pairing. Skip 5+6 (DFS/PSC issues).
+      if (bestConfig.vht_oper_chwidth !== undefined) {
+        let chwidth = parseInt(bestConfig.vht_oper_chwidth)
+        let seg0 = parseInt(bestConfig.vht_oper_centr_freq_seg0_idx)
+        data.Vht_oper_chwidth = chwidth
+        data.Vht_oper_centr_freq_seg0_idx = seg0
+        if (data.Ieee80211ax === 1) {
+          data.He_oper_chwidth = chwidth
+          data.He_oper_centr_freq_seg0_idx = seg0
+        }
+        if (data.Ieee80211be === 1) {
+          data.Eht_oper_chwidth = chwidth
+          data.Eht_oper_centr_freq_seg0_idx = seg0
+        }
+      }
+
+      // MLO: only auto-enable 2.4+5 pairing
       if (mainBand === 2 && data.Ieee80211be === 1) {
         let has_24_eht = (iwMap[iface]?.bands || []).some(
           (b) => b.band?.includes('Band 1') && b.eht_phy_capabilities

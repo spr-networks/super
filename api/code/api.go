@@ -2908,6 +2908,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/hostapd/calcChannel", hostapdChannelCalc).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/enable", hostapdEnableInterface).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/disable", hostapdDisableInterface).Methods("PUT")
+	external_router_authenticated.HandleFunc("/hostapd/{interface}/deauth", hostapdDeauth).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/resetConfiguration", hostapdResetInterface).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/enableExtraBSS", hostapdEnableExtraBSS).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/hostapd/syncMesh", hostapdSyncMesh).Methods("PUT")
