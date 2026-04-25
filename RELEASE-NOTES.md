@@ -1,6 +1,16 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.0.29
+**Fixes**
+- Improved MLO support
+- More installer fixes for raspbian 
+
+## v1.0.28
+**Fixes**
+- Installer fixes for raspbian
+- Add missing board-2.bin for ubuntu ath12k
+
 ## v1.0.27
 **Base Image Features**
 - Configure better PQ support for sshd 
