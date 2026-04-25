@@ -33,9 +33,10 @@ mount -t cgroup -o all cgroup /sys/fs/cgroup
 mkdir -p /sys/fs/cgroup/devices
 mount -t cgroup -o devices devices /sys/fs/cgroup/devices
 
+containerd &
+CONTAINERD_PID=$!
 dockerd --iptables=false --ip6tables=false --bridge=none &
 DOCKERD_PID=$!
-containerd &
 
 cd /home/spr/super
 
@@ -43,7 +44,23 @@ cd /home/spr/super
 until docker info >/dev/null 2>&1; do sleep 1; done
 
 # pull in default containers
-docker compose -f docker-compose.yml  -f dyndns/docker-compose.yml -f ppp/docker-compose.yml -f wifi_uplink/docker-compose.yml pull --quiet
+COMPOSE_FILES="-f docker-compose.yml -f dyndns/docker-compose.yml -f ppp/docker-compose.yml -f wifi_uplink/docker-compose.yml"
+docker compose $COMPOSE_FILES pull --quiet
+
+# Verify every expected image actually landed in `docker image ls`. The qemu
+# build silently dropped images in the past — fail the build now instead of
+# shipping an empty image.
+MISSING=0
+for img in $(docker compose $COMPOSE_FILES config --images 2>/dev/null | sort -u); do
+  if ! docker image inspect "$img" >/dev/null 2>&1; then
+    echo "FATAL: image not present after pull: $img" >&2
+    MISSING=$((MISSING + 1))
+  fi
+done
+if [ "$MISSING" -gt 0 ]; then
+  echo "FATAL: $MISSING image(s) missing, aborting build" >&2
+  exit 1
+fi
 
 
 # finish downloaded install
@@ -52,7 +69,7 @@ dpkg --configure -a
 
 # sync with install.sh and cross-install.sh
 apt -y upgrade --no-download
-apt -y install --no-download --no-install-recommends nftables wireless-regdb ethtool nano iw fdisk tmux conntrack jq inotify-tools dhcpcd cloud-guest-utils
+apt -y install --no-download --no-install-recommends nftables wireless-regdb ethtool nano iw fdisk tmux conntrack jq inotify-tools dhcpcd cloud-guest-utils tcpdump iperf3
 # Mount boot firmware so kernel postinst hooks can update it
 mkdir -p /boot/firmware
 mount /dev/vda1 /boot/firmware
@@ -84,8 +101,10 @@ echo "127.0.0.1      spr" >> /etc/hosts
 echo "network: {config: disabled}" > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
 
 # disable raspbian's dhcpcd service - SPR runs its own DHCP per AP-VLAN
-systemctl disable dhcpcd 2>/dev/null || true
-systemctl mask dhcpcd 2>/dev/null || true
+# Mask both the standalone unit and the per-iface template (dhcpcd@.service)
+# otherwise dhcpcd@eth0 etc. still launches at boot.
+systemctl disable dhcpcd.service dhcpcd@.service 2>/dev/null || true
+systemctl mask dhcpcd.service dhcpcd@.service 2>/dev/null || true
 
 # Set wifi country so RPiOS does not rfkill wireless on boot
 raspi-config nonint do_wifi_country US
@@ -266,8 +285,14 @@ EOF
 # remove script
 rm /pi-target-install.sh
 
-# gracefully stop docker so its state is flushed before halt
+# gracefully stop docker + containerd so image content store is flushed
 kill -TERM $DOCKERD_PID
 wait $DOCKERD_PID
+kill -TERM $CONTAINERD_PID
+wait $CONTAINERD_PID
 sync
+
+# success marker for the outer build script to grep
+echo "===SPR_INSTALL_OK==="
+
 poweroff -f

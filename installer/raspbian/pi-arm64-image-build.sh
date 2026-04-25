@@ -24,15 +24,20 @@ DOCKER_DEFAULT_PLATFORM=linux/arm64 docker run --rm \
 # created by mount.sh is released in the same kernel context before QEMU
 # opens the image.  spr-pi-builder already has qemu-system-aarch64.
 docker run --privileged -v /dev:/dev -v $PWD/data:/data -v $PWD/scripts:/scripts/ -v $PWD/firmware:/firmware/ spr-pi-builder bash -c '
+  set -e
   /scripts/go-pi.sh
-  qemu-system-aarch64 -machine virt -cpu cortex-a72 -smp 2 -m 1G \
+  qemu-system-aarch64 -machine virt -cpu cortex-a72 -smp 2 -m 1G -no-reboot \
     -initrd /data/initrd -kernel /data/vmlinuz \
-    -append "root=/dev/vda2 rootfstype=ext4 rw panic=0 net.ifnames=0 biosdevname=0 init=/pi-target-install.sh" \
+    -append "root=/dev/vda2 rootfstype=ext4 rw panic=-1 net.ifnames=0 biosdevname=0 init=/pi-target-install.sh" \
     -drive if=none,id=hd0,file=/data/spr.img,format=raw \
     -device virtio-blk-pci,drive=hd0 \
     -netdev user,id=mynet \
     -device virtio-net-pci,netdev=mynet,romfile= \
-    -nographic
+    -nographic | tee /tmp/qemu.log
+  if ! grep -q "===SPR_INSTALL_OK===" /tmp/qemu.log; then
+    echo "FATAL: pi-target-install.sh did not complete successfully" >&2
+    exit 1
+  fi
 '
 
 ./scripts/shrink.sh
