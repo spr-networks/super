@@ -83,6 +83,10 @@ echo "127.0.0.1      spr" >> /etc/hosts
 # dont use this
 echo "network: {config: disabled}" > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
 
+# disable raspbian's dhcpcd service - SPR runs its own DHCP per AP-VLAN
+systemctl disable dhcpcd 2>/dev/null || true
+systemctl mask dhcpcd 2>/dev/null || true
+
 # Set wifi country so RPiOS does not rfkill wireless on boot
 raspi-config nonint do_wifi_country US
 
@@ -166,13 +170,17 @@ KVER=$(ls /lib/modules/ | sort -V | tail -1)
 # regenerate initrd with udev rules in place before copying to firmware
 update-initramfs -u -k ${KVER:-all}
 
-# Copy SPR kernel + initrd to boot firmware partition
+# Install SPR kernel and DTBs
 if [ -n "$KVER" ]; then
   cp /boot/vmlinuz-${KVER} /boot/firmware/kernel8.img
   cp /boot/initrd.img-${KVER} /boot/firmware/initramfs8
   # Pi 5 (2712)
   cp /boot/vmlinuz-${KVER} /boot/firmware/kernel_2712.img
   cp /boot/initrd.img-${KVER} /boot/firmware/initramfs_2712
+
+  cp /usr/lib/linux-image-${KVER}/broadcom/bcm27*.dtb /boot/firmware/
+  mkdir -p /boot/firmware/overlays
+  cp /usr/lib/linux-image-${KVER}/overlays/*.dtbo /boot/firmware/overlays/ 2>/dev/null || true
 fi
 
 # we need the pcie-32bit-dma enabled for the mediatek cards
