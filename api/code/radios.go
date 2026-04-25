@@ -512,6 +512,31 @@ func hostapdStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(status)
 }
 
+func hostapdDeauth(w http.ResponseWriter, r *http.Request) {
+	iface := mux.Vars(r)["interface"]
+	if !isValidIface(iface) {
+		http.Error(w, "Invalid interface", 400)
+		return
+	}
+
+	var mac string
+	if err := json.NewDecoder(r.Body).Decode(&mac); err != nil {
+		http.Error(w, "Invalid MAC", 400)
+		return
+	}
+	if !isValidMAC(mac) {
+		http.Error(w, "Invalid MAC", 400)
+		return
+	}
+
+	RunHostapdCommandArray(iface, []string{"disassociate", mac})
+	if _, err := RunHostapdCommandArray(iface, []string{"deauthenticate", mac}); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
 func hostapdAllStations(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
 	if !isValidIface(iface) {

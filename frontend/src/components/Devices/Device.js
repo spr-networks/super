@@ -28,7 +28,7 @@ import {
 
 import { TagItem, GroupItem, PolicyItem } from 'components/TagItem'
 import IconItem from 'components/IconItem'
-import { PencilIcon, WaypointsIcon, WifiIcon } from 'lucide-react-native'
+import { PencilIcon, PowerOffIcon, WaypointsIcon, WifiIcon } from 'lucide-react-native'
 
 const DeviceIcon = ({
   icon,
@@ -165,6 +165,25 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
       )
   }
 
+  const deauthDevice = () => {
+    // device.LastIface is the AP-VLAN device (e.g. "wlan3.4096" or "wlan3.ap.guest").
+    // hostapd_cli wants the radio iface — first segment before the dot.
+    let iface = device.LastIface?.split('.')[0]
+    if (!iface || !device.MAC || device.MAC === 'pending') {
+      context.warning('Disconnect unavailable', 'No active wifi association')
+      return
+    }
+    wifiAPI
+      .deauth(iface, device.MAC)
+      .then(() => {
+        context.success('Disconnected', `${device.Name || device.MAC} kicked off ${iface}`)
+        notifyChange && notifyChange()
+      })
+      .catch((error) =>
+        context.error('[API] deauth error: ' + (error?.message || error))
+      )
+  }
+
   const duplicateDevice = () => {
     // this will copy psk from source device
 
@@ -219,6 +238,8 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
           removeDevice()
         } else if (key == 'info') {
           modalContext.modal('', <DeviceInfo identity={device.MAC} />)
+        } else if (key == 'deauth') {
+          deauthDevice()
         }
       }}
     >
@@ -234,6 +255,12 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
         <Icon as={WifiIcon} color="$muted500" mr="$2" />
         <MenuItemLabel size="sm">Show password</MenuItemLabel>
       </MenuItem>
+      {wifi_type !== 'Wired' && device.isConnected ? (
+        <MenuItem key="deauth">
+          <Icon as={PowerOffIcon} color="$muted500" mr="$2" />
+          <MenuItemLabel size="sm">Disconnect</MenuItemLabel>
+        </MenuItem>
+      ) : null}
       <MenuItem key="delete">
         <Icon as={TrashIcon} color="$red700" mr="$2" />
         <MenuItemLabel size="sm" color="$red700">
