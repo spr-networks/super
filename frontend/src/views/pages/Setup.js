@@ -559,8 +559,35 @@ const Setup = (props) => {
     }
   }
 
+  // Compute the LAN IP the router will be reachable at after setup.
+  // The router takes the .1 of whatever tinynet was chosen.
+  const getNewRouterIP = () => {
+    let net = tinynet
+    if (net.includes('/')) net = net.split('/')[0]
+    let parts = net.split('.')
+    if (parts.length !== 4) return null
+    return `${parts[0]}.${parts[1]}.${parts[2]}.1`
+  }
+
   const handlePressFinish = () => {
     removeSetupAP(() => {
+      const newIP = getNewRouterIP()
+      const curHost =
+        Platform.OS == 'web' && window?.location?.hostname
+          ? window.location.hostname
+          : null
+      // If the router moved to a new subnet, jump to the new IP so the user
+      // doesn't end up at a dead address from the old setup AP.
+      if (
+        Platform.OS == 'web' &&
+        newIP &&
+        curHost &&
+        newIP !== curHost
+      ) {
+        window.location =
+          window.location.protocol + '//' + newIP + '/auth/login'
+        return
+      }
       navigate('/auth/login')
     })
   }
@@ -735,13 +762,27 @@ const Setup = (props) => {
             </Link>
           </HStack>
 
-          <ButtonSetup onPress={handlePressFinish} disabled={!apiReachable}>
-            {apiReachable ? (
-              <ButtonText>Finish</ButtonText>
-            ) : (
-              <ButtonText>Waiting for API...</ButtonText>
-            )}
-          </ButtonSetup>
+          {(() => {
+            const newIP = getNewRouterIP()
+            const curHost =
+              Platform.OS == 'web' && window?.location?.hostname
+            const willJump =
+              Platform.OS == 'web' && newIP && curHost && newIP !== curHost
+            return (
+              <ButtonSetup
+                onPress={handlePressFinish}
+                disabled={!apiReachable}
+              >
+                {apiReachable ? (
+                  <ButtonText>
+                    {willJump ? `Continue to ${newIP}` : 'Finish'}
+                  </ButtonText>
+                ) : (
+                  <ButtonText>Waiting for API...</ButtonText>
+                )}
+              </ButtonSetup>
+            )
+          })()}
         </VStack>
       </SetupScrollView>
     )

@@ -142,6 +142,7 @@ const SidebarItem = (props) => {
       'Auth',
       'Events',
       'Uplink',
+      'Link Settings',
       'LAN',
       'Logs',
       'Notifications',

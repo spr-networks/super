@@ -79,10 +79,10 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   const [modalType, setModalType] = useState('')
 
   // for adding
-  let defaultPolicies = ['wan', 'dns', 'dns:family', 'lan', 'noapi']
+  let defaultPolicies = ['wan', 'dns', 'dns:family', 'lan', 'lan_upstream', 'noapi']
 
   if (!isSimpleMode) {
-    defaultPolicies.push(...['lan_upstream', 'disabled', 'quarantine'])
+    defaultPolicies.push(...['disabled', 'quarantine'])
   }
 
   const policyName = {

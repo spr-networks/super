@@ -153,7 +153,6 @@ const routes = [
         name: 'Link Settings',
         icon: WaypointsIcon,
         component: LinkConfigurationTabView,
-        hideSimple: true,
         layout: 'admin'
       },
       {
