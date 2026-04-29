@@ -1,6 +1,11 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.0.31
+**Fixes**
+- Detect when uplink/downlink are misconfigured on a fresh install and prompt to fix
+- Update to 26.04 for ubuntu and use new spr-debian kernel with security fixes
+
 ## v1.0.30
 **Features**
 - Add iperf3, tcpdump to host images
