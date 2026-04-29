@@ -1,10 +1,9 @@
 #!/bin/bash
 set -e
 mkdir data
-# 25.04 is not yet ready due to mt7915e, r8125 driver bugs
-VERSION="24.04.3"
+VERSION="26.04"
 IMG="ubuntu-${VERSION}-preinstalled-server-arm64+raspi.img.xz"
-HASH="9bb1799cee8965e6df0234c1c879dd35be1d87afe39b84951f278b6bd0433e56"
+HASH="10604098a0c4eeb7359e58e12b01badbce8c74b0d53b414e633ba0b047b512cd"
 
 cd ./data
 
