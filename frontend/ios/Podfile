@@ -54,5 +54,16 @@ target 'spr' do
     react_native_post_install(installer)
     __apply_Xcode_12_5_M1_post_install_workaround(installer)
     set_run_script_to_always_run_when_no_input_or_output_files_exist(project: installer.pods_project)
+
+    # RN 0.72 Yoga + clang 17+: YGValue.h uses deprecated user-defined literal
+    # syntax (`operator"" _pt`) that newer clang treats as -Werror. Disable
+    # that specific warning so archive builds still succeed.
+    installer.pods_project.targets.each do |target|
+      if target.name == 'Yoga'
+        target.build_configurations.each do |config|
+          config.build_settings['WARNING_CFLAGS'] = '$(inherited) -Wno-error=deprecated-literal-operator -Wno-deprecated-literal-operator'
+        end
+      end
+    end
   end
 end
