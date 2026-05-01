@@ -64,6 +64,16 @@ target 'spr' do
           config.build_settings['WARNING_CFLAGS'] = '$(inherited) -Wno-error=deprecated-literal-operator -Wno-deprecated-literal-operator'
         end
       end
+      # Bump min iOS target from 11.0 to 13.0 on every pod. Xcode 26 only
+      # supports 12.0+, and Swift compatibility forced-load libs aren't
+      # shipped for sub-12 targets — that's what trips
+      # "swiftCompatibility5x not found" at link time.
+      target.build_configurations.each do |config|
+        cur = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if cur.nil? || cur.to_f < 13.0
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+        end
+      end
     end
   end
 end
