@@ -1440,6 +1440,12 @@ func populateSets() {
 		}
 		if iface.Type == "Uplink" && iface.Enabled == true {
 			addUplinkEntry(iface.Name, iface.Subtype, false)
+			// Manually-configured uplinks come up DOWN after reboot. Bring
+			// them up here on every startup so users don't have to ip link
+			// set <iface> up by hand.
+			if iface.Subtype != "pppup" && isValidIface(iface.Name) {
+				exec.Command("ip", "link", "set", iface.Name, "up").Run()
+			}
 		}
 	}
 
