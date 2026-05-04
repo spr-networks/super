@@ -14,6 +14,10 @@ systemctl disable systemd-resolved
 rm -f /etc/resolv.conf
 echo nameserver 1.1.1.1 > /etc/resolv.conf
 
+# Enable systemd-timesyncd for NTP. Network-readiness handled by systemd.
+apt -y install --no-download --no-install-recommends systemd-timesyncd 2>/dev/null || true
+systemctl enable systemd-timesyncd 2>/dev/null || true
+
 # install docker
 apt -y install --no-download --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin git
 
