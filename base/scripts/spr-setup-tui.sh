@@ -141,6 +141,24 @@ main_menu() {
     done
 }
 
+# Build a one-line description of an interface (driver + link state + IPv4)
+# so the uplink is visually obvious in the selector — it's the one with a
+# real upstream IP. Driver name helps distinguish onboard vs USB adapters.
+iface_desc() {
+    local iface=$1
+    local carrier=$(cat /sys/class/net/$iface/carrier 2>/dev/null)
+    local ipv4=$(ip -4 -o addr show dev "$iface" 2>/dev/null | awk '{print $4}' | head -1)
+    local driver=$(basename "$(readlink /sys/class/net/$iface/device/driver 2>/dev/null)" 2>/dev/null)
+    [ -z "$driver" ] && driver="?"
+    local link="no cable"
+    [ "$carrier" = "1" ] && link="cable up"
+    if [ -n "$ipv4" ]; then
+        echo "$driver, $link, $ipv4"
+    else
+        echo "$driver, $link, no IP"
+    fi
+}
+
 # Network settings menu
 network_settings() {
     # Get current values
@@ -155,10 +173,13 @@ network_settings() {
     # Build interface list for dialog
     local iface_list=()
     for iface in "${interfaces[@]}"; do
+        local desc=$(iface_desc "$iface")
         if [ "$iface" = "$current_wanif" ]; then
-            iface_list+=("$iface" "WAN (current)")
+            iface_list+=("$iface" "[UPLINK] $desc")
+        elif [ "$iface" = "$current_lanif" ]; then
+            iface_list+=("$iface" "[LAN] $desc")
         else
-            iface_list+=("$iface" "")
+            iface_list+=("$iface" "$desc")
         fi
     done
 
@@ -173,33 +194,36 @@ network_settings() {
         return
     fi
 
-    # Ask about LAN interface
-    $DIALOG --clear --title "Network Settings" \
-        --yesno "Do you have a second ethernet port for wired LAN?\n\nSelect Yes if you want to use a dedicated LAN port.\nSelect No to use WiFi only for LAN." \
-        10 70
-
-    if [ $? -eq 0 ]; then
-        # Build LAN interface list (exclude selected WAN)
-        local lan_iface_list=()
-        for iface in "${interfaces[@]}"; do
-            if [ "$iface" != "$WANIF" ]; then
-                if [ "$iface" = "$current_lanif" ]; then
-                    lan_iface_list+=("$iface" "LAN (current)")
-                else
-                    lan_iface_list+=("$iface" "")
-                fi
+    # Build LAN interface list (exclude selected WAN). If nothing remains the
+    # box is WiFi-only by default; otherwise present the candidates with an
+    # explicit "WiFi only" option at the top so the choice is self-explanatory.
+    local lan_iface_list=("none" "WiFi only (no wired LAN)")
+    for iface in "${interfaces[@]}"; do
+        if [ "$iface" != "$WANIF" ]; then
+            if [ "$iface" = "$current_lanif" ]; then
+                lan_iface_list+=("$iface" "LAN (current)")
+            else
+                lan_iface_list+=("$iface" "")
             fi
-        done
+        fi
+    done
 
+    if [ ${#lan_iface_list[@]} -le 2 ]; then
+        # Only the "none" entry — no other ifaces to pick from.
+        LANIF=""
+    else
         $DIALOG --clear --title "Network Settings" \
-            --menu "Select LAN Interface:" \
+            --menu "Select LAN Interface (or WiFi only):" \
             20 70 10 "${lan_iface_list[@]}" 2>$TMPFILE
 
         if [ $? -eq 0 ]; then
-            LANIF=$(cat $TMPFILE)
+            local selected=$(cat $TMPFILE)
+            if [ "$selected" = "none" ]; then
+                LANIF=""
+            else
+                LANIF="$selected"
+            fi
         fi
-    else
-        LANIF=""
     fi
 
     # Configure LAN subnet
@@ -250,9 +274,19 @@ wifi_settings() {
 
     local wifi_count=$(echo "$wifi_ifaces" | wc -l)
 
-    # Get current SSID if set
+    # Get current SSID if set; fall back to persisted hostapd config so the
+    # prefill matches what's actually on disk across TUI sessions.
     local current_ssid=""
     local current_country=""
+
+    if [ -z "$WIFI_SSID" ] || [ -z "$WIFI_COUNTRY" ]; then
+        local existing_conf
+        existing_conf=$(ls "${SUPERDIR}/configs/wifi/"hostapd_*.conf 2>/dev/null | head -1)
+        if [ -n "$existing_conf" ]; then
+            [ -z "$WIFI_SSID" ] && WIFI_SSID=$(grep -m1 '^ssid=' "$existing_conf" | cut -d= -f2-)
+            [ -z "$WIFI_COUNTRY" ] && WIFI_COUNTRY=$(grep -m1 '^country_code=' "$existing_conf" | cut -d= -f2-)
+        fi
+    fi
 
     if [ -n "$WIFI_SSID" ]; then
         current_ssid="$WIFI_SSID"
@@ -552,6 +586,17 @@ view_config() {
         plus_display="${plus_token:0:8}..."
     else
         plus_display="Not configured"
+    fi
+    # Fall back to reading SSID/country from the first existing hostapd config
+    # so View Config shows the persisted values across TUI sessions, not just
+    # what was set in the current run.
+    if [ -z "$WIFI_SSID" ] || [ -z "$WIFI_COUNTRY" ]; then
+        local existing_conf
+        existing_conf=$(ls "${SUPERDIR}/configs/wifi/"hostapd_*.conf 2>/dev/null | head -1)
+        if [ -n "$existing_conf" ]; then
+            [ -z "$WIFI_SSID" ] && WIFI_SSID=$(grep -m1 '^ssid=' "$existing_conf" | cut -d= -f2-)
+            [ -z "$WIFI_COUNTRY" ] && WIFI_COUNTRY=$(grep -m1 '^country_code=' "$existing_conf" | cut -d= -f2-)
+        fi
     fi
     [ -n "$WIFI_SSID" ] && wifi_ssid_display="$WIFI_SSID"
     [ -n "$WIFI_COUNTRY" ] && wifi_country_display="$WIFI_COUNTRY"

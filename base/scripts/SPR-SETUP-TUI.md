@@ -103,15 +103,14 @@ The tool modifies the following configuration files:
 
 | Feature | Web Setup | TUI Setup |
 |---------|-----------|-----------|
-| WiFi Configuration | ✓ | ✗ (use web after) |
+| WiFi SSID + Country Code | ✓ | ✓ |
+| First-device WiFi password | ✓ | ✓ |
 | Network Interfaces | ✓ | ✓ |
 | LAN Subnet | ✓ | ✓ |
 | Admin Password | ✓ | ✓ |
 | Advanced Settings | ✓ | ✓ |
 | Accessibility | Requires display | SSH-friendly |
-| WiFi Country Code | ✓ | ✗ (use web after) |
-
-**Note**: WiFi-specific settings (SSID, country code, etc.) should still be configured through the web interface at `https://<router-ip>/auth/setup`
+| Per-channel / band tuning | ✓ | ✗ (use web after) |
 
 ## Troubleshooting
 
