@@ -70,8 +70,8 @@ target 'spr' do
       # "Undefined symbols __swift_FORCE_LOAD_$_swiftCompatibility5x" at link.
       target.build_configurations.each do |config|
         cur = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
-        if cur.nil? || cur.to_f < 15.4
-          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.4'
+        if cur.nil? || cur.to_f < 16.0
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
         end
       end
     end
