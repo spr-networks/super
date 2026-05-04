@@ -2913,6 +2913,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/authorizedKeys", authorizedKeysHandler).Methods("GET", "PUT")
 
 	external_router_authenticated.HandleFunc("/time", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]int64{"unix": time.Now().Unix()})
 	}).Methods("GET")
 	external_router_authenticated.HandleFunc("/time/sync", timeSyncHandler).Methods("PUT")
