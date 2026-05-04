@@ -533,6 +533,16 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 		}
 
 		refreshDownlinksLocked()
+
+		//Set interfaces up
+		if isValidIface(iconfig.Name) && iconfig.Type != "AP" && iconfig.Subtype != "pppup" {
+			state := "down"
+			if iconfig.Enabled {
+				state = "up"
+			}
+			exec.Command("ip", "link", "set", iconfig.Name, state).Run()
+		}
+
 		return err
 	}
 
@@ -910,6 +920,10 @@ func refreshDownlinksLocked() {
 				continue
 			}
 			addWiredLanInterface(ifconfig.Name)
+			//Set interfaces up
+			if ifconfig.Enabled && isValidIface(ifconfig.Name) {
+				exec.Command("ip", "link", "set", ifconfig.Name, "up").Run()
+			}
 		}
 	}
 }
