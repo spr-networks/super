@@ -54,5 +54,38 @@ target 'spr' do
     react_native_post_install(installer)
     __apply_Xcode_12_5_M1_post_install_workaround(installer)
     set_run_script_to_always_run_when_no_input_or_output_files_exist(project: installer.pods_project)
+
+    # RN 0.72 Yoga + clang 17+: YGValue.h uses deprecated user-defined literal
+    # syntax (`operator"" _pt`) that newer clang treats as -Werror. Disable
+    # that specific warning so archive builds still succeed.
+    installer.pods_project.targets.each do |target|
+      if target.name == 'Yoga'
+        target.build_configurations.each do |config|
+          config.build_settings['WARNING_CFLAGS'] = '$(inherited) -Wno-error=deprecated-literal-operator -Wno-deprecated-literal-operator'
+        end
+      end
+      # Bump min iOS target on every pod to 15.4. At <15.4 the Swift compiler
+      # emits back-deploy forced-load references to libswiftCompatibility51/56/
+      # Concurrency etc., which Xcode 26 doesn't ship anymore — leading to
+      # "Undefined symbols __swift_FORCE_LOAD_$_swiftCompatibility5x" at link.
+      target.build_configurations.each do |config|
+        cur = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if cur.nil? || cur.to_f < 16.0
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+        end
+      end
+    end
+
+    # Main app target has no Swift files, but pods (e.g. react-native-rsa-native)
+    # do. Force the main app to embed the Swift stdlib so the linker pulls in
+    # libswiftCompatibility5x and resolves the forced-load symbols those pods
+    # emit. Otherwise: "Undefined symbols __swift_FORCE_LOAD_$_swiftCompatibility51".
+    main_project = installer.aggregate_targets[0].user_project
+    main_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'YES'
+      end
+    end
+    main_project.save
   end
 end

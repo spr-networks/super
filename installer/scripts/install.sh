@@ -51,24 +51,20 @@ git checkout 65bbd4c394a9d51f1ca5a0531166c22ff07d4e56
 
 cp -R /root/mt76/firmware/. /lib/firmware/mediatek/
 
-# set up ntpdate
-cat > /tmp/ntpdate.service << EOF
-[Unit]
-Description=NTP Time Synchronization
+# Overlay newer mt7996 firmware on top of the pinned copy. Pinned to a known
+# master SHA (not master tip) so builds stay reproducible and can't break
+# unexpectedly when upstream pushes incompatible firmware.
+# https://github.com/openwrt/mt76/tree/master/firmware/mt7996
+MT7996_SHA=018f60316d4dd6b4e741874eda40e2dfaa29df3b
+git fetch --depth 1 origin $MT7996_SHA
+git checkout $MT7996_SHA -- firmware/mt7996
+mkdir -p /lib/firmware/mediatek/mt7996
+cp -R /root/mt76/firmware/mt7996/. /lib/firmware/mediatek/mt7996/
 
-[Service]
-ExecStart=/usr/sbin/ntpdate time.nist.gov
-
-[Install]
-WantedBy=multi-user.target
-
-[Timer]
-OnBootSec=5min
-OnUnitActiveSec=1d
-EOF
-
-cp /tmp/ntpdate.service /usr/lib/systemd/system/
-ln -s /usr/lib/systemd/system/ntpdate.service /etc/systemd/system/multi-user.target.wants/ntpdate.service
+# Enable systemd-timesyncd for ongoing NTP sync (handles network-readiness
+# itself; replaces the broken ntpdate one-shot we used to ship).
+apt-get -y install --no-install-recommends systemd-timesyncd 2>/dev/null || true
+systemctl enable systemd-timesyncd 2>/dev/null || true
 
 # disable dhclient on the WANIF, since we will run our own dhcp
 # dont use this

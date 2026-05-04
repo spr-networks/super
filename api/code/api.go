@@ -2909,6 +2909,13 @@ func main() {
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/enable", hostapdEnableInterface).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/disable", hostapdDisableInterface).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/deauth", hostapdDeauth).Methods("PUT")
+
+	external_router_authenticated.HandleFunc("/authorizedKeys", authorizedKeysHandler).Methods("GET", "PUT")
+
+	external_router_authenticated.HandleFunc("/time", func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]int64{"unix": time.Now().Unix()})
+	}).Methods("GET")
+	external_router_authenticated.HandleFunc("/time/sync", timeSyncHandler).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/resetConfiguration", hostapdResetInterface).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/enableExtraBSS", hostapdEnableExtraBSS).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/hostapd/syncMesh", hostapdSyncMesh).Methods("PUT")

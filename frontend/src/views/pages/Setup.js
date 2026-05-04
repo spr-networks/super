@@ -1049,6 +1049,17 @@ const Setup = (props) => {
             </ButtonSetup>
           </Link>
         </HStack>
+        <VStack space="xs" alignItems="center" mt="$4">
+          <Text size="sm" color="$muted500">
+            Prefer the terminal? You can also configure SPR over SSH:
+          </Text>
+          <Text size="sm" color="$muted500" fontFamily="$mono">
+            ssh ubuntu@{window?.location?.hostname}
+          </Text>
+          <Text size="sm" color="$muted500" fontFamily="$mono">
+            sudo /home/spr/super/base/scripts/spr-setup-tui.sh
+          </Text>
+        </VStack>
       </VStack>
     </SetupScrollView>
   )

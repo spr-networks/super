@@ -969,6 +969,67 @@ func setup() {
 
 }
 
+var sshKeyRe = regexp.MustCompile(`^[A-Za-z0-9.@_-]+ [A-Za-z0-9+/]+=*( [\x20-\x7E]*)?$`)
+
+const tplImage = "ghcr.io/spr-networks/container_template:latest"
+const authorizedKeysScript = "/home/spr/super/superd/scripts/install-authorized-keys.sh"
+
+func deployAuthorizedKeys(w http.ResponseWriter, r *http.Request) {
+	var keys []string
+	if json.NewDecoder(r.Body).Decode(&keys) != nil || len(keys) == 0 {
+		http.Error(w, "no keys", 400)
+		return
+	}
+	for i, k := range keys {
+		k = strings.TrimSpace(k)
+		if strings.ContainsAny(k, "\r\n\x00") || !sshKeyRe.MatchString(k) {
+			http.Error(w, "invalid key", 400)
+			return
+		}
+		keys[i] = k
+	}
+	cmd := exec.Command("docker", "run", "--rm", "-i",
+		"-v", "/home/ubuntu/.ssh:/host_ssh",
+		"-v", authorizedKeysScript+":/install.sh:ro",
+		tplImage, "/install.sh")
+	cmd.Stdin = strings.NewReader(strings.Join(keys, "\n") + "\n")
+	out, err := cmd.CombinedOutput()
+	if e, ok := err.(*exec.ExitError); ok && e.ExitCode() == 3 {
+		http.Error(w, strings.TrimSpace(string(out)), http.StatusConflict)
+		return
+	}
+	if err != nil {
+		http.Error(w, strings.TrimSpace(string(out)), 500)
+	}
+}
+
+func getAuthorizedKeys(w http.ResponseWriter, r *http.Request) {
+	out, err := exec.Command("docker", "run", "--rm",
+		"-v", "/home/ubuntu/.ssh:/host_ssh:ro",
+		tplImage, "cat", "/host_ssh/authorized_keys").Output()
+	keys := []string{}
+	for _, line := range strings.Split(string(out), "\n") {
+		if line = strings.TrimSpace(line); line != "" && !strings.HasPrefix(line, "#") {
+			keys = append(keys, line)
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"Locked": err == nil, "Keys": keys})
+}
+
+// Force systemd-timesyncd to re-poll NTP. Runs in a privileged container
+// with --pid=host so nsenter can pivot into the host's namespaces.
+func syncTime(w http.ResponseWriter, r *http.Request) {
+	out, err := exec.Command("docker", "run", "--rm", "--privileged", "--pid=host",
+		tplImage, "nsenter", "-t", "1", "-m", "-u", "-n", "-i", "-p",
+		"systemctl", "restart", "systemd-timesyncd").CombinedOutput()
+	if err != nil {
+		http.Error(w, strings.TrimSpace(string(out)), 500)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
 func main() {
 	err := os.Chdir("/super")
 	if err != nil {
@@ -1003,6 +1064,10 @@ func main() {
 	unix_plugin_router.HandleFunc("/release", release_info).Methods("GET", "PUT", "DELETE")
 
 	unix_plugin_router.HandleFunc("/compose_paths", compose_paths).Methods("GET")
+
+	unix_plugin_router.HandleFunc("/authorizedKeys", getAuthorizedKeys).Methods("GET")
+	unix_plugin_router.HandleFunc("/authorizedKeys", deployAuthorizedKeys).Methods("PUT")
+	unix_plugin_router.HandleFunc("/time/sync", syncTime).Methods("PUT")
 
 	os.Remove(UNIX_PLUGIN_LISTENER)
 	unixPluginListener, err := net.Listen("unix", UNIX_PLUGIN_LISTENER)

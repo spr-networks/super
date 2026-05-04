@@ -701,7 +701,7 @@ const WifiChannelParameters = ({
             setGroupValues(next)
           }}
         >
-          <HStack space="md">
+          <HStack space="md" flexWrap="wrap" rowGap="$2">
             <Checkbox {...checkboxProps} value={'wifi6'}>
               <CheckboxIndicator mr="$2">
                 <CheckboxIcon />

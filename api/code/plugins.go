@@ -922,6 +922,53 @@ func startExtensionServices() error {
 	return nil
 }
 
+// Proxy a PUT to superd's privileged time-sync endpoint.
+func timeSyncHandler(w http.ResponseWriter, r *http.Request) {
+	c := http.Client{Transport: &http.Transport{
+		Dial: func(_, _ string) (net.Conn, error) { return net.Dial("unix", SuperdSocketPath) },
+	}}
+	defer c.CloseIdleConnections()
+	req, _ := http.NewRequest(http.MethodPut, "http://localhost/time/sync", nil)
+	resp, err := c.Do(req)
+	if err != nil {
+		http.Error(w, err.Error(), 502)
+		return
+	}
+	defer resp.Body.Close()
+	SprbusPublish("system:time:sync", map[string]interface{}{"ip": remoteIP(r), "status": resp.StatusCode})
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(w, resp.Body)
+}
+
+// SSH-key calls proxy to superd.
+func authorizedKeysHandler(w http.ResponseWriter, r *http.Request) {
+	body, _ := ioutil.ReadAll(r.Body)
+	c := http.Client{Transport: &http.Transport{
+		Dial: func(_, _ string) (net.Conn, error) { return net.Dial("unix", SuperdSocketPath) },
+	}}
+	defer c.CloseIdleConnections()
+	req, _ := http.NewRequest(r.Method, "http://localhost/authorizedKeys", bytes.NewReader(body))
+	resp, err := c.Do(req)
+	if err != nil {
+		http.Error(w, err.Error(), 502)
+		return
+	}
+	defer resp.Body.Close()
+	if r.Method == http.MethodPut {
+		var keys []string
+		_ = json.Unmarshal(body, &keys)
+		event := map[string]interface{}{"ip": remoteIP(r), "count": len(keys), "status": resp.StatusCode}
+		topic := "ssh:authorized_keys:added"
+		if resp.StatusCode != 200 {
+			topic = "ssh:authorized_keys:rejected"
+		}
+		SprbusPublish(topic, event)
+	}
+	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(w, resp.Body)
+}
+
 func callSuperdRestart(composePath string, target string) {
 	c := http.Client{}
 	c.Transport = &http.Transport{

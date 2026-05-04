@@ -1,6 +1,19 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.0.32
+**Features**
+- Add an authorized SSH key for the ubuntu user from the web UI (will not overwrite an existing `authorized_keys`)
+- Time sync: System Info shows router/browser drift with a Sync Now button; OTP setup warns when the clock is off
+- Enable `systemd-timesyncd` on raspbian, ubuntu and clearfog images
+- Update CoreDNS
+- Refresh mt7996 firmware in the installer
+**Fixes**
+- Workaround for uplink interface being down on boot (#471)
+- Devices: Add Device button now floats on web while scrolling, matching mobile
+- Wifi settings: checkbox rows wrap on narrow screens so all options are reachable on mobile
+- System Info: fix duplicate-key warning in Configs backup list and stop a runtime crash when `/time` is unavailable
+
 ## v1.0.31
 **Fixes**
 - Detect when uplink/downlink are misconfigured on a fresh install and prompt to fix

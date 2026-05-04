@@ -1,5 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 
+import { Platform } from 'react-native'
+
 import {
   View,
   Text,
@@ -465,6 +467,7 @@ const Devices = (props) => {
         size="sm"
         onPress={handleRedirect}
         bg="$primary500"
+        {...(Platform.OS === 'web' && { position: 'fixed' })}
       >
         <FabIcon as={AddIcon} mr="$1" />
         <FabLabel>Add Device</FabLabel>

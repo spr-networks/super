@@ -271,7 +271,7 @@ const WifiChannelParameters = ({
                 Configure Authentication Settings
               </Text>
 
-            <HStack space="md">
+            <HStack space="md" flexWrap="wrap" rowGap="$2">
 
             <Checkbox {...wpaOpenCheckboxProps} value={'wpa_open'}>
               <CheckboxIndicator mr="$2">

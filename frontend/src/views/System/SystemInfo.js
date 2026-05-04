@@ -28,6 +28,7 @@ import { ucFirst } from 'utils'
 import ReleaseInfo from 'components/System/Release'
 import ConfigsBackup from 'views/System/Configs'
 import Database from 'views/System/Database'
+import TimeSync from 'components/System/TimeSync'
 import { ListHeader } from 'components/List'
 
 
@@ -106,6 +107,7 @@ const SystemInfo = (props) => {
   return (
     <ScrollView h="$full" sx={{ '@md': { h: '92vh' } }}>
       <ReleaseInfo />
+      <TimeSync />
       <VStack space="md">
         <ListHeader title="System Info">
           <Button action="primary" size="sm" onPress={doRestart}>

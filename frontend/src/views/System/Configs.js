@@ -94,7 +94,7 @@ const ConfigsBackup = (props) => {
       <Box>
         <FlatList
           data={backups}
-          keyExtractor={(item) => item.Timestamp}
+          keyExtractor={(item) => `${item.Timestamp}-${item.Name}`}
           renderItem={({ item }) => (
             <ListItem>
               <Badge action="muted" variant="outline">

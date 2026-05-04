@@ -14,6 +14,10 @@ systemctl disable systemd-resolved
 rm -f /etc/resolv.conf
 echo nameserver 1.1.1.1 > /etc/resolv.conf
 
+# Enable systemd-timesyncd for NTP. Network-readiness handled by systemd.
+apt -y install --no-download --no-install-recommends systemd-timesyncd 2>/dev/null || true
+systemctl enable systemd-timesyncd 2>/dev/null || true
+
 # install docker
 apt -y install --no-download --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin git
 
@@ -76,6 +80,16 @@ cd /root/mt76
 git fetch --depth 1 origin 65bbd4c394a9d51f1ca5a0531166c22ff07d4e56
 git checkout 65bbd4c394a9d51f1ca5a0531166c22ff07d4e56
 cp -R /root/mt76/firmware/. /lib/firmware/mediatek/
+
+# Overlay newer mt7996 firmware on top of the pinned copy. Pinned to a known
+# master SHA (not master tip) so builds stay reproducible and can't break
+# unexpectedly when upstream pushes incompatible firmware.
+# https://github.com/openwrt/mt76/tree/master/firmware/mt7996
+MT7996_SHA=018f60316d4dd6b4e741874eda40e2dfaa29df3b
+git fetch --depth 1 origin $MT7996_SHA
+git checkout $MT7996_SHA -- firmware/mt7996
+mkdir -p /lib/firmware/mediatek/mt7996
+cp -R /root/mt76/firmware/mt7996/. /lib/firmware/mediatek/mt7996/
 
 # Add a bug fix for scatter/gather bugs with USB:
 echo "options mt76_usb disable_usb_sg=1" > /etc/modprobe.d/mt76_usb.conf

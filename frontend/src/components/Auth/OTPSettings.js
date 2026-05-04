@@ -23,6 +23,7 @@ import {
 import { api } from 'api'
 import { Base64 } from 'utils'
 import { ListHeader } from 'components/List'
+import TimeSync from 'components/System/TimeSync'
 
 let ApiBaseUrl = api.baseURL
 let TOKEN = ''
@@ -109,6 +110,8 @@ const OTPSettings = (props) => {
 
   return (
     <View>
+      {/* OTP requires accurate time — warn if SPR's clock drifts. */}
+      <TimeSync hideWhenSynced />
       <ListHeader title="OTP Settings" description={description}>
         <HStack space="sm" alignItems="center">
           <Button action="primary" size="sm" onPress={handleClickRegister}>
