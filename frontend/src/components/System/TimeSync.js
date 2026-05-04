@@ -30,10 +30,13 @@ const TimeSync = ({ hideWhenSynced = false }) => {
   // device that scans the QR (typically the same one in your hand) and the
   // server agree.
   const check = () =>
-    api.get('/time').then((r) => {
-      if (typeof r?.unix !== 'number') return
-      setDrift(r.unix - Math.floor(Date.now() / 1000))
-    })
+    api
+      .get('/time')
+      .then((r) => {
+        if (typeof r?.unix !== 'number') return
+        setDrift(r.unix - Math.floor(Date.now() / 1000))
+      })
+      .catch(() => {})
 
   useEffect(() => {
     check()
@@ -54,9 +57,8 @@ const TimeSync = ({ hideWhenSynced = false }) => {
       })
   }
 
-  if (drift === null) return null
-  const off = Math.abs(drift) > DRIFT_WARN_SECONDS
-  if (!off && hideWhenSynced) return null
+  const off = drift !== null && Math.abs(drift) > DRIFT_WARN_SECONDS
+  if (hideWhenSynced && !off) return null
 
   return (
     <Box
@@ -76,8 +78,9 @@ const TimeSync = ({ hideWhenSynced = false }) => {
             {off ? 'Clock mismatch with this device' : 'Router clock'}
           </Text>
           <Text size="sm" color="$muted500">
-            Router differs from this device by {drift > 0 ? '+' : ''}
-            {drift}s.
+            {drift === null
+              ? 'Router clock unavailable.'
+              : `Router differs from this device by ${drift > 0 ? '+' : ''}${drift}s.`}
             {off
               ? ' OTP and TLS depend on accurate time. Verify your device’s clock first, then sync the router if needed.'
               : ''}
