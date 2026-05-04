@@ -51,6 +51,16 @@ git checkout 65bbd4c394a9d51f1ca5a0531166c22ff07d4e56
 
 cp -R /root/mt76/firmware/. /lib/firmware/mediatek/
 
+# Overlay newer mt7996 firmware on top of the pinned copy. Pinned to a known
+# master SHA (not master tip) so builds stay reproducible and can't break
+# unexpectedly when upstream pushes incompatible firmware.
+# https://github.com/openwrt/mt76/tree/master/firmware/mt7996
+MT7996_SHA=018f60316d4dd6b4e741874eda40e2dfaa29df3b
+git fetch --depth 1 origin $MT7996_SHA
+git checkout $MT7996_SHA -- firmware/mt7996
+mkdir -p /lib/firmware/mediatek/mt7996
+cp -R /root/mt76/firmware/mt7996/. /lib/firmware/mediatek/mt7996/
+
 # set up ntpdate
 cat > /tmp/ntpdate.service << EOF
 [Unit]
