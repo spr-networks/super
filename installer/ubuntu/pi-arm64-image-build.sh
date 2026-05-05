@@ -17,7 +17,16 @@ DOCKER_DEFAULT_PLATFORM="" docker pull ubuntu:24.04
 docker run --privileged -v /dev:/dev -v $PWD/data:/data -v $PWD/scripts:/scripts/ -v $PWD/firmware:/firmware/ ubuntu:24.04 /scripts/go-pi.sh
 
 pushd data
-qemu-system-aarch64 -machine virt -cpu cortex-a72 -smp 2 -m 1G -initrd initrd -kernel vmlinuz -append "root=/dev/vda2 rootfstype=ext4 rw panic=0 net.ifnames=0 biosdevname=0 init=/pi-target-install.sh"   -drive file=spr.img,format=raw,if=none,id=hd0 -device virtio-blk-pci,drive=hd0  -netdev user,id=mynet -device virtio-net-pci,netdev=mynet -nographic
+qemu-system-aarch64 -machine virt -cpu cortex-a72 -smp 2 -m 1G -no-reboot \
+  -initrd initrd -kernel vmlinuz \
+  -append "root=/dev/vda2 rootfstype=ext4 rw panic=-1 net.ifnames=0 biosdevname=0 init=/pi-target-install.sh" \
+  -drive file=spr.img,format=raw,if=none,id=hd0 -device virtio-blk-pci,drive=hd0 \
+  -netdev user,id=mynet -device virtio-net-pci,netdev=mynet \
+  -nographic | tee /tmp/qemu.log
+if ! grep -q "===SPR_INSTALL_OK===" /tmp/qemu.log; then
+  echo "FATAL: pi-target-install.sh did not complete successfully" >&2
+  exit 1
+fi
 popd
 
 ./scripts/shrink.sh

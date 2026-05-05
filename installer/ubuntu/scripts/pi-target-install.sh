@@ -37,10 +37,15 @@ mount -t cgroup -o all cgroup /sys/fs/cgroup
 mkdir -p /sys/fs/cgroup/devices
 mount -t cgroup -o devices devices /sys/fs/cgroup/devices
 
-dockerd  &
 containerd &
+CONTAINERD_PID=$!
+dockerd &
+DOCKERD_PID=$!
 
 cd /home/spr/super
+
+# wait for dockerd to be ready before pulling
+until docker info >/dev/null 2>&1; do sleep 1; done
 
 # pull in default containers
 docker compose -f docker-compose.yml  -f dyndns/docker-compose.yml -f ppp/docker-compose.yml -f wifi_uplink/docker-compose.yml pull
@@ -247,5 +252,15 @@ EOF
 
 # remove script
 rm /pi-target-install.sh
+
+# gracefully stop docker + containerd so image content store is flushed
+kill -TERM $DOCKERD_PID
+wait $DOCKERD_PID
+kill -TERM $CONTAINERD_PID
+wait $CONTAINERD_PID
 sync
-halt -f
+
+# success marker for the outer build script to grep
+echo "===SPR_INSTALL_OK==="
+
+poweroff -f
