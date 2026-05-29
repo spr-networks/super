@@ -65,6 +65,16 @@ table inet filter {
     type ifname;
   }
 
+  # this set allows dhcp clients from these setup interfaces
+  set setup_interfaces_dhcp {
+    type ifname;
+  }
+
+  # this set contains setup interfaces for ssh only to aid setup
+  set setup_ssh_interfaces {
+    type ifname;
+  }
+
   # this set contains only the wired interfaces, for DHCP whitelisting.
   # without knowing the mac address for dhcp_access ahead of time.
   # VLANs are *not* placed here as VLANs are currently 1:1 per device.
@@ -295,7 +305,7 @@ table inet filter {
     # Wired lan
     iifname @wired_lan_interfaces udp dport 67 counter accept
     #accept dhcp, dns from setup interfaces also
-    iifname @setup_interfaces counter udp dport {53, 67} accept
+    iifname @setup_interfaces_dhcp counter udp dport {53, 67} accept
 
     # Authorized wireless stations & MACs. They do not have an ip address yet
     counter udp dport 67 iifname . ether saddr vmap @dhcp_access
