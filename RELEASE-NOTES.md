@@ -1,6 +1,11 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.0.34
+**Fixes**
+- Fix ubuntu installer
+- Fix guest network handling with mesh
+
 ## v1.0.33
 **Fixes**
 - Fix display for 802.11be in wireless clients page
