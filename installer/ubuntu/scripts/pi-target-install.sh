@@ -224,6 +224,7 @@ sudo mv runsc containerd-shim-runsc-v1 /usr/local/bin
 cat > /etc/docker/daemon.json << EOF
 {
     "iptables": false,
+    "userland-proxy": false,
     "runtimes": {
         "runsc": {
             "path": "/usr/local/bin/runsc",
