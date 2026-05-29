@@ -106,6 +106,16 @@ echo "network: {config: disabled}" > /etc/cloud/cloud.cfg.d/99-disable-network-c
 systemctl disable dhcpcd.service dhcpcd@.service 2>/dev/null || true
 systemctl mask dhcpcd.service dhcpcd@.service 2>/dev/null || true
 
+# disable NetworkManager - Debian/RaspiOS Trixie uses it by default to manage
+# links and run DHCP on the WAN. SPR owns networking, so it is redundant.
+systemctl disable NetworkManager 2>/dev/null || true
+systemctl mask NetworkManager NetworkManager-wait-online.service NetworkManager-dispatcher.service 2>/dev/null || true
+
+# disable systemd-networkd (systemd's own DHCP client) - SPR runs its own DHCP.
+# Mask the socket and wait-online unit too so nothing pulls networkd back in.
+systemctl disable systemd-networkd.service systemd-networkd.socket systemd-networkd-wait-online.service 2>/dev/null || true
+systemctl mask systemd-networkd.service systemd-networkd.socket systemd-networkd-wait-online.service 2>/dev/null || true
+
 # Enable systemd-timesyncd for NTP. Network-readiness handled by systemd.
 apt -y install --no-download --no-install-recommends systemd-timesyncd 2>/dev/null || true
 systemctl enable systemd-timesyncd 2>/dev/null || true

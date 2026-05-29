@@ -12,21 +12,24 @@ cp ./data/spr.clean.img ./data/spr.img
 
 ./scripts/resize.sh
 
-#use host for next ubuntu
-DOCKER_DEFAULT_PLATFORM="" docker pull ubuntu:24.04
-docker run --privileged -v /dev:/dev -v $PWD/data:/data -v $PWD/scripts:/scripts/ -v $PWD/firmware:/firmware/ ubuntu:24.04 /scripts/go-pi.sh
-
-pushd data
-qemu-system-aarch64 -machine virt -cpu cortex-a72 -smp 2 -m 1G -no-reboot \
-  -initrd initrd -kernel vmlinuz \
-  -append "root=/dev/vda2 rootfstype=ext4 rw panic=-1 net.ifnames=0 biosdevname=0 init=/pi-target-install.sh" \
-  -drive file=spr.img,format=raw,if=none,id=hd0 -device virtio-blk-pci,drive=hd0 \
-  -netdev user,id=mynet -device virtio-net-pci,netdev=mynet \
-  -nographic | tee /tmp/qemu.log
-if ! grep -q "===SPR_INSTALL_OK===" /tmp/qemu.log; then
-  echo "FATAL: pi-target-install.sh did not complete successfully" >&2
-  exit 1
-fi
-popd
+# Run cross-install and QEMU in a single container so the loop device
+# created by mount.sh is released in the same kernel context before QEMU
+# opens the image.  spr-pi-builder already has qemu-system-aarch64.
+docker run --privileged -v /dev:/dev -v $PWD/data:/data -v $PWD/scripts:/scripts/ -v $PWD/firmware:/firmware/ spr-pi-builder bash -c '
+  set -e
+  /scripts/go-pi.sh
+  qemu-system-aarch64 -machine virt -cpu cortex-a72 -smp 2 -m 1G -no-reboot \
+    -initrd /data/initrd -kernel /data/vmlinuz \
+    -append "root=/dev/vda2 rootfstype=ext4 rw panic=-1 net.ifnames=0 biosdevname=0 init=/pi-target-install.sh" \
+    -drive if=none,id=hd0,file=/data/spr.img,format=raw \
+    -device virtio-blk-pci,drive=hd0 \
+    -netdev user,id=mynet \
+    -device virtio-net-pci,netdev=mynet,romfile= \
+    -nographic | tee /tmp/qemu.log
+  if ! grep -q "===SPR_INSTALL_OK===" /tmp/qemu.log; then
+    echo "FATAL: pi-target-install.sh did not complete successfully" >&2
+    exit 1
+  fi
+'
 
 ./scripts/shrink.sh
