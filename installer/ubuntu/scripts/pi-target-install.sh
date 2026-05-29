@@ -14,10 +14,6 @@ systemctl disable systemd-resolved
 rm -f /etc/resolv.conf
 echo nameserver 1.1.1.1 > /etc/resolv.conf
 
-# Enable systemd-timesyncd for NTP. Network-readiness handled by systemd.
-apt -y install --no-download --no-install-recommends systemd-timesyncd 2>/dev/null || true
-systemctl enable systemd-timesyncd 2>/dev/null || true
-
 # install docker
 apt -y install --no-download --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin git
 
@@ -57,7 +53,8 @@ dpkg --configure -a
 
 # sync with install.sh and cross-install.sh
 apt -y upgrade --no-download
-apt -y install --no-download --no-install-recommends nftables wireless-regdb ethtool nano iw cloud-utils fdisk tmux conntrack jq inotify-tools tcpdump iperf3
+apt -y install --no-download --no-install-recommends nftables wireless-regdb ethtool nano iw cloud-utils fdisk tmux conntrack jq inotify-tools tcpdump iperf3 systemd-timesyncd
+systemctl enable systemd-timesyncd 2>/dev/null || true
 # install docker and buildx
 apt -y install --no-download --no-install-recommends r8125-dkms linux-headers-raspi
 
