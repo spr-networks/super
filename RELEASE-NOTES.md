@@ -3,6 +3,7 @@
 
 ## v1.0.33
 **Fixes**
+- Fix display for 802.11be in wireless clients page
 - Relax installer restrictions with API access from wired ports
 - Update 6.18 kernel for security fixes
 
