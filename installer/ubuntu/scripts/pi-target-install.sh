@@ -35,7 +35,7 @@ mount -t cgroup -o devices devices /sys/fs/cgroup/devices
 
 containerd &
 CONTAINERD_PID=$!
-dockerd &
+dockerd --iptables=false --ip6tables=false --bridge=none --userland-proxy=false &
 DOCKERD_PID=$!
 
 cd /home/spr/super
@@ -181,9 +181,6 @@ umount /boot/firmware
 rmdir /boot/firmware
 
 # cleanup
-
-#remove old kernel from base image (update available)
-apt-get remove -y linux-image-6.8.0-1031-raspi linux-modules-6.8.0-1031-raspi
 
 # remove large default packages
 apt-get remove -y python3-botocore
