@@ -130,7 +130,9 @@ const WifiClients = (props) => {
     if (!txrate) {
       return '802.11'
     }
-    if (txrate.includes('[HE]')) {
+    if (txrate.includes('[EHT]')) {
+      return '802.11be'
+    } else if (txrate.includes('[HE]')) {
       return '802.11ax'
     } else if (txrate.includes('[VHT]')) {
       return '802.11ac'

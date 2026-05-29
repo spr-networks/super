@@ -18,8 +18,15 @@ services:
         tags:
         - ghcr.io/spr-networks/super_dyndns:latest${RELEASE_CHANNEL:-}
         - ghcr.io/spr-networks/super_dyndns:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
-    network_mode: bridge
+    networks:
+      - dyndns_net
     logging: *default-logging
     volumes:
       - "${SUPERDIR}/state/plugins/dyndns/:/state/plugins/dyndns/"
       - "${SUPERDIR}/configs/dyndns/:/configs/dyndns/"
+
+networks:
+  dyndns_net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_icc: "false"

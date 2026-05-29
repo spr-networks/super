@@ -667,7 +667,15 @@ func addSetupInterface(iface string) {
 }
 
 func deleteSetupInterface(iface string) {
-	exec.Command("nft", "add", "element", "inet", "filter", "setup_interfaces", "{", iface, "}").Run()
+	exec.Command("nft", "delete", "element", "inet", "filter", "setup_interfaces", "{", iface, "}").Run()
+}
+
+func addSetupDHCPInterface(iface string) {
+	exec.Command("nft", "add", "element", "inet", "filter", "setup_interfaces_dhcp", "{", iface, "}").Run()
+}
+
+func deleteSetupDHCPInterface(iface string) {
+	exec.Command("nft", "delete", "element", "inet", "filter", "setup_interfaces_dhcp", "{", iface, "}").Run()
 }
 
 func addLanInterface(iface string) {

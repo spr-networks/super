@@ -2903,6 +2903,29 @@ func ipIfaceMappings(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(gIfaceMap)
 }
 
+func getPhysicalInterfaces() []string {
+	physical := []string{}
+	links, err := netlink.LinkList()
+	if err != nil {
+		log.Println("failed to list links via netlink", err)
+		return physical
+	}
+	for _, link := range links {
+		attrs := link.Attrs()
+		if link.Type() != "device" {
+			continue
+		}
+		if attrs.EncapType != "ether" {
+			continue
+		}
+		if attrs.Name == SetupAP {
+			continue
+		}
+		physical = append(physical, attrs.Name)
+	}
+	return physical
+}
+
 func setupAPInit() {
 	//kick off the the firewall rules for each configured subnet
 	//for the setup ap
@@ -2919,6 +2942,11 @@ func setupAPInit() {
 	}
 
 	addSetupInterface(SetupAP)
+	addSetupDHCPInterface(SetupAP)
+
+	for _, iface := range getPhysicalInterfaces() {
+		addSetupInterface(iface)
+	}
 
 }
 

@@ -199,6 +199,12 @@ func PluginRequestHandlerCert(proxy *httputil.ReverseProxy) func(http.ResponseWr
 	}
 }
 
+const PluginsHostSuffix = ".plugins.spr.lan"
+
+func notStaticPrefix(r *http.Request, _ *mux.RouteMatch) bool {
+	return !strings.HasPrefix(r.URL.Path, "/static/")
+}
+
 func PluginEnabled(name string) bool {
 	for _, entry := range config.Plugins {
 		if entry.Name == name && entry.Enabled == true {
@@ -425,6 +431,12 @@ func PluginRoutes(external_router_authenticated *mux.Router, external_router_pub
 			// for future consideration
 			//external_router_public.HandleFunc("/admin/custom_plugin/ws/"+entry.URI+"/"+"{rest:.*}", WebSocketPluginHandler(entry))
 
+		}
+
+		vhost := entry.URI + PluginsHostSuffix
+		external_router_authenticated.Host(vhost).MatcherFunc(notStaticPrefix).Handler(proxy)
+		if entry.HasUI {
+			external_router_public.Host(vhost).PathPrefix("/static/").Handler(proxy)
 		}
 	}
 

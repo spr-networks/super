@@ -1,6 +1,12 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.0.33
+**Fixes**
+- Fix display for 802.11be in wireless clients page
+- Relax installer restrictions with API access from wired ports
+- Update 6.18 kernel for security fixes
+
 ## v1.0.32
 **Features**
 - Add an authorized SSH key for the ubuntu user from the web UI (will not overwrite an existing `authorized_keys`)
