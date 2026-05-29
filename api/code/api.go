@@ -2220,6 +2220,20 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 			saveDevicesJson(devices)
 			doReloadPSKFiles()
 		}
+	} else if guest_wifi && pska.Router != "" {
+		if _, known := devices[pska.MAC]; !known {
+			now := time.Now().String()
+			devices[pska.MAC] = DeviceEntry{
+				MAC:           pska.MAC,
+				Groups:        []string{},
+				DeviceTags:    []string{"guest"},
+				Policies:      []string{"wan", "dns", "noapi", "guestonly"},
+				DHCPFirstTime: now,
+				DHCPLastTime:  now,
+			}
+			saveDevicesJson(devices)
+			pska.Status = "Provisioned mesh guest"
+		}
 	}
 
 	updateMeshPluginConnect(pska)
