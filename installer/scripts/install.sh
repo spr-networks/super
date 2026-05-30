@@ -80,6 +80,7 @@ echo "options mt76_usb disable_usb_sg=1" > /etc/modprobe.d/mt76_usb.conf
 cat > /etc/docker/daemon.json << EOF
 {
     "iptables": false,
+    "userland-proxy": false,
     "runtimes": {
         "runsc": {
             "path": "/usr/local/bin/runsc",

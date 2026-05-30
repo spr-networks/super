@@ -42,7 +42,7 @@ echo "nameserver 1.1.1.1" > /etc/resolv.conf
 echo network: {config: disabled} > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
 
 # disable iptables for  docker
-echo -e "{\n  \"iptables\": false\n}" > /etc/docker/daemon.json
+echo -e "{\n  \"iptables\": false,\n  \"userland-proxy\": false\n}" > /etc/docker/daemon.json
 
 
 cp -R base/template_configs configs

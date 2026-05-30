@@ -1,6 +1,12 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.0.34
+**Fixes**
+- Fix guest network handling with mesh
+**Note**
+- Disable ubuntu installer in favor of raspbian as main supported OS.
+
 ## v1.0.33
 **Fixes**
 - Fix display for 802.11be in wireless clients page

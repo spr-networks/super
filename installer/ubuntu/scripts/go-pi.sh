@@ -16,11 +16,14 @@ mkdir -p /mnt/fs/lib/firmware/ath12k/QCN9274/hw2.0
 cp /firmware/ath12k/* /mnt/fs/lib/firmware/ath12k/QCN9274/hw2.0/
 
 # disable iface renaming on the boot image.
-if ! grep -q "net.ifnames=0 biosdevname=0" /mnt/boot/firmware/cmdline.txt; then
-  sed -i '$s/$/ net.ifnames=0 biosdevname=0/' /mnt/boot/firmware/cmdline.txt
+# cmdline.txt location varies by base image: older images put it at the top of
+# the firmware partition, resolute moved it into the current/ slot directory.
+CMDLINE=$(ls /mnt/boot/firmware/current/cmdline.txt /mnt/boot/firmware/cmdline.txt 2>/dev/null | head -1)
+if [ -n "$CMDLINE" ] && ! grep -q "net.ifnames=0 biosdevname=0" "$CMDLINE"; then
+  sed -i '$s/$/ net.ifnames=0 biosdevname=0/' "$CMDLINE"
 fi
 
-cp /mnt/fs/boot/initrd.img /data/initrd
-cp /mnt/fs/boot/vmlinuz /data/vmlinuz
+cp /mnt/boot/firmware/current/initrd.img /data/initrd 2>/dev/null || cp /mnt/fs/boot/initrd.img /data/initrd
+cp /mnt/boot/firmware/current/vmlinuz /data/vmlinuz 2>/dev/null || cp /mnt/fs/boot/vmlinuz /data/vmlinuz
 
 /scripts/unmount.sh
