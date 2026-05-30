@@ -1,6 +1,10 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.0.35
+**Fixes**
+- Add MLO failed neighbor scan patch
+
 ## v1.0.34
 **Fixes**
 - Fix guest network handling with mesh
