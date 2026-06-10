@@ -491,7 +491,6 @@ func TestDeleteForwardingRule(t *testing.T) {
 				return string(out)
 			}
 
-			// First add the rule and confirm it landed in the kernel.
 			err := AddForwardingRule(tt.protocol, tt.srcIP, tt.srcPort, tt.dstIP, tt.dstPort)
 			if err != nil {
 				t.Fatalf("Failed to add rule before deletion test: %v", err)
@@ -504,11 +503,9 @@ func TestDeleteForwardingRule(t *testing.T) {
 				t.Fatalf("forwarding rule for %s not present in %s after add", tt.srcIP, mapName)
 			}
 
-			// Now delete it. The google/nftables library has a known issue with
-			// GetSets for concatenated types which can surface as "conn.Receive:
-			// netlink receive: invalid argument" even when the delete succeeded,
-			// so the error alone is not trusted either way - the kernel state
-			// check below is authoritative.
+			// google/nftables can report "conn.Receive: netlink receive: invalid
+			// argument" for concatenated types even when the delete succeeded, so
+			// the kernel state check below is authoritative, not the error.
 			err = DeleteForwardingRule(tt.protocol, tt.srcIP, tt.srcPort, tt.dstIP, tt.dstPort)
 			if err != nil {
 				if strings.Contains(err.Error(), "conn.Receive: netlink receive: invalid argument") {
@@ -633,20 +630,17 @@ func TestAddServicePort(t *testing.T) {
 func TestAddVmap(t *testing.T) {
 	InitNFTClient()
 
-	// Test 1: Simple verdict map
 	err := AddPortVerdictToMap("inet", "filter", "lan_tcp_accept", "4040", "accept")
 	if err != nil {
 		t.Fatalf("AddPortVerdictToMap() error = %v", err)
 	}
 	t.Cleanup(func() { _ = DeletePortFromMap("inet", "filter", "lan_tcp_accept", "4040") })
 
-	// Verify the element was added
 	client := GetNFTClient()
 	if err := client.GetMapElement(TableFamilyInet, "filter", "lan_tcp_accept", PortToBytes("4040")); err != nil {
 		t.Errorf("GetMapElement() error = %v, element should exist after AddPortVerdictToMap", err)
 	}
 
-	// Test 2: A simple non-verdict map
 	t.Run("tcpanyfwd", func(t *testing.T) {
 		// This map is ipv4_addr : ipv4_addr (no concatenation)
 		err := AddForwardingRule("tcp", "192.168.1.50", "any", "10.0.0.50", "any")
@@ -907,7 +901,6 @@ func TestDropPrivateRFC1918(t *testing.T) {
 		t.Logf("drop_private_rfc1918 elements (JSON): %s", string(jsonData))
 	}
 
-	// The authoritative check is the nft CLI listing, asserted unconditionally.
 	cmd := exec.Command("nft", "list", "map", "inet", "filter", "drop_private_rfc1918")
 	output, cmdErr := cmd.Output()
 	if cmdErr != nil {

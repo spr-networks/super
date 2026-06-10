@@ -1753,8 +1753,8 @@ func AddRuleToChain(family, tableName, chainName, rule string) error {
 
 // addRuleExprs adds (append) or inserts (prepend) a rule built from raw
 // nftables expressions. The expression sequences used by the typed builders
-// below replicate the exact bytecode `nft --debug=netlink` emits for the
-// legacy rule strings; equivalence is verified by the differential tests.
+// below replicate the bytecode `nft --debug=netlink` emits for the legacy
+// rule strings.
 func addRuleExprs(family, tableName, chainName string, exprs []expr.Any, insert bool) error {
 	f, client, err := withFamily(family)
 	if err != nil {
