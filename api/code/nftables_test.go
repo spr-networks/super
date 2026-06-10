@@ -11,57 +11,77 @@ func TestGetTable(t *testing.T) {
 	// Initialize the NFT client
 	client := NewNFTClient()
 
+	// GetTable is get-or-create, so asserting on its return value alone proves
+	// nothing. For existing tables, first confirm the table is really in the
+	// kernel (so GetTable exercises its lookup path), then check the handle.
 	tests := []struct {
-		name       string
-		family     TableFamily
-		tableName  string
-		shouldFail bool
+		name      string
+		family    TableFamily
+		familyStr string
+		tableName string
 	}{
 		{
-			name:       "Get inet filter table",
-			family:     TableFamilyInet,
-			tableName:  "filter",
-			shouldFail: false,
+			name:      "Get inet filter table",
+			family:    TableFamilyInet,
+			familyStr: "inet",
+			tableName: "filter",
 		},
 		{
-			name:       "Get inet nat table",
-			family:     TableFamilyInet,
-			tableName:  "nat",
-			shouldFail: false,
+			name:      "Get inet nat table",
+			family:    TableFamilyInet,
+			familyStr: "inet",
+			tableName: "nat",
 		},
 		{
-			name:       "Get ip accounting table",
-			family:     TableFamilyIP,
-			tableName:  "accounting",
-			shouldFail: false,
-		},
-		{
-			name:       "Get inet mangle table",
-			family:     TableFamilyInet,
-			tableName:  "mangle",
-			shouldFail: false,
+			name:      "Get inet mangle table",
+			family:    TableFamilyInet,
+			familyStr: "inet",
+			tableName: "mangle",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			table := client.GetTable(tt.family, tt.tableName)
-			if table == nil && !tt.shouldFail {
-				t.Errorf("GetTable() returned nil for %s %s", familyToString(tt.family), tt.tableName)
-			} else if table != nil && tt.shouldFail {
-				t.Errorf("GetTable() should have failed for %s %s", familyToString(tt.family), tt.tableName)
+			if err := CheckTableExists(tt.familyStr, tt.tableName); err != nil {
+				t.Fatalf("fixture table %s %s missing from kernel: %v", tt.familyStr, tt.tableName, err)
 			}
 
-			if table != nil {
-				if table.Name != tt.tableName {
-					t.Errorf("Table name mismatch: got %s, want %s", table.Name, tt.tableName)
-				}
-				if uint32(table.Family) != uint32(tt.family) {
-					t.Errorf("Table family mismatch: got %d, want %d", table.Family, tt.family)
-				}
+			table := client.GetTable(tt.family, tt.tableName)
+			if table == nil {
+				t.Fatalf("GetTable() returned nil for %s %s", familyToString(tt.family), tt.tableName)
+			}
+			if table.Name != tt.tableName {
+				t.Errorf("Table name mismatch: got %s, want %s", table.Name, tt.tableName)
+			}
+			if uint32(table.Family) != uint32(tt.family) {
+				t.Errorf("Table family mismatch: got %d, want %d", table.Family, tt.family)
 			}
 		})
 	}
+
+	// GetTable on a missing table queues an AddTable on the connection; it only
+	// reaches the kernel on the next Flush. Verify that get-or-create behavior
+	// explicitly, with cleanup.
+	t.Run("get-or-create on missing table", func(t *testing.T) {
+		const tmpTable = "test_getorcreate"
+		_ = exec.Command("nft", "delete", "table", "ip", tmpTable).Run()
+		if err := CheckTableExists("ip", tmpTable); err == nil {
+			t.Fatalf("table ip %s unexpectedly exists before GetTable", tmpTable)
+		}
+
+		table := client.GetTable(TableFamilyIP, tmpTable)
+		if table == nil {
+			t.Fatal("GetTable() returned nil for missing table, want created handle")
+		}
+		if err := client.conn.Flush(); err != nil {
+			t.Fatalf("Flush() after GetTable error = %v", err)
+		}
+		t.Cleanup(func() { _ = exec.Command("nft", "delete", "table", "ip", tmpTable).Run() })
+
+		if err := CheckTableExists("ip", tmpTable); err != nil {
+			t.Errorf("GetTable did not create missing table after Flush: %v", err)
+		}
+	})
 }
 
 func TestListTables(t *testing.T) {
@@ -461,37 +481,45 @@ func TestDeleteForwardingRule(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// First add the rule
+			// The port-specific forwarding rules live in inet nat tcpfwd/udpfwd.
+			mapName := tt.protocol + "fwd"
+			listMap := func() string {
+				out, err := exec.Command("nft", "list", "map", "inet", "nat", mapName).CombinedOutput()
+				if err != nil {
+					t.Fatalf("nft list map inet nat %s: %v\n%s", mapName, err, out)
+				}
+				return string(out)
+			}
+
+			// First add the rule and confirm it landed in the kernel.
 			err := AddForwardingRule(tt.protocol, tt.srcIP, tt.srcPort, tt.dstIP, tt.dstPort)
 			if err != nil {
 				t.Fatalf("Failed to add rule before deletion test: %v", err)
 			}
-
-			// Skip verification due to GetSetElements issue with concatenated types
-
-			// Build the same key that DeleteForwardingRule will use
-			var key []byte
-			if tt.dstPort == "any" {
-				key = IPToBytes(tt.srcIP)
-			} else {
-				key = append(IPToBytes(tt.srcIP), PortToBytes(tt.srcPort)...)
+			t.Cleanup(func() {
+				_ = exec.Command("nft", "delete", "element", "inet", "nat", mapName,
+					"{", tt.srcIP, ".", tt.srcPort, "}").Run()
+			})
+			if !strings.Contains(listMap(), tt.srcIP) {
+				t.Fatalf("forwarding rule for %s not present in %s after add", tt.srcIP, mapName)
 			}
-			t.Logf("Delete key: %v (len=%d)", key, len(key))
 
-			// Now delete it
+			// Now delete it. The google/nftables library has a known issue with
+			// GetSets for concatenated types which can surface as "conn.Receive:
+			// netlink receive: invalid argument" even when the delete succeeded,
+			// so the error alone is not trusted either way - the kernel state
+			// check below is authoritative.
 			err = DeleteForwardingRule(tt.protocol, tt.srcIP, tt.srcPort, tt.dstIP, tt.dstPort)
 			if err != nil {
-				// The google/nftables library has a known issue with GetSets for concatenated types
-				// which causes "conn.Receive: netlink receive: invalid argument" errors.
-				// However, the actual delete operation typically succeeds.
-				// This is a limitation of the library, not our code.
 				if strings.Contains(err.Error(), "conn.Receive: netlink receive: invalid argument") {
-					t.Logf("Expected error due to google/nftables concatenated type limitation: %v", err)
-					t.Log("Note: The delete operation likely succeeded despite this error")
+					t.Logf("Known google/nftables concatenated type error: %v", err)
 				} else {
-					// This is an unexpected error
 					t.Errorf("DeleteForwardingRule() unexpected error = %v", err)
 				}
+			}
+
+			if strings.Contains(listMap(), tt.srcIP) {
+				t.Errorf("forwarding rule for %s still present in %s after DeleteForwardingRule", tt.srcIP, mapName)
 			}
 		})
 	}
@@ -605,27 +633,34 @@ func TestAddServicePort(t *testing.T) {
 func TestAddVmap(t *testing.T) {
 	InitNFTClient()
 
-	// Test 1: Simple verdict map (working)
+	// Test 1: Simple verdict map
 	err := AddPortVerdictToMap("inet", "filter", "lan_tcp_accept", "4040", "accept")
 	if err != nil {
 		t.Fatalf("AddPortVerdictToMap() error = %v", err)
 	}
+	t.Cleanup(func() { _ = DeletePortFromMap("inet", "filter", "lan_tcp_accept", "4040") })
 
-	// Try to verify the element was added
+	// Verify the element was added
 	client := GetNFTClient()
-	exists := client.GetMapElement(TableFamilyInet, "filter", "lan_tcp_accept", PortToBytes("4040"))
-	if exists != nil {
-		t.Logf("Element verification failed: %v", exists)
-	} else {
-		t.Log("Element successfully added and verified")
+	if err := client.GetMapElement(TableFamilyInet, "filter", "lan_tcp_accept", PortToBytes("4040")); err != nil {
+		t.Errorf("GetMapElement() error = %v, element should exist after AddPortVerdictToMap", err)
 	}
 
-	// Test 2: Try a simple non-verdict map
+	// Test 2: A simple non-verdict map
 	t.Run("tcpanyfwd", func(t *testing.T) {
 		// This map is ipv4_addr : ipv4_addr (no concatenation)
 		err := AddForwardingRule("tcp", "192.168.1.50", "any", "10.0.0.50", "any")
 		if err != nil {
-			t.Errorf("AddForwardingRule(any) failed: %v", err)
+			t.Fatalf("AddForwardingRule(any) failed: %v", err)
+		}
+		t.Cleanup(func() { _ = DeleteForwardingRule("tcp", "192.168.1.50", "any", "10.0.0.50", "any") })
+
+		out, err := exec.Command("nft", "list", "map", "inet", "nat", "tcpanyfwd").CombinedOutput()
+		if err != nil {
+			t.Fatalf("nft list map inet nat tcpanyfwd: %v\n%s", err, out)
+		}
+		if !strings.Contains(string(out), "192.168.1.50") {
+			t.Errorf("forwarding entry not found in tcpanyfwd after AddForwardingRule:\n%s", out)
 		}
 	})
 }
@@ -655,6 +690,10 @@ func TestInterfaceRanges(t *testing.T) {
 		if err1 != nil {
 			t.Fatalf("Failed to add first entry: %v", err1)
 		}
+		t.Cleanup(func() {
+			_ = DeleteElementFromMapComplex("inet", "filter", "dns_access", []string{"192.168.1.100", "eth0"})
+			_ = DeleteElementFromMapComplex("inet", "filter", "dns_access", []string{"192.168.1.101", "eth1"})
+		})
 
 		// Check intermediate state
 		cmd := exec.Command("nft", "list", "map", "inet", "filter", "dns_access")
@@ -677,7 +716,15 @@ func TestInterfaceRanges(t *testing.T) {
 		mapOutput := string(output2)
 		t.Logf("Consecutive IPs dns_access map contents:\n%s", mapOutput)
 
-		// Check for unexpected ranges
+		// Check for unexpected ranges. The historical bug created open-ended IP
+		// ranges (e.g. 192.168.1.100-255.255.255.255) when single IPs were added
+		// to interval maps, so the IP-range checks are the important ones.
+		if strings.Contains(mapOutput, "192.168.1.100-") || strings.Contains(mapOutput, "192.168.1.101-") {
+			t.Error("Unexpected IP range found in map - single IPs should not become interval starts")
+		}
+		if strings.Contains(mapOutput, "-255.255.255.255") {
+			t.Error("Open-ended IP range found in map - interval encoding regression")
+		}
 		if strings.Contains(mapOutput, "eth0\"-\"eth1") || strings.Contains(mapOutput, "\"eth0\"-\"eth1\"") {
 			t.Error("Unexpected interface range found in map - interfaces should be individual entries")
 		}
@@ -688,6 +735,10 @@ func TestInterfaceRanges(t *testing.T) {
 		// Use non-consecutive IPs and different interfaces
 		err1 := AddIPIfaceVerdictElement("inet", "filter", "dns_access", "192.168.5.50", "wlan0", "accept")
 		err2 := AddIPIfaceVerdictElement("inet", "filter", "dns_access", "10.0.0.25", "docker0", "accept")
+		t.Cleanup(func() {
+			_ = DeleteElementFromMapComplex("inet", "filter", "dns_access", []string{"192.168.5.50", "wlan0"})
+			_ = DeleteElementFromMapComplex("inet", "filter", "dns_access", []string{"10.0.0.25", "docker0"})
+		})
 
 		if err1 != nil {
 			t.Fatalf("Failed to add first non-consecutive entry: %v", err1)
@@ -726,6 +777,10 @@ func TestInterfaceRanges(t *testing.T) {
 		// Add two entries to ethernet_filter (which does NOT have flags interval)
 		err1 := AddMACVerdictElement("inet", "filter", "ethernet_filter", "192.168.1.100", "eth0", "aa:bb:cc:dd:ee:01", "accept")
 		err2 := AddMACVerdictElement("inet", "filter", "ethernet_filter", "192.168.1.101", "eth1", "aa:bb:cc:dd:ee:02", "accept")
+		t.Cleanup(func() {
+			_ = DeleteMACVerdictElement("inet", "filter", "ethernet_filter", "192.168.1.100", "eth0", "aa:bb:cc:dd:ee:01", "accept")
+			_ = DeleteMACVerdictElement("inet", "filter", "ethernet_filter", "192.168.1.101", "eth1", "aa:bb:cc:dd:ee:02", "accept")
+		})
 
 		if err1 != nil {
 			t.Fatalf("Failed to add first ethernet_filter entry: %v", err1)
@@ -843,37 +898,39 @@ func TestDropPrivateRFC1918(t *testing.T) {
 	t.Logf("drop_private_rfc1918 map found: KeyType=%v, DataType=%v, IsMap=%v, Interval=%v",
 		dropMap.KeyType, dropMap.DataType, dropMap.IsMap, dropMap.Interval)
 
-	// Test listing the map contents
+	// ListMapElements may fail on interval maps (known library limitation);
+	// log either way, but never let it gate the real assertions below.
 	jsonData, err := client.ListMapElements(TableFamilyInet, "filter", "drop_private_rfc1918")
 	if err != nil {
-		t.Logf("Failed to list drop_private_rfc1918 elements: %v", err)
-		// This is expected due to interval maps, use nft command instead
-		cmd := exec.Command("nft", "list", "map", "inet", "filter", "drop_private_rfc1918")
-		output, cmdErr := cmd.Output()
-		if cmdErr != nil {
-			t.Fatalf("Failed to list map with nft command: %v", cmdErr)
-		}
-		t.Logf("drop_private_rfc1918 map contents:\n%s", string(output))
-
-		// Verify it contains expected RFC1918 ranges
-		mapOutput := string(output)
-		expectedRanges := []string{
-			"10.0.0.0/8",
-			"172.16.0.0/12",
-			"192.168.0.0/16",
-		}
-		for _, cidr := range expectedRanges {
-			if !strings.Contains(mapOutput, cidr) {
-				t.Errorf("Expected CIDR range %s not found in drop_private_rfc1918 map", cidr)
-			}
-		}
-
-		// Verify the verdict jumps to restrict_upstream_private_addresses
-		if !strings.Contains(mapOutput, "restrict_upstream_private_addresses") {
-			t.Error("Expected verdict 'jump restrict_upstream_private_addresses' not found")
-		}
+		t.Logf("ListMapElements failed (known interval map limitation): %v", err)
 	} else {
 		t.Logf("drop_private_rfc1918 elements (JSON): %s", string(jsonData))
+	}
+
+	// The authoritative check is the nft CLI listing, asserted unconditionally.
+	cmd := exec.Command("nft", "list", "map", "inet", "filter", "drop_private_rfc1918")
+	output, cmdErr := cmd.Output()
+	if cmdErr != nil {
+		t.Fatalf("Failed to list map with nft command: %v", cmdErr)
+	}
+	mapOutput := string(output)
+	t.Logf("drop_private_rfc1918 map contents:\n%s", mapOutput)
+
+	// Verify it contains expected RFC1918 ranges
+	expectedRanges := []string{
+		"10.0.0.0/8",
+		"172.16.0.0/12",
+		"192.168.0.0/16",
+	}
+	for _, cidr := range expectedRanges {
+		if !strings.Contains(mapOutput, cidr) {
+			t.Errorf("Expected CIDR range %s not found in drop_private_rfc1918 map", cidr)
+		}
+	}
+
+	// Verify the verdict jumps to restrict_upstream_private_addresses
+	if !strings.Contains(mapOutput, "restrict_upstream_private_addresses") {
+		t.Error("Expected verdict 'jump restrict_upstream_private_addresses' not found")
 	}
 
 	// Since this is a pre-populated map with static ranges, we won't modify it in tests
@@ -1121,29 +1178,42 @@ func TestAPIBlockSet(t *testing.T) {
 	}
 }
 
-// TestIntervalSetHandling verifies that single IPs in interval sets don't create ranges
+// TestIntervalSetHandling verifies that single IPs in interval sets don't create ranges.
+// This guards the fix for the bug where adding a single IP like 192.168.23.30 to an
+// interval set created an open-ended range 192.168.23.30-255.255.255.255 (AddSetElement
+// must set KeyEnd = Key for interval sets).
 func TestIntervalSetHandling(t *testing.T) {
-	// This test verifies the fix for the bug where adding a single IP like 192.168.23.30
-	// to an interval set would create a range 192.168.23.30-255.255.255.255
-	
-	testIP := "192.168.23.30"
-	
-	// Convert IP to bytes
+	InitNFTClient()
+	client := GetNFTClient()
+
+	const testIP = "192.168.23.30"
+	const setName = "supernetworks" // ipv4_addr set with flags interval in the fixture
+
 	ipBytes := IPToBytes(testIP)
-	if ipBytes == nil {
-		t.Fatalf("Failed to convert IP %s to bytes", testIP)
+	if ipBytes == nil || len(ipBytes) != 4 {
+		t.Fatalf("IPToBytes(%s) = %v, want 4 bytes", testIP, ipBytes)
 	}
-	
-	// Verify correct conversion
-	if len(ipBytes) != 4 {
-		t.Errorf("Expected 4 bytes for IPv4, got %d", len(ipBytes))
+
+	if err := client.AddSetElement(TableFamilyInet, "filter", setName, ipBytes); err != nil {
+		t.Fatalf("AddSetElement() error = %v", err)
 	}
-	
-	// The fix in AddSetElement now ensures that for interval sets:
-	// - elem.KeyEnd is set to the same value as elem.Key
-	// - elem.IntervalEnd is set to false
-	// This prevents nftables from interpreting it as an open-ended range
-	
-	t.Logf("IP %s converted to bytes: %v", testIP, ipBytes)
-	t.Log("AddSetElement now properly handles interval sets by setting KeyEnd = Key")
+	t.Cleanup(func() {
+		_ = exec.Command("nft", "delete", "element", "inet", "filter", setName, "{", testIP, "}").Run()
+	})
+
+	out, err := exec.Command("nft", "list", "set", "inet", "filter", setName).CombinedOutput()
+	if err != nil {
+		t.Fatalf("nft list set inet filter %s: %v\n%s", setName, err, out)
+	}
+	listing := string(out)
+
+	if !strings.Contains(listing, testIP) {
+		t.Fatalf("single IP %s not present in interval set after AddSetElement:\n%s", testIP, listing)
+	}
+	if strings.Contains(listing, testIP+"-") {
+		t.Errorf("single IP %s became an interval start (range regression):\n%s", testIP, listing)
+	}
+	if strings.Contains(listing, "-255.255.255.255") {
+		t.Errorf("open-ended range found in interval set (KeyEnd regression):\n%s", listing)
+	}
 }

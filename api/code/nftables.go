@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/google/nftables"
+	"github.com/google/nftables/binaryutil"
 	"github.com/google/nftables/expr"
 	"golang.org/x/sys/unix"
 )
@@ -473,7 +474,7 @@ func (c *NFTClient) AddSetElement(family TableFamily, tableName, setName string,
 		// End element: increment IP by 1 to create a single-IP range
 		endBytes := make([]byte, len(element))
 		copy(endBytes, element)
-		
+
 		// Increment the last byte if it's an IPv4 address
 		if len(endBytes) == 4 {
 			// Increment the IP address
@@ -485,7 +486,7 @@ func (c *NFTClient) AddSetElement(family TableFamily, tableName, setName string,
 				endBytes[i] = 0
 			}
 		}
-		
+
 		endElem := nftables.SetElement{
 			Key:         endBytes,
 			IntervalEnd: true,
@@ -528,7 +529,7 @@ func (c *NFTClient) DeleteSetElement(family TableFamily, tableName, setName stri
 		// End element: must match what was added (IP + 1)
 		endBytes := make([]byte, len(element))
 		copy(endBytes, element)
-		
+
 		// Increment the last byte if it's an IPv4 address
 		if len(endBytes) == 4 {
 			// Increment the IP address
@@ -540,7 +541,7 @@ func (c *NFTClient) DeleteSetElement(family TableFamily, tableName, setName stri
 				endBytes[i] = 0
 			}
 		}
-		
+
 		endElem := nftables.SetElement{
 			Key:         endBytes,
 			IntervalEnd: true,
@@ -1699,15 +1700,38 @@ func CheckMapExists(family, tableName, mapName string) error {
 	return err
 }
 
-// CreateIPIfaceVerdictMap creates a map with type ipv4_addr.ifname:verdict
+// CreateIPIfaceVerdictMap creates a map with type ipv4_addr . ifname : verdict
 func CreateIPIfaceVerdictMap(family, tableName, mapName string) error {
-	// Use exec to create the map - TBD google/nftables support
-	// creating maps with concatenated types
-	cmd := exec.Command("nft", "add", "map", family, tableName, mapName,
-		"{", "type", "ipv4_addr", ".", "ifname", ":", "verdict", ";", "}")
-
-	_, err := cmd.Output()
+	f, client, err := withFamily(family)
 	if err != nil {
+		return err
+	}
+
+	// nft errors when the target table is absent; preserve that behavior
+	// (GetTable would otherwise get-or-create the table).
+	if err := CheckTableExists(family, tableName); err != nil {
+		return fmt.Errorf("table %s not found", tableName)
+	}
+	table := client.GetTable(f, tableName)
+
+	keyType, err := nftables.ConcatSetType(nftables.TypeIPAddr, nftables.TypeIFName)
+	if err != nil {
+		return fmt.Errorf("failed to build concatenated key type for map %s: %v", mapName, err)
+	}
+
+	m := &nftables.Set{
+		Table:         table,
+		Name:          mapName,
+		IsMap:         true,
+		Concatenation: true,
+		KeyType:       keyType,
+		DataType:      nftables.TypeVerdict,
+	}
+
+	if err := client.conn.AddSet(m, nil); err != nil {
+		return fmt.Errorf("failed to create map %s: %v", mapName, err)
+	}
+	if err := client.conn.Flush(); err != nil {
 		return fmt.Errorf("failed to create map %s: %v", mapName, err)
 	}
 
@@ -1727,17 +1751,195 @@ func AddRuleToChain(family, tableName, chainName, rule string) error {
 	return nil
 }
 
-// InsertRuleToChain inserts a rule to a chain (simplified version)
-func InsertRuleToChain(family, tableName, chainName, rule string) error {
-	// Use exec to insert rules - TBD  google/nftables support
-	cmd := exec.Command("nft", "insert", "rule", family, tableName, chainName, rule)
-
-	_, err := cmd.Output()
+// addRuleExprs adds (append) or inserts (prepend) a rule built from raw
+// nftables expressions. The expression sequences used by the typed builders
+// below replicate the exact bytecode `nft --debug=netlink` emits for the
+// legacy rule strings; equivalence is verified by the differential tests.
+func addRuleExprs(family, tableName, chainName string, exprs []expr.Any, insert bool) error {
+	f, client, err := withFamily(family)
 	if err != nil {
-		return fmt.Errorf("failed to insert rule into chain %s: %v", chainName, err)
+		return err
 	}
 
-	return nil
+	if err := CheckTableExists(family, tableName); err != nil {
+		return fmt.Errorf("table %s not found", tableName)
+	}
+	table := client.GetTable(f, tableName)
+
+	rule := &nftables.Rule{
+		Table: table,
+		Chain: &nftables.Chain{Name: chainName, Table: table},
+		Exprs: exprs,
+	}
+
+	if insert {
+		client.conn.InsertRule(rule)
+	} else {
+		client.conn.AddRule(rule)
+	}
+	return client.conn.Flush()
+}
+
+// ipv4Dependency matches `meta nfproto ipv4`, the implicit dependency nft
+// generates for `ip ...` matches in inet-family tables.
+func ipv4Dependency() []expr.Any {
+	return []expr.Any{
+		&expr.Meta{Key: expr.MetaKeyNFPROTO, Register: 1},
+		&expr.Cmp{Op: expr.CmpOpEq, Register: 1, Data: []byte{unix.NFPROTO_IPV4}},
+	}
+}
+
+// AddMarkSetRule appends `meta mark set <mark>` to a chain.
+func AddMarkSetRule(family, tableName, chainName string, mark uint32) error {
+	return addRuleExprs(family, tableName, chainName, []expr.Any{
+		&expr.Immediate{Register: 1, Data: binaryutil.NativeEndian.PutUint32(mark)},
+		&expr.Meta{Key: expr.MetaKeyMARK, SourceRegister: true, Register: 1},
+	}, false)
+}
+
+// AddAcceptRule appends `accept` to a chain.
+func AddAcceptRule(family, tableName, chainName string) error {
+	return addRuleExprs(family, tableName, chainName, []expr.Any{
+		&expr.Verdict{Kind: expr.VerdictAccept},
+	}, false)
+}
+
+// AddOutboundUplinkHashRule appends the outbound load-balancing rule:
+//
+//	iif != lo iifname != "site*" iifname != @uplink_interfaces
+//	ip daddr != @supernetworks ip daddr != 224.0.0.0/4
+//	meta mark set jhash ip saddr [. ip daddr] mod <numTables> offset <offset>
+func AddOutboundUplinkHashRule(family, tableName, chainName string, saddrOnly bool, numTables, offset int) error {
+	lo, err := net.InterfaceByName("lo")
+	if err != nil {
+		return fmt.Errorf("failed to resolve interface lo: %v", err)
+	}
+
+	exprs := []expr.Any{
+		&expr.Meta{Key: expr.MetaKeyIIF, Register: 1},
+		&expr.Cmp{Op: expr.CmpOpNeq, Register: 1, Data: binaryutil.NativeEndian.PutUint32(uint32(lo.Index))},
+		&expr.Meta{Key: expr.MetaKeyIIFNAME, Register: 1},
+		// wildcard `iifname != "site*"` compares only the prefix bytes
+		&expr.Cmp{Op: expr.CmpOpNeq, Register: 1, Data: []byte("site")},
+		&expr.Meta{Key: expr.MetaKeyIIFNAME, Register: 1},
+		&expr.Lookup{SourceRegister: 1, SetName: "uplink_interfaces", Invert: true},
+	}
+	exprs = append(exprs, ipv4Dependency()...)
+	exprs = append(exprs,
+		&expr.Payload{DestRegister: 1, Base: expr.PayloadBaseNetworkHeader, Offset: 16, Len: 4},
+		&expr.Lookup{SourceRegister: 1, SetName: "supernetworks", Invert: true},
+		// ip daddr != 224.0.0.0/4
+		&expr.Payload{DestRegister: 1, Base: expr.PayloadBaseNetworkHeader, Offset: 16, Len: 4},
+		&expr.Bitwise{SourceRegister: 1, DestRegister: 1, Len: 4,
+			Mask: []byte{0xf0, 0x00, 0x00, 0x00}, Xor: []byte{0x00, 0x00, 0x00, 0x00}},
+		&expr.Cmp{Op: expr.CmpOpNeq, Register: 1, Data: []byte{0xe0, 0x00, 0x00, 0x00}},
+	)
+
+	// Hash key loads into 128-bit register 2 (32-bit slots 12+), matching nft's
+	// register allocation: saddr to the first slot, daddr to slot 13 for the
+	// concatenated strategy.
+	hashLen := uint32(4)
+	exprs = append(exprs, &expr.Payload{DestRegister: 2, Base: expr.PayloadBaseNetworkHeader, Offset: 12, Len: 4})
+	if !saddrOnly {
+		hashLen = 8
+		exprs = append(exprs, &expr.Payload{DestRegister: 13, Base: expr.PayloadBaseNetworkHeader, Offset: 16, Len: 4})
+	}
+	exprs = append(exprs,
+		&expr.Hash{SourceRegister: 2, DestRegister: 1, Length: hashLen,
+			Modulus: uint32(numTables), Offset: uint32(offset), Type: expr.HashTypeJenkins},
+		&expr.Meta{Key: expr.MetaKeyMARK, SourceRegister: true, Register: 1},
+	)
+
+	return addRuleExprs(family, tableName, chainName, exprs, false)
+}
+
+// InsertWiphyForwardLanRule inserts:
+//
+//	counter oifname "<apIface>.*" ip saddr . iifname vmap @lan_access
+func InsertWiphyForwardLanRule(family, tableName, chainName, apIface string) error {
+	exprs := []expr.Any{
+		&expr.Counter{},
+		&expr.Meta{Key: expr.MetaKeyOIFNAME, Register: 1},
+		// wildcard `oifname "<iface>.*"` compares only the prefix bytes
+		&expr.Cmp{Op: expr.CmpOpEq, Register: 1, Data: []byte(apIface + ".")},
+	}
+	exprs = append(exprs, ipv4Dependency()...)
+	exprs = append(exprs,
+		// concatenated vmap key: ip saddr . iifname
+		&expr.Payload{DestRegister: 1, Base: expr.PayloadBaseNetworkHeader, Offset: 12, Len: 4},
+		&expr.Meta{Key: expr.MetaKeyIIFNAME, Register: 9},
+		&expr.Lookup{SourceRegister: 1, SetName: "lan_access", DestRegister: 0, IsDestRegSet: true},
+	)
+	return addRuleExprs(family, tableName, chainName, exprs, true)
+}
+
+// InsertCustomGroupVmapRule inserts the custom-zone vmap rule:
+//
+//	ip daddr . oifname vmap @<zone>_dst_access ip saddr . iifname vmap @<zone>_src_access
+func InsertCustomGroupVmapRule(family, tableName, chainName, zoneName string) error {
+	exprs := ipv4Dependency()
+	exprs = append(exprs,
+		&expr.Payload{DestRegister: 1, Base: expr.PayloadBaseNetworkHeader, Offset: 16, Len: 4},
+		&expr.Meta{Key: expr.MetaKeyOIFNAME, Register: 9},
+		&expr.Lookup{SourceRegister: 1, SetName: zoneName + "_dst_access", DestRegister: 0, IsDestRegSet: true},
+		&expr.Payload{DestRegister: 1, Base: expr.PayloadBaseNetworkHeader, Offset: 12, Len: 4},
+		&expr.Meta{Key: expr.MetaKeyIIFNAME, Register: 9},
+		&expr.Lookup{SourceRegister: 1, SetName: zoneName + "_src_access", DestRegister: 0, IsDestRegSet: true},
+	)
+	return addRuleExprs(family, tableName, chainName, exprs, true)
+}
+
+// InsertDNSDnatPortRule inserts:
+//
+//	<protocol> dport 53 counter dnat ip to <dnsIP>:53
+func InsertDNSDnatPortRule(family, tableName, chainName, protocol, dnsIP string) error {
+	proto := ProtocolToBytes(protocol)
+	if proto == nil {
+		return fmt.Errorf("invalid protocol %s", protocol)
+	}
+	ip := net.ParseIP(dnsIP)
+	if ip == nil || ip.To4() == nil {
+		return fmt.Errorf("invalid IPv4 address %s", dnsIP)
+	}
+
+	exprs := []expr.Any{
+		&expr.Meta{Key: expr.MetaKeyL4PROTO, Register: 1},
+		&expr.Cmp{Op: expr.CmpOpEq, Register: 1, Data: proto},
+		&expr.Payload{DestRegister: 1, Base: expr.PayloadBaseTransportHeader, Offset: 2, Len: 2},
+		&expr.Cmp{Op: expr.CmpOpEq, Register: 1, Data: binaryutil.BigEndian.PutUint16(53)},
+		&expr.Counter{},
+		&expr.Immediate{Register: 1, Data: ip.To4()},
+		&expr.Immediate{Register: 2, Data: binaryutil.BigEndian.PutUint16(53)},
+		&expr.NAT{Type: expr.NATTypeDestNAT, Family: unix.NFPROTO_IPV4,
+			RegAddrMin: 1, RegProtoMin: 2, Specified: true},
+	}
+	return addRuleExprs(family, tableName, chainName, exprs, true)
+}
+
+// InsertDNSMapDnatRule inserts:
+//
+//	ip saddr @custom_dns_devices meta l4proto <protocol> dnat to ip saddr map @custom_dns_devices:53
+func InsertDNSMapDnatRule(family, tableName, chainName, protocol string) error {
+	proto := ProtocolToBytes(protocol)
+	if proto == nil {
+		return fmt.Errorf("invalid protocol %s", protocol)
+	}
+
+	exprs := ipv4Dependency()
+	exprs = append(exprs,
+		// set membership: ip saddr @custom_dns_devices
+		&expr.Payload{DestRegister: 1, Base: expr.PayloadBaseNetworkHeader, Offset: 12, Len: 4},
+		&expr.Lookup{SourceRegister: 1, SetName: "custom_dns_devices"},
+		&expr.Meta{Key: expr.MetaKeyL4PROTO, Register: 1},
+		&expr.Cmp{Op: expr.CmpOpEq, Register: 1, Data: proto},
+		// map lookup: dnat address from @custom_dns_devices keyed by saddr
+		&expr.Payload{DestRegister: 1, Base: expr.PayloadBaseNetworkHeader, Offset: 12, Len: 4},
+		&expr.Lookup{SourceRegister: 1, SetName: "custom_dns_devices", DestRegister: 1, IsDestRegSet: true},
+		&expr.Immediate{Register: 2, Data: binaryutil.BigEndian.PutUint16(53)},
+		&expr.NAT{Type: expr.NATTypeDestNAT, Family: unix.NFPROTO_IPV4,
+			RegAddrMin: 1, RegProtoMin: 2, Specified: true},
+	)
+	return addRuleExprs(family, tableName, chainName, exprs, true)
 }
 
 // AddIPToSet adds an IP address to a set

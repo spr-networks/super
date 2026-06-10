@@ -298,7 +298,31 @@ func AddRuleToChain(family, tableName, chainName, rule string) error {
 	return fmt.Errorf("nftables not supported on macOS")
 }
 
-func InsertRuleToChain(family, tableName, chainName, rule string) error {
+func AddMarkSetRule(family, tableName, chainName string, mark uint32) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
+func AddAcceptRule(family, tableName, chainName string) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
+func AddOutboundUplinkHashRule(family, tableName, chainName string, saddrOnly bool, numTables, offset int) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
+func InsertWiphyForwardLanRule(family, tableName, chainName, apIface string) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
+func InsertCustomGroupVmapRule(family, tableName, chainName, zoneName string) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
+func InsertDNSDnatPortRule(family, tableName, chainName, protocol, dnsIP string) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
+func InsertDNSMapDnatRule(family, tableName, chainName, protocol string) error {
 	return fmt.Errorf("nftables not supported on macOS")
 }
 
