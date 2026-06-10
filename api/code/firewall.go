@@ -20,6 +20,7 @@ import (
 
 import (
 	"github.com/gorilla/mux"
+	"github.com/vishvananda/netlink"
 )
 
 var FWmtx sync.Mutex
@@ -557,18 +558,10 @@ func rebuildUplink() {
 	uplinkSettings := loadUplinksConfig()
 
 	//saddr.daddr strategy assumed by default
-	strategy := "jhash ip saddr . ip daddr"
-	if uplinkSettings.LoadBalanceStrategy == "saddr" {
-		strategy = "jhash ip saddr"
-		//saddr can be more consistent but has poor balancing
-	}
+	//saddr-only can be more consistent but has poor balancing
+	saddrOnly := uplinkSettings.LoadBalanceStrategy == "saddr"
 
-	rule := "add rule inet mangle OUTBOUND_UPLINK " +
-		"iif != lo iifname != \"site*\" " +
-		"iifname != @uplink_interfaces ip daddr != @supernetworks " +
-		"ip daddr != 224.0.0.0/4 meta mark set " + strategy + fmt.Sprintf(" mod %d offset %d", len(outbound), firstOutboundRouteTable)
-
-	err = AddRuleToChain("inet", "mangle", "OUTBOUND_UPLINK", rule)
+	err = AddOutboundUplinkHashRule("inet", "mangle", "OUTBOUND_UPLINK", saddrOnly, len(outbound), firstOutboundRouteTable)
 	if err != nil {
 		log.Println("failed to insert outbound uplink rule", err)
 		return
@@ -603,11 +596,9 @@ func rebuildUplink() {
 				continue
 			}
 
-			rule := "meta mark set " + indexStr
-			err = AddRuleToChain("inet", "mangle", "mark"+indexStr, rule)
+			err = AddMarkSetRule("inet", "mangle", "mark"+indexStr, uint32(markNumber))
 			if err == nil {
-				rule2 := "accept"
-				err = AddRuleToChain("inet", "mangle", "mark"+indexStr, rule2)
+				err = AddAcceptRule("inet", "mangle", "mark"+indexStr)
 			}
 			if err != nil {
 				//delete the chain
@@ -1678,8 +1669,7 @@ func applyRadioInterfaces(interfacesConfig []InterfaceConfig) {
 		if entry.Enabled == true && entry.Type == "AP" {
 			// $(if [ "$VLANSIF" ]; then echo "counter oifname "$VLANSIF*" ip saddr . iifname vmap @lan_access"; fi)
 
-			rule := "counter oifname " + entry.Name + ".* ip saddr . iifname vmap @lan_access"
-			err := InsertRuleToChain("inet", "filter", "WIPHY_FORWARD_LAN", rule)
+			err := InsertWiphyForwardLanRule("inet", "filter", "WIPHY_FORWARD_LAN", entry.Name)
 			if err != nil {
 				log.Println("failed to insert WIPHY_FORWARD_LAN rule", err)
 			}
@@ -2282,8 +2272,7 @@ func addCustomVerdict(ZoneName string, IP string, Iface string) {
 			log.Println("addCustomVerdict Failed", err)
 			return
 		}
-		rule := "ip daddr . oifname vmap @" + ZoneName + "_dst_access ip saddr . iifname vmap @" + ZoneName + "_src_access"
-		err = InsertRuleToChain("inet", "filter", "CUSTOM_GROUPS", rule)
+		err = InsertCustomGroupVmapRule("inet", "filter", "CUSTOM_GROUPS", ZoneName)
 		if err != nil {
 			log.Println("addCustomVerdict Failed", err)
 			return
@@ -3267,31 +3256,23 @@ func updateFirewallSubnets(DNSIP string, TinyNets []string) {
 		return
 	}
 
-	rule := "tcp dport 53 counter dnat ip to " + DNSIP + ":53"
-	err = InsertRuleToChain("inet", "nat", "DNS_DNAT", rule)
+	err = InsertDNSDnatPortRule("inet", "nat", "DNS_DNAT", "tcp", DNSIP)
 	if err != nil {
 		log.Println("failed to insert TCP DNS DNAT rule", err)
 	}
 
-	rule = "udp dport 53 counter dnat ip to " + DNSIP + ":53"
-	err = InsertRuleToChain("inet", "nat", "DNS_DNAT", rule)
+	err = InsertDNSDnatPortRule("inet", "nat", "DNS_DNAT", "udp", DNSIP)
 	if err != nil {
 		log.Println("failed to insert UDP DNS DNAT rule", err)
 	}
 
-	rule = "ip saddr @custom_dns_devices meta l4proto tcp dnat to ip saddr map @custom_dns_devices:53"
-
-	err = InsertRuleToChain("inet", "nat", "DNS_DNAT", rule)
-
+	err = InsertDNSMapDnatRule("inet", "nat", "DNS_DNAT", "tcp")
 	if err != nil {
 		log.Println("failed to add tcp custom_dns_devices", err)
 		return
 	}
 
-	rule = "ip saddr @custom_dns_devices meta l4proto udp dnat to ip saddr map @custom_dns_devices:53"
-
-	err = InsertRuleToChain("inet", "nat", "DNS_DNAT", rule)
-
+	err = InsertDNSMapDnatRule("inet", "nat", "DNS_DNAT", "udp")
 	if err != nil {
 		log.Println("failed to add udp custom_dns_devices", err)
 		return
