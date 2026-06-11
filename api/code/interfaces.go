@@ -36,19 +36,21 @@ type AdditionalIP struct {
 }
 
 type InterfaceConfig struct {
-	Name          string
-	Type          string
-	Subtype       string
-	Enabled       bool
-	ExtraBSS      []ExtraBSS     `json:",omitempty"`
-	DisableDHCP   bool           `json:",omitempty"`
-	IP            string         `json:",omitempty"`
-	Router        string         `json:",omitempty"`
-	VLAN          string         `json:",omitempty"`
-	MACOverride   string         `json:",omitempty"`
-	MACRandomize  bool           `json:",omitempty"`
-	MACCloak      bool           `json:",omitempty"`
-	AdditionalIPs []AdditionalIP `json:",omitempty"`
+	Name                     string
+	Type                     string
+	Subtype                  string
+	Enabled                  bool
+	ExtraBSS                 []ExtraBSS     `json:",omitempty"`
+	DisableDHCP              bool           `json:",omitempty"`
+	IP                       string         `json:",omitempty"`
+	Router                   string         `json:",omitempty"`
+	VLAN                     string         `json:",omitempty"`
+	MACOverride              string         `json:",omitempty"`
+	MACRandomize             bool           `json:",omitempty"`
+	MACCloak                 bool           `json:",omitempty"`
+	AdditionalIPs            []AdditionalIP `json:",omitempty"`
+	CaptivePortalPassthrough bool           `json:",omitempty"`
+	CaptivePortalDomains     []string       `json:",omitempty"`
 }
 
 // this will be exported to all containers in public/interfaces.json
@@ -224,7 +226,7 @@ func configureInterface(interfaceType string, subType string, name string, MACRa
 
 	}
 
-	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, "", "", "", "", MACRandomize, MACCloak, []AdditionalIP{}}
+	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, "", "", "", "", MACRandomize, MACCloak, []AdditionalIP{}, false, []string{}}
 
 	config := loadInterfacesConfigLocked()
 
@@ -655,41 +657,41 @@ func getVLANInterfaces(parent string) ([]net.Interface, error) {
 }
 
 func addApiInterface(iface string) {
-	exec.Command("nft", "add", "element", "inet", "filter", "api_interfaces", "{", iface, "}").Run()
+	AddInterfaceToSet("api_interfaces", iface)
 }
 
 func deleteApiInterface(iface string) {
-	exec.Command("nft", "add", "element", "inet", "filter", "api_interfaces", "{", iface, "}").Run()
+	DeleteInterfaceFromSet("api_interfaces", iface)
 }
 
 func addSetupInterface(iface string) {
-	exec.Command("nft", "add", "element", "inet", "filter", "setup_interfaces", "{", iface, "}").Run()
+	AddInterfaceToSet("setup_interfaces", iface)
 }
 
 func deleteSetupInterface(iface string) {
-	exec.Command("nft", "delete", "element", "inet", "filter", "setup_interfaces", "{", iface, "}").Run()
+	DeleteInterfaceFromSet("setup_interfaces", iface)
 }
 
 func addSetupDHCPInterface(iface string) {
-	exec.Command("nft", "add", "element", "inet", "filter", "setup_interfaces_dhcp", "{", iface, "}").Run()
+	AddInterfaceToSet("setup_interfaces_dhcp", iface)
 }
 
 func deleteSetupDHCPInterface(iface string) {
-	exec.Command("nft", "delete", "element", "inet", "filter", "setup_interfaces_dhcp", "{", iface, "}").Run()
+	DeleteInterfaceFromSet("setup_interfaces_dhcp", iface)
 }
 
 func addLanInterface(iface string) {
-	exec.Command("nft", "add", "element", "inet", "filter", "lan_interfaces", "{", iface, "}").Run()
-	exec.Command("nft", "add", "element", "inet", "nat", "lan_interfaces", "{", iface, "}").Run()
+	AddInterfaceToSetWithTable("inet", "filter", "lan_interfaces", iface)
+	AddInterfaceToSetWithTable("inet", "nat", "lan_interfaces", iface)
 }
 
 func addWiredLanInterface(iface string) {
-	exec.Command("nft", "add", "element", "inet", "filter", "wired_lan_interfaces", "{", iface, "}").Run()
+	AddInterfaceToSet("wired_lan_interfaces", iface)
 }
 
 func deleteLanInterface(iface string) {
-	exec.Command("nft", "delete", "element", "inet", "filter", "lan_interfaces", "{", iface, "}").Run()
-	exec.Command("nft", "delete", "element", "inet", "nat", "lan_interfaces", "{", iface, "}").Run()
+	DeleteInterfaceFromSetWithTable("inet", "filter", "lan_interfaces", iface)
+	DeleteInterfaceFromSetWithTable("inet", "nat", "lan_interfaces", iface)
 }
 
 func doRefreshVlanTrunk(iface string, enable bool, devices map[string]DeviceEntry) {
@@ -743,7 +745,7 @@ func doRefreshVlanTrunk(iface string, enable bool, devices map[string]DeviceEntr
 
 			addLanInterface(vlanIface)
 			// add vlan to dhcp_access
-			exec.Command("nft", "add", "element", "inet", "filter", "dhcp_access", "{", vlanIface, ".", dev.MAC, ":", "accept", "}").Run()
+			AddElementToMapComplex("inet", "filter", "dhcp_access", []string{vlanIface, dev.MAC}, "accept")
 		}
 	}
 }
@@ -910,28 +912,50 @@ func refreshDownlinks() {
 	refreshDownlinksLocked()
 }
 
-func refreshDownlinksLocked() {
+// getDownlinkInterfacesLocked returns all enabled downlink interfaces
+// Must be called with Interfacesmtx locked
+func getDownlinkInterfacesLocked() []string {
 	interfaces := loadInterfacesConfigLocked()
+	downlinks := []string{}
 
-	//empty the wired lan interfaces list
-	exec.Command("nft", "flush", "set", "inet", "filter", "wired_lan_interfaces").Run()
-
-	// and repopulate it
+	// LANIF env var takes priority if set
 	lanif := os.Getenv("LANIF")
 	if lanif != "" {
-		addWiredLanInterface(lanif)
+		downlinks = append(downlinks, lanif)
 	}
+
+	// Add all configured downlink interfaces
 	for _, ifconfig := range interfaces {
-		if ifconfig.Type == "Downlink" {
+		if ifconfig.Type == "Downlink" && ifconfig.Enabled {
+			// Skip if already added via LANIF
 			if lanif != "" && ifconfig.Name == lanif {
-				//already covered
 				continue
 			}
-			addWiredLanInterface(ifconfig.Name)
-			//Set interfaces up
-			if ifconfig.Enabled && isValidIface(ifconfig.Name) {
-				exec.Command("ip", "link", "set", ifconfig.Name, "up").Run()
-			}
+			downlinks = append(downlinks, ifconfig.Name)
+		}
+	}
+
+	return downlinks
+}
+
+// getDownlinkInterfaces returns all enabled downlink interfaces
+func getDownlinkInterfaces() []string {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+	return getDownlinkInterfacesLocked()
+}
+
+func refreshDownlinksLocked() {
+	//empty the wired lan interfaces list
+	FlushSetWithTable("inet", "filter", "wired_lan_interfaces")
+
+	// Get all downlink interfaces and add them
+	downlinks := getDownlinkInterfacesLocked()
+	for _, iface := range downlinks {
+		addWiredLanInterface(iface)
+		//Set interfaces up
+		if isValidIface(iface) {
+			exec.Command("ip", "link", "set", iface, "up").Run()
 		}
 	}
 }
