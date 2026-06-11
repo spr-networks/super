@@ -240,82 +240,38 @@ func checkBlockRuleInNFT(t *testing.T, rule BlockRule, shouldExist bool) {
 	}
 }
 
-func checkOutputBlockRuleInNFT(t *testing.T, rule OutputBlockRule, shouldExist bool) {
-	cmd := exec.Command("nft", "list", "map", "inet", "filter", "output_block")
-	output, err := cmd.Output()
+// representativeIP returns an in-range address for a host or CIDR, off the network boundary
+func representativeIP(t *testing.T, s string) string {
+	t.Helper()
+	if !strings.Contains(s, "/") {
+		return s
+	}
+	_, ipnet, err := net.ParseCIDR(s)
 	if err != nil {
-		t.Logf("Failed to list nft map output_block: %v", err)
-		return
+		t.Fatalf("bad CIDR %s: %v", s, err)
 	}
-
-	// Handle CIDR notation - nftables will only show the network address
-	srcIP := rule.SrcIP
-	if strings.Contains(srcIP, "/") {
-		// Extract just the network address from CIDR
-		ip, _, _ := net.ParseCIDR(srcIP)
-		if ip != nil {
-			srcIP = ip.String()
-		}
+	ip := ipnet.IP.To4()
+	if ip == nil {
+		t.Fatalf("not ipv4: %s", s)
 	}
-
-	dstIP := rule.DstIP
-	if strings.Contains(dstIP, "/") {
-		// Extract just the network address from CIDR
-		ip, _, _ := net.ParseCIDR(dstIP)
-		if ip != nil {
-			dstIP = ip.String()
-		}
+	out := make(net.IP, 4)
+	copy(out, ip)
+	if ones, _ := ipnet.Mask.Size(); ones < 32 {
+		out[3] |= 1 // network+1, inside any prefix shorter than /32
 	}
+	return out.String()
+}
 
-	// With interval flags, nftables may aggregate rules into ranges
-	// So we need to check if our specific IPs are within the ranges shown
-	outputStr := string(output)
+func checkOutputBlockRuleInNFT(t *testing.T, rule OutputBlockRule, shouldExist bool) {
+	t.Helper()
+	src := representativeIP(t, rule.SrcIP)
+	dst := representativeIP(t, rule.DstIP)
 
-	// For exact match check
-	expectedEntry := fmt.Sprintf("%s . %s . %s : drop", srcIP, dstIP, rule.Protocol)
-	exactMatch := strings.Contains(outputStr, expectedEntry)
-
-	// Also check for common CIDR variations that nftables might display
-	if !exactMatch && srcIP == "10.0.0.0" {
-		cidrEntry := fmt.Sprintf("10.0.0.0/8 . %s . %s : drop", dstIP, rule.Protocol)
-		exactMatch = strings.Contains(outputStr, cidrEntry)
-	}
-	if !exactMatch && dstIP == "10.0.0.0" {
-		cidrEntry := fmt.Sprintf("%s . 10.0.0.0/8 . %s : drop", srcIP, rule.Protocol)
-		exactMatch = strings.Contains(outputStr, cidrEntry)
-	}
-	if !exactMatch && srcIP == "192.168.0.0" {
-		cidrEntry := fmt.Sprintf("192.168.0.0/16 . %s . %s : drop", dstIP, rule.Protocol)
-		exactMatch = strings.Contains(outputStr, cidrEntry)
-	}
-	if !exactMatch && dstIP == "192.168.0.0" {
-		cidrEntry := fmt.Sprintf("%s . 192.168.0.0/16 . %s : drop", srcIP, rule.Protocol)
-		exactMatch = strings.Contains(outputStr, cidrEntry)
-	}
-
-	// For range check - look for patterns like "192.168.1.100-192.168.0.0"
-	// This indicates our IPs are part of an aggregated range
-	srcInRange := strings.Contains(outputStr, srcIP+"-") || strings.Contains(outputStr, "-"+srcIP)
-	dstInRange := strings.Contains(outputStr, dstIP+"-") || strings.Contains(outputStr, "-"+dstIP)
-
-	// Check protocol - might be a range like "6-17" for tcp-udp
-	protoNum := ""
-	switch rule.Protocol {
-	case "tcp":
-		protoNum = "6"
-	case "udp":
-		protoNum = "17"
-	}
-	protoInRange := strings.Contains(outputStr, protoNum+"-") || strings.Contains(outputStr, "-"+protoNum)
-
-	exists := exactMatch || (srcInRange && dstInRange && protoInRange)
-
-	if shouldExist && !exists {
-		t.Errorf("Expected output block rule not found in nft map: %s", expectedEntry)
-		t.Logf("nft output: %s", outputStr)
-	} else if !shouldExist && exists {
-		t.Errorf("Output block rule should not exist in nft map but found: %s", expectedEntry)
-		t.Logf("nft output: %s", outputStr)
+	got := nftGetElement(t, "inet", "filter", "output_block", src, ".", dst, ".", rule.Protocol)
+	if got != shouldExist {
+		out, _ := exec.Command("nft", "list", "map", "inet", "filter", "output_block").CombinedOutput()
+		t.Errorf("output block rule %s . %s . %s : match=%v, want %v\n%s",
+			rule.SrcIP, rule.DstIP, rule.Protocol, got, shouldExist, out)
 	}
 }
 
@@ -2498,7 +2454,7 @@ func TestAPIBlockComprehensive(t *testing.T) {
 	cmd3 := exec.Command("nft", "list", "set", "inet", "filter", "api_block")
 	output3, _ := cmd3.Output()
 	outputStr3 := string(output3)
-	
+
 	if strings.Contains(outputStr3, testIP) {
 		t.Errorf("IP %s still present after removal", testIP)
 	}

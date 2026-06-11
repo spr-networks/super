@@ -293,6 +293,14 @@ func CreateIPIfaceVerdictMap(family, tableName, mapName string) error {
 	return fmt.Errorf("nftables not supported on macOS")
 }
 
+func fwdBlockKey(srcIP, dstIP, protocol, dstPort string) (key, keyEnd []byte) {
+	return nil, nil
+}
+
+func (c *NFTClient) GetMapElement(family TableFamily, tableName, mapName string, key []byte) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
 // Rule operations
 func AddRuleToChain(family, tableName, chainName, rule string) error {
 	return fmt.Errorf("nftables not supported on macOS")

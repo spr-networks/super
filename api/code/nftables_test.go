@@ -372,19 +372,22 @@ func TestVerdictToBytes(t *testing.T) {
 	}
 }
 
-func TestAddForwardingRule(t *testing.T) {
-	// Initialize the client
-	InitNFTClient()
-
-	// First, let's check if the map exists
-	client := GetNFTClient()
-	tcpMap, err := client.GetMap(TableFamilyInet, "nat", "tcpfwd")
-	if err != nil {
-		t.Logf("Failed to get tcpfwd map: %v", err)
-	} else {
-		t.Logf("tcpfwd map found: KeyType=%v, DataType=%v, IsMap=%v", tcpMap.KeyType, tcpMap.DataType, tcpMap.IsMap)
-		t.Logf("tcpfwd map details: Constant=%v, Interval=%v, Anonymous=%v", tcpMap.Constant, tcpMap.Interval, tcpMap.Anonymous)
+// nftGetElement does an interval-aware lookup of a concrete key in a map
+func nftGetElement(t *testing.T, family, table, mapName string, key ...string) bool {
+	t.Helper()
+	args := append([]string{"get", "element", family, table, mapName, "{"}, append(key, "}")...)
+	out, err := exec.Command("nft", args...).CombinedOutput()
+	if err == nil {
+		return true
 	}
+	if !strings.Contains(string(out), "No such file or directory") {
+		t.Fatalf("nft get element %v: %v\n%s", args, err, out)
+	}
+	return false
+}
+
+func TestAddForwardingRule(t *testing.T) {
+	InitNFTClient()
 
 	tests := []struct {
 		name     string
@@ -393,60 +396,105 @@ func TestAddForwardingRule(t *testing.T) {
 		srcPort  string
 		dstIP    string
 		dstPort  string
-		wantErr  bool
+		// a concrete destination that must resolve through the map
+		matchIP   string
+		matchPort string
 	}{
 		{
-			name:     "Add TCP forwarding rule",
-			protocol: "tcp",
-			srcIP:    "192.168.1.100",
-			srcPort:  "80",
-			dstIP:    "10.0.0.100",
-			dstPort:  "8080",
-			wantErr:  false,
+			name: "specific source", protocol: "tcp",
+			srcIP: "192.168.1.100", srcPort: "80", dstIP: "10.0.0.100", dstPort: "8080",
+			matchIP: "192.168.1.100", matchPort: "80",
 		},
 		{
-			name:     "Add UDP forwarding rule",
-			protocol: "udp",
-			srcIP:    "192.168.1.100",
-			srcPort:  "53",
-			dstIP:    "10.0.0.100",
-			dstPort:  "5353",
-			wantErr:  false,
+			name: "udp specific source", protocol: "udp",
+			srcIP: "192.168.1.100", srcPort: "53", dstIP: "10.0.0.100", dstPort: "5353",
+			matchIP: "192.168.1.100", matchPort: "53",
 		},
 		{
-			name:     "Add TCP any port forwarding rule",
-			protocol: "tcp",
-			srcIP:    "192.168.1.100",
-			srcPort:  "any",
-			dstIP:    "10.0.0.100",
-			dstPort:  "any",
-			wantErr:  false,
+			name: "any source 0.0.0.0/0", protocol: "tcp",
+			srcIP: "0.0.0.0/0", srcPort: "8554", dstIP: "10.168.250.14", dstPort: "8554",
+			matchIP: "10.168.0.42", matchPort: "8554",
 		},
 		{
-			name:     "Add UDP any port forwarding rule",
-			protocol: "udp",
-			srcIP:    "192.168.1.100",
-			srcPort:  "any",
-			dstIP:    "10.0.0.100",
-			dstPort:  "any",
-			wantErr:  false,
+			name: "cidr source", protocol: "tcp",
+			srcIP: "10.168.0.0/16", srcPort: "9000", dstIP: "10.0.0.50", dstPort: "9000",
+			matchIP: "10.168.5.9", matchPort: "9000",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := AddForwardingRule(tt.protocol, tt.srcIP, tt.srcPort, tt.dstIP, tt.dstPort)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("AddForwardingRule() error = %v, wantErr %v", err, tt.wantErr)
+			mapName := tt.protocol + "fwd"
+
+			if err := AddForwardingRule(tt.protocol, tt.srcIP, tt.srcPort, tt.dstIP, tt.dstPort); err != nil {
+				t.Fatalf("AddForwardingRule() error = %v", err)
+			}
+			t.Cleanup(func() {
+				_ = DeleteForwardingRule(tt.protocol, tt.srcIP, tt.srcPort, tt.dstIP, tt.dstPort)
+			})
+
+			if !nftGetElement(t, "inet", "nat", mapName, tt.matchIP, ".", tt.matchPort) {
+				out, _ := exec.Command("nft", "list", "map", "inet", "nat", mapName).CombinedOutput()
+				t.Errorf("destination %s . %s does not match forwarding rule (src %s):\n%s",
+					tt.matchIP, tt.matchPort, tt.srcIP, out)
 			}
 
-			// Clean up after test
-			if err == nil {
-				// Delete the rule we just added
-				_ = DeleteForwardingRule(tt.protocol, tt.srcIP, tt.srcPort, tt.dstIP, tt.dstPort)
+			if nftGetElement(t, "inet", "nat", mapName, tt.matchIP, ".", "1") {
+				t.Errorf("destination %s . 1 unexpectedly matched (src %s)", tt.matchIP, tt.srcIP)
 			}
 		})
 	}
+}
+
+// the library-built 0.0.0.0/0 element must resolve identically to the CLI one
+func TestForwardingRuleAnyMatchesEquivalentToCLI(t *testing.T) {
+	InitNFTClient()
+
+	const port = "8554"
+	const dst = "10.168.250.14"
+	probes := []string{"10.168.0.42", "1.2.3.4", "8.8.8.8", "192.168.0.1"}
+
+	if err := AddForwardingRule("tcp", "0.0.0.0/0", port, dst, port); err != nil {
+		t.Fatalf("AddForwardingRule() error = %v", err)
+	}
+	libDump := strings.Join(strings.Fields(nftMapDump(t, "tcpfwd")), " ")
+	libMatch := map[string]bool{}
+	for _, ip := range probes {
+		libMatch[ip] = nftGetElement(t, "inet", "nat", "tcpfwd", ip, ".", port)
+	}
+	if err := DeleteForwardingRule("tcp", "0.0.0.0/0", port, dst, port); err != nil {
+		t.Fatalf("DeleteForwardingRule() error = %v", err)
+	}
+
+	if out, err := exec.Command("nft", "add", "element", "inet", "nat", "tcpfwd",
+		"{", "0.0.0.0/0", ".", port, ":", dst, ".", port, "}").CombinedOutput(); err != nil {
+		t.Fatalf("nft add element: %v\n%s", err, out)
+	}
+	cliDump := strings.Join(strings.Fields(nftMapDump(t, "tcpfwd")), " ")
+	for _, ip := range probes {
+		cliMatch := nftGetElement(t, "inet", "nat", "tcpfwd", ip, ".", port)
+		if cliMatch != libMatch[ip] {
+			t.Errorf("probe %s: library match=%v, CLI match=%v", ip, libMatch[ip], cliMatch)
+		}
+		if !cliMatch {
+			t.Errorf("probe %s did not match even the CLI element", ip)
+		}
+	}
+	_ = exec.Command("nft", "delete", "element", "inet", "nat", "tcpfwd",
+		"{", "0.0.0.0/0", ".", port, ":", dst, ".", port, "}").Run()
+
+	if libDump != cliDump {
+		t.Errorf("library element differs from CLI element:\n lib=%q\n cli=%q", libDump, cliDump)
+	}
+}
+
+func nftMapDump(t *testing.T, mapName string) string {
+	t.Helper()
+	out, err := exec.Command("nft", "list", "map", "inet", "nat", mapName).CombinedOutput()
+	if err != nil {
+		t.Fatalf("nft list map %s: %v\n%s", mapName, err, out)
+	}
+	return string(out)
 }
 
 func TestDeleteForwardingRule(t *testing.T) {

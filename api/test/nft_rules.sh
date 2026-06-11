@@ -555,9 +555,11 @@ table inet nat {
 
   map udpfwd {
     type ipv4_addr . inet_service : ipv4_addr . inet_service;
+    flags interval;
   }
   map tcpfwd {
     type ipv4_addr . inet_service : ipv4_addr . inet_service;
+    flags interval;
   }
   map udpanyfwd {
     type ipv4_addr : ipv4_addr;

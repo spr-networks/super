@@ -2512,9 +2512,11 @@ var blockVerdict = "goto PFWDROPLOG"
 var blockVmapName = "fwd_block"
 
 func isForwardBlockInstalled(br ForwardingBlockRule) bool {
-	key := br.SrcIP + "." + br.DstIP + "." + br.Protocol + "." + br.DstPort + ":" + blockVerdict
-	err := GetElementFromMap("inet", "filter", blockVmapName, key)
-	return err == nil
+	key, _ := fwdBlockKey(br.SrcIP, br.DstIP, br.Protocol, br.DstPort)
+	if key == nil {
+		return false
+	}
+	return GetNFTClient().GetMapElement(TableFamilyInet, "filter", blockVmapName, key) == nil
 }
 
 func addForwardBlock(br ForwardingBlockRule) error {

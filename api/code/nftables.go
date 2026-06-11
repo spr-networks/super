@@ -246,6 +246,11 @@ func (c *NFTClient) ListSetElements(family TableFamily, tableName, setName strin
 
 // AddMapElement adds an element to a map
 func (c *NFTClient) AddMapElement(family TableFamily, tableName, mapName string, key, value []byte) error {
+	return c.AddMapElementRange(family, tableName, mapName, key, key, value)
+}
+
+// AddMapElementRange adds an element with an inclusive key range (keyEnd == key for a single point)
+func (c *NFTClient) AddMapElementRange(family TableFamily, tableName, mapName string, key, keyEnd, value []byte) error {
 	set, err := c.GetMap(family, tableName, mapName)
 	if err != nil {
 		return fmt.Errorf("failed to get map %s/%s/%s: %w", familyToString(family), tableName, mapName, err)
@@ -261,12 +266,11 @@ func (c *NFTClient) AddMapElement(family TableFamily, tableName, mapName string,
 	// Check if this is a verdict map first
 	isVerdictMap := set.IsMap && set.DataType.Name == "verdict"
 
-	// For interval maps, single elements need special handling to prevent range merging.
-	// We set KeyEnd = Key to indicate this is a single element, not a range start.
+	// interval maps need KeyEnd: equal to Key for single elements, or the range end
 	if set.Interval {
 		element.IntervalEnd = false
-		element.KeyEnd = make([]byte, len(key))
-		copy(element.KeyEnd, key)
+		element.KeyEnd = make([]byte, len(keyEnd))
+		copy(element.KeyEnd, keyEnd)
 	}
 
 	if isVerdictMap {
@@ -355,6 +359,11 @@ func isVerdictString(s string) bool {
 
 // DeleteMapElement deletes an element from a map
 func (c *NFTClient) DeleteMapElement(family TableFamily, tableName, mapName string, key []byte) error {
+	return c.DeleteMapElementRange(family, tableName, mapName, key, key)
+}
+
+// DeleteMapElementRange deletes an element with an inclusive key range
+func (c *NFTClient) DeleteMapElementRange(family TableFamily, tableName, mapName string, key, keyEnd []byte) error {
 	set, err := c.GetMap(family, tableName, mapName)
 	if err != nil {
 		return fmt.Errorf("failed to get map %s/%s/%s: %w", familyToString(family), tableName, mapName, err)
@@ -368,17 +377,20 @@ func (c *NFTClient) DeleteMapElement(family TableFamily, tableName, mapName stri
 		copy(paddedKey, key)
 		key = paddedKey
 	}
+	if set.KeyType.Bytes > uint32(len(keyEnd)) {
+		paddedKeyEnd := make([]byte, set.KeyType.Bytes)
+		copy(paddedKeyEnd, keyEnd)
+		keyEnd = paddedKeyEnd
+	}
 
 	element := nftables.SetElement{
 		Key: key,
 	}
 
-	// For interval maps, single elements need special handling to prevent range merging.
-	// We set KeyEnd = Key to indicate this is a single element, not a range start.
 	if set.Interval {
 		element.IntervalEnd = false
-		element.KeyEnd = make([]byte, len(key))
-		copy(element.KeyEnd, key)
+		element.KeyEnd = make([]byte, len(keyEnd))
+		copy(element.KeyEnd, keyEnd)
 	}
 
 	// Note: There is a known issue with google/nftables where GetSetElements
@@ -952,155 +964,189 @@ func GetNFTClient() *NFTClient {
 // Firewall-specific wrapper functions
 
 // AddForwardingRule adds a forwarding rule to the appropriate map
+// ipRangeBytes returns the inclusive start/end bytes for an IP or CIDR (0.0.0.0 != 0.0.0.0/0)
+func ipRangeBytes(ip string) (start, end []byte) {
+	if strings.Contains(ip, "/") {
+		_, ipnet, err := net.ParseCIDR(ip)
+		if err != nil {
+			return nil, nil
+		}
+		start = ipnet.IP.To4()
+		if start == nil {
+			return nil, nil
+		}
+		end = make([]byte, 4)
+		for i := range start {
+			end[i] = start[i] | ^ipnet.Mask[i]
+		}
+		return start, end
+	}
+	b := IPToBytes(ip)
+	return b, b
+}
+
+// portRangeBytesConcat returns the inclusive start/end bytes for a port or port range
+func portRangeBytesConcat(port string) (start, end []byte) {
+	conv := func(s string) []byte {
+		p, err := strconv.Atoi(s)
+		if err != nil || p < 0 || p > 65535 {
+			return nil
+		}
+		b := make([]byte, 4)
+		binary.BigEndian.PutUint16(b, uint16(p))
+		return b
+	}
+	if strings.Contains(port, "-") {
+		parts := strings.SplitN(port, "-", 2)
+		start, end = conv(parts[0]), conv(parts[1])
+		if start == nil || end == nil {
+			return nil, nil
+		}
+		return start, end
+	}
+	b := conv(port)
+	return b, b
+}
+
+// concatRangeKeys joins per-field start/end byte pairs into an interval key pair
+func concatRangeKeys(fields ...[2][]byte) (key, keyEnd []byte) {
+	for _, f := range fields {
+		if f[0] == nil || f[1] == nil {
+			return nil, nil
+		}
+		key = append(key, f[0]...)
+		keyEnd = append(keyEnd, f[1]...)
+	}
+	return key, keyEnd
+}
+
+func ipField(ip string) [2][]byte   { s, e := ipRangeBytes(ip); return [2][]byte{s, e} }
+func portField(p string) [2][]byte  { s, e := portRangeBytesConcat(p); return [2][]byte{s, e} }
+func exactField(b []byte) [2][]byte { return [2][]byte{b, b} }
+
+// blockKey builds the ipv4 . ipv4 . inet_proto interval key pair for block and output_block
+func blockKey(srcIP, dstIP, protocol string) (key, keyEnd []byte) {
+	return concatRangeKeys(ipField(srcIP), ipField(dstIP),
+		exactField(ProtocolToBytesForConcatenated(protocol)))
+}
+
+// fwdBlockKey builds the ipv4 . ipv4 . inet_proto . inet_service interval key pair for fwd_block
+func fwdBlockKey(srcIP, dstIP, protocol, dstPort string) (key, keyEnd []byte) {
+	return concatRangeKeys(ipField(srcIP), ipField(dstIP),
+		exactField(ProtocolToBytesForConcatenated(protocol)), portField(dstPort))
+}
+
 func AddForwardingRule(protocol, srcIP, srcPort, dstIP, dstPort string) error {
 	client := GetNFTClient()
 
-	var mapName string
-	var key, value []byte
-
-	if dstPort == "any" {
-		mapName = protocol + "anyfwd"
-		key = IPToBytes(srcIP)
-		value = IPToBytes(dstIP)
-
-		if key == nil || value == nil {
-			return fmt.Errorf("invalid IP address")
-		}
-	} else {
-		mapName = protocol + "fwd"
-		// For complex keys, we'll concatenate the bytes
-		srcIPBytes := IPToBytes(srcIP)
-		srcPortBytes := PortToBytesForConcatenated(srcPort)
-		dstIPBytes := IPToBytes(dstIP)
-		dstPortBytes := PortToBytesForConcatenated(dstPort)
-
-		if srcIPBytes == nil || srcPortBytes == nil || dstIPBytes == nil || dstPortBytes == nil {
-			return fmt.Errorf("invalid IP or port")
-		}
-
-		// Concatenate key and value bytes
-		key = append(srcIPBytes, srcPortBytes...)
-		value = append(dstIPBytes, dstPortBytes...)
+	startIP, endIP := ipRangeBytes(srcIP)
+	dstIPBytes := IPToBytes(dstIP)
+	if startIP == nil || endIP == nil || dstIPBytes == nil {
+		return fmt.Errorf("invalid IP address")
 	}
 
-	return client.AddMapElement(TableFamilyInet, "nat", mapName, key, value)
+	if dstPort == "any" {
+		mapName := protocol + "anyfwd"
+		return client.AddMapElementRange(TableFamilyInet, "nat", mapName, startIP, endIP, dstIPBytes)
+	}
+
+	mapName := protocol + "fwd"
+	srcPortBytes := PortToBytesForConcatenated(srcPort)
+	dstPortBytes := PortToBytesForConcatenated(dstPort)
+	if srcPortBytes == nil || dstPortBytes == nil {
+		return fmt.Errorf("invalid port")
+	}
+
+	key := append(append([]byte{}, startIP...), srcPortBytes...)
+	keyEnd := append(append([]byte{}, endIP...), srcPortBytes...)
+	value := append(append([]byte{}, dstIPBytes...), dstPortBytes...)
+
+	return client.AddMapElementRange(TableFamilyInet, "nat", mapName, key, keyEnd, value)
 }
 
 // DeleteForwardingRule removes a forwarding rule from the appropriate map
 func DeleteForwardingRule(protocol, srcIP, srcPort, dstIP, dstPort string) error {
 	client := GetNFTClient()
 
-	var mapName string
-	var key []byte
-
-	if dstPort == "any" {
-		mapName = protocol + "anyfwd"
-		key = IPToBytes(srcIP)
-	} else {
-		mapName = protocol + "fwd"
-		key = append(IPToBytes(srcIP), PortToBytesForConcatenated(srcPort)...)
+	startIP, endIP := ipRangeBytes(srcIP)
+	if startIP == nil || endIP == nil {
+		return fmt.Errorf("invalid IP address")
 	}
 
-	return client.DeleteMapElement(TableFamilyInet, "nat", mapName, key)
+	if dstPort == "any" {
+		mapName := protocol + "anyfwd"
+		return client.DeleteMapElementRange(TableFamilyInet, "nat", mapName, startIP, endIP)
+	}
+
+	mapName := protocol + "fwd"
+	srcPortBytes := PortToBytesForConcatenated(srcPort)
+	if srcPortBytes == nil {
+		return fmt.Errorf("invalid port")
+	}
+	key := append(append([]byte{}, startIP...), srcPortBytes...)
+	keyEnd := append(append([]byte{}, endIP...), srcPortBytes...)
+
+	return client.DeleteMapElementRange(TableFamilyInet, "nat", mapName, key, keyEnd)
 }
 
 // AddBlockRule adds a block rule to the block map
 func AddBlockRule(srcIP, dstIP, protocol string) error {
 	client := GetNFTClient()
-
-	// Build the composite key: srcIP (4 bytes) + dstIP (4 bytes) + protocol (4 bytes for concatenated)
-	srcBytes := IPToBytes(srcIP)
-	dstBytes := IPToBytes(dstIP)
-	protoBytes := ProtocolToBytesForConcatenated(protocol)
-
-	if srcBytes == nil || dstBytes == nil || protoBytes == nil {
+	key, keyEnd := blockKey(srcIP, dstIP, protocol)
+	if key == nil {
 		return fmt.Errorf("invalid IP or protocol")
 	}
-
-	key := make([]byte, 0, 12) // 4 + 4 + 4 bytes
-	key = append(key, srcBytes...)
-	key = append(key, dstBytes...)
-	key = append(key, protoBytes...)
-
-	value := []byte("drop")
-
-	return client.AddMapElement(TableFamilyInet, "nat", "block", key, value)
+	return client.AddMapElementRange(TableFamilyInet, "nat", "block", key, keyEnd, []byte("drop"))
 }
 
 // DeleteBlockRule removes a block rule from the block map
 func DeleteBlockRule(srcIP, dstIP, protocol string) error {
 	client := GetNFTClient()
-
-	key := buildIPIPProtocolKey(srcIP, dstIP, protocol)
-
-	return client.DeleteMapElement(TableFamilyInet, "nat", "block", key)
+	key, keyEnd := blockKey(srcIP, dstIP, protocol)
+	if key == nil {
+		return fmt.Errorf("invalid IP or protocol")
+	}
+	return client.DeleteMapElementRange(TableFamilyInet, "nat", "block", key, keyEnd)
 }
 
 // AddOutputBlockRule adds an output block rule
 func AddOutputBlockRule(srcIP, dstIP, protocol string) error {
 	client := GetNFTClient()
-
-	key := buildIPIPProtocolKey(srcIP, dstIP, protocol)
-	value := []byte("drop")
-
-	return client.AddMapElement(TableFamilyInet, "filter", "output_block", key, value)
+	key, keyEnd := blockKey(srcIP, dstIP, protocol)
+	if key == nil {
+		return fmt.Errorf("invalid IP or protocol")
+	}
+	return client.AddMapElementRange(TableFamilyInet, "filter", "output_block", key, keyEnd, []byte("drop"))
 }
 
 // DeleteOutputBlockRule removes an output block rule
 func DeleteOutputBlockRule(srcIP, dstIP, protocol string) error {
 	client := GetNFTClient()
-
-	key := buildIPIPProtocolKey(srcIP, dstIP, protocol)
-
-	return client.DeleteMapElement(TableFamilyInet, "filter", "output_block", key)
+	key, keyEnd := blockKey(srcIP, dstIP, protocol)
+	if key == nil {
+		return fmt.Errorf("invalid IP or protocol")
+	}
+	return client.DeleteMapElementRange(TableFamilyInet, "filter", "output_block", key, keyEnd)
 }
 
 // AddForwardingBlockRule adds a forwarding block rule
 func AddForwardingBlockRule(srcIP, dstIP, protocol, dstPort string) error {
 	client := GetNFTClient()
-
-	// Build the composite key: srcIP (4 bytes) + dstIP (4 bytes) + protocol (4 bytes) + dstPort (2 bytes for inet_service)
-	srcBytes := IPToBytes(srcIP)
-	dstBytes := IPToBytes(dstIP)
-	protoBytes := ProtocolToBytesForConcatenated(protocol)
-	portBytes := PortToBytesForConcatenated(dstPort)
-
-	if srcBytes == nil || dstBytes == nil || protoBytes == nil || portBytes == nil {
+	key, keyEnd := fwdBlockKey(srcIP, dstIP, protocol, dstPort)
+	if key == nil {
 		return fmt.Errorf("invalid IP, protocol, or port")
 	}
-
-	key := make([]byte, 0, 16) // 4 + 4 + 4 + 4 bytes
-	key = append(key, srcBytes...)
-	key = append(key, dstBytes...)
-	key = append(key, protoBytes...)
-	key = append(key, portBytes...)
-
-	value := []byte("drop")
-
-	return client.AddMapElement(TableFamilyInet, "filter", "fwd_block", key, value)
+	return client.AddMapElementRange(TableFamilyInet, "filter", "fwd_block", key, keyEnd, []byte("drop"))
 }
 
 // DeleteForwardingBlockRule removes a forwarding block rule
 func DeleteForwardingBlockRule(srcIP, dstIP, protocol, dstPort string) error {
 	client := GetNFTClient()
-
-	// Build the composite key: srcIP (4 bytes) + dstIP (4 bytes) + protocol (4 bytes) + dstPort (2 bytes for inet_service)
-	srcBytes := IPToBytes(srcIP)
-	dstBytes := IPToBytes(dstIP)
-	protoBytes := ProtocolToBytesForConcatenated(protocol)
-	portBytes := PortToBytesForConcatenated(dstPort)
-
-	if srcBytes == nil || dstBytes == nil || protoBytes == nil || portBytes == nil {
+	key, keyEnd := fwdBlockKey(srcIP, dstIP, protocol, dstPort)
+	if key == nil {
 		return fmt.Errorf("invalid IP, protocol, or port")
 	}
-
-	key := make([]byte, 0, 16) // 4 + 4 + 4 + 4 bytes
-	key = append(key, srcBytes...)
-	key = append(key, dstBytes...)
-	key = append(key, protoBytes...)
-	key = append(key, portBytes...)
-
-	return client.DeleteMapElement(TableFamilyInet, "filter", "fwd_block", key)
+	return client.DeleteMapElementRange(TableFamilyInet, "filter", "fwd_block", key, keyEnd)
 }
 
 // AddServicePort adds a service port to the appropriate map
