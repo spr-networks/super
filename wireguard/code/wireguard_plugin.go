@@ -5,19 +5,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"sync"
 )
 
 import (
 	"github.com/gorilla/mux"
+	"golang.zx2c4.com/wireguard/wgctrl"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 var UNIX_PLUGIN_LISTENER = TEST_PREFIX + "/state/plugins/wireguard/wireguard_plugin"
@@ -65,85 +65,86 @@ type ClientConfig struct {
 func genKeyPair() (KeyPair, error) {
 	keypair := KeyPair{}
 
-	cmd := exec.Command("wg", "genkey")
-	stdout, err := cmd.Output()
+	privateKey, err := wgtypes.GeneratePrivateKey()
 	if err != nil {
 		fmt.Println("wg genkey failed", err)
 		return keypair, err
 	}
 
-	keypair.PrivateKey = strings.TrimSuffix(string(stdout), "\n")
-
-	cmd = exec.Command("wg", "pubkey")
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		fmt.Println("wg pubkey failed", err)
-		return keypair, err
-	}
-
-	go func() {
-		defer stdin.Close()
-		io.WriteString(stdin, keypair.PrivateKey+"\n")
-	}()
-
-	pubkey, err := cmd.Output()
-	if err != nil {
-		fmt.Println("wg pubkey failed: bad key", err)
-		return keypair, err
-	}
-
-	keypair.PublicKey = strings.TrimSuffix(string(pubkey), "\n")
+	keypair.PrivateKey = privateKey.String()
+	keypair.PublicKey = privateKey.PublicKey().String()
 
 	return keypair, nil
 }
 
 func genPresharedKey() (string, error) {
-	cmd := exec.Command("wg", "genpsk")
-	stdout, err := cmd.Output()
+	key, err := wgtypes.GenerateKey()
 	if err != nil {
 		fmt.Println("wg genpsk failed", err)
 		return "", err
 	}
 
-	PresharedKey := strings.TrimSuffix(string(stdout), "\n")
-	return PresharedKey, nil
+	return key.String(), nil
+}
+
+// clientPeerFromDevice maps a wgtypes.Peer to the ClientPeer wire format,
+// preserving the conventions of the previous `wg show <iface> dump` parser:
+// unset preshared key and endpoint are "(none)", empty allowed-ips is
+// "(none)", allowed-ips are comma-joined, keepalive off is 0.
+func clientPeerFromDevice(p wgtypes.Peer) ClientPeer {
+	peer := ClientPeer{}
+	peer.PublicKey = p.PublicKey.String()
+
+	if p.PresharedKey == (wgtypes.Key{}) {
+		peer.PresharedKey = "(none)"
+	} else {
+		peer.PresharedKey = p.PresharedKey.String()
+	}
+
+	if p.Endpoint == nil {
+		peer.Endpoint = "(none)"
+	} else {
+		peer.Endpoint = p.Endpoint.String()
+	}
+
+	if len(p.AllowedIPs) == 0 {
+		peer.AllowedIPs = "(none)"
+	} else {
+		ips := []string{}
+		for _, ipnet := range p.AllowedIPs {
+			ips = append(ips, ipnet.String())
+		}
+		peer.AllowedIPs = strings.Join(ips, ",")
+	}
+
+	if !p.LastHandshakeTime.IsZero() {
+		peer.LatestHandshake = uint64(p.LastHandshakeTime.Unix())
+	}
+	peer.TransferRx = uint64(p.ReceiveBytes)
+	peer.TransferTx = uint64(p.TransmitBytes)
+	peer.PersistentKeepalive = uint64(p.PersistentKeepaliveInterval.Seconds())
+
+	return peer
 }
 
 func getPeers() ([]ClientPeer, error) {
 	peers := []ClientPeer{}
 
-	cmd := exec.Command("wg", "show", WireguardInterface, "dump")
-	data, err := cmd.Output()
+	c, err := wgctrl.New()
+	if err != nil {
+		fmt.Println("wgctrl failed", err)
+		return peers, err
+	}
+	defer c.Close()
+
+	dev, err := c.Device(WireguardInterface)
 	if err != nil {
 		fmt.Println("wg show failed", err)
 		return peers, err
 	}
 
-	for idx, line := range strings.Split(string(data), "\n") {
-		// interface config - TODO get listenPort from here
-		//private_key public_key listen_port fwmark
-		if idx == 0 {
-			continue
-		}
-
-		pieces := strings.Split(line, "\t")
-		// 4 for interface
-		if len(pieces) < 8 {
-			continue
-		}
-
-		//public_key preshared_key endpoint allowed_ips latest_handshake transfer_rx transfer_tx persistent_keepalive
-		peer := ClientPeer{}
-		peer.PublicKey = pieces[0]
-		peer.PresharedKey = pieces[1]
-		peer.Endpoint = pieces[2]
-		peer.AllowedIPs = pieces[3]
-		peer.LatestHandshake, _ = strconv.ParseUint(pieces[4], 10, 64)
-		peer.TransferRx, _ = strconv.ParseUint(pieces[5], 10, 64)
-		peer.TransferTx, _ = strconv.ParseUint(pieces[6], 10, 64)
-		peer.PersistentKeepalive, _ = strconv.ParseUint(pieces[7], 10, 64)
-
-		peers = append(peers, peer)
+	for _, p := range dev.Peers {
+		peers = append(peers, clientPeerFromDevice(p))
 	}
 
 	return peers, nil
@@ -201,27 +202,89 @@ func getEndpoint() (string, error) {
 	return endpoint, nil
 }
 
-// get wireguard endpoint from the environment
+// get the server public key from the wireguard interface
 func getPublicKey() (string, error) {
-	cmd := exec.Command("wg", "show", WireguardInterface, "public-key")
-	stdout, err := cmd.Output()
+	c, err := wgctrl.New()
+	if err != nil {
+		return "", err
+	}
+	defer c.Close()
+
+	dev, err := c.Device(WireguardInterface)
 	if err != nil {
 		return "", err
 	}
 
-	pubkey := strings.TrimSuffix(string(stdout), "\n")
+	// `wg show <iface> public-key` prints "(none)" when no key is set
+	if dev.PublicKey == (wgtypes.Key{}) {
+		return "(none)", nil
+	}
 
-	return pubkey, nil
+	return dev.PublicKey.String(), nil
+}
+
+// buildWireguardConfig renders a device in the exact format of
+// `wg showconf <iface>`. The format is load-bearing: up.sh re-applies the
+// saved file with `wg setconf`.
+func buildWireguardConfig(dev *wgtypes.Device) string {
+	var b strings.Builder
+
+	b.WriteString("[Interface]\n")
+	if dev.ListenPort != 0 {
+		fmt.Fprintf(&b, "ListenPort = %d\n", dev.ListenPort)
+	}
+	if dev.FirewallMark != 0 {
+		fmt.Fprintf(&b, "FwMark = 0x%x\n", dev.FirewallMark)
+	}
+	if dev.PrivateKey != (wgtypes.Key{}) {
+		fmt.Fprintf(&b, "PrivateKey = %s\n", dev.PrivateKey.String())
+	}
+	b.WriteString("\n")
+
+	for i, p := range dev.Peers {
+		fmt.Fprintf(&b, "[Peer]\nPublicKey = %s\n", p.PublicKey.String())
+		if p.PresharedKey != (wgtypes.Key{}) {
+			fmt.Fprintf(&b, "PresharedKey = %s\n", p.PresharedKey.String())
+		}
+		if len(p.AllowedIPs) > 0 {
+			b.WriteString("AllowedIPs = ")
+			for j, ipnet := range p.AllowedIPs {
+				if j > 0 {
+					b.WriteString(", ")
+				}
+				b.WriteString(ipnet.String())
+			}
+			b.WriteString("\n")
+		}
+		if p.Endpoint != nil {
+			fmt.Fprintf(&b, "Endpoint = %s\n", p.Endpoint.String())
+		}
+		if p.PersistentKeepaliveInterval != 0 {
+			fmt.Fprintf(&b, "PersistentKeepalive = %d\n", int(p.PersistentKeepaliveInterval.Seconds()))
+		}
+		if i < len(dev.Peers)-1 {
+			b.WriteString("\n")
+		}
+	}
+
+	return b.String()
 }
 
 func saveConfig() error {
-	cmd := exec.Command("wg", "showconf", WireguardInterface)
-	data, err := cmd.Output()
+	c, err := wgctrl.New()
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+
+	dev, err := c.Device(WireguardInterface)
 	if err != nil {
 		return err
 	}
 
-	err = ioutil.WriteFile(WireguardConfigFile, data, 0600)
+	data := buildWireguardConfig(dev)
+
+	err = ioutil.WriteFile(WireguardConfigFile, []byte(data), 0600)
 	if err != nil {
 		return err
 	}
@@ -230,8 +293,20 @@ func saveConfig() error {
 }
 
 func removePeer(peer ClientPeer) error {
-	cmd := exec.Command("wg", "set", WireguardInterface, "peer", peer.PublicKey, "remove")
-	_, err := cmd.Output()
+	publicKey, err := wgtypes.ParseKey(peer.PublicKey)
+	if err != nil {
+		return err
+	}
+
+	c, err := wgctrl.New()
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+
+	err = c.ConfigureDevice(WireguardInterface, wgtypes.Config{
+		Peers: []wgtypes.PeerConfig{{PublicKey: publicKey, Remove: true}},
+	})
 	if err != nil {
 		return err
 	}
@@ -242,6 +317,45 @@ func removePeer(peer ClientPeer) error {
 	}
 
 	return nil
+}
+
+// addPeer configures a peer on the interface, replicating
+// `wg set <iface> peer <pk> preshared-key <psk> allowed-ips <ips>`
+// (allowed-ips on the wg CLI replaces the existing list).
+func addPeer(publicKey, presharedKey, allowedIPs string) error {
+	pk, err := wgtypes.ParseKey(publicKey)
+	if err != nil {
+		return fmt.Errorf("invalid public key: %v", err)
+	}
+
+	psk, err := wgtypes.ParseKey(presharedKey)
+	if err != nil {
+		return fmt.Errorf("invalid preshared key: %v", err)
+	}
+
+	nets := []net.IPNet{}
+	for _, cidr := range strings.Split(allowedIPs, ",") {
+		_, ipnet, err := net.ParseCIDR(strings.TrimSpace(cidr))
+		if err != nil {
+			return fmt.Errorf("invalid allowed-ips %s: %v", cidr, err)
+		}
+		nets = append(nets, *ipnet)
+	}
+
+	c, err := wgctrl.New()
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+
+	return c.ConfigureDevice(WireguardInterface, wgtypes.Config{
+		Peers: []wgtypes.PeerConfig{{
+			PublicKey:         pk,
+			PresharedKey:      &psk,
+			ReplaceAllowedIPs: true,
+			AllowedIPs:        nets,
+		}},
+	})
 }
 
 type AbstractDHCPRequest struct {
@@ -435,23 +549,9 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cmd := exec.Command("wg", "set", WireguardInterface, "peer", peer.PublicKey, "preshared-key", "/dev/stdin", "allowed-ips", AllowedIPs)
-
-	stdin, err := cmd.StdinPipe()
+	err = addPeer(peer.PublicKey, PresharedKey, AllowedIPs)
 	if err != nil {
-		fmt.Println("wg set stdin pipe error:", err)
-		http.Error(w, err.Error(), 400)
-		return
-	}
-
-	go func() {
-		defer stdin.Close()
-		io.WriteString(stdin, PresharedKey+"\n")
-	}()
-
-	_, err = cmd.Output()
-	if err != nil {
-		fmt.Println("wg set stdout error:", err)
+		fmt.Println("wg set error:", err)
 		http.Error(w, err.Error(), 400)
 		return
 	}
@@ -547,21 +647,90 @@ func pluginGetConfig(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(string(data))
 }
 
-// TODO parse output from wg show wg0 dump && strip PrivateKey
+// wgStatusPeer / wgStatusDevice replicate the JSON emitted by the wg-json
+// script from wireguard-tools (which the API's /status consumers parse):
+// fields are omitted when unset and the private key is never included.
+type wgStatusPeer struct {
+	PresharedKey        string   `json:"presharedKey,omitempty"`
+	Endpoint            string   `json:"endpoint,omitempty"`
+	LatestHandshake     int64    `json:"latestHandshake,omitempty"`
+	TransferRx          int64    `json:"transferRx,omitempty"`
+	TransferTx          int64    `json:"transferTx,omitempty"`
+	PersistentKeepalive int      `json:"persistentKeepalive,omitempty"`
+	AllowedIPs          []string `json:"allowedIps"`
+}
+
+type wgStatusDevice struct {
+	PublicKey  string                  `json:"publicKey,omitempty"`
+	ListenPort int                     `json:"listenPort,omitempty"`
+	Fwmark     int                     `json:"fwmark,omitempty"`
+	Peers      map[string]wgStatusPeer `json:"peers"`
+}
+
+func getStatus() (map[string]wgStatusDevice, error) {
+	c, err := wgctrl.New()
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	devices, err := c.Devices()
+	if err != nil {
+		return nil, err
+	}
+
+	status := map[string]wgStatusDevice{}
+	for _, dev := range devices {
+		entry := wgStatusDevice{
+			ListenPort: dev.ListenPort,
+			Fwmark:     dev.FirewallMark,
+			Peers:      map[string]wgStatusPeer{},
+		}
+		if dev.PublicKey != (wgtypes.Key{}) {
+			entry.PublicKey = dev.PublicKey.String()
+		}
+
+		for _, p := range dev.Peers {
+			peer := wgStatusPeer{
+				TransferRx:          p.ReceiveBytes,
+				TransferTx:          p.TransmitBytes,
+				PersistentKeepalive: int(p.PersistentKeepaliveInterval.Seconds()),
+				AllowedIPs:          []string{},
+			}
+			if p.PresharedKey != (wgtypes.Key{}) {
+				peer.PresharedKey = p.PresharedKey.String()
+			}
+			if p.Endpoint != nil {
+				peer.Endpoint = p.Endpoint.String()
+			}
+			if !p.LastHandshakeTime.IsZero() {
+				peer.LatestHandshake = p.LastHandshakeTime.Unix()
+			}
+			for _, ipnet := range p.AllowedIPs {
+				peer.AllowedIPs = append(peer.AllowedIPs, ipnet.String())
+			}
+			entry.Peers[p.PublicKey.String()] = peer
+		}
+
+		status[dev.Name] = entry
+	}
+
+	return status, nil
+}
+
 func pluginGetStatus(w http.ResponseWriter, r *http.Request) {
 	Configmtx.Lock()
 	defer Configmtx.Unlock()
 
-	cmd := exec.Command("/scripts/wg-json")
-	data, err := cmd.Output()
+	status, err := getStatus()
 	if err != nil {
-		fmt.Println("wg-json failed", err)
+		fmt.Println("wg status failed", err)
 		http.Error(w, "Not found", 404)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprint(w, string(data))
+	json.NewEncoder(w).Encode(status)
 }
 
 func pluginUp(w http.ResponseWriter, r *http.Request) {
