@@ -25,8 +25,8 @@ ARG USE_TMPFS=true
 RUN --mount=type=tmpfs,target=/tmpfs \
    [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
    go generate && \
-   go get github.com/spr-networks/coredns-jsonlog && \
-   go get github.com/spr-networks/coredns-block && \
+   go get github.com/spr-networks/coredns-jsonlog@sprbus-json && \
+   go get github.com/spr-networks/coredns-block@sprbus-json && \
    go get github.com/spr-networks/coredns-spr_cache && \
    go get github.com/spr-networks/coredns-spr_forward && \
    go generate && \
