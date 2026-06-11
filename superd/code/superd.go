@@ -289,7 +289,23 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 func update(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
+
+	//on the main release channel, verify build provenance for the images this
+	//update would pull. on failure abort before downloading anything.
+	if getReleaseChannel() == "" {
+		err := verifyUpdateImages(compose, target)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+	}
+
 	composeCommand(compose, target, "pull", "", false)
+
+	//confirm the pulled images match what was verified
+	if getReleaseChannel() == "" {
+		go verifyPulledImages()
+	}
 }
 
 func start(w http.ResponseWriter, r *http.Request) {
@@ -1078,6 +1094,7 @@ func main() {
 
 	unix_plugin_router := mux.NewRouter().StrictSlash(true)
 	unix_plugin_router.HandleFunc("/restart", restart).Methods("PUT")
+	unix_plugin_router.HandleFunc("/attest_status", attestStatus).Methods("GET", "PUT")
 	unix_plugin_router.HandleFunc("/start", start).Methods("PUT")
 	unix_plugin_router.HandleFunc("/stop", stop).Methods("PUT")
 	unix_plugin_router.HandleFunc("/update", update).Methods("PUT")
