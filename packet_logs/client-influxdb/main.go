@@ -22,7 +22,7 @@ import (
 
 	"github.com/google/gopacket/layers"
 	"github.com/influxdata/influxdb-client-go/v2"
-	"github.com/spr-networks/sprbus"
+	sprbus "github.com/spr-networks/sprbus-json"
 )
 
 var ServerEventSock = "/state/api/eventbus.sock"

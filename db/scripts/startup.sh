@@ -8,4 +8,4 @@ if [ ! -d "$STATE_DIR" ]; then
     mkdir "$STATE_DIR"
 fi
 
-/boltapi
+/dbapi

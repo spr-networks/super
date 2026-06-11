@@ -5,20 +5,17 @@ go 1.25.0
 require (
 	github.com/google/gopacket v1.1.19
 	github.com/influxdata/influxdb-client-go/v2 v2.14.0
-	github.com/spr-networks/sprbus v0.1.9
 )
 
 require (
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/influxdata/line-protocol v0.0.0-20210922203350-b1ad95c89adf // indirect
-	github.com/moby/pubsub v1.0.0 // indirect
 	github.com/oapi-codegen/runtime v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
+	github.com/spr-networks/sprbus-json v0.0.0
 	golang.org/x/net v0.52.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260319201613-d00831a3d3e7 // indirect
-	google.golang.org/grpc v1.79.3 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
 )
+
+replace github.com/spr-networks/sprbus-json => ../../sprbus-json

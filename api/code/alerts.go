@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/spr-networks/sprbus"
+	sprbus "github.com/spr-networks/sprbus-json"
 
 	"github.com/PaesslerAG/gval"
 	"github.com/PaesslerAG/jsonpath"

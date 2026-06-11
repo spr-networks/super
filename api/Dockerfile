@@ -11,8 +11,8 @@ ENV PATH="/usr/local/go/bin:$PATH"
 
 RUN mkdir /code
 WORKDIR /code
-RUN git clone https://github.com/spr-networks/sprbus --depth 1
-WORKDIR /code/sprbus/cmd/
+RUN git clone https://github.com/spr-networks/sprbus-json --depth 1
+WORKDIR /code/sprbus-json/cmd/
 
 ARG USE_TMPFS=true
 RUN --mount=type=tmpfs,target=/tmpfs \
