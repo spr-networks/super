@@ -979,6 +979,62 @@ func addServicePort(port ServicePort) error {
 	return nil
 }
 
+func restrictUpstreamServicesIfPublic(uplinks []string) bool {
+	hasPublic := false
+	for _, iface := range uplinks {
+		if interfaceHasPublicIP(iface) {
+			hasPublic = true
+			break
+		}
+	}
+
+	if !hasPublic {
+		return false
+	}
+
+	//the uplink is directly on the public internet: do not keep the default
+	//wan access to the service ports (ssh/http/https), go LAN-only
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
+
+	changed := false
+	for i := range gFirewallConfig.ServicePorts {
+		if gFirewallConfig.ServicePorts[i].UpstreamEnabled {
+			gFirewallConfig.ServicePorts[i].UpstreamEnabled = false
+			//only remove the wan side entry for this port, nothing else
+			DeleteServicePort(gFirewallConfig.ServicePorts[i].Protocol,
+				gFirewallConfig.ServicePorts[i].Port, true)
+			changed = true
+		}
+	}
+
+	if changed {
+		saveFirewallRulesLocked()
+	}
+
+	return true
+}
+
+func setupRestrictUpstreamServices() bool {
+	uplinks := []string{}
+
+	Interfacesmtx.Lock()
+	config := loadInterfacesConfigLocked()
+	Interfacesmtx.Unlock()
+
+	for _, entry := range config {
+		if entry.Enabled && entry.Type == "Uplink" {
+			uplinks = append(uplinks, entry.Name)
+		}
+	}
+
+	if wanif := os.Getenv("WANIF"); wanif != "" {
+		uplinks = append(uplinks, wanif)
+	}
+
+	return restrictUpstreamServicesIfPublic(uplinks)
+}
+
 func applyServicePorts(servicePorts []ServicePort) error {
 
 	FlushServicePorts()
@@ -2898,6 +2954,45 @@ func getPhysicalInterfaces() []string {
 		physical = append(physical, attrs.Name)
 	}
 	return physical
+}
+
+func ipIsPrivateOrLocal(ip net.IP) bool {
+	if ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+		return true
+	}
+
+	if ip4 := ip.To4(); ip4 != nil {
+		//CGNAT 100.64.0.0/10
+		if ip4[0] == 100 && ip4[1] >= 64 && ip4[1] <= 127 {
+			return true
+		}
+	}
+
+	return false
+}
+
+func interfaceHasPublicIP(iface string) bool {
+	ief, err := net.InterfaceByName(iface)
+	if err != nil {
+		return false
+	}
+
+	addrs, err := ief.Addrs()
+	if err != nil {
+		return false
+	}
+
+	for _, addr := range addrs {
+		ipnet, ok := addr.(*net.IPNet)
+		if !ok {
+			continue
+		}
+		if ipnet.IP.IsGlobalUnicast() && !ipIsPrivateOrLocal(ipnet.IP) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func setupAPInit() {

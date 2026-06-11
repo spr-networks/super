@@ -2651,6 +2651,10 @@ func finalizeSetup(w http.ResponseWriter, r *http.Request) {
 	// disable mdns advertising and set up default multicast rules
 	multicastSettingsSetupDone()
 
+	//if the uplink is on a public internet address, restrict the default
+	//ssh/http/https service ports to LAN access only
+	setupRestrictUpstreamServices()
+
 	ioutil.WriteFile(SetupDonePath, []byte("true"), 0600)
 
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
