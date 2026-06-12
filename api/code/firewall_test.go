@@ -2115,6 +2115,51 @@ func TestEstablishDeviceSkipsDisabled(t *testing.T) {
 	}
 }
 
+// The snapshot used by the route loop must report identical membership to a
+// live GetMapElement lookup, for every map shape the loop checks.
+func TestMapSnapshotMatchesLive(t *testing.T) {
+	setupFirewallTest(t)
+	defer teardownFirewallTest(t)
+
+	ip, iface, mac := "192.168.7.20", "eth0", "aa:bb:cc:00:11:22"
+	otherIP := "192.168.7.99"
+
+	// 3-part (ethernet_filter) and 2-part (group _src/_dst_access) maps
+	if err := AddElementToMapComplex("inet", "filter", "ethernet_filter",
+		[]string{ip, iface, mac}, "return"); err != nil {
+		t.Fatalf("add ethernet_filter: %v", err)
+	}
+	if err := AddElementToMapComplex("inet", "filter", "dns_access",
+		[]string{ip, iface}, "accept"); err != nil {
+		t.Fatalf("add dns_access: %v", err)
+	}
+
+	snap := GetNFTClient().SnapshotMaps(TableFamilyInet, "filter",
+		[]string{"ethernet_filter", "dns_access", "internet_access"})
+
+	cases := []struct {
+		name  string
+		parts []string
+	}{
+		{"ethernet_filter", []string{ip, iface, mac}},
+		{"ethernet_filter", []string{otherIP, iface, mac}}, // absent
+		{"dns_access", []string{ip, iface}},
+		{"dns_access", []string{otherIP, iface}},     // absent
+		{"internet_access", []string{ip, iface}},     // empty map
+	}
+	for _, c := range cases {
+		live := GetElementFromMapComplex("inet", "filter", c.name, c.parts) == nil
+		snapHas := snap.HasElement(c.name, c.parts)
+		if live != snapHas {
+			t.Errorf("%s %v: live=%v snapshot=%v (must match)", c.name, c.parts, live, snapHas)
+		}
+	}
+	// a map not in the snapshot reports absent
+	if snap.HasElement("lan_access", []string{ip, iface}) {
+		t.Error("un-snapshotted map should report absent")
+	}
+}
+
 func TestFlushVmapsRemovesEntries(t *testing.T) {
 	setupFirewallTest(t)
 	defer teardownFirewallTest(t)

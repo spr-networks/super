@@ -394,6 +394,45 @@ func (c *NFTClient) GetMapElement(family TableFamily, tableName, mapName string,
 	return fmt.Errorf("element not found")
 }
 
+// MapSnapshot caches map element keys for membership tests without re-dumping.
+type MapSnapshot struct {
+	maps map[string]map[string]struct{}
+}
+
+// SnapshotMaps dumps each named map once. Missing maps are recorded as empty.
+func (c *NFTClient) SnapshotMaps(family TableFamily, tableName string, mapNames []string) *MapSnapshot {
+	snap := &MapSnapshot{maps: make(map[string]map[string]struct{}, len(mapNames))}
+	table := c.GetTable(family, tableName)
+	for _, name := range mapNames {
+		keys := map[string]struct{}{}
+		if table != nil {
+			if set, err := c.conn.GetSetByName(table, name); err == nil {
+				if elements, err := c.conn.GetSetElements(set); err == nil {
+					for _, el := range elements {
+						keys[string(el.Key)] = struct{}{}
+					}
+				}
+			}
+		}
+		snap.maps[name] = keys
+	}
+	return snap
+}
+
+// HasElement reports whether mapName contains the concatenated keyParts.
+func (s *MapSnapshot) HasElement(mapName string, keyParts []string) bool {
+	keys, ok := s.maps[mapName]
+	if !ok {
+		return false
+	}
+	key, err := buildConcatenatedKey(mapName, keyParts)
+	if err != nil {
+		return false
+	}
+	_, found := keys[string(key)]
+	return found
+}
+
 // FlushMap removes all elements from a map
 func (c *NFTClient) FlushMap(family TableFamily, tableName, mapName string) error {
 	set, err := c.GetMap(family, tableName, mapName)
