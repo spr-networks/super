@@ -394,14 +394,18 @@ func (c *NFTClient) GetMapElement(family TableFamily, tableName, mapName string,
 	return fmt.Errorf("element not found")
 }
 
-// MapSnapshot caches map element keys for membership tests without re-dumping.
+// MapSnapshot caches map element keys and parsed entries without re-dumping.
 type MapSnapshot struct {
-	maps map[string]map[string]struct{}
+	maps    map[string]map[string]struct{}
+	entries map[string][]verdictEntry
 }
 
 // SnapshotMaps dumps each named map once. Missing maps are recorded as empty.
 func (c *NFTClient) SnapshotMaps(family TableFamily, tableName string, mapNames []string) *MapSnapshot {
-	snap := &MapSnapshot{maps: make(map[string]map[string]struct{}, len(mapNames))}
+	snap := &MapSnapshot{
+		maps:    make(map[string]map[string]struct{}, len(mapNames)),
+		entries: make(map[string][]verdictEntry, len(mapNames)),
+	}
 	table := c.GetTable(family, tableName)
 	for _, name := range mapNames {
 		keys := map[string]struct{}{}
@@ -410,6 +414,9 @@ func (c *NFTClient) SnapshotMaps(family TableFamily, tableName string, mapNames 
 				if elements, err := c.conn.GetSetElements(set); err == nil {
 					for _, el := range elements {
 						keys[string(el.Key)] = struct{}{}
+						if parts := splitConcatKey(name, el.Key); parts != nil {
+							snap.entries[name] = append(snap.entries[name], verdictEntryFromKey(name, len(el.Key), parts))
+						}
 					}
 				}
 			}
@@ -417,6 +424,34 @@ func (c *NFTClient) SnapshotMaps(family TableFamily, tableName string, mapNames 
 		snap.maps[name] = keys
 	}
 	return snap
+}
+
+func verdictEntryFromKey(mapName string, keyLen int, parts []string) verdictEntry {
+	e := verdictEntry{}
+	for i, kind := range concatKeySchema(mapName, keyLen) {
+		switch kind {
+		case "ip":
+			e.ipv4 = parts[i]
+		case "iface":
+			e.ifname = parts[i]
+		case "mac":
+			e.mac = parts[i]
+		}
+	}
+	return e
+}
+
+func (s *MapSnapshot) Entries(mapName string) []verdictEntry {
+	return s.entries[mapName]
+}
+
+func (s *MapSnapshot) HasMAC(mapName, mac string) bool {
+	for _, e := range s.entries[mapName] {
+		if e.mac != "" && equalMAC(e.mac, mac) {
+			return true
+		}
+	}
+	return false
 }
 
 // HasElement reports whether mapName contains the concatenated keyParts.
