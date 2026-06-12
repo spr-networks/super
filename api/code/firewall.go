@@ -1113,7 +1113,7 @@ func deleteDeviceEndpointEntry(srcIP string, e Endpoint) {
 func deleteEndpoint(e Endpoint) error {
 	//NOTE: Domains not implemented yet. This handles the IP case
 	if e.IP == "" {
-		return fmt.Errorf("Domain not implemented yet for " + e.RuleName)
+		return fmt.Errorf("Domain not implemented yet for %s", e.RuleName)
 	}
 
 	Devicesmtx.Lock()
@@ -1624,7 +1624,7 @@ func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container
 
 		ip := net.ParseIP(container_rule.RouteDst)
 		if ip == nil {
-			return fmt.Errorf("invalid ip " + container_rule.RouteDst)
+			return fmt.Errorf("invalid ip %s", container_rule.RouteDst)
 		}
 
 		if action == "add" {
@@ -1747,7 +1747,7 @@ func showNFMap(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, string(stdout))
+	fmt.Fprintf(w, "%s", string(stdout))
 }
 
 func showNFTable(w http.ResponseWriter, r *http.Request) {
@@ -1763,7 +1763,7 @@ func showNFTable(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "plain/text")
-	fmt.Fprintf(w, stdout)
+	fmt.Fprintf(w, "%s", stdout)
 }
 
 func listNFTables(w http.ResponseWriter, r *http.Request) {
@@ -1776,7 +1776,7 @@ func listNFTables(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, string(stdout))
+	fmt.Fprintf(w, "%s", string(stdout))
 }
 
 func getFirewallConfig(w http.ResponseWriter, r *http.Request) {
@@ -1791,7 +1791,7 @@ func CIDRorIP(IP string) error {
 	if err != nil {
 		ip := net.ParseIP(IP)
 		if ip == nil {
-			return fmt.Errorf("invalid ip " + IP)
+			return fmt.Errorf("invalid ip %s", IP)
 		} else {
 			return nil
 		}

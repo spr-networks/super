@@ -502,7 +502,7 @@ func sendDeviceAlertByToken(deviceToken string, title string, message string) er
 		}
 	}
 
-	return fmt.Errorf("could not find device " + deviceToken)
+	return fmt.Errorf("could not find device %s", deviceToken)
 }
 
 /*

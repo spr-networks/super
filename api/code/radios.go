@@ -1249,13 +1249,13 @@ func iwCommand(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, string(stdout))
+		fmt.Fprintf(w, "%s", string(stdout))
 
 		return
 	}
 
 	w.Header().Set("Content-Type", "text/plain")
-	fmt.Fprintf(w, string(data))
+	fmt.Fprintf(w, "%s", string(data))
 }
 
 func (e *ExtraBSS) Validate() error {
