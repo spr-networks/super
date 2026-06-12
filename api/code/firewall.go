@@ -2359,12 +2359,12 @@ func hasCustomVerdict(ZoneName string, IP string, Iface string) bool {
 	return false
 }
 
-func hasVmapEntries(devices map[string]DeviceEntry, entry DeviceEntry, Iface string) bool {
+func hasVmapEntries(snap *MapSnapshot, devices map[string]DeviceEntry, entry DeviceEntry, Iface string) bool {
 	//check if a device has its vmap entries established
 
 	//check ethernet filter entry is present
 	if entry.MAC != "" {
-		if !hasVerdictMac(entry.RecentIP, entry.MAC, Iface, "ethernet_filter", "return") {
+		if !snap.HasElement("ethernet_filter", []string{entry.RecentIP, Iface, entry.MAC}) {
 			return false
 		}
 	}
@@ -2404,8 +2404,9 @@ func hasVmapEntries(devices map[string]DeviceEntry, entry DeviceEntry, Iface str
 			continue
 		}
 
-		//custom group
-		if !hasCustomVerdict(group_name, entry.RecentIP, Iface) {
+		//custom group: present when in both _dst_access and _src_access
+		if !snap.HasElement(group_name+"_dst_access", []string{entry.RecentIP, Iface}) ||
+			!snap.HasElement(group_name+"_src_access", []string{entry.RecentIP, Iface}) {
 			return false
 		}
 	}
@@ -3250,6 +3251,9 @@ func dynamicRouteLoop() {
 				}
 			}
 
+			//snapshot the verdict maps once instead of re-dumping per device
+			vmapSnap := GetNFTClient().SnapshotMaps(TableFamilyInet, "filter", getVerdictMapNames())
+
 			//now get the existing route and make an update if needed
 			for ident, entry := range devices {
 				//no IP yet for this device -> no route, skip this entry
@@ -3313,7 +3317,7 @@ func dynamicRouteLoop() {
 				//once when an entry is present, then leave them alone -- never
 				//fall through to establishDevice, which would re-add them.
 				if device_disabled {
-					if entry.MAC != "" && hasVerdictMac(entry.RecentIP, entry.MAC, new_iface, "ethernet_filter", "return") {
+					if entry.MAC != "" && vmapSnap.HasElement("ethernet_filter", []string{entry.RecentIP, new_iface, entry.MAC}) {
 						flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface))
 					}
 					continue
@@ -3323,7 +3327,7 @@ func dynamicRouteLoop() {
 				if established_route_device != "" && established_route_device == new_iface {
 
 					//investigate verdict maps and make sure device is there
-					if hasVmapEntries(devices, entry, new_iface) {
+					if hasVmapEntries(vmapSnap, devices, entry, new_iface) {
 						//vmaps happy, skip updating this device
 						continue
 					}

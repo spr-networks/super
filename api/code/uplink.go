@@ -357,8 +357,8 @@ type PPPIface struct {
 	Enabled  bool
 	Username string
 	Secret   string
-	VLAN     string `json,optional`
-	MTU      string `json, optional`
+	VLAN     string
+	MTU      string
 }
 
 type PPPConfig struct {
