@@ -131,59 +131,12 @@ func (c *NFTClient) GetMap(family TableFamily, tableName, mapName string) (*nfta
 		return nil, fmt.Errorf("table %s not found", tableName)
 	}
 
-	sets, err := c.conn.GetSets(table)
+	set, err := c.conn.GetSetByName(table, mapName)
 	if err != nil {
-		// Check if this is the known concatenated type issue
-		if strings.Contains(err.Error(), "conn.Receive: netlink receive: invalid argument") {
-			// For known concatenated maps, return a basic set structure
-			// This is a workaround for the google/nftables issue
-			switch mapName {
-			case "tcpfwd", "udpfwd":
-				// ipv4_addr . inet_service : ipv4_addr . inet_service
-				return &nftables.Set{
-					Table:    table,
-					Name:     mapName,
-					KeyType:  nftables.SetDatatype{Name: "ipv4_addr . inet_service", Bytes: 8},
-					DataType: nftables.SetDatatype{Name: "ipv4_addr . inet_service", Bytes: 8},
-					IsMap:    true,
-				}, nil
-			case "tcpanyfwd", "udpanyfwd":
-				// ipv4_addr : ipv4_addr
-				return &nftables.Set{
-					Table:    table,
-					Name:     mapName,
-					KeyType:  nftables.TypeIPAddr,
-					DataType: nftables.TypeIPAddr,
-					IsMap:    true,
-				}, nil
-			case "block":
-				// ipv4_addr . ipv4_addr . inet_proto : verdict
-				return &nftables.Set{
-					Table:    table,
-					Name:     mapName,
-					KeyType:  nftables.SetDatatype{Name: "ipv4_addr . ipv4_addr . inet_proto", Bytes: 9},
-					DataType: nftables.SetDatatype{Name: "verdict", Bytes: 0},
-					IsMap:    true,
-				}, nil
-			default:
-				// For other maps, return a generic structure
-				return &nftables.Set{
-					Table: table,
-					Name:  mapName,
-					IsMap: true,
-				}, nil
-			}
-		}
 		return nil, err
 	}
 
-	for _, set := range sets {
-		if set.Name == mapName {
-			return set, nil
-		}
-	}
-
-	return nil, fmt.Errorf("map %s not found in table %s", mapName, tableName)
+	return set, nil
 }
 
 // ListMapElements lists all elements in a map and returns them as JSON
@@ -439,6 +392,80 @@ func (c *NFTClient) GetMapElement(family TableFamily, tableName, mapName string,
 	}
 
 	return fmt.Errorf("element not found")
+}
+
+// MapSnapshot caches map element keys and parsed entries without re-dumping.
+type MapSnapshot struct {
+	maps    map[string]map[string]struct{}
+	entries map[string][]verdictEntry
+}
+
+// SnapshotMaps dumps each named map once. Missing maps are recorded as empty.
+func (c *NFTClient) SnapshotMaps(family TableFamily, tableName string, mapNames []string) *MapSnapshot {
+	snap := &MapSnapshot{
+		maps:    make(map[string]map[string]struct{}, len(mapNames)),
+		entries: make(map[string][]verdictEntry, len(mapNames)),
+	}
+	table := c.GetTable(family, tableName)
+	for _, name := range mapNames {
+		keys := map[string]struct{}{}
+		if table != nil {
+			if set, err := c.conn.GetSetByName(table, name); err == nil {
+				if elements, err := c.conn.GetSetElements(set); err == nil {
+					for _, el := range elements {
+						keys[string(el.Key)] = struct{}{}
+						if parts := splitConcatKey(name, el.Key); parts != nil {
+							snap.entries[name] = append(snap.entries[name], verdictEntryFromKey(name, len(el.Key), parts))
+						}
+					}
+				}
+			}
+		}
+		snap.maps[name] = keys
+	}
+	return snap
+}
+
+func verdictEntryFromKey(mapName string, keyLen int, parts []string) verdictEntry {
+	e := verdictEntry{}
+	for i, kind := range concatKeySchema(mapName, keyLen) {
+		switch kind {
+		case "ip":
+			e.ipv4 = parts[i]
+		case "iface":
+			e.ifname = parts[i]
+		case "mac":
+			e.mac = parts[i]
+		}
+	}
+	return e
+}
+
+func (s *MapSnapshot) Entries(mapName string) []verdictEntry {
+	return s.entries[mapName]
+}
+
+func (s *MapSnapshot) HasMAC(mapName, mac string) bool {
+	for _, e := range s.entries[mapName] {
+		if e.mac != "" && equalMAC(e.mac, mac) {
+			return true
+		}
+	}
+	return false
+}
+
+// HasElement reports whether mapName contains the concatenated keyParts.
+func (s *MapSnapshot) HasElement(mapName string, keyParts []string) bool {
+	keys, ok := s.maps[mapName]
+	if !ok {
+		return false
+	}
+	key, err := buildConcatenatedKey(mapName, keyParts)
+	if err != nil {
+		return false
+	}
+	_, found := keys[string(key)]
+	return found
 }
 
 // FlushMap removes all elements from a map

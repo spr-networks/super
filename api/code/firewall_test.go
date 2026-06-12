@@ -2067,8 +2067,171 @@ func TestFlushVmaps(t *testing.T) {
 			}()
 
 			// Call flushVmaps - it should handle all edge cases gracefully
-			flushVmaps(tt.IPString, tt.MACString, tt.iface, tt.tags, tt.flush)
+			flushVmaps(tt.IPString, tt.MACString, tt.iface, tt.tags, tt.flush, false, nil)
 		})
+	}
+}
+
+// flushVmaps must actually remove entries it added: the delete key has to be
+// the same binary concatenation the add used, not a dotted ascii string.
+// establishDevice (the dynamicRouteLoop path) must not add a disabled device
+// to ethernet_filter, otherwise the loop oscillates: flush, re-add, flush...
+func TestEstablishDeviceSkipsDisabled(t *testing.T) {
+	setupFirewallTest(t)
+	defer teardownFirewallTest(t)
+
+	iface := "eth0"
+	groups := []GroupEntry{}
+
+	enabled := DeviceEntry{
+		MAC: "aa:00:00:00:00:01", RecentIP: "192.168.9.10",
+		Name: "enabled", Groups: []string{}, Policies: []string{},
+	}
+	disabled := DeviceEntry{
+		MAC: "aa:00:00:00:00:02", RecentIP: "192.168.9.11",
+		Name: "disabled", Groups: []string{}, Policies: []string{"disabled"},
+		DeviceDisabled: true,
+	}
+	devices := map[string]DeviceEntry{enabled.MAC: enabled, disabled.MAC: disabled}
+
+	establishDevice(devices, groups, enabled, iface, "", "192.168.9.8/30", "192.168.9.9")
+	establishDevice(devices, groups, disabled, iface, "", "192.168.9.12/30", "192.168.9.13")
+
+	if GetMACVerdictElement("inet", "filter", "ethernet_filter",
+		enabled.RecentIP, iface, enabled.MAC, "return") != nil {
+		t.Error("enabled device should be in ethernet_filter")
+	}
+	if GetMACVerdictElement("inet", "filter", "ethernet_filter",
+		disabled.RecentIP, iface, disabled.MAC, "return") == nil {
+		t.Error("disabled device should NOT be in ethernet_filter")
+	}
+
+	// re-establishing a now-disabled device must remove its stale entry
+	addVerdictMac(disabled.RecentIP, disabled.MAC, iface, "ethernet_filter", "return")
+	establishDevice(devices, groups, disabled, iface, iface, "192.168.9.12/30", "192.168.9.13")
+	if GetMACVerdictElement("inet", "filter", "ethernet_filter",
+		disabled.RecentIP, iface, disabled.MAC, "return") == nil {
+		t.Error("disabled device entry should be flushed on re-establish")
+	}
+}
+
+// The snapshot used by the route loop must report identical membership to a
+// live GetMapElement lookup, for every map shape the loop checks.
+func TestMapSnapshotMatchesLive(t *testing.T) {
+	setupFirewallTest(t)
+	defer teardownFirewallTest(t)
+
+	ip, iface, mac := "192.168.7.20", "eth0", "aa:bb:cc:00:11:22"
+	otherIP := "192.168.7.99"
+
+	// 3-part (ethernet_filter) and 2-part (group _src/_dst_access) maps
+	if err := AddElementToMapComplex("inet", "filter", "ethernet_filter",
+		[]string{ip, iface, mac}, "return"); err != nil {
+		t.Fatalf("add ethernet_filter: %v", err)
+	}
+	if err := AddElementToMapComplex("inet", "filter", "dns_access",
+		[]string{ip, iface}, "accept"); err != nil {
+		t.Fatalf("add dns_access: %v", err)
+	}
+
+	snap := GetNFTClient().SnapshotMaps(TableFamilyInet, "filter",
+		[]string{"ethernet_filter", "dns_access", "internet_access"})
+
+	cases := []struct {
+		name  string
+		parts []string
+	}{
+		{"ethernet_filter", []string{ip, iface, mac}},
+		{"ethernet_filter", []string{otherIP, iface, mac}}, // absent
+		{"dns_access", []string{ip, iface}},
+		{"dns_access", []string{otherIP, iface}}, // absent
+		{"internet_access", []string{ip, iface}}, // empty map
+	}
+	for _, c := range cases {
+		live := GetElementFromMapComplex("inet", "filter", c.name, c.parts) == nil
+		snapHas := snap.HasElement(c.name, c.parts)
+		if live != snapHas {
+			t.Errorf("%s %v: live=%v snapshot=%v (must match)", c.name, c.parts, live, snapHas)
+		}
+	}
+	// a map not in the snapshot reports absent
+	if snap.HasElement("lan_access", []string{ip, iface}) {
+		t.Error("un-snapshotted map should report absent")
+	}
+}
+
+// A disabled device whose ethernet_filter entry is on a different interface
+// than the route loop's computed new_iface must still be flushed. The old
+// gate checked HasElement at new_iface and missed the stale-iface entry, so it
+// flushed every tick without ever removing it (the high-CPU bug on the box).
+func TestDisabledDeviceFlushedAcrossInterfaces(t *testing.T) {
+	setupFirewallTest(t)
+	defer teardownFirewallTest(t)
+
+	ip, entryIface, mac := "192.168.8.50", "eth0", "78:31:c1:d2:f0:01"
+	newIface := "eth1" // what the loop computes, different from the entry's iface
+
+	if err := AddElementToMapComplex("inet", "filter", "ethernet_filter",
+		[]string{ip, entryIface, mac}, "return"); err != nil {
+		t.Fatalf("add ethernet_filter: %v", err)
+	}
+
+	snap := GetNFTClient().SnapshotMaps(TableFamilyInet, "filter", getVerdictMapNames())
+
+	// MAC-based gate catches it; the old iface-specific gate would not
+	if !snap.HasMAC("ethernet_filter", mac) {
+		t.Fatal("HasMAC should find the entry regardless of interface")
+	}
+	if snap.HasElement("ethernet_filter", []string{ip, newIface, mac}) {
+		t.Fatal("entry is on eth0, not eth1 -- old gate would (wrongly) miss it")
+	}
+
+	// flush as the disabled branch does, with the mismatched new_iface
+	flushVmaps(ip, mac, newIface, getVerdictMapNames(), isAPVlan(newIface), true, snap)
+
+	if GetMACVerdictElement("inet", "filter", "ethernet_filter", ip, entryIface, mac, "return") == nil {
+		t.Error("disabled device still in ethernet_filter after flush")
+	}
+	// and a fresh snapshot must now report it gone (no perpetual re-flush)
+	snap2 := GetNFTClient().SnapshotMaps(TableFamilyInet, "filter", []string{"ethernet_filter"})
+	if snap2.HasMAC("ethernet_filter", mac) {
+		t.Error("entry should be gone; loop would otherwise flush every tick")
+	}
+}
+
+func TestFlushVmapsRemovesEntries(t *testing.T) {
+	setupFirewallTest(t)
+	defer teardownFirewallTest(t)
+
+	ip := "192.168.5.42"
+	iface := "eth0"
+	mac := "aa:bb:cc:dd:ee:ff"
+
+	// 2-part map: ipv4 . ifname
+	if err := AddElementToMapComplex("inet", "filter", "internet_access",
+		[]string{ip, iface}, "accept"); err != nil {
+		t.Fatalf("add internet_access: %v", err)
+	}
+	// 3-part map: ipv4 . ifname . ether_addr
+	if err := AddElementToMapComplex("inet", "filter", "ethernet_filter",
+		[]string{ip, iface, mac}, "return"); err != nil {
+		t.Fatalf("add ethernet_filter: %v", err)
+	}
+
+	if GetElementFromMapComplex("inet", "filter", "internet_access", []string{ip, iface}) != nil {
+		t.Fatal("internet_access entry not present after add")
+	}
+	if GetElementFromMapComplex("inet", "filter", "ethernet_filter", []string{ip, iface, mac}) != nil {
+		t.Fatal("ethernet_filter entry not present after add")
+	}
+
+	flushVmaps(ip, mac, iface, []string{"internet_access", "ethernet_filter"}, true, false, nil)
+
+	if err := GetElementFromMapComplex("inet", "filter", "internet_access", []string{ip, iface}); err == nil {
+		t.Error("internet_access entry still present after flushVmaps")
+	}
+	if err := GetElementFromMapComplex("inet", "filter", "ethernet_filter", []string{ip, iface, mac}); err == nil {
+		t.Error("ethernet_filter entry still present after flushVmaps")
 	}
 }
 

@@ -1281,11 +1281,17 @@ func refreshDeviceGroupsAndPolicy(devices map[string]DeviceEntry, groups []Group
 		}
 	}
 
-	//check dhcp vmap for the interface
-	entries := getNFTVerdictMap("dhcp_access")
-	for _, entry := range entries {
-		if equalMAC(entry.mac, dev.MAC) {
-			ifname = entry.ifname
+	//the most recent DHCP interface is authoritative; the dhcp_access lookup
+	//below is ambiguous when stale entries exist for a moved device
+	ifname = dev.DHCPLastInterface
+
+	if ifname == "" {
+		//fall back to the dhcp vmap for devices without a recorded interface
+		entries := getNFTVerdictMap("dhcp_access")
+		for _, entry := range entries {
+			if equalMAC(entry.mac, dev.MAC) {
+				ifname = entry.ifname
+			}
 		}
 	}
 
@@ -1299,7 +1305,7 @@ func refreshDeviceGroupsAndPolicy(devices map[string]DeviceEntry, groups []Group
 	}
 
 	//remove from existing verdict maps
-	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), isAPVlan(ifname))
+	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), isAPVlan(ifname), false, nil)
 
 	device_disabled := slices.Contains(dev.Policies, "disabled") || dev.DeviceDisabled == true
 	if !device_disabled {
@@ -2359,12 +2365,12 @@ func hasCustomVerdict(ZoneName string, IP string, Iface string) bool {
 	return false
 }
 
-func hasVmapEntries(devices map[string]DeviceEntry, entry DeviceEntry, Iface string) bool {
+func hasVmapEntries(snap *MapSnapshot, devices map[string]DeviceEntry, entry DeviceEntry, Iface string) bool {
 	//check if a device has its vmap entries established
 
 	//check ethernet filter entry is present
 	if entry.MAC != "" {
-		if !hasVerdictMac(entry.RecentIP, entry.MAC, Iface, "ethernet_filter", "return") {
+		if !snap.HasElement("ethernet_filter", []string{entry.RecentIP, Iface, entry.MAC}) {
 			return false
 		}
 	}
@@ -2404,8 +2410,9 @@ func hasVmapEntries(devices map[string]DeviceEntry, entry DeviceEntry, Iface str
 			continue
 		}
 
-		//custom group
-		if !hasCustomVerdict(group_name, entry.RecentIP, Iface) {
+		//custom group: present when in both _dst_access and _src_access
+		if !snap.HasElement(group_name+"_dst_access", []string{entry.RecentIP, Iface}) ||
+			!snap.HasElement(group_name+"_src_access", []string{entry.RecentIP, Iface}) {
 			return false
 		}
 	}
@@ -2413,7 +2420,7 @@ func hasVmapEntries(devices map[string]DeviceEntry, entry DeviceEntry, Iface str
 	return true
 }
 
-func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, matchInterface bool) {
+func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, matchInterface bool, disabled bool, snap *MapSnapshot) {
 	is_mesh := isMeshPluginEnabled()
 	mesh_downlink := ""
 	if is_mesh {
@@ -2429,8 +2436,12 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 	}
 
 	for _, name := range vmap_names {
-		entries := getNFTVerdictMap(name)
-		verdict := getMapVerdict(name)
+		var entries []verdictEntry
+		if snap != nil {
+			entries = snap.Entries(name)
+		} else {
+			entries = getNFTVerdictMap(name)
+		}
 		for _, entry := range entries {
 
 			//do not flush wireguard entries from vmaps unless the incoming device is on the same interface
@@ -2444,9 +2455,11 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 
 			//when in mesh mode, dont flush the downlink
 			//for faster transitions
-			if is_mesh && name == "ethernet_filter" {
-				if entry.ifname == mesh_downlink {
-					continue
+			if !disabled {
+				if is_mesh && name == "ethernet_filter" {
+					if entry.ifname == mesh_downlink {
+						continue
+					}
 				}
 			}
 
@@ -2454,14 +2467,14 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 				//no ifname, cant do anything with these
 			} else if (entry.ipv4 == IP) || (matchInterface && (entry.ifname == Ifname)) || ((MAC != "") && equalMAC(entry.mac, MAC)) {
 				if entry.mac != "" {
-					key := entry.ipv4 + "." + entry.ifname + "." + entry.mac + ":" + verdict
-					err := DeleteElementFromMap("inet", "filter", name, key)
+					err := DeleteElementFromMapComplex("inet", "filter", name,
+						[]string{entry.ipv4, entry.ifname, entry.mac})
 					if err != nil {
 						log.Println("nft delete failed", err)
 					}
 				} else {
-					key := entry.ipv4 + "." + entry.ifname + ":" + verdict
-					err := DeleteElementFromMap("inet", "filter", name, key)
+					err := DeleteElementFromMapComplex("inet", "filter", name,
+						[]string{entry.ipv4, entry.ifname})
 					if err != nil {
 						log.Println("nft delete failed", err)
 						return
@@ -3037,7 +3050,7 @@ func establishDevice(devices map[string]DeviceEntry, groups []GroupEntry,
 	}
 
 	//2. delete this ip, mac from any existing verdict maps
-	flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface))
+	flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface), false, nil)
 
 	//3. delete the old router address
 	exec.Command("ip", "addr", "del", routeIP, "dev", established_route_device).Run()
@@ -3068,7 +3081,13 @@ func establishDevice(devices map[string]DeviceEntry, groups []GroupEntry,
 		updateArp(new_iface, entry.RecentIP, entry.MAC)
 	}
 
-	//6. add entry to appropriate verdict maps
+	//6. add entry to appropriate verdict maps -- but not for disabled
+	//devices, which must stay out of the maps (flushVmaps above already
+	//removed any stale entries)
+	if slices.Contains(entry.Policies, "disabled") || entry.DeviceDisabled {
+		return
+	}
+
 	//add this MAC and IP to the ethernet filter. wg will be a no-op
 	addVerdictMac(entry.RecentIP, entry.MAC, new_iface, "ethernet_filter", "return")
 
@@ -3245,6 +3264,10 @@ func dynamicRouteLoop() {
 				}
 			}
 
+			//snapshot the verdict maps once instead of re-dumping per device
+			vmapSnap := GetNFTClient().SnapshotMaps(TableFamilyInet, "filter", getVerdictMapNames())
+			routeSnap := SnapshotRoutes()
+
 			//now get the existing route and make an update if needed
 			for ident, entry := range devices {
 				//no IP yet for this device -> no route, skip this entry
@@ -3253,7 +3276,7 @@ func dynamicRouteLoop() {
 				}
 
 				// this gets the current device destination for this entry (LANIF, wifi vlan, )
-				established_route_device := getRouteInterface(entry.RecentIP)
+				established_route_device := routeSnap.InterfaceForIP(entry.RecentIP)
 
 				// try the ident (MAC) first for what the new route should be
 				new_iface, exists := suggested_device[ident]
@@ -3302,19 +3325,23 @@ func dynamicRouteLoop() {
 				//update the iface map with the designated interface
 				newIfaceMap[entry.RecentIP] = new_iface
 
+				device_disabled := slices.Contains(entry.Policies, "disabled") || entry.DeviceDisabled
+
+				//disabled devices stay out of the verdict maps. match by MAC
+				//to catch entries left on a stale interface
+				if device_disabled {
+					if entry.MAC != "" && vmapSnap.HasMAC("ethernet_filter", entry.MAC) {
+						flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface), true, vmapSnap)
+					}
+					continue
+				}
+
 				//happy state -- the established interface matches the calculated interface to route to
 				if established_route_device != "" && established_route_device == new_iface {
 
-					device_disabled := slices.Contains(entry.Policies, "disabled")
-
 					//investigate verdict maps and make sure device is there
-					if hasVmapEntries(devices, entry, new_iface) {
+					if hasVmapEntries(vmapSnap, devices, entry, new_iface) {
 						//vmaps happy, skip updating this device
-
-						if device_disabled {
-							//do flush the device
-							flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface))
-						}
 						continue
 					}
 

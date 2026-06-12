@@ -86,3 +86,62 @@ func isLinkReallyUpNetlink(interfaceName string) bool {
 	attrs := link.Attrs()
 	return (attrs.Flags&net.FlagUp != 0) && (attrs.RawFlags&unix.IFF_RUNNING != 0)
 }
+
+type routeNet struct {
+	net   *net.IPNet
+	iface string
+}
+
+// RouteSnapshot resolves device IPs to their interface from one route dump.
+type RouteSnapshot struct {
+	routes []routeNet
+}
+
+func SnapshotRoutes() *RouteSnapshot {
+	snap := &RouteSnapshot{}
+
+	links, err := netlink.LinkList()
+	if err != nil {
+		return snap
+	}
+	idxName := make(map[int]string, len(links))
+	for _, l := range links {
+		idxName[l.Attrs().Index] = l.Attrs().Name
+	}
+
+	routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
+	if err != nil {
+		return snap
+	}
+	for _, r := range routes {
+		iface := idxName[r.LinkIndex]
+		if iface == "" {
+			continue
+		}
+		n := r.Dst
+		if n == nil {
+			n = &net.IPNet{IP: net.IPv4zero, Mask: net.CIDRMask(0, 32)}
+		}
+		snap.routes = append(snap.routes, routeNet{net: n, iface: iface})
+	}
+	return snap
+}
+
+// InterfaceForIP returns the interface of the longest-prefix route for the IP.
+func (s *RouteSnapshot) InterfaceForIP(ip string) string {
+	dst := net.ParseIP(ip)
+	if dst == nil {
+		return ""
+	}
+	bestOnes := -1
+	best := ""
+	for _, r := range s.routes {
+		if r.net.Contains(dst) {
+			if ones, _ := r.net.Mask.Size(); ones > bestOnes {
+				bestOnes = ones
+				best = r.iface
+			}
+		}
+	}
+	return best
+}

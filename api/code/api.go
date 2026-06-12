@@ -1653,24 +1653,43 @@ func pendingPSK(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(exists)
 }
 
+// getGroupsJson result is cached; saveGroupsJson (the only writer) invalidates.
+var (
+	groupsCacheMtx sync.Mutex
+	groupsCache    []GroupEntry
+	groupsCacheOK  bool
+)
+
 func saveGroupsJson(groups []GroupEntry) {
 	file, _ := json.MarshalIndent(groups, "", " ")
 	err := ioutil.WriteFile(GroupsConfigFile, file, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
+	groupsCacheMtx.Lock()
+	groupsCacheOK = false
+	groupsCacheMtx.Unlock()
 }
 
 func getGroupsJson() []GroupEntry {
-	groups := []GroupEntry{}
+	groupsCacheMtx.Lock()
+	defer groupsCacheMtx.Unlock()
+
+	if groupsCacheOK {
+		return groupsCache
+	}
+
 	data, err := ioutil.ReadFile(GroupsConfigFile)
 	if err != nil {
 		return nil
 	}
-	err = json.Unmarshal(data, &groups)
-	if err != nil {
+	groups := []GroupEntry{}
+	if err := json.Unmarshal(data, &groups); err != nil {
 		log.Fatal(err)
 	}
+
+	groupsCache = groups
+	groupsCacheOK = true
 	return groups
 }
 

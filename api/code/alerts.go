@@ -745,6 +745,19 @@ type Event struct {
 	data interface{}
 }
 
+// anyAlertRuleMatches reports whether an enabled alert rule's prefix matches
+// the topic, so an event with no interested rule can skip decoding entirely.
+func anyAlertRuleMatches(topic string) bool {
+	AlertSettingsmtx.RLock()
+	defer AlertSettingsmtx.RUnlock()
+	for _, rule := range gAlertsConfig {
+		if !rule.Disabled && strings.HasPrefix(topic, rule.TopicPrefix) {
+			return true
+		}
+	}
+	return false
+}
+
 func processEventAlerts(notifyChan chan<- Alert, storeChan chan<- Alert, topic string, event interface{}) {
 	//make sure event settings dont change out from under us
 
@@ -823,25 +836,12 @@ func AlertsRunEventListener() {
 	wg.Add(1)
 	go doStore(storeChan)
 
-	//decide from the topic alone whether anything consumes this event,
-	//so unconsumed bus traffic costs no json decoding at all
-	alertRuleMatches := func(topic string) bool {
-		AlertSettingsmtx.RLock()
-		defer AlertSettingsmtx.RUnlock()
-		for _, rule := range gAlertsConfig {
-			if !rule.Disabled && strings.HasPrefix(topic, rule.TopicPrefix) {
-				return true
-			}
-		}
-		return false
-	}
-
 	busEvent := func(topic string, raw []byte) {
-		//wifi:auth events and plugin: events are special, we always send them up the websocket
-		// for the UI to react to
+		//decide from the topic alone whether anything consumes this event,
+		//so unconsumed bus traffic costs no json decoding at all
 		wantUI := strings.HasPrefix(topic, "wifi:auth") || strings.HasPrefix(topic, "plugin:")
 		wantWS := WSHasWildcardListener()
-		wantAlert := alertRuleMatches(topic)
+		wantAlert := anyAlertRuleMatches(topic)
 
 		if !wantUI && !wantWS && !wantAlert {
 			return

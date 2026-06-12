@@ -390,3 +390,8 @@ func isLinkReallyUpNetlink(interfaceName string) bool {
 	// Stub implementation for macOS
 	return false
 }
+
+type RouteSnapshot struct{}
+
+func SnapshotRoutes() *RouteSnapshot              { return &RouteSnapshot{} }
+func (s *RouteSnapshot) InterfaceForIP(string) string { return "" }
