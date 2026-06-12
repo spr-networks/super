@@ -64,6 +64,12 @@ func WSNotifyWildcardListeners(msg_type string, data interface{}) {
 	}
 }
 
+func WSHasWildcardListener() bool {
+	WSMtx.Lock()
+	defer WSMtx.Unlock()
+	return WSHasWildcardListenerUnlocked()
+}
+
 func WSHasWildcardListenerUnlocked() bool {
 	//use a tmp array to keep track of active clients to keep
 	for _, client := range WSClients {
