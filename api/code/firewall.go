@@ -3193,6 +3193,11 @@ func dynamicRouteLoop() {
 			lanif := getFirstDownlink()
 			lanif_vlan_trunk := false
 
+			meshDownlink := ""
+			if meshPluginEnabled {
+				meshDownlink = meshPluginDownlink()
+			}
+
 			Interfacesmtx.Lock()
 			interfaces := loadInterfacesConfigLocked()
 			Interfacesmtx.Unlock()
@@ -3285,6 +3290,9 @@ func dynamicRouteLoop() {
 						} else {
 							new_iface = lanif + "." + entry.VLANTag
 						}
+					} else if meshPluginEnabled && wifiDevice {
+						//mesh plugin was enabled and it was a wifi device
+						new_iface = meshDownlink
 					} else {
 						// disconnected wifi devices will have empty new_iface, skip
 						continue

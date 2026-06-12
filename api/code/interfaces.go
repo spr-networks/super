@@ -946,16 +946,27 @@ func getDownlinkInterfaces() []string {
 }
 
 func refreshDownlinksLocked() {
+	interfaces := loadInterfacesConfigLocked()
+
 	//empty the wired lan interfaces list
 	FlushSetWithTable("inet", "filter", "wired_lan_interfaces")
 
-	// Get all downlink interfaces and add them
-	downlinks := getDownlinkInterfacesLocked()
-	for _, iface := range downlinks {
-		addWiredLanInterface(iface)
-		//Set interfaces up
-		if isValidIface(iface) {
-			exec.Command("ip", "link", "set", iface, "up").Run()
+	// and repopulate it
+	lanif := os.Getenv("LANIF")
+	if lanif != "" {
+		addWiredLanInterface(lanif)
+	}
+	for _, ifconfig := range interfaces {
+		if ifconfig.Type == "Downlink" {
+			if lanif != "" && ifconfig.Name == lanif {
+				//already covered
+				continue
+			}
+			addWiredLanInterface(ifconfig.Name)
+			//Set interfaces up
+			if ifconfig.Enabled && isValidIface(ifconfig.Name) {
+				exec.Command("ip", "link", "set", ifconfig.Name, "up").Run()
+			}
 		}
 	}
 }
