@@ -1576,8 +1576,14 @@ func DeleteMACVerdictElement(family, tableName, mapName, ip, iface, mac, verdict
 // AddIPIfaceVerdictElement adds an element with IP.Interface:Verdict format
 func AddIPIfaceVerdictElement(family, tableName, mapName, ip, iface, verdict string) error {
 	// Check if this is a CIDR notation and the map supports intervals
-	if strings.Contains(ip, "/") && (mapName == "dns_access" || mapName == "fwd_iface_lan" || mapName == "fwd_iface_wan") {
-		return AddIPIfaceCIDRVerdictElement(family, tableName, mapName, ip, iface, verdict)
+	if strings.Contains(ip, "/") {
+		// fwd_iface_lan/wan are keyed ifname.ipv4_addr, dns_access ipv4_addr.ifname
+		if mapName == "fwd_iface_lan" || mapName == "fwd_iface_wan" {
+			return AddIfaceIPCIDRVerdictElement(family, tableName, mapName, iface, ip, verdict)
+		}
+		if mapName == "dns_access" {
+			return AddIPIfaceCIDRVerdictElement(family, tableName, mapName, ip, iface, verdict)
+		}
 	}
 	return AddElementToMapComplex(family, tableName, mapName, []string{ip, iface}, verdict)
 }

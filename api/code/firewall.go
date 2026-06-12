@@ -578,7 +578,7 @@ func rebuildUplink() {
 
 		// Add a rule that matches the packet mark to the routing table.
 		cmd = exec.Command("ip", "rule", "add", "fwmark", fmt.Sprintf("%d", markNumber), "table", indexStr)
-
+		_, err = cmd.Output()
 		if err != nil {
 			log.Printf("failed to add rule for mark %d: %v", markNumber, err)
 			continue

@@ -164,7 +164,9 @@ func collectCaptivePortalDomains() []string {
 	domainMap := make(map[string]bool)
 
 	// Read interfaces configuration
+	Interfacesmtx.Lock()
 	interfaces := loadInterfacesConfigLocked()
+	Interfacesmtx.Unlock()
 
 	// Collect domains from uplinks with captive portal passthrough enabled
 	for _, iface := range interfaces {
