@@ -181,12 +181,12 @@ func configureInterface(interfaceType string, subType string, name string, MACRa
 	defer Interfacesmtx.Unlock()
 
 	if !isValidIface(name) {
-		return fmt.Errorf("Invalid interace name " + name)
+		return fmt.Errorf("Invalid interace name %s", name)
 	}
 
 	if interfaceType != "AP" && interfaceType != "Uplink" {
 		//generate a hostap config if it is not there yet (?)
-		return fmt.Errorf("Unknown interface type " + interfaceType)
+		return fmt.Errorf("Unknown interface type %s", interfaceType)
 	}
 
 	if interfaceType == "AP" {
@@ -318,7 +318,7 @@ func getInterfacesConfiguration(w http.ResponseWriter, r *http.Request) {
 func updateInterfaceType(Iface string, Type string, Subtype string, Enabled bool) ([]InterfaceConfig, error) {
 
 	if !isValidIface(Iface) {
-		return []InterfaceConfig{}, fmt.Errorf("Invalid iface name " + Iface)
+		return []InterfaceConfig{}, fmt.Errorf("Invalid iface name %s", Iface)
 	}
 
 	Interfacesmtx.Lock()
@@ -987,7 +987,7 @@ type IPAddrInfo struct {
 // This adds secondary IPs without affecting the primary IP managed by DHCP
 func applyAdditionalIPs(ifaceName string, additionalIPs []AdditionalIP) error {
 	if !isValidIface(ifaceName) {
-		return fmt.Errorf("Invalid interface name: " + ifaceName)
+		return fmt.Errorf("Invalid interface name: %s", ifaceName)
 	}
 
 	// Get current IP addresses on the interface using JSON output
