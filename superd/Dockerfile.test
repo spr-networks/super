@@ -1,0 +1,12 @@
+FROM docker:cli
+RUN apk add --no-cache bash git gcc musl-dev
+COPY --from=golang:1.24-alpine /usr/local/go /usr/local/go
+ENV PATH="/usr/local/go/bin:$PATH"
+
+RUN mkdir /code
+COPY code/ /code/
+WORKDIR /code
+
+# validate the production build and pre-compile the tests
+# (-vet=off: pre-existing non-constant-format-string warnings under Go 1.24+)
+RUN go build -o /superd . && go test -vet=off -c -o /dev/null .

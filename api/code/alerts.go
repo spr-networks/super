@@ -502,7 +502,7 @@ func sendDeviceAlertByToken(deviceToken string, title string, message string) er
 		}
 	}
 
-	return fmt.Errorf("could not find device " + deviceToken)
+	return fmt.Errorf("could not find device %s", deviceToken)
 }
 
 /*
@@ -746,6 +746,19 @@ type Event struct {
 	data interface{}
 }
 
+// anyAlertRuleMatches reports whether an enabled alert rule's prefix matches
+// the topic, so an event with no interested rule can skip decoding entirely.
+func anyAlertRuleMatches(topic string) bool {
+	AlertSettingsmtx.RLock()
+	defer AlertSettingsmtx.RUnlock()
+	for _, rule := range gAlertsConfig {
+		if !rule.Disabled && strings.HasPrefix(topic, rule.TopicPrefix) {
+			return true
+		}
+	}
+	return false
+}
+
 func processEventAlerts(notifyChan chan<- Alert, storeChan chan<- Alert, topic string, event interface{}) {
 	//make sure event settings dont change out from under us
 
@@ -825,33 +838,35 @@ func AlertsRunEventListener() {
 	go doStore(storeChan)
 
 	busEvent := func(topic string, value string) {
+		//decide from the topic alone whether anything consumes this event, so
+		//unmatched bus traffic costs no json decoding
+
+		//wifi:auth and plugin: events always go up the websocket for the UI
+		wantUI := strings.HasPrefix(topic, "wifi:auth") || strings.HasPrefix(topic, "plugin:")
+		wantWS := WSHasWildcardListener()
+		wantAlert := anyAlertRuleMatches(topic)
+
+		if !wantUI && !wantWS && !wantAlert {
+			return
+		}
 
 		var data map[string]interface{}
-		decodeErr := json.Unmarshal([]byte(value), &data)
-		if decodeErr == nil {
+		if err := json.Unmarshal([]byte(value), &data); err != nil {
+			log.Println("failed to decode eventbus json:", err)
+			return
+		}
+
+		if wantWS {
 			WSNotifyWildcardListeners(topic, data)
-		} else {
-			log.Println("failed to decode eventbus json:", decodeErr)
-			return
 		}
 
-		//wifi:auth events and plugin: events are special, we always send them up the websocket
-		// for the UI to react to
-		if strings.HasPrefix(topic, "wifi:auth") || strings.HasPrefix(topic, "plugin:") {
-			if decodeErr == nil {
-				WSNotifyValue(topic, data)
-			}
+		if wantUI {
+			WSNotifyValue(topic, data)
 		}
 
-		event := interface{}(nil)
-		err := json.Unmarshal([]byte(value), &event)
-		if err != nil {
-			log.Println("invalid json for event", err)
-			return
+		if wantAlert {
+			processEventAlerts(notifyChan, storeChan, topic, data)
 		}
-
-		processEventAlerts(notifyChan, storeChan, topic, event)
-
 	}
 
 	// wait for sprbus server to start

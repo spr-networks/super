@@ -110,22 +110,23 @@ type DeviceStyle struct {
 }
 
 type DeviceEntry struct {
-	Name             string
-	MAC              string
-	WGPubKey         string
-	VLANTag          string
-	RecentIP         string
-	DNSCustom        string
-	PSKEntry         PSKEntry
-	Policies         []string
-	Groups           []string
-	DeviceTags       []string
-	DHCPFirstTime    string
-	DHCPLastTime     string
-	Style            DeviceStyle
-	DeviceExpiration int64
-	DeleteExpiration bool
-	DeviceDisabled   bool //tbd deprecate this in favor of only using the policy name.
+	Name              string
+	MAC               string
+	WGPubKey          string
+	VLANTag           string
+	RecentIP          string
+	DNSCustom         string
+	PSKEntry          PSKEntry
+	Policies          []string
+	Groups            []string
+	DeviceTags        []string
+	DHCPFirstTime     string
+	DHCPLastTime      string
+	DHCPLastInterface string
+	Style             DeviceStyle
+	DeviceExpiration  int64
+	DeleteExpiration  bool
+	DeviceDisabled    bool //tbd deprecate this in favor of only using the policy name.
 }
 
 var ValidPolicyStrings = []string{"wan", "lan", "dns", "api", "lan_upstream", "noapi", "guestonly", "disabled", "quarantine", "dns:family"}
@@ -192,7 +193,7 @@ func ipAddr(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, string(stdout))
+	fmt.Fprintf(w, "%s", string(stdout))
 }
 
 func ipLinkUpDown(w http.ResponseWriter, r *http.Request) {
@@ -241,9 +242,43 @@ func getFeatures(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(reply)
 }
 
+// Helper function to make Docker API requests
+func dockerRequest(method, path string, body io.Reader) ([]byte, error) {
+	DockerSocketPath := "/var/run/docker.sock"
+
+	c := http.Client{}
+	c.Transport = &http.Transport{
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.Dial("unix", DockerSocketPath)
+		},
+	}
+	defer c.CloseIdleConnections()
+
+	req, err := http.NewRequest(method, "http://localhost"+path, body)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf("docker API error %d: %s", resp.StatusCode, string(data))
+	}
+
+	return data, nil
+}
+
 // system info: uptime, docker ps etc.
 func getInfo(w http.ResponseWriter, r *http.Request) {
-	DockerSocketPath := "/var/run/docker.sock"
 
 	name := mux.Vars(r)["name"]
 
@@ -292,51 +327,9 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 
 		data, err = cmd.Output()
 	} else if name == "dockernetworks" {
-		c := http.Client{}
-		c.Transport = &http.Transport{
-			Dial: func(network, addr string) (net.Conn, error) {
-				return net.Dial("unix", DockerSocketPath)
-			},
-		}
-		defer c.CloseIdleConnections()
-
-		req, err := http.NewRequest(http.MethodGet, "http://localhost/v1.41/networks", nil)
-		if err != nil {
-			http.Error(w, err.Error(), 400)
-			return
-		}
-
-		resp, err := c.Do(req)
-		if err != nil {
-			http.Error(w, err.Error(), 400)
-			return
-		}
-
-		defer resp.Body.Close()
-		data, err = ioutil.ReadAll(resp.Body)
+		data, err = dockerRequest("GET", "/v1.41/networks", nil)
 	} else if name == "docker" {
-		c := http.Client{}
-		c.Transport = &http.Transport{
-			Dial: func(network, addr string) (net.Conn, error) {
-				return net.Dial("unix", DockerSocketPath)
-			},
-		}
-		defer c.CloseIdleConnections()
-
-		req, err := http.NewRequest(http.MethodGet, "http://localhost/v1.41/containers/json?all=1", nil)
-		if err != nil {
-			http.Error(w, err.Error(), 400)
-			return
-		}
-
-		resp, err := c.Do(req)
-		if err != nil {
-			http.Error(w, err.Error(), 400)
-			return
-		}
-
-		defer resp.Body.Close()
-		data, err = ioutil.ReadAll(resp.Body)
+		data, err = dockerRequest("GET", "/v1.41/containers/json?all=1", nil)
 	} else if name == "hostname" {
 		data, err = ioutil.ReadFile(HostnameConfigPath)
 		if err == nil && len(data) > 0 {
@@ -365,7 +358,7 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, string(data))
+	fmt.Fprintf(w, "%s", string(data))
 }
 
 // get spr version
@@ -377,7 +370,7 @@ func getGitVersion(w http.ResponseWriter, r *http.Request) {
 
 	req, err := http.NewRequest(http.MethodGet, "http://localhost/git_version?"+params.Encode(), nil)
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to make request for version "+plugin).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to make request for version %s", plugin).Error(), 400)
 		return
 	}
 
@@ -386,7 +379,7 @@ func getGitVersion(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := c.Do(req)
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to request version from superd "+plugin).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to request version from superd %s", plugin).Error(), 400)
 		return
 	}
 
@@ -442,7 +435,7 @@ func releaseInfo(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			http.Error(w, fmt.Errorf("failed to get info "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+			http.Error(w, fmt.Errorf("failed to get info %d", resp.StatusCode).Error(), 400)
 			return
 		}
 
@@ -468,7 +461,7 @@ func releaseInfo(w http.ResponseWriter, r *http.Request) {
 		_, err = ioutil.ReadAll(resp.Body)
 
 		if resp.StatusCode != http.StatusOK {
-			http.Error(w, fmt.Errorf("failed to set superd release "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+			http.Error(w, fmt.Errorf("failed to set superd release %d", resp.StatusCode).Error(), 400)
 			return
 		}
 
@@ -500,7 +493,7 @@ func releaseInfo(w http.ResponseWriter, r *http.Request) {
 	_, err = ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		http.Error(w, fmt.Errorf("failed to set superd release "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to set superd release %d", resp.StatusCode).Error(), 400)
 		return
 	}
 	//fall through success
@@ -635,7 +628,7 @@ func checkUpdates(w http.ResponseWriter, r *http.Request) {
 func update(w http.ResponseWriter, r *http.Request) {
 	errorStr := performUpdate()
 	if errorStr != "" {
-		http.Error(w, fmt.Errorf(errorStr).Error(), 400)
+		http.Error(w, fmt.Errorf("%s", errorStr).Error(), 400)
 		return
 	}
 }
@@ -723,7 +716,7 @@ func releasesAvailable(w http.ResponseWriter, r *http.Request) {
 
 	req, err := http.NewRequest(http.MethodPost, "http://localhost/remote_container_tags"+appended, bytes.NewBuffer(jsonValue))
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to make request for tags "+container).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to make request for tags %s", container).Error(), 400)
 		return
 	}
 
@@ -732,7 +725,7 @@ func releasesAvailable(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := c.Do(req)
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to request tags from superd "+appended).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to request tags from superd %s", appended).Error(), 400)
 		return
 	}
 
@@ -1660,24 +1653,43 @@ func pendingPSK(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(exists)
 }
 
+// getGroupsJson result is cached; saveGroupsJson (the only writer) invalidates.
+var (
+	groupsCacheMtx sync.Mutex
+	groupsCache    []GroupEntry
+	groupsCacheOK  bool
+)
+
 func saveGroupsJson(groups []GroupEntry) {
 	file, _ := json.MarshalIndent(groups, "", " ")
 	err := ioutil.WriteFile(GroupsConfigFile, file, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
+	groupsCacheMtx.Lock()
+	groupsCacheOK = false
+	groupsCacheMtx.Unlock()
 }
 
 func getGroupsJson() []GroupEntry {
-	groups := []GroupEntry{}
+	groupsCacheMtx.Lock()
+	defer groupsCacheMtx.Unlock()
+
+	if groupsCacheOK {
+		return groupsCache
+	}
+
 	data, err := ioutil.ReadFile(GroupsConfigFile)
 	if err != nil {
 		return nil
 	}
-	err = json.Unmarshal(data, &groups)
-	if err != nil {
+	groups := []GroupEntry{}
+	if err := json.Unmarshal(data, &groups); err != nil {
 		log.Fatal(err)
 	}
+
+	groupsCache = groups
+	groupsCacheOK = true
 	return groups
 }
 
@@ -1823,8 +1835,7 @@ func getNFTVerdictMap(map_name string) []verdictEntry {
 	existing := []verdictEntry{}
 
 	//nft -j list map inet filter name
-	cmd := exec.Command("nft", "-j", "list", "map", "inet", "filter", map_name)
-	stdout, err := cmd.Output()
+	stdout, err := ListMapJSON("inet", "filter", map_name)
 	if err != nil {
 		return existing
 	}
@@ -1833,35 +1844,127 @@ func getNFTVerdictMap(map_name string) []verdictEntry {
 	var data map[string]interface{}
 	err = json.Unmarshal(stdout, &data)
 	data2, ok := data["nftables"].([]interface{})
-	if ok != true {
-		log.Fatal("invalid json")
+	if !ok {
+		log.Printf("getNFTVerdictMap: invalid json structure - missing nftables")
+		return existing
 	}
-	data3, ok := data2[1].(map[string]interface{})
+
+	// The new ListMapJSON implementation only returns the map data without metadata
+	// So we need to check for either format (old nft -j had metadata at index 0)
+	var mapIndex int
+	if len(data2) == 0 {
+		log.Printf("getNFTVerdictMap: empty nftables array")
+		return existing
+	} else if len(data2) == 1 {
+		// New format: only map data
+		mapIndex = 0
+	} else {
+		// Old format: metadata at 0, map at 1
+		mapIndex = 1
+	}
+
+	data3, ok := data2[mapIndex].(map[string]interface{})
+	if !ok {
+		log.Printf("getNFTVerdictMap: invalid structure at nftables[%d]", mapIndex)
+		return existing
+	}
+
 	data4, ok := data3["map"].(map[string]interface{})
+	if !ok {
+		log.Printf("getNFTVerdictMap: missing map in nftables[%d]", mapIndex)
+		return existing
+	}
+
 	data5, ok := data4["elem"].([]interface{})
+	if !ok {
+		// Map might be empty, which is fine
+		return existing
+	}
+
 	for _, d := range data5 {
-		e, ok := d.([]interface{})
-		f, ok := e[0].(map[string]interface{})
-		g, ok := f["concat"].([]interface{})
-		if ok {
+		// Handle both array format and direct map format
+		var f map[string]interface{}
+
+		// Try direct map format first (newer format)
+		if direct_map, ok := d.(map[string]interface{}); ok {
+			f = direct_map
+		} else {
+			// Try array format (older format)
+			e, ok := d.([]interface{})
+			if !ok || len(e) == 0 {
+				continue
+			}
+
+			f_temp, ok := e[0].(map[string]interface{})
+			if !ok {
+				continue
+			}
+			f = f_temp
+		}
+
+		// Check if we have the expected "concat" format
+		g, concat_ok := f["concat"].([]interface{})
+		if concat_ok && len(g) > 0 {
+			// Original format with concat array
+			// Get first element
 			first, _ := g[0].(string)
-			second, second_ok := g[1].(string)
-			if len(g) > 2 {
-				third, third_ok := g[2].(string)
-				if third_ok {
-					existing = append(existing, verdictEntry{first, second, third})
-				}
-			} else {
-				if second_ok {
-					if map_name == "dhcp_access" {
-						// type ifname . ether_addr : verdict (no IP)
-						existing = append(existing, verdictEntry{"", first, second})
-					} else {
-						// for _dst_access
-						// type ipv4_addr . ifname : verdict (no MAC)
-						existing = append(existing, verdictEntry{first, second, ""})
+
+			// Check for second element
+			if len(g) > 1 {
+				second, second_ok := g[1].(string)
+				if len(g) > 2 {
+					third, third_ok := g[2].(string)
+					if third_ok && second_ok {
+						existing = append(existing, verdictEntry{first, second, third})
+					}
+				} else {
+					if second_ok {
+						if map_name == "dhcp_access" {
+							// type ifname . ether_addr : verdict (no IP)
+							entry := verdictEntry{"", first, second}
+							existing = append(existing, entry)
+						} else {
+							// for _dst_access
+							// type ipv4_addr . ifname : verdict (no MAC)
+							existing = append(existing, verdictEntry{first, second, ""})
+						}
 					}
 				}
+			}
+		} else {
+			// New format where the key is a single concatenated string
+			// The key is the first key in the map
+			for key, _ := range f {
+				if map_name == "dhcp_access" && len(key) >= 22 {
+					// dhcp_access: ifname (16 bytes) . ether_addr (8 bytes)
+					// Extract interface name (first 16 bytes, null-terminated)
+					ifname_bytes := []byte(key[:16])
+					var ifname string
+					null_idx := -1
+					for i, b := range ifname_bytes {
+						if b == 0 {
+							null_idx = i
+							break
+						}
+					}
+					if null_idx >= 0 {
+						ifname = string(ifname_bytes[:null_idx])
+					} else {
+						ifname = string(ifname_bytes)
+					}
+
+					// Extract MAC address (next 6 bytes)
+					if len(key) >= 22 {
+						mac_bytes := []byte(key[16:22])
+						mac := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x",
+							mac_bytes[0], mac_bytes[1], mac_bytes[2],
+							mac_bytes[3], mac_bytes[4], mac_bytes[5])
+
+						entry := verdictEntry{"", ifname, mac}
+						existing = append(existing, entry)
+					}
+				}
+				break // Only process the first key
 			}
 		}
 	}
@@ -1876,8 +1979,7 @@ type dnsVerdictEntry struct {
 func getCustomDNSVerdictMap() []dnsVerdictEntry {
 	existing := []dnsVerdictEntry{}
 
-	cmd := exec.Command("nft", "-j", "list", "map", "inet", "nat", "custom_dns_devices")
-	stdout, err := cmd.Output()
+	stdout, err := ListMapJSON("inet", "nat", "custom_dns_devices")
 	if err != nil {
 		return existing
 	}
@@ -2568,6 +2670,10 @@ func finalizeSetup(w http.ResponseWriter, r *http.Request) {
 	// disable mdns advertising and set up default multicast rules
 	multicastSettingsSetupDone()
 
+	//if the uplink is on a public internet address, restrict the default
+	//ssh/http/https service ports to LAN access only
+	setupRestrictUpstreamServices()
+
 	ioutil.WriteFile(SetupDonePath, []byte("true"), 0600)
 
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
@@ -2970,6 +3076,8 @@ func main() {
 	//TBD: API Docs
 	external_router_authenticated.HandleFunc("/plugin/custom_compose_paths", applyJwtOtpCheck(modifyCustomComposePaths)).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/plugin/install_user_url", installUserPluginGitUrl(external_router_authenticated, external_router_public)).Methods("PUT")
+	external_router_authenticated.HandleFunc("/plugin/download_info", applyJwtOtpCheck(downloadUserPluginInfo)).Methods("PUT")
+	external_router_authenticated.HandleFunc("/plugin/complete_install", completeUserPluginInstall(external_router_authenticated, external_router_public)).Methods("PUT")
 	external_router_authenticated.HandleFunc("/plusToken", plusToken).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/plusTokenValid", plusTokenValid).Methods("GET")
 	external_router_authenticated.HandleFunc("/stopPlusExtension", stopPlusExt).Methods("PUT")
@@ -3032,6 +3140,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	//wait for base  container to run
+	SyncBaseContainer()
 
 	initAuth()
 	//set up dhcp

@@ -11,7 +11,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -290,7 +289,23 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 func update(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
+
+	//on the main release channel, verify build provenance for the images this
+	//update would pull. on failure abort before downloading anything.
+	if getReleaseChannel() == "" {
+		err := verifyUpdateImages(compose, target)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+	}
+
 	composeCommand(compose, target, "pull", "", false)
+
+	//confirm the pulled images match what was verified
+	if getReleaseChannel() == "" {
+		go verifyPulledImages()
+	}
 }
 
 func start(w http.ResponseWriter, r *http.Request) {
@@ -586,19 +601,65 @@ func logRequest(handler http.Handler) http.Handler {
 	})
 }
 
+// dockerAPIGetJSON performs a GET against the Docker Engine API over the
+// local unix socket and decodes the JSON response.
+func dockerAPIGetJSON(path string, target interface{}) error {
+	c := http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			Dial: func(network, addr string) (net.Conn, error) {
+				return net.Dial("unix", "/var/run/docker.sock")
+			},
+		},
+	}
+
+	resp, err := c.Get("http://localhost" + path)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("docker api %s: status %d", path, resp.StatusCode)
+	}
+
+	return json.NewDecoder(resp.Body).Decode(target)
+}
+
+type dockerConfigLabels struct {
+	Config struct {
+		Labels map[string]string
+	}
+}
+
+// dockerObjectLabel returns a label value from a container or image,
+// matching `docker inspect` lookup order: container name first, then image.
+// A missing label on an existing object returns "" without error, like
+// `docker inspect --format={{index .Config.Labels "name"}}`.
+func dockerObjectLabel(name, labelName string) (string, error) {
+	info := dockerConfigLabels{}
+
+	err := dockerAPIGetJSON("/containers/"+url.PathEscape(name)+"/json", &info)
+	if err != nil {
+		err = dockerAPIGetJSON("/images/"+url.PathEscape(name)+"/json", &info)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return info.Config.Labels[labelName], nil
+}
+
 func getHostSuperDir() string {
 	default_dir := "/home/spr/super/"
-	f := "'{{index .Config.Labels \"com.docker.compose.project.working_dir\"}}'"
 
-	cmd := exec.Command("docker", "inspect", "--format="+f, "superd")
-	stdout, err := cmd.Output()
-
+	value, err := dockerObjectLabel("superd", "com.docker.compose.project.working_dir")
 	if err != nil {
 		fmt.Println("[-]", err)
 		return default_dir
 	}
 
-	return strings.Trim(string(stdout), "'\n") + "/"
+	return value + "/"
 }
 
 func versionForRepository(path string) string {
@@ -634,29 +695,19 @@ func lastTagForRepository(path string) string {
 }
 
 func dockerImageLabel(image string, labelName string) (string, error) {
-	cmd := exec.Command("docker", "inspect", "--format={{index .Config.Labels \""+labelName+"\"}}", image)
-
-	var out bytes.Buffer
-	cmd.Stdout = &out
-
-	err := cmd.Run()
+	labelValue, err := dockerObjectLabel(image, labelName)
 	if err != nil {
 		//in case the container has not been created use the full image name
 		spr_prefix := "ghcr.io/spr-networks/super_"
 		image_name := strings.Replace(image, "super", "", 1)
 		image_name = strings.ReplaceAll(image_name, "-", "_")
-		cmd = exec.Command("docker", "inspect", "--format={{index .Config.Labels \""+labelName+"\"}}", spr_prefix+image_name)
 
-		var out bytes.Buffer
-		cmd.Stdout = &out
-
-		err := cmd.Run()
+		labelValue, err = dockerObjectLabel(spr_prefix+image_name, labelName)
 		if err != nil {
 			return "", err
 		}
 	}
 
-	labelValue := strings.Trim(out.String(), "\n")
 	return labelValue, nil
 }
 
@@ -1043,6 +1094,7 @@ func main() {
 
 	unix_plugin_router := mux.NewRouter().StrictSlash(true)
 	unix_plugin_router.HandleFunc("/restart", restart).Methods("PUT")
+	unix_plugin_router.HandleFunc("/attest_status", attestStatus).Methods("GET", "PUT")
 	unix_plugin_router.HandleFunc("/start", start).Methods("PUT")
 	unix_plugin_router.HandleFunc("/stop", stop).Methods("PUT")
 	unix_plugin_router.HandleFunc("/update", update).Methods("PUT")

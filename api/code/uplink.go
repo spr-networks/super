@@ -121,7 +121,7 @@ func (n *WPANetwork) Validate() error {
 		} else if part == "SAE" {
 			continue
 		}
-		return fmt.Errorf("KeyMgmt field has invalid value " + part)
+		return fmt.Errorf("KeyMgmt field has invalid value %s", part)
 	}
 
 	return nil
@@ -357,8 +357,8 @@ type PPPIface struct {
 	Enabled  bool
 	Username string
 	Secret   string
-	VLAN     string `json,optional`
-	MTU      string `json, optional`
+	VLAN     string
+	MTU      string
 }
 
 type PPPConfig struct {
@@ -627,7 +627,7 @@ func updateLinkIPConfig(w http.ResponseWriter, r *http.Request) {
 
 		ip := net.ParseIP(iconfig.Router)
 		if ip == nil {
-			err = fmt.Errorf("invalid Router ip " + iconfig.Router)
+			err = fmt.Errorf("invalid Router ip %s", iconfig.Router)
 			http.Error(w, err.Error(), 400)
 			return
 		}

@@ -3,14 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"golang.org/x/sys/unix"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"reflect"
-	"regexp"
 	"slices"
 	"sort"
 	"strconv"
@@ -72,6 +70,62 @@ type CustomInterfaceRule struct {
 	Policies  []string
 	Groups    []string
 	Tags      []string //unused for now
+}
+
+// validatePort checks if a port string is valid.
+// Returns true if the port is valid, false otherwise.
+// Valid ports are:
+// - "any" (special case)
+// - Single port number between 1-65535
+// - Port range in format "start-end" where both are between 1-65535
+func validatePort(port string) (bool, error) {
+	if port == "any" || port == "0-65535" {
+		return true, nil
+	}
+
+	// Check for port range (but not negative numbers)
+	if strings.Contains(port, "-") && !strings.HasPrefix(port, "-") {
+		parts := strings.Split(port, "-")
+		if len(parts) != 2 {
+			return false, fmt.Errorf("invalid port range format")
+		}
+
+		start, err := strconv.Atoi(parts[0])
+		if err != nil {
+			return false, fmt.Errorf("invalid start port in range")
+		}
+
+		end, err := strconv.Atoi(parts[1])
+		if err != nil {
+			return false, fmt.Errorf("invalid end port in range")
+		}
+
+		if start < 1 || start > 65535 {
+			return false, fmt.Errorf("start port %d is out of valid range (1-65535)", start)
+		}
+
+		if end < 1 || end > 65535 {
+			return false, fmt.Errorf("end port %d is out of valid range (1-65535)", end)
+		}
+
+		if start > end {
+			return false, fmt.Errorf("start port must be less than or equal to end port")
+		}
+
+		return true, nil
+	}
+
+	// Single port
+	portNum, err := strconv.Atoi(port)
+	if err != nil {
+		return false, fmt.Errorf("invalid port number")
+	}
+
+	if portNum < 1 || portNum > 65535 {
+		return false, fmt.Errorf("port %d is out of valid range (1-65535)", portNum)
+	}
+
+	return true, nil
 }
 
 func (c *CustomInterfaceRule) Equals(other *CustomInterfaceRule) bool {
@@ -192,8 +246,7 @@ func saveFirewallRulesLocked() {
 }
 
 func getPortsFromPortVerdictMap(name string) []string {
-	cmd := exec.Command("nft", "-j", "list", "map", "inet", "filter", name)
-	stdout, err := cmd.Output()
+	stdout, err := ListMapJSON("inet", "filter", name)
 
 	ports := []string{}
 	//jq .nftables[1].map.elem[][0]
@@ -255,7 +308,7 @@ func loadFirewallRules() error {
 	defer FWmtx.Unlock()
 	data, err := ioutil.ReadFile(FirewallConfigFile)
 	if err != nil {
-		log.Println("[-] Empty firewall configuration, initializing")
+		log.Println("[-] Empty firewall configuration, initializing " + FirewallConfigFile)
 	} else {
 		err := json.Unmarshal(data, &gFirewallConfig)
 		if err != nil {
@@ -304,16 +357,7 @@ func migrateFirewallGroupsToPolicies() {
 	}
 }
 
-func isLinkReallyUpNetlink(interfaceName string) bool {
-	link, err := netlink.LinkByName(interfaceName)
-	if err != nil {
-		log.Printf("Failed to get link %s: %v", interfaceName, err)
-		return false
-	}
-
-	attrs := link.Attrs()
-	return (attrs.Flags&net.FlagUp != 0) && (attrs.RawFlags&unix.IFF_RUNNING != 0)
-}
+// Platform-specific implementation in linux.go and darwin.go
 
 // getDefaultGatewayForSubnet returns the first possible host IP for a given subnet
 func getDefaultGatewayForSubnet(subnet string) string {
@@ -487,8 +531,7 @@ func rebuildUplink() {
 
 	outbound := collectOutbound()
 
-	cmd := exec.Command("nft", "flush", "chain", "inet", "mangle", "OUTBOUND_UPLINK")
-	_, err := cmd.Output()
+	err := FlushChainByName("inet", "mangle", "OUTBOUND_UPLINK")
 	if err != nil {
 		log.Println("failed to flush chain mangle OUTBOUND_UPLINK", err)
 		return
@@ -515,22 +558,12 @@ func rebuildUplink() {
 	uplinkSettings := loadUplinksConfig()
 
 	//saddr.daddr strategy assumed by default
-	strategy := "jhash ip saddr . ip daddr"
-	if uplinkSettings.LoadBalanceStrategy == "saddr" {
-		strategy = "jhash ip saddr"
-		//saddr can be more consistent but has poor balancing
-	}
+	//saddr-only can be more consistent but has poor balancing
+	saddrOnly := uplinkSettings.LoadBalanceStrategy == "saddr"
 
-	rule := "add rule inet mangle OUTBOUND_UPLINK " +
-		"iif != lo iifname != \"site*\" " +
-		"iifname != @uplink_interfaces ip daddr != @supernetworks " +
-		"ip daddr != 224.0.0.0/4 meta mark set " + strategy + fmt.Sprintf(" mod %d offset %d", len(outbound), firstOutboundRouteTable)
-
-	cmd = exec.Command("nft", strings.Fields(rule)...)
-
-	_, err = cmd.Output()
+	err = AddOutboundUplinkHashRule("inet", "mangle", "OUTBOUND_UPLINK", saddrOnly, len(outbound), firstOutboundRouteTable)
 	if err != nil {
-		log.Println("failed to insert rule", cmd, err)
+		log.Println("failed to insert outbound uplink rule", err)
 		return
 	}
 
@@ -540,7 +573,7 @@ func rebuildUplink() {
 		indexStr := fmt.Sprintf("%d", markNumber)
 
 		// Delete the existing rule, if any.
-		cmd = exec.Command("ip", "rule", "del", "fwmark", fmt.Sprintf("%d", markNumber), "table", indexStr)
+		cmd := exec.Command("ip", "rule", "del", "fwmark", fmt.Sprintf("%d", markNumber), "table", indexStr)
 		_, _ = cmd.Output() // Ignore errors, as the rule may not exist yet.
 
 		// Add a rule that matches the packet mark to the routing table.
@@ -554,24 +587,22 @@ func rebuildUplink() {
 		setDefaultUplinkGateway(outboundInterface, index)
 
 		//create a utility mangle chain as well
-		err = exec.Command("nft", "list", "chain", "inet", "mangle", "mark"+indexStr).Run()
+		err = CheckChainExists("inet", "mangle", "mark"+indexStr)
 		if err != nil {
 			//create it
-			err = exec.Command("nft", "add", "chain", "inet", "mangle", "mark"+indexStr).Run()
+			err = AddChain("inet", "mangle", "mark"+indexStr)
 			if err != nil {
 				log.Println("nft add chain "+indexStr+" failed", err)
 				continue
 			}
 
-			err = exec.Command("nft", "add", "rule", "inet", "mangle", "mark"+indexStr,
-				"meta", "mark", "set", indexStr).Run()
+			err = AddMarkSetRule("inet", "mangle", "mark"+indexStr, uint32(markNumber))
 			if err == nil {
-				err = exec.Command("nft", "add", "rule", "inet", "mangle", "mark"+indexStr,
-					"accept").Run()
+				err = AddAcceptRule("inet", "mangle", "mark"+indexStr)
 			}
 			if err != nil {
 				//delete the chain
-				err = exec.Command("nft", "delete", "chain", "inet", "mangle", "mark"+indexStr).Run()
+				err = DeleteChain("inet", "mangle", "mark"+indexStr)
 				log.Println("failed to add rule for mark"+indexStr, err)
 				continue
 			}
@@ -580,8 +611,8 @@ func rebuildUplink() {
 	}
 
 	// Flush the route cache to ensure the new route is used immediately.
-	cmd = exec.Command("ip", "route", "flush", "cache")
-	_, err = cmd.Output()
+	err = exec.Command("ip", "route", "flush", "cache").Run()
+
 	if err != nil {
 		log.Printf("failed to flush route cache: %v", err)
 	}
@@ -589,34 +620,38 @@ func rebuildUplink() {
 }
 
 func modifyUplinkEntry(ifname, action string, rebuild bool) error {
-	cmd := exec.Command("nft", action, "element", "inet", "filter",
-		"uplink_interfaces", "{", ifname, "}")
+	var err error
 
-	_, err := cmd.Output()
+	if action == "add" {
+		err = AddInterfaceToSetWithTable("inet", "filter", "uplink_interfaces", ifname)
+		if err != nil {
+			log.Println("failed to add uplink_interfaces filter element", err)
+		}
 
-	if err != nil {
-		log.Println("failed to "+action+" uplink_interfaces element", err)
-		log.Println(cmd)
-	}
+		err = AddInterfaceToSetWithTable("inet", "nat", "uplink_interfaces", ifname)
+		if err != nil {
+			log.Println("failed to add uplink_interfaces nat element", err)
+		}
 
-	cmd = exec.Command("nft", action, "element", "inet", "nat",
-		"uplink_interfaces", "{", ifname, "}")
+		err = AddInterfaceToSetWithTable("inet", "mangle", "uplink_interfaces", ifname)
+		if err != nil {
+			log.Println("failed to add uplink_interfaces mangle element", err)
+		}
+	} else if action == "delete" {
+		err = DeleteInterfaceFromSetWithTable("inet", "filter", "uplink_interfaces", ifname)
+		if err != nil {
+			log.Println("failed to delete uplink_interfaces filter element", err)
+		}
 
-	_, err = cmd.Output()
+		err = DeleteInterfaceFromSetWithTable("inet", "nat", "uplink_interfaces", ifname)
+		if err != nil {
+			log.Println("failed to delete uplink_interfaces nat element", err)
+		}
 
-	if err != nil {
-		log.Println("failed to "+action+" uplink_interfaces element", err)
-		log.Println(cmd)
-	}
-
-	cmd = exec.Command("nft", action, "element", "inet", "mangle",
-		"uplink_interfaces", "{", ifname, "}")
-
-	_, err = cmd.Output()
-
-	if err != nil {
-		log.Println("failed to "+action+" uplink_interfaces element", err)
-		log.Println(cmd)
+		err = DeleteInterfaceFromSetWithTable("inet", "mangle", "uplink_interfaces", ifname)
+		if err != nil {
+			log.Println("failed to delete uplink_interfaces mangle element", err)
+		}
 	}
 
 	if rebuild {
@@ -640,39 +675,63 @@ func removeUplinkEntry(ifname string, rebuild bool) {
 }
 
 func flushSupernetworkEntries() {
-	exec.Command("nft", "flush", "set", "ip", "accounting", "local_lan").Output()
-	exec.Command("nft", "flush", "set", "inet", "mangle", "supernetworks").Output()
-	exec.Command("nft", "flush", "set", "ip", "filter", "supernetworks").Output()
+	FlushSetWithTable("ip", "accounting", "local_lan")
+	FlushSetWithTable("inet", "mangle", "supernetworks")
+	FlushSetWithTable("ip", "filter", "supernetworks")
 }
 
 func modifySupernetworkEntry(supernet, action string) {
-	cmd := exec.Command("nft", action, "element", "inet", "mangle",
-		"supernetworks", "{", supernet, "}")
+	var err error
 
-	_, err := cmd.Output()
+	if action == "add" {
+		// Check if it's a CIDR notation
+		if strings.Contains(supernet, "/") {
+			err = AddCIDRToSet("inet", "mangle", "supernetworks", supernet)
+			if err != nil {
+				log.Println("failed to add mangle supernetworks element", err)
+			}
 
-	if err != nil {
-		log.Println("failed to "+action+" mangle supernetworks element", err)
-		log.Println(cmd)
-	}
+			err = AddCIDRToSet("inet", "filter", "supernetworks", supernet)
+			if err != nil {
+				log.Println("failed to add filter supernetworks element", err)
+			}
 
-	cmd = exec.Command("nft", action, "element", "inet", "filter",
-		"supernetworks", "{", supernet, "}")
+			err = AddCIDRToSet("ip", "accounting", "local_lan", supernet)
+			if err != nil {
+				log.Println("failed to add ip accounting local_lan element", err)
+			}
+		} else {
+			// Single IP address
+			err = AddIPToSet("inet", "mangle", "supernetworks", supernet)
+			if err != nil {
+				log.Println("failed to add mangle supernetworks element", err)
+			}
 
-	_, err = cmd.Output()
+			err = AddIPToSet("inet", "filter", "supernetworks", supernet)
+			if err != nil {
+				log.Println("failed to add filter supernetworks element", err)
+			}
 
-	if err != nil {
-		log.Println("failed to "+action+" filter supernetworks element", err)
-		log.Println(cmd)
-	}
+			err = AddIPToSet("ip", "accounting", "local_lan", supernet)
+			if err != nil {
+				log.Println("failed to add ip accounting local_lan element", err)
+			}
+		}
+	} else if action == "delete" {
+		err = DeleteIPFromSet("inet", "mangle", "supernetworks", supernet)
+		if err != nil {
+			log.Println("failed to delete mangle supernetworks element", err)
+		}
 
-	//also updated it under accounting
-	cmd = exec.Command("nft", action, "element", "ip", "accounting", "local_lan", "{", supernet, "}")
-	_, err = cmd.Output()
+		err = DeleteIPFromSet("inet", "filter", "supernetworks", supernet)
+		if err != nil {
+			log.Println("failed to delete filter supernetworks element", err)
+		}
 
-	if err != nil {
-		log.Println("failed to "+action+" accounting supernetworks element", err)
-		log.Println(cmd)
+		err = DeleteIPFromSet("ip", "accounting", "local_lan", supernet)
+		if err != nil {
+			log.Println("failed to delete ip accounting local_lan element", err)
+		}
 	}
 
 }
@@ -771,50 +830,27 @@ func modifyCustomInterfaceRulesImpl(crule CustomInterfaceRule, doDelete bool) er
 }
 
 func deleteBlock(br BlockRule) error {
-	cmd := exec.Command("nft", "delete", "element", "inet", "nat", "block", "{",
-		br.SrcIP, ".", br.DstIP, ".", br.Protocol, ":", "drop", "}")
-
-	_, err := cmd.Output()
-
+	err := DeleteBlockRule(br.SrcIP, br.DstIP, br.Protocol)
 	if err != nil {
-		log.Println("failed to delete element", err)
-		log.Println(cmd)
+		log.Println("failed to delete block rule", err)
 	}
 
 	return err
 }
 
 func deleteOutputBlock(br OutputBlockRule) error {
-	cmd := exec.Command("nft", "delete", "element", "inet", "filter", "output_block", "{",
-		br.SrcIP, ".", br.DstIP, ".", br.Protocol, ":", "drop", "}")
-
-	_, err := cmd.Output()
-
+	err := DeleteOutputBlockRule(br.SrcIP, br.DstIP, br.Protocol)
 	if err != nil {
-		log.Println("failed to delete element", err)
-		log.Println(cmd)
+		log.Println("failed to delete output block rule", err)
 	}
 
 	return err
 }
 
 func deleteForwarding(f ForwardingRule) error {
-	var cmd *exec.Cmd
-	if f.DstPort == "any" {
-		cmd = exec.Command("nft", "delete", "element", "inet", "nat", f.Protocol+"anyfwd",
-			"{", f.SrcIP, ":",
-			f.DstIP, "}")
-
-	} else {
-		cmd = exec.Command("nft", "delete", "element", "inet", "nat", f.Protocol+"fwd",
-			"{", f.SrcIP, ".", f.SrcPort, ":",
-			f.DstIP, ".", f.DstPort, "}")
-	}
-	_, err := cmd.Output()
-
+	err := DeleteForwardingRule(f.Protocol, f.SrcIP, f.SrcPort, f.DstIP, f.DstPort)
 	if err != nil {
-		log.Println("failed to delete element", err)
-		log.Println(cmd)
+		log.Println("failed to delete forwarding rule", err)
 	}
 
 	return err
@@ -826,22 +862,9 @@ func applyForwarding(forwarding []ForwardingRule) error {
 	//need to flush the fwd rules here ?
 
 	for _, f := range forwarding {
-		var cmd *exec.Cmd
-		if f.DstPort == "any" {
-			cmd = exec.Command("nft", "add", "element", "inet", "nat", f.Protocol+"anyfwd",
-				"{", f.SrcIP, ":",
-				f.DstIP, "}")
-
-		} else {
-			cmd = exec.Command("nft", "add", "element", "inet", "nat", f.Protocol+"fwd",
-				"{", f.SrcIP, ".", f.SrcPort, ":",
-				f.DstIP, ".", f.DstPort, "}")
-		}
-		_, err := cmd.Output()
-
+		err := AddForwardingRule(f.Protocol, f.SrcIP, f.SrcPort, f.DstIP, f.DstPort)
 		if err != nil {
-			log.Println("failed to add element", err)
-			log.Println(cmd)
+			log.Println("failed to add forwarding rule", err)
 		}
 
 	}
@@ -851,14 +874,9 @@ func applyForwarding(forwarding []ForwardingRule) error {
 
 func applyBlocking(blockRules []BlockRule) error {
 	for _, br := range blockRules {
-		cmd := exec.Command("nft", "add", "element", "inet", "nat", "block", "{",
-			br.SrcIP, ".", br.DstIP, ".", br.Protocol, ":", "drop", "}")
-
-		_, err := cmd.Output()
-
+		err := AddBlockRule(br.SrcIP, br.DstIP, br.Protocol)
 		if err != nil {
-			log.Println("failed to add element", err)
-			log.Println(cmd)
+			log.Println("failed to add block rule", err)
 		}
 	}
 
@@ -867,14 +885,9 @@ func applyBlocking(blockRules []BlockRule) error {
 
 func applyOutputBlocking(blockRules []OutputBlockRule) error {
 	for _, br := range blockRules {
-		cmd := exec.Command("nft", "add", "element", "inet", "filter", "output_block", "{",
-			br.SrcIP, ".", br.DstIP, ".", br.Protocol, ":", "drop", "}")
-
-		_, err := cmd.Output()
-
+		err := AddOutputBlockRule(br.SrcIP, br.DstIP, br.Protocol)
 		if err != nil {
-			log.Println("failed to add element", err)
-			log.Println(cmd)
+			log.Println("failed to add output block rule", err)
 		}
 	}
 
@@ -891,46 +904,22 @@ func applyForwardBlocking(blockRules []ForwardingBlockRule) error {
 }
 
 func deletePortVmap(port string, vmap string) error {
-
-	//check if it exists
-	cmd := exec.Command("nft", "get", "element", "inet", "filter", vmap,
-		"{", port, ":", "accept", "}")
-	_, err := cmd.Output()
-
-	if err == nil {
-
-		cmd := exec.Command("nft", "delete", "element", "inet", "filter", vmap,
-			"{", port, ":", "accept", "}")
-		_, err := cmd.Output()
-
-		if err != nil {
-			log.Println("failed to delete element from "+vmap, err)
-			log.Println(cmd)
-		}
+	// Just try to delete it - ignore if it doesn't exist
+	err := DeletePortFromMap("inet", "filter", vmap, port)
+	if err != nil && !strings.Contains(err.Error(), "no such file or directory") {
+		log.Println("failed to delete element from "+vmap, err)
+		return err
 	}
 
-	return err
+	return nil
 }
 
 func addPortVmap(port string, vmap string) error {
-
-	//check if it exists
-	cmd := exec.Command("nft", "get", "element", "inet", "filter", vmap,
-		"{", port, ":", "accept", "}")
-	_, err := cmd.Output()
-
+	// Just add it - nftables handles duplicates gracefully
+	err := AddPortVerdictToMap("inet", "filter", vmap, port, "accept")
 	if err != nil {
-		//entry did not already exist, add it.
-
-		cmd := exec.Command("nft", "add", "element", "inet", "filter", vmap,
-			"{", port, ":", "accept", "}")
-		_, err := cmd.Output()
-
-		if err != nil {
-			log.Println("failed to add element to "+vmap, err)
-			log.Println(cmd)
-			return err
-		}
+		log.Printf("failed to add port %s to %s: %v", port, vmap, err)
+		return err
 	}
 
 	return nil
@@ -990,12 +979,65 @@ func addServicePort(port ServicePort) error {
 	return nil
 }
 
+func restrictUpstreamServicesIfPublic(uplinks []string) bool {
+	hasPublic := false
+	for _, iface := range uplinks {
+		if interfaceHasPublicIP(iface) {
+			hasPublic = true
+			break
+		}
+	}
+
+	if !hasPublic {
+		return false
+	}
+
+	//the uplink is directly on the public internet: do not keep the default
+	//wan access to the service ports (ssh/http/https), go LAN-only
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
+
+	changed := false
+	for i := range gFirewallConfig.ServicePorts {
+		if gFirewallConfig.ServicePorts[i].UpstreamEnabled {
+			gFirewallConfig.ServicePorts[i].UpstreamEnabled = false
+			//only remove the wan side entry for this port, nothing else
+			DeleteServicePort(gFirewallConfig.ServicePorts[i].Protocol,
+				gFirewallConfig.ServicePorts[i].Port, true)
+			changed = true
+		}
+	}
+
+	if changed {
+		saveFirewallRulesLocked()
+	}
+
+	return true
+}
+
+func setupRestrictUpstreamServices() bool {
+	uplinks := []string{}
+
+	Interfacesmtx.Lock()
+	config := loadInterfacesConfigLocked()
+	Interfacesmtx.Unlock()
+
+	for _, entry := range config {
+		if entry.Enabled && entry.Type == "Uplink" {
+			uplinks = append(uplinks, entry.Name)
+		}
+	}
+
+	if wanif := os.Getenv("WANIF"); wanif != "" {
+		uplinks = append(uplinks, wanif)
+	}
+
+	return restrictUpstreamServicesIfPublic(uplinks)
+}
+
 func applyServicePorts(servicePorts []ServicePort) error {
 
-	exec.Command("nft", "flush", "map", "inet", "filter", "lan_tcp_accept").Run()
-	exec.Command("nft", "flush", "map", "inet", "filter", "wan_tcp_accept").Run()
-	exec.Command("nft", "flush", "map", "inet", "filter", "lan_udp_accept").Run()
-	exec.Command("nft", "flush", "map", "inet", "filter", "wan_udp_accept").Run()
+	FlushServicePorts()
 
 	for _, port := range servicePorts {
 		addServicePort(port)
@@ -1019,7 +1061,7 @@ func addMulticastPort(port MulticastPort) error {
 		return addPortVmap(port.Port, "multicast_wan_udp_accept")
 	} else {
 		//ensure deleted
-		err = deletePortVmap(port.Port, "Multicast_wan_udp_accept")
+		err = deletePortVmap(port.Port, "multicast_wan_udp_accept")
 	}
 
 	return err
@@ -1027,8 +1069,8 @@ func addMulticastPort(port MulticastPort) error {
 
 func applyMulticastPorts(multicastPorts []MulticastPort) error {
 	//reset multicast ports
-	exec.Command("nft", "flush", "map", "ip", "filter", "multicast_lan_udp_accept").Run()
-	exec.Command("nft", "flush", "map", "ip", "filter", "multicast_wan_udp_accept").Run()
+	FlushMapByName("inet", "filter", "multicast_lan_udp_accept")
+	FlushMapByName("inet", "filter", "multicast_wan_udp_accept")
 
 	foundMDNS := false
 	for _, port := range multicastPorts {
@@ -1051,46 +1093,27 @@ func applyMulticastPorts(multicastPorts []MulticastPort) error {
 }
 
 func hasFirewallDeviceEndpointEntry(srcIP string, e Endpoint) bool {
-
-	cmd := exec.Command("nft", "get", "element", "inet", "filter", "ept_"+e.Protocol+"fwd",
-		"{", srcIP, ".", e.IP, ".", e.Port, ":", "accept", "}")
-
-	_, err := cmd.Output()
-	return err == nil
+	return HasEndpoint(e.Protocol, srcIP, e.IP, e.Port)
 }
 
 func addDeviceEndpointEntry(srcIP string, e Endpoint) {
-
-	cmd := exec.Command("nft", "add", "element", "inet", "filter", "ept_"+e.Protocol+"fwd",
-		"{", srcIP, ".", e.IP, ".", e.Port, ":", "accept", "}")
-
-	_, err := cmd.Output()
-
+	err := AddEndpoint(e.Protocol, srcIP, e.IP, e.Port)
 	if err != nil {
-		log.Println("failed to add element", err)
-		log.Println(cmd)
+		log.Println("failed to add endpoint", err)
 	}
-
 }
 
 func deleteDeviceEndpointEntry(srcIP string, e Endpoint) {
-
-	cmd := exec.Command("nft", "delete", "element", "inet", "filter", "ept_"+e.Protocol+"fwd",
-		"{", srcIP, ".", e.IP, ".", e.Port, ":", "accept", "}")
-
-	_, err := cmd.Output()
-
+	err := DeleteEndpoint(e.Protocol, srcIP, e.IP, e.Port)
 	if err != nil {
-		log.Println("failed to delete element", err)
-		log.Println(cmd)
+		log.Println("failed to delete endpoint", err)
 	}
-
 }
 
 func deleteEndpoint(e Endpoint) error {
 	//NOTE: Domains not implemented yet. This handles the IP case
 	if e.IP == "" {
-		return fmt.Errorf("Domain not implemented yet for " + e.RuleName)
+		return fmt.Errorf("Domain not implemented yet for %s", e.RuleName)
 	}
 
 	Devicesmtx.Lock()
@@ -1142,35 +1165,23 @@ func applyEndpointRules(device DeviceEntry) {
 }
 
 func hasPrivateUpstreamAccess(ip string) bool {
-	cmd := exec.Command("nft", "get", "element", "inet", "filter", "upstream_private_rfc1918_allowed",
-		"{", ip, ":", "return", "}")
-	_, err := cmd.Output()
+	err := GetIPFromMap("inet", "filter", "upstream_private_rfc1918_allowed", ip)
 	return err == nil
 }
 
 func allowPrivateUpstreamAccess(ip string) error {
-	cmd := exec.Command("nft", "add", "element", "inet", "filter", "upstream_private_rfc1918_allowed",
-		"{", ip, ":", "return", "}")
-	_, err := cmd.Output()
-
+	err := AddIPVerdictToMap("inet", "filter", "upstream_private_rfc1918_allowed", ip, "return")
 	if err != nil {
 		log.Println("failed to add element to upstream_private_rfc1918_allowed", err)
-		log.Println(cmd)
 	}
-
 	return err
 }
 
 func removePrivateUpstreamAccess(ip string) error {
-	cmd := exec.Command("nft", "delete", "element", "inet", "filter", "upstream_private_rfc1918_allowed",
-		"{", ip, ":", "return", "}")
-	_, err := cmd.Output()
-
+	err := DeleteIPFromMap("inet", "filter", "upstream_private_rfc1918_allowed", ip)
 	if err != nil {
 		log.Println("failed to remove element from upstream_private_rfc1918_allowed", err)
-		log.Println(cmd)
 	}
-
 	return err
 }
 
@@ -1193,35 +1204,23 @@ func applyPrivateNetworkUpstreamDevice(device DeviceEntry) {
 }
 
 func hasNoAPIAccess(ip string) bool {
-	cmd := exec.Command("nft", "get", "element", "inet", "filter", "api_block",
-		"{", ip, "}")
-	_, err := cmd.Output()
+	err := GetIPFromSet("inet", "filter", "api_block", ip)
 	return err == nil
 }
 
 func addNoAPIAccess(ip string) error {
-	cmd := exec.Command("nft", "add", "element", "inet", "filter", "api_block",
-		"{", ip, "}")
-	_, err := cmd.Output()
-
+	err := AddIPToSet("inet", "filter", "api_block", ip)
 	if err != nil {
 		log.Println("failed to add element to api_block", err)
-		log.Println(cmd)
 	}
-
 	return err
 }
 
 func removeNoAPIAccess(ip string) error {
-	cmd := exec.Command("nft", "delete", "element", "inet", "filter", "api_block",
-		"{", ip, "}")
-	_, err := cmd.Output()
-
+	err := DeleteIPFromSet("inet", "filter", "api_block", ip)
 	if err != nil {
 		log.Println("failed to remove element from api_block", err)
-		log.Println(cmd)
 	}
-
 	return err
 }
 
@@ -1282,11 +1281,17 @@ func refreshDeviceGroupsAndPolicy(devices map[string]DeviceEntry, groups []Group
 		}
 	}
 
-	//check dhcp vmap for the interface
-	entries := getNFTVerdictMap("dhcp_access")
-	for _, entry := range entries {
-		if equalMAC(entry.mac, dev.MAC) {
-			ifname = entry.ifname
+	//the most recent DHCP interface is authoritative; the dhcp_access lookup
+	//below is ambiguous when stale entries exist for a moved device
+	ifname = dev.DHCPLastInterface
+
+	if ifname == "" {
+		//fall back to the dhcp vmap for devices without a recorded interface
+		entries := getNFTVerdictMap("dhcp_access")
+		for _, entry := range entries {
+			if equalMAC(entry.mac, dev.MAC) {
+				ifname = entry.ifname
+			}
 		}
 	}
 
@@ -1300,7 +1305,7 @@ func refreshDeviceGroupsAndPolicy(devices map[string]DeviceEntry, groups []Group
 	}
 
 	//remove from existing verdict maps
-	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), isAPVlan(ifname))
+	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), isAPVlan(ifname), false, nil)
 
 	device_disabled := slices.Contains(dev.Policies, "disabled") || dev.DeviceDisabled == true
 	if !device_disabled {
@@ -1318,8 +1323,7 @@ func applyPingRules() {
 	interfaces := loadInterfacesConfigLocked()
 	Interfacesmtx.Unlock()
 
-	cmd := exec.Command("nft", "flush", "map", "inet", "filter", "ping_rules")
-	_, err := cmd.Output()
+	err := FlushPingRules()
 	if err != nil {
 		fmt.Println("- Failed to flush ping map", err)
 		return
@@ -1338,27 +1342,21 @@ func applyPingRules() {
 		//interfaces not ready to go.
 
 		if pingWan {
-			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
-				"{", "0.0.0.0/0", ".", os.Getenv("WANIF"), ":", "accept", "}")
-			err = cmd.Run()
+			err = AddPingRule("0.0.0.0/0", os.Getenv("WANIF"))
 			if err != nil {
 				fmt.Println("[-] Ping rule failed to add wan", err)
 			}
 		}
 
 		if pingLan {
-			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
-				"{", "0.0.0.0/0", ".", os.Getenv("LANIF"), ":", "accept", "}")
-			err = cmd.Run()
+			err = AddPingRule("0.0.0.0/0", os.Getenv("LANIF"))
 			if err != nil {
 				fmt.Println("[-] Ping rule failed to add lan", err)
 			}
 
 			//also add wireguard to the ping rules
 			//future: gate this on wg being enabled
-			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
-				"{", "0.0.0.0/0", ".", "wg0", ":", "accept", "}")
-			err = cmd.Run()
+			err = AddPingRule("0.0.0.0/0", "wg0")
 			if err != nil {
 				fmt.Println("[-] Ping rule failed to add wg0", err)
 			}
@@ -1370,32 +1368,24 @@ func applyPingRules() {
 
 	for _, iface := range interfaces {
 		if iface.Type == "Uplink" && pingWan {
-			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
-				"{", "0.0.0.0/0", ".", iface.Name, ":", "accept", "}")
-			err = cmd.Run()
+			err = AddPingRule("0.0.0.0/0", iface.Name)
 			if err != nil {
 				fmt.Println("[-] Ping rule failed to add", err)
 			}
 		} else if iface.Type == "AP" && pingLan {
-			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
-				"{", "0.0.0.0/0", ".", iface.Name+".*", ":", "accept", "}")
-			_, err = cmd.Output()
+			err = AddPingRule("0.0.0.0/0", iface.Name+".*")
 			if err != nil {
 				fmt.Println("[-] Ping rule failed to add", err)
 			}
 		} else if iface.Type == "Downlink" && pingLan {
-			cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
-				"{", "0.0.0.0/0", ".", iface.Name, ":", "accept", "}")
-			_, err = cmd.Output()
+			err = AddPingRule("0.0.0.0/0", iface.Name)
 			if err != nil {
 				fmt.Println("[-] Ping rule failed to add", err)
 			}
 
 			if iface.Subtype == "VLAN-Trunk" {
 				//add vlan interfaces as well for vlan trunk
-				cmd = exec.Command("nft", "add", "element", "inet", "filter", "ping_rules",
-					"{", "0.0.0.0/0", ".", iface.Name+".*", ":", "accept", "}")
-				_, err = cmd.Output()
+				err = AddPingRule("0.0.0.0/0", iface.Name+".*")
 				if err != nil {
 					fmt.Println("[-] Ping rule failed to add", err)
 				}
@@ -1525,8 +1515,11 @@ func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container
 
 	//if action is delete, ensure no other rules use this policy on this interface
 	if wan && (action != "delete" || wan_count == 0) {
-		err = exec.Command("nft", action, "element", "inet", "filter", "fwd_iface_wan",
-			"{", container_rule.Interface, ".", container_rule.SrcIP, ":", "accept", "}").Run()
+		if action == "add" {
+			err = AddElementToMapComplex("inet", "filter", "fwd_iface_wan", []string{container_rule.Interface, container_rule.SrcIP}, "accept")
+		} else if action == "delete" {
+			err = DeleteElementFromMapComplex("inet", "filter", "fwd_iface_wan", []string{container_rule.Interface, container_rule.SrcIP})
+		}
 		if err != nil {
 			if action != "delete" {
 				log.Println("failed to "+action+" "+container_rule.Interface+" "+container_rule.SrcIP+" on fwd_iface_wan", err)
@@ -1538,8 +1531,11 @@ func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container
 	}
 
 	if lan && (action != "delete" || lan_count == 0) {
-		err = exec.Command("nft", action, "element", "inet", "filter", "fwd_iface_lan",
-			"{", container_rule.Interface, ".", container_rule.SrcIP, ":", "accept", "}").Run()
+		if action == "add" {
+			err = AddElementToMapComplex("inet", "filter", "fwd_iface_lan", []string{container_rule.Interface, container_rule.SrcIP}, "accept")
+		} else if action == "delete" {
+			err = DeleteElementFromMapComplex("inet", "filter", "fwd_iface_lan", []string{container_rule.Interface, container_rule.SrcIP})
+		}
 		if err != nil {
 			if action != "delete" {
 				log.Println("failed to "+action+" "+container_rule.Interface+" "+container_rule.SrcIP+" on fwd_iface_lan", err)
@@ -1551,8 +1547,11 @@ func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container
 	}
 
 	if dns && (action != "delete" || dns_count == 0) {
-		err = exec.Command("nft", action, "element", "inet", "filter", "dns_access",
-			"{", container_rule.SrcIP, ".", container_rule.Interface, ":", "accept", "}").Run()
+		if action == "add" {
+			err = AddElementToMapComplex("inet", "filter", "dns_access", []string{container_rule.SrcIP, container_rule.Interface}, "accept")
+		} else if action == "delete" {
+			err = DeleteElementFromMapComplex("inet", "filter", "dns_access", []string{container_rule.SrcIP, container_rule.Interface})
+		}
 		if err != nil {
 			if action != "delete" {
 				log.Println("failed to  "+action+" "+container_rule.Interface+" "+container_rule.SrcIP+" on dns_access", err)
@@ -1564,8 +1563,11 @@ func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container
 	}
 
 	if api && (action != "delete" || api_count == 0) {
-		err = exec.Command("nft", action, "element", "inet", "filter", "api_interfaces",
-			"{", container_rule.Interface, "}").Run()
+		if action == "add" {
+			err = AddInterfaceToSetWithTable("inet", "filter", "api_interfaces", container_rule.Interface)
+		} else if action == "delete" {
+			err = DeleteInterfaceFromSetWithTable("inet", "filter", "api_interfaces", container_rule.Interface)
+		}
 		if err != nil {
 			if action != "delete" {
 				log.Println("failed to  "+action+" "+container_rule.Interface+" for @api_interfaces", err)
@@ -1597,12 +1599,12 @@ func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container
 
 			if !found {
 				//clear rule from group.
-				err := exec.Command("nft", "delete", "element", "inet", "filter", group+"_src_access", "{", container_rule.SrcIP, ".", container_rule.Interface, ":", "accept", "}").Run()
+				err := DeleteElementFromMapComplex("inet", "filter", group+"_src_access", []string{container_rule.SrcIP, container_rule.Interface, "accept"})
 				if err != nil {
 					log.Println("[-] Error container_interface group nft delete failed", err)
 				}
 
-				err = exec.Command("nft", "delete", "element", "inet", "filter", group+"_dst_access", "{", container_rule.SrcIP, ".", container_rule.Interface, ":", "continue", "}").Run()
+				err = DeleteElementFromMapComplex("inet", "filter", group+"_dst_access", []string{container_rule.SrcIP, container_rule.Interface, "continue"})
 				if err != nil {
 					log.Println("[-]  Error container_interface group  nft delete failed", err)
 				}
@@ -1628,7 +1630,7 @@ func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container
 
 		ip := net.ParseIP(container_rule.RouteDst)
 		if ip == nil {
-			return fmt.Errorf("invalid ip " + container_rule.RouteDst)
+			return fmt.Errorf("invalid ip %s", container_rule.RouteDst)
 		}
 
 		if action == "add" {
@@ -1642,12 +1644,12 @@ func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container
 }
 
 func applyContainerInterfaces() {
-	err := exec.Command("nft", "flush", "map", "inet", "filter", "fwd_iface_wan").Run()
+	err := FlushMapByName("inet", "filter", "fwd_iface_wan")
 	if err != nil {
 		log.Println("failed to flush fwd_iface_wan", err)
 	}
 
-	err = exec.Command("nft", "flush", "map", "inet", "filter", "fwd_iface_lan").Run()
+	err = FlushMapByName("inet", "filter", "fwd_iface_lan")
 	if err != nil {
 		log.Println("failed to flush fwd_iface_lan", err)
 	}
@@ -1657,16 +1659,33 @@ func applyContainerInterfaces() {
 
 	if dockerif != "" && dockernet != "" {
 		//prepopulate default docker0
-		err = exec.Command("nft", "add", "element", "inet", "filter", "fwd_iface_wan",
-			"{", dockerif, ".", dockernet, ":", "accept", "}").Run()
-		if err != nil {
-			log.Println("failed to populate "+dockerif+" "+dockernet+" on fwd_iface_wan", err)
+		// Check if dockernet is CIDR notation
+		if strings.Contains(dockernet, "/") {
+			err = AddIfaceIPCIDRVerdictElement("inet", "filter", "fwd_iface_wan", dockerif, dockernet, "accept")
+			if err != nil {
+				log.Println("failed to populate "+dockerif+" "+dockernet+" on fwd_iface_wan", err)
+			}
+
+			err = AddIfaceIPCIDRVerdictElement("inet", "filter", "fwd_iface_lan", dockerif, dockernet, "accept")
+			if err != nil {
+				log.Println("failed to populate "+dockerif+" "+dockernet+" on fwd_iface_lan", err)
+			}
+		} else {
+			err = AddElementToMapComplex("inet", "filter", "fwd_iface_wan", []string{dockerif, dockernet}, "accept")
+			if err != nil {
+				log.Println("failed to populate "+dockerif+" "+dockernet+" on fwd_iface_wan", err)
+			}
+
+			err = AddElementToMapComplex("inet", "filter", "fwd_iface_lan", []string{dockerif, dockernet}, "accept")
+			if err != nil {
+				log.Println("failed to populate "+dockerif+" "+dockernet+" on fwd_iface_lan", err)
+			}
 		}
 
-		err = exec.Command("nft", "add", "element", "inet", "filter", "fwd_iface_lan",
-			"{", dockerif, ".", dockernet, ":", "accept", "}").Run()
+		// Also add docker to dns_access to match what base container does
+		err = AddIPIfaceVerdictElement("inet", "filter", "dns_access", dockernet, dockerif, "accept")
 		if err != nil {
-			log.Println("failed to populate "+dockerif+" "+dockernet+" on fwd_iface_lan", err)
+			log.Println("failed to populate "+dockerif+" "+dockernet+" on dns_access", err)
 		}
 	}
 
@@ -1702,8 +1721,7 @@ func applyFirewallRulesLocked() {
 }
 
 func applyRadioInterfaces(interfacesConfig []InterfaceConfig) {
-	cmd := exec.Command("nft", "flush", "chain", "inet", "filter", "WIPHY_FORWARD_LAN")
-	_, err := cmd.Output()
+	err := FlushChainByName("inet", "filter", "WIPHY_FORWARD_LAN")
 	if err != nil {
 		log.Println("failed to flush chain", err)
 		return
@@ -1713,11 +1731,9 @@ func applyRadioInterfaces(interfacesConfig []InterfaceConfig) {
 		if entry.Enabled == true && entry.Type == "AP" {
 			// $(if [ "$VLANSIF" ]; then echo "counter oifname "$VLANSIF*" ip saddr . iifname vmap @lan_access"; fi)
 
-			cmd = exec.Command("nft", "insert", "rule", "inet", "filter", "WIPHY_FORWARD_LAN",
-				"counter", "oifname", entry.Name+".*", "ip", "saddr", ".", "iifname", "vmap", "@lan_access")
-			_, err = cmd.Output()
+			err := InsertWiphyForwardLanRule("inet", "filter", "WIPHY_FORWARD_LAN", entry.Name)
 			if err != nil {
-				log.Println("failed to insert rule", cmd, err)
+				log.Println("failed to insert WIPHY_FORWARD_LAN rule", err)
 			}
 
 		}
@@ -1728,8 +1744,7 @@ func applyRadioInterfaces(interfacesConfig []InterfaceConfig) {
 func showNFMap(w http.ResponseWriter, r *http.Request) {
 	name := mux.Vars(r)["name"]
 
-	cmd := exec.Command("nft", "-j", "list", "map", "inet", "filter", name)
-	stdout, err := cmd.Output()
+	stdout, err := ListMapJSON("inet", "filter", name)
 
 	if err != nil {
 		log.Println("show NFMap failed to list", name, "->", err)
@@ -1738,15 +1753,14 @@ func showNFMap(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, string(stdout))
+	fmt.Fprintf(w, "%s", string(stdout))
 }
 
 func showNFTable(w http.ResponseWriter, r *http.Request) {
 	family := mux.Vars(r)["family"]
 	name := mux.Vars(r)["name"]
 
-	cmd := exec.Command("nft", "list", "table", family, name)
-	stdout, err := cmd.Output()
+	stdout, err := ListTableText(family, name)
 
 	if err != nil {
 		log.Println("show NFMap failed to list ", family, " ", name, "->", err)
@@ -1755,12 +1769,11 @@ func showNFTable(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "plain/text")
-	fmt.Fprintf(w, string(stdout))
+	fmt.Fprintf(w, "%s", stdout)
 }
 
 func listNFTables(w http.ResponseWriter, r *http.Request) {
-	cmd := exec.Command("nft", "-j", "list", "tables")
-	stdout, err := cmd.Output()
+	stdout, err := ListTablesJSON()
 
 	if err != nil {
 		log.Println("nft failed to list tables", err)
@@ -1769,7 +1782,7 @@ func listNFTables(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, string(stdout))
+	fmt.Fprintf(w, "%s", string(stdout))
 }
 
 func getFirewallConfig(w http.ResponseWriter, r *http.Request) {
@@ -1784,7 +1797,7 @@ func CIDRorIP(IP string) error {
 	if err != nil {
 		ip := net.ParseIP(IP)
 		if ip == nil {
-			return fmt.Errorf("invalid ip " + IP)
+			return fmt.Errorf("invalid ip %s", IP)
 		} else {
 			return nil
 		}
@@ -1808,19 +1821,16 @@ func modifyForwardRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	re := regexp.MustCompile("^([0-9]+-[0-9]+|[0-9]+)$")
-
-	if fwd.SrcPort != "any" && !re.MatchString(fwd.SrcPort) {
-		http.Error(w, "Invalid SrcPort", 400)
+	// Validate source port
+	if valid, err := validatePort(fwd.SrcPort); !valid {
+		http.Error(w, fmt.Sprintf("Invalid SrcPort: %v", err), 400)
 		return
 	}
 
-	if fwd.DstPort != "any" {
-		_, err = strconv.Atoi(fwd.DstPort)
-		if err != nil {
-			http.Error(w, "Invalid DstPort", 400)
-			return
-		}
+	// Validate destination port
+	if valid, err := validatePort(fwd.DstPort); !valid {
+		http.Error(w, fmt.Sprintf("Invalid DstPort: %v", err), 400)
+		return
 	}
 
 	if CIDRorIP(fwd.SrcIP) != nil {
@@ -1969,10 +1979,9 @@ func blockForwardingIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	re := regexp.MustCompile("^([0-9]+-[0-9]+|[0-9]+)$")
-
-	if !re.MatchString(br.DstPort) {
-		http.Error(w, "Invalid DstPort", 400)
+	// Validate destination port
+	if valid, err := validatePort(br.DstPort); !valid {
+		http.Error(w, fmt.Sprintf("Invalid DstPort: %v", err), 400)
 		return
 	}
 
@@ -2017,10 +2026,21 @@ func modifyServicePort(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	re := regexp.MustCompile("^([0-9]+)$")
+	// Validate port (service ports should be single ports only)
+	if port.Port == "" {
+		http.Error(w, "Port cannot be empty", 400)
+		return
+	}
 
-	if port.Port == "" || !re.MatchString(port.Port) {
-		http.Error(w, "Invalid Port", 400)
+	// For service ports, we don't allow ranges or special values
+	portNum, err := strconv.Atoi(port.Port)
+	if err != nil {
+		http.Error(w, "Invalid Port: must be a number", 400)
+		return
+	}
+
+	if portNum < 1 || portNum > 65535 {
+		http.Error(w, fmt.Sprintf("Invalid Port: %d is out of valid range (1-65535)", portNum), 400)
 		return
 	}
 
@@ -2090,10 +2110,21 @@ func modifyMulticast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	re := regexp.MustCompile("^([0-9]+)$")
+	// Validate port (multicast ports should be single ports only)
+	if port.Port == "" {
+		http.Error(w, "Port cannot be empty", 400)
+		return
+	}
 
-	if port.Port == "" || !re.MatchString(port.Port) {
-		http.Error(w, "Invalid Port", 400)
+	// For multicast ports, we don't allow ranges or special values
+	portNum, err := strconv.Atoi(port.Port)
+	if err != nil {
+		http.Error(w, "Invalid Port: must be a number", 400)
+		return
+	}
+
+	if portNum < 1 || portNum > 65535 {
+		http.Error(w, fmt.Sprintf("Invalid Port: %d is out of valid range (1-65535)", portNum), 400)
 		return
 	}
 
@@ -2181,10 +2212,14 @@ func modifyEndpoint(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		re := regexp.MustCompile("^([0-9]+)$")
-
-		if endpoint.Port != "0-65535" && endpoint.Port != "any" && (endpoint.Port == "" || !re.MatchString(endpoint.Port)) {
-			http.Error(w, "Invalid Port", 400)
+		// Validate port (endpoints support single ports and special values)
+		if endpoint.Port != "" {
+			if valid, err := validatePort(endpoint.Port); !valid {
+				http.Error(w, fmt.Sprintf("Invalid Port: %v", err), 400)
+				return
+			}
+		} else {
+			http.Error(w, "Port cannot be empty", 400)
 			return
 		}
 
@@ -2232,7 +2267,7 @@ func modifyEndpoint(w http.ResponseWriter, r *http.Request) {
 }
 
 func addVerdict(IP string, Iface string, Table string) {
-	err := exec.Command("nft", "add", "element", "inet", "filter", Table, "{", IP, ".", Iface, ":", "accept", "}").Run()
+	err := AddElementToMapComplex("inet", "filter", Table, []string{IP, Iface}, "accept")
 	if err != nil {
 		log.Println("addVerdict Failed", Iface, Table, err)
 		return
@@ -2241,23 +2276,20 @@ func addVerdict(IP string, Iface string, Table string) {
 
 func hasVerdict(IP string, Iface string, Table string) bool {
 	verdict := getMapVerdict(Table)
-	err := exec.Command("nft", "get", "element", "inet", "filter", Table, "{", IP, ".", Iface, ":", verdict, "}").Run()
+	key := IP + "." + Iface + ":" + verdict
+	err := GetElementFromMap("inet", "filter", Table, key)
 	return err == nil
 }
 
 func addCustomDNSElement(IP, DNSCustom string) {
-	err := exec.Command("nft", "add", "element", "inet", "nat", "custom_dns_devices",
-		"{", IP, ":", DNSCustom, "}").Run()
-
+	err := AddElementToMap("inet", "nat", "custom_dns_devices", IP, DNSCustom)
 	if err != nil {
 		log.Println("add custom dns server failed", IP, DNSCustom, err)
 	}
 }
 
 func delCustomDNSElement(IP, DNSCustom string) {
-	err := exec.Command("nft", "delete", "element", "inet", "nat", "custom_dns_devices",
-		"{", IP, ":", DNSCustom, "}").Run()
-
+	err := DeleteElementFromMap("inet", "nat", "custom_dns_devices", IP)
 	if err != nil {
 		log.Println("remove custom dns server failed", IP, DNSCustom, err)
 	}
@@ -2276,8 +2308,8 @@ func addLANVerdict(IP string, Iface string) {
 }
 
 func addInternetVerdict(IP string, Iface string) {
-	err := exec.Command("nft", "add", "element", "inet", "filter",
-		"internet_access", "{", IP, ".", Iface, ":", getMapVerdict("internet_access"), "}").Run()
+	verdict := getMapVerdict("internet_access")
+	err := AddElementToMapComplex("inet", "filter", "internet_access", []string{IP, Iface}, verdict)
 	if err != nil {
 		log.Println("addVerdict Failed", Iface, "internet_access", err)
 		return
@@ -2286,36 +2318,36 @@ func addInternetVerdict(IP string, Iface string) {
 
 func addCustomVerdict(ZoneName string, IP string, Iface string) {
 	//create verdict maps if they do not exist
-	err := exec.Command("nft", "list", "map", "inet", "filter", ZoneName+"_dst_access").Run()
+	err := CheckMapExists("inet", "filter", ZoneName+"_dst_access")
 	if err != nil {
 		//two verdict maps are used for establishing custom groups.
 		// the {name}_dst_access map allows Inet packets to a certain IP/interface pair
 		//the {name}_src_access part allows Inet packets from a IP/IFace set
 
-		err = exec.Command("nft", "add", "map", "inet", "filter", ZoneName+"_src_access", "{", "type", "ipv4_addr", ".", "ifname", ":", "verdict", ";", "flags", "interval", ";", "}").Run()
+		err = CreateIPIfaceVerdictMap("inet", "filter", ZoneName+"_src_access")
 		if err != nil {
 			log.Println("addCustomVerdict Failed", err)
 			return
 		}
-		err = exec.Command("nft", "add", "map", "inet", "filter", ZoneName+"_dst_access", "{", "type", "ipv4_addr", ".", "ifname", ":", "verdict", ";", "flags", "interval", ";", "}").Run()
+		err = CreateIPIfaceVerdictMap("inet", "filter", ZoneName+"_dst_access")
 		if err != nil {
 			log.Println("addCustomVerdict Failed", err)
 			return
 		}
-		err = exec.Command("nft", "insert", "rule", "inet", "filter", "CUSTOM_GROUPS", "ip", "daddr", ".", "oifname", "vmap", "@"+ZoneName+"_dst_access", "ip", "saddr", ".", "iifname", "vmap", "@"+ZoneName+"_src_access").Run()
+		err = InsertCustomGroupVmapRule("inet", "filter", "CUSTOM_GROUPS", ZoneName)
 		if err != nil {
 			log.Println("addCustomVerdict Failed", err)
 			return
 		}
 	}
 
-	err = exec.Command("nft", "add", "element", "inet", "filter", ZoneName+"_dst_access", "{", IP, ".", Iface, ":", "continue", "}").Run()
+	err = AddElementToMapComplex("inet", "filter", ZoneName+"_dst_access", []string{IP, Iface}, "continue")
 	if err != nil {
 		log.Println("addCustomVerdict Failed", err)
 		return
 	}
 
-	err = exec.Command("nft", "add", "element", "inet", "filter", ZoneName+"_src_access", "{", IP, ".", Iface, ":", "accept", "}").Run()
+	err = AddElementToMapComplex("inet", "filter", ZoneName+"_src_access", []string{IP, Iface}, "accept")
 	if err != nil {
 		log.Println("addCustomVerdict Failed", err)
 		return
@@ -2323,20 +2355,22 @@ func addCustomVerdict(ZoneName string, IP string, Iface string) {
 }
 
 func hasCustomVerdict(ZoneName string, IP string, Iface string) bool {
-	err := exec.Command("nft", "get", "element", "inet", "filter", ZoneName+"_dst_access", "{", IP, ".", Iface, ":", "continue", "}").Run()
+	// Check if the element exists in dst_access map
+	err := GetElementFromMapComplex("inet", "filter", ZoneName+"_dst_access", []string{IP, Iface})
 	if err == nil {
-		err = exec.Command("nft", "get", "element", "inet", "filter", ZoneName+"_src_access", "{", IP, ".", Iface, ":", "accept", "}").Run()
+		// Check if the element exists in src_access map
+		err = GetElementFromMapComplex("inet", "filter", ZoneName+"_src_access", []string{IP, Iface})
 		return err == nil
 	}
 	return false
 }
 
-func hasVmapEntries(devices map[string]DeviceEntry, entry DeviceEntry, Iface string) bool {
+func hasVmapEntries(snap *MapSnapshot, devices map[string]DeviceEntry, entry DeviceEntry, Iface string) bool {
 	//check if a device has its vmap entries established
 
 	//check ethernet filter entry is present
 	if entry.MAC != "" {
-		if !hasVerdictMac(entry.RecentIP, entry.MAC, Iface, "ethernet_filter", "return") {
+		if !snap.HasElement("ethernet_filter", []string{entry.RecentIP, Iface, entry.MAC}) {
 			return false
 		}
 	}
@@ -2376,8 +2410,9 @@ func hasVmapEntries(devices map[string]DeviceEntry, entry DeviceEntry, Iface str
 			continue
 		}
 
-		//custom group
-		if !hasCustomVerdict(group_name, entry.RecentIP, Iface) {
+		//custom group: present when in both _dst_access and _src_access
+		if !snap.HasElement(group_name+"_dst_access", []string{entry.RecentIP, Iface}) ||
+			!snap.HasElement(group_name+"_src_access", []string{entry.RecentIP, Iface}) {
 			return false
 		}
 	}
@@ -2385,7 +2420,7 @@ func hasVmapEntries(devices map[string]DeviceEntry, entry DeviceEntry, Iface str
 	return true
 }
 
-func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, matchInterface bool) {
+func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, matchInterface bool, disabled bool, snap *MapSnapshot) {
 	is_mesh := isMeshPluginEnabled()
 	mesh_downlink := ""
 	if is_mesh {
@@ -2401,8 +2436,12 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 	}
 
 	for _, name := range vmap_names {
-		entries := getNFTVerdictMap(name)
-		verdict := getMapVerdict(name)
+		var entries []verdictEntry
+		if snap != nil {
+			entries = snap.Entries(name)
+		} else {
+			entries = getNFTVerdictMap(name)
+		}
 		for _, entry := range entries {
 
 			//do not flush wireguard entries from vmaps unless the incoming device is on the same interface
@@ -2416,9 +2455,11 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 
 			//when in mesh mode, dont flush the downlink
 			//for faster transitions
-			if is_mesh && name == "ethernet_filter" {
-				if entry.ifname == mesh_downlink {
-					continue
+			if !disabled {
+				if is_mesh && name == "ethernet_filter" {
+					if entry.ifname == mesh_downlink {
+						continue
+					}
 				}
 			}
 
@@ -2426,12 +2467,14 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 				//no ifname, cant do anything with these
 			} else if (entry.ipv4 == IP) || (matchInterface && (entry.ifname == Ifname)) || ((MAC != "") && equalMAC(entry.mac, MAC)) {
 				if entry.mac != "" {
-					err := exec.Command("nft", "delete", "element", "inet", "filter", name, "{", entry.ipv4, ".", entry.ifname, ".", entry.mac, ":", verdict, "}").Run()
+					err := DeleteElementFromMapComplex("inet", "filter", name,
+						[]string{entry.ipv4, entry.ifname, entry.mac})
 					if err != nil {
 						log.Println("nft delete failed", err)
 					}
 				} else {
-					err := exec.Command("nft", "delete", "element", "inet", "filter", name, "{", entry.ipv4, ".", entry.ifname, ":", verdict, "}").Run()
+					err := DeleteElementFromMapComplex("inet", "filter", name,
+						[]string{entry.ipv4, entry.ifname})
 					if err != nil {
 						log.Println("nft delete failed", err)
 						return
@@ -2466,7 +2509,7 @@ func addVerdictMac(IP string, MAC string, Iface string, Table string, Verdict st
 		return
 	}
 
-	err := exec.Command("nft", "add", "element", "inet", "filter", Table, "{", IP, ".", Iface, ".", MAC, ":", Verdict, "}").Run()
+	err := AddMACVerdictElement("inet", "filter", Table, IP, Iface, MAC, Verdict)
 	if err != nil {
 		log.Println("addVerdictMac Failed", MAC, Iface, Table, err)
 		return
@@ -2474,7 +2517,7 @@ func addVerdictMac(IP string, MAC string, Iface string, Table string, Verdict st
 }
 
 func hasVerdictMac(IP string, MAC string, Iface string, Table string, Verdict string) bool {
-	err := exec.Command("nft", "get", "element", "inet", "filter", Table, "{", IP, ".", Iface, ".", MAC, ":", Verdict, "}").Run()
+	err := GetMACVerdictElement("inet", "filter", Table, IP, Iface, MAC, Verdict)
 	return err == nil
 }
 
@@ -2482,37 +2525,26 @@ var blockVerdict = "goto PFWDROPLOG"
 var blockVmapName = "fwd_block"
 
 func isForwardBlockInstalled(br ForwardingBlockRule) bool {
-	cmd := exec.Command("nft", "get", "element", "inet", "filter", blockVmapName, "{",
-		br.SrcIP, ".", br.DstIP, ".", br.Protocol, ".", br.DstPort, ":", blockVerdict, "}")
-
-	err := cmd.Run()
-	return err == nil
+	key, _ := fwdBlockKey(br.SrcIP, br.DstIP, br.Protocol, br.DstPort)
+	if key == nil {
+		return false
+	}
+	return GetNFTClient().GetMapElement(TableFamilyInet, "filter", blockVmapName, key) == nil
 }
 
 func addForwardBlock(br ForwardingBlockRule) error {
-	cmd := exec.Command("nft", "add", "element", "inet", "filter", blockVmapName, "{",
-		br.SrcIP, ".", br.DstIP, ".", br.Protocol, ".", br.DstPort, ":", blockVerdict, "}")
-
-	_, err := cmd.Output()
-
+	err := AddForwardingBlockRule(br.SrcIP, br.DstIP, br.Protocol, br.DstPort)
 	if err != nil {
-		log.Println("failed to add element", err)
-		log.Println(cmd)
+		log.Println("failed to add forwarding block rule", err)
 	}
 	return err
 }
 
 func deleteForwardBlock(br ForwardingBlockRule) error {
-	cmd := exec.Command("nft", "delete", "element", "inet", "filter", blockVmapName, "{",
-		br.SrcIP, ".", br.DstIP, ".", br.Protocol, ".", br.DstPort, ":", blockVerdict, "}")
-
-	_, err := cmd.Output()
-
+	err := DeleteForwardingBlockRule(br.SrcIP, br.DstIP, br.Protocol, br.DstPort)
 	if err != nil {
-		log.Println("failed to delete element", err)
-		log.Println(cmd)
+		log.Println("failed to delete forwarding block rule", err)
 	}
-
 	return err
 }
 
@@ -2656,6 +2688,63 @@ func isMeshPluginEnabled() bool {
 	return false
 }
 
+// getMeshPeerInterfaces returns a map of MAC addresses to their mesh route interfaces
+// for all authorized stations connected via mesh leaf routers
+func getMeshPeerInterfaces() map[string]string {
+	result := make(map[string]string)
+
+	if !isMeshPluginEnabled() || isLeafRouter() {
+		return result
+	}
+
+	leafStations, err := fetchAllLeafStations()
+	if err != nil {
+		log.Printf("Failed to fetch leaf stations: %v\n", err)
+		return result
+	}
+
+	if leafStations == nil {
+		return result
+	}
+
+	// Cache route interfaces to avoid redundant calls
+	routeInterfaceCache := make(map[string]string)
+
+	// Process the leaf stations data
+	for leafIP, leafData := range leafStations {
+		if leafData.Error != nil {
+			fmt.Printf("Error from leaf %s: %v\n", leafIP, leafData.Error)
+			continue
+		}
+
+		// Get the route interface for this leaf IP from cache or fetch it
+		leafRouteInterface, exists := routeInterfaceCache[leafIP]
+		if !exists {
+			leafRouteInterface = getRouteInterface(leafIP)
+			// Cache the result even if empty to avoid redundant calls
+			routeInterfaceCache[leafIP] = leafRouteInterface
+		}
+		if leafRouteInterface == "" {
+			log.Printf("Could not determine route interface for leaf %s\n", leafIP)
+			continue
+		}
+
+		// Process stations for this leaf
+		for mac, stationInfo := range leafData.Stations {
+			// Check if station is authorized
+			flags, exists := stationInfo["flags"]
+			if !exists || !strings.Contains(flags, "[AUTHORIZED]") {
+				continue
+			}
+
+			// Add to result map
+			result[strings.ToLower(mac)] = leafRouteInterface
+		}
+	}
+
+	return result
+}
+
 func meshPluginDownlink() string {
 	//tbd this should be a paramter in mesh setup.
 	//query config and get it
@@ -2736,51 +2825,7 @@ type RouteEntry struct {
 	Gateway string `json:"gateway"`
 }
 
-func getRouteInterface(IP string) string {
-	routes := []RouteEntry{}
-
-	cmd := exec.Command("ip", "-j", "route", "get", IP)
-	output, err := cmd.Output()
-
-	if err != nil {
-		return ""
-	}
-
-	err = json.Unmarshal(output, &routes)
-	if err != nil {
-		log.Println(err)
-		return ""
-	}
-
-	if len(routes) == 1 {
-		return routes[0].Dev
-	}
-
-	return ""
-}
-
-func getRouteGatewayForTable(Table string) string {
-	routes := []RouteEntry{}
-
-	cmd := exec.Command("ip", "-j", "route", "show", "table", Table)
-	output, err := cmd.Output()
-
-	if err != nil {
-		return ""
-	}
-
-	err = json.Unmarshal(output, &routes)
-	if err != nil {
-		log.Println(err)
-		return ""
-	}
-
-	if len(routes) == 1 {
-		return routes[0].Gateway
-	}
-
-	return ""
-}
+// Platform-specific implementations are in route_linux.go and route_darwin.go
 
 func populateVmapEntries(devices map[string]DeviceEntry, groups []GroupEntry, IP, MAC, Iface, WGPubKey, DNSCustom string) {
 
@@ -2926,6 +2971,45 @@ func getPhysicalInterfaces() []string {
 	return physical
 }
 
+func ipIsPrivateOrLocal(ip net.IP) bool {
+	if ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+		return true
+	}
+
+	if ip4 := ip.To4(); ip4 != nil {
+		//CGNAT 100.64.0.0/10
+		if ip4[0] == 100 && ip4[1] >= 64 && ip4[1] <= 127 {
+			return true
+		}
+	}
+
+	return false
+}
+
+func interfaceHasPublicIP(iface string) bool {
+	ief, err := net.InterfaceByName(iface)
+	if err != nil {
+		return false
+	}
+
+	addrs, err := ief.Addrs()
+	if err != nil {
+		return false
+	}
+
+	for _, addr := range addrs {
+		ipnet, ok := addr.(*net.IPNet)
+		if !ok {
+			continue
+		}
+		if ipnet.IP.IsGlobalUnicast() && !ipIsPrivateOrLocal(ipnet.IP) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func setupAPInit() {
 	//kick off the the firewall rules for each configured subnet
 	//for the setup ap
@@ -2966,7 +3050,7 @@ func establishDevice(devices map[string]DeviceEntry, groups []GroupEntry,
 	}
 
 	//2. delete this ip, mac from any existing verdict maps
-	flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface))
+	flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface), false, nil)
 
 	//3. delete the old router address
 	exec.Command("ip", "addr", "del", routeIP, "dev", established_route_device).Run()
@@ -2997,7 +3081,13 @@ func establishDevice(devices map[string]DeviceEntry, groups []GroupEntry,
 		updateArp(new_iface, entry.RecentIP, entry.MAC)
 	}
 
-	//6. add entry to appropriate verdict maps
+	//6. add entry to appropriate verdict maps -- but not for disabled
+	//devices, which must stay out of the maps (flushVmaps above already
+	//removed any stale entries)
+	if slices.Contains(entry.Policies, "disabled") || entry.DeviceDisabled {
+		return
+	}
+
 	//add this MAC and IP to the ethernet filter. wg will be a no-op
 	addVerdictMac(entry.RecentIP, entry.MAC, new_iface, "ethernet_filter", "return")
 
@@ -3062,9 +3152,41 @@ func clearConntrackSrcIP(peer string) {
 }
 
 func dynamicRouteLoop() {
+
+	/*
+	* SPR uses a self-organized network informed by hostapd,
+	*  wireguard, and DHCP.
+	*
+	* The route to an IP can dynamically change if the MAC address
+	* shows up over a new interface.
+	*
+	* With Wired Downhaul a WiFi MAC address will show up on the downhaul
+	* wired link, for example.
+	*
+	* With Wireguard devices keep the same IP as with DHCP over any other interface.
+	*
+	 */
+
+	meshPluginEnabled := isMeshPluginEnabled()
+
 	//mesh APs do not need routes, as they use the bridge
-	if isLeafRouter() {
-		return
+	if meshPluginEnabled {
+		if isLeafRouter() {
+			return
+		}
+		//on first start, the mesh nodes might already have clients connected,
+		//that had DHCP'd earlier. They would not get disconnected and know to DHCP
+		// again if the API goes down
+
+		//for this scenario, we can inform the API immediately by polling their state.
+		//during continuous operation the mesh nodes should not need to be polled
+		//since clients will DHCP if they reconnect.
+		meshPeerInterfaces := getMeshPeerInterfaces()
+
+		//update recent dhcp with this info
+		for mac, iface_dst := range meshPeerInterfaces {
+			RecentDHCPIface[mac] = iface_dst
+		}
 	}
 
 	ticker := time.NewTicker(1 * time.Second)
@@ -3081,24 +3203,19 @@ func dynamicRouteLoop() {
 			Devicesmtx.Unlock()
 			Groupsmtx.Unlock()
 
-			// TBD: need to handle multiple trunk ports, lan ports
-			// that a device can arrive on.
-			// SPR currently assumes one named LANIF.
+			// Get all downlink interfaces
+			downlinks := getDownlinkInterfaces()
+
+			//add wg0 as a valid sink
+			downlinks = append(downlinks, "wg0")
 
 			lanif := getFirstDownlink()
 			lanif_vlan_trunk := false
-			meshPluginEnabled := isMeshPluginEnabled()
+
 			meshDownlink := ""
 			if meshPluginEnabled {
 				meshDownlink = meshPluginDownlink()
 			}
-
-			wireguard_peers, remote_endpoints := getWireguardActivePeers()
-			wifi_peers := getWifiPeers()
-
-			notifyVpnActivity(wireguard_peers, remote_endpoints)
-
-			suggested_device := map[string]string{}
 
 			Interfacesmtx.Lock()
 			interfaces := loadInterfacesConfigLocked()
@@ -3111,6 +3228,17 @@ func dynamicRouteLoop() {
 					}
 				}
 			}
+			wireguard_peers, remote_endpoints := getWireguardActivePeers()
+			wifi_peers := getWifiPeers()
+
+			notifyVpnActivity(wireguard_peers, remote_endpoints)
+
+			//this structure informs what interface to route a device through
+			suggested_device := map[string]string{}
+
+			//The PublicIfaceMapFile will also be updated
+			//for plugins to have network state information
+			newIfaceMap := map[string]string{}
 
 			FWmtx.Lock()
 
@@ -3127,8 +3255,8 @@ func dynamicRouteLoop() {
 			}
 			FWmtx.Unlock()
 
-			//next, if wireguard is there, place that as priority
-			// if it is not already a wifi peer
+			//next, create an IP mapping for wireguard devices
+			//that are currently connected.
 			for _, ip := range wireguard_peers {
 				_, exists := suggested_device[ip]
 				if !exists {
@@ -3136,9 +3264,9 @@ func dynamicRouteLoop() {
 				}
 			}
 
-			//PublicIfaceMapFile
-
-			newIfaceMap := map[string]string{}
+			//snapshot the verdict maps once instead of re-dumping per device
+			vmapSnap := GetNFTClient().SnapshotMaps(TableFamilyInet, "filter", getVerdictMapNames())
+			routeSnap := SnapshotRoutes()
 
 			//now get the existing route and make an update if needed
 			for ident, entry := range devices {
@@ -3148,54 +3276,72 @@ func dynamicRouteLoop() {
 				}
 
 				// this gets the current device destination for this entry (LANIF, wifi vlan, )
-				established_route_device := getRouteInterface(entry.RecentIP)
+				established_route_device := routeSnap.InterfaceForIP(entry.RecentIP)
 
-				//try the ident (MAC) first for what the new route should be
+				// try the ident (MAC) first for what the new route should be
 				new_iface, exists := suggested_device[ident]
+
 				if !exists {
 					// if that failed, try looking it up by IP address (for wireguard)
 					new_iface, exists = suggested_device[entry.RecentIP]
 				}
 
-				//update the iface map with the designated interface
-				newIfaceMap[entry.RecentIP] = new_iface
+				// Check if the suggested interface is valid
+				if exists && new_iface != "" && !strings.HasPrefix(new_iface, "wlan") {
+					// For VLAN interfaces, check the base interface
+					baseIface := new_iface
+					if strings.Contains(new_iface, ".") {
+						baseIface = strings.Split(new_iface, ".")[0]
+					}
+
+					// Verify the interface is a valid downlink
+					isValidDownlink := slices.Contains(downlinks, baseIface)
+
+					// If it's not a downlink, was not wg0, or a wlan
+					if !isValidDownlink {
+						// Interface is not valid, treat as if not found
+						exists = false
+						new_iface = ""
+					}
+				}
 
 				if !exists {
 					wifiDevice := isWifiDevice(entry)
 					if lanif != "" && !wifiDevice {
-						// when mesh plugin is off and not a wifi device, then go for lanif
-
-						//no new_iface and a LAN interface is set, use that.
 						if lanif_vlan_trunk == false || entry.VLANTag == "" {
 							new_iface = lanif
 						} else {
 							new_iface = lanif + "." + entry.VLANTag
 						}
-						newIfaceMap[entry.RecentIP] = new_iface
 					} else if meshPluginEnabled && wifiDevice {
 						//mesh plugin was enabled and it was a wifi device
 						new_iface = meshDownlink
-						newIfaceMap[entry.RecentIP] = new_iface
 					} else {
-
-						// disconnected devices will have empty new_iface, skip
+						// disconnected wifi devices will have empty new_iface, skip
 						continue
 					}
+				}
+
+				//update the iface map with the designated interface
+				newIfaceMap[entry.RecentIP] = new_iface
+
+				device_disabled := slices.Contains(entry.Policies, "disabled") || entry.DeviceDisabled
+
+				//disabled devices stay out of the verdict maps. match by MAC
+				//to catch entries left on a stale interface
+				if device_disabled {
+					if entry.MAC != "" && vmapSnap.HasMAC("ethernet_filter", entry.MAC) {
+						flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface), true, vmapSnap)
+					}
+					continue
 				}
 
 				//happy state -- the established interface matches the calculated interface to route to
 				if established_route_device != "" && established_route_device == new_iface {
 
-					device_disabled := slices.Contains(entry.Policies, "disabled")
-
 					//investigate verdict maps and make sure device is there
-					if hasVmapEntries(devices, entry, new_iface) {
+					if hasVmapEntries(vmapSnap, devices, entry, new_iface) {
 						//vmaps happy, skip updating this device
-
-						if device_disabled {
-							//do flush the device
-							flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface))
-						}
 						continue
 					}
 
@@ -3257,40 +3403,29 @@ func updateFirewallSubnets(DNSIP string, TinyNets []string) {
 	}
 
 	//2) DNSIP
-	cmd := exec.Command("nft", "flush", "chain", "inet", "nat", "DNS_DNAT")
-	_, err := cmd.Output()
+	err := FlushChainByName("inet", "nat", "DNS_DNAT")
 	if err != nil {
 		log.Println("failed to flush chain", err)
 		return
 	}
 
-	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
-		"tcp", "dport", "53", "counter", "dnat", "ip", "to", DNSIP+":53")
-	_, err = cmd.Output()
+	err = InsertDNSDnatPortRule("inet", "nat", "DNS_DNAT", "tcp", DNSIP)
 	if err != nil {
-		log.Println("failed to insert rule", cmd, err)
+		log.Println("failed to insert TCP DNS DNAT rule", err)
 	}
 
-	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
-		"udp", "dport", "53", "counter", "dnat", "ip", "to", DNSIP+":53")
-	_, err = cmd.Output()
+	err = InsertDNSDnatPortRule("inet", "nat", "DNS_DNAT", "udp", DNSIP)
 	if err != nil {
-		log.Println("failed to insert rule", cmd, err)
+		log.Println("failed to insert UDP DNS DNAT rule", err)
 	}
 
-	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
-		"ip", "saddr", "@custom_dns_devices", "meta", "l4proto",
-		"tcp", "dnat", "to", "ip", "saddr", "map", "@custom_dns_devices:53")
-	_, err = cmd.Output()
+	err = InsertDNSMapDnatRule("inet", "nat", "DNS_DNAT", "tcp")
 	if err != nil {
 		log.Println("failed to add tcp custom_dns_devices", err)
 		return
 	}
 
-	cmd = exec.Command("nft", "insert", "rule", "inet", "nat", "DNS_DNAT",
-		"ip", "saddr", "@custom_dns_devices", "meta", "l4proto",
-		"udp", "dnat", "to", "ip", "saddr", "map", "@custom_dns_devices:53")
-	_, err = cmd.Output()
+	err = InsertDNSMapDnatRule("inet", "nat", "DNS_DNAT", "udp")
 	if err != nil {
 		log.Println("failed to add udp custom_dns_devices", err)
 		return
@@ -3299,14 +3434,14 @@ func updateFirewallSubnets(DNSIP string, TinyNets []string) {
 }
 
 func updateSystemDNSRedirectRule(targetIP string) error {
-	err := exec.Command("nft", "flush", "chain", "inet", "filter", "DNS_OUTPUT").Run()
+	err := FlushChainByName("inet", "filter", "DNS_OUTPUT")
 	if err != nil {
 		return fmt.Errorf("failed to flush chain: %v", err)
 	}
 
 	if targetIP != "" {
-		err = exec.Command("nft", "add", "rule", "inet", "filter", "DNS_OUTPUT",
-			"inet protocol { tcp, udp }", "dport 53", "ip daddr !=", targetIP, "dnat to", targetIP).Run()
+		rule := "inet protocol { tcp, udp } dport 53 ip daddr != " + targetIP + " dnat to " + targetIP
+		err = AddRuleToChain("inet", "filter", "DNS_OUTPUT", rule)
 
 		if err != nil {
 			return fmt.Errorf("failed to add rule: %v", err)
@@ -3341,8 +3476,6 @@ func systemDNSOverride(w http.ResponseWriter, r *http.Request) {
 }
 
 func initFirewallRules() {
-	SyncBaseContainer()
-
 	loadFirewallRules()
 
 	FWmtx.Lock()
