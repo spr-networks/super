@@ -3189,6 +3189,21 @@ func dynamicRouteLoop() {
 
 			//add wg0 as a valid sink
 			downlinks = append(downlinks, "wg0")
+
+			lanif := getFirstDownlink()
+			lanif_vlan_trunk := false
+
+			Interfacesmtx.Lock()
+			interfaces := loadInterfacesConfigLocked()
+			Interfacesmtx.Unlock()
+
+			for _, ifconfig := range interfaces {
+				if ifconfig.Name == lanif {
+					if ifconfig.Subtype == "VLAN-Trunk" {
+						lanif_vlan_trunk = true
+					}
+				}
+			}
 			wireguard_peers, remote_endpoints := getWireguardActivePeers()
 			wifi_peers := getWifiPeers()
 
@@ -3263,11 +3278,17 @@ func dynamicRouteLoop() {
 				}
 
 				if !exists {
-
-					// We don't know which interface to use
-					// The device wasn't in suggested_device map (from DHCP/WiFi/WireGuard)
-					// Without DHCP information, we can't route the device
-					continue
+					wifiDevice := isWifiDevice(entry)
+					if lanif != "" && !wifiDevice {
+						if lanif_vlan_trunk == false || entry.VLANTag == "" {
+							new_iface = lanif
+						} else {
+							new_iface = lanif + "." + entry.VLANTag
+						}
+					} else {
+						// disconnected wifi devices will have empty new_iface, skip
+						continue
+					}
 				}
 
 				//update the iface map with the designated interface
