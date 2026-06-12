@@ -2430,7 +2430,6 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 
 	for _, name := range vmap_names {
 		entries := getNFTVerdictMap(name)
-		verdict := getMapVerdict(name)
 		for _, entry := range entries {
 
 			//do not flush wireguard entries from vmaps unless the incoming device is on the same interface
@@ -2454,14 +2453,14 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 				//no ifname, cant do anything with these
 			} else if (entry.ipv4 == IP) || (matchInterface && (entry.ifname == Ifname)) || ((MAC != "") && equalMAC(entry.mac, MAC)) {
 				if entry.mac != "" {
-					key := entry.ipv4 + "." + entry.ifname + "." + entry.mac + ":" + verdict
-					err := DeleteElementFromMap("inet", "filter", name, key)
+					err := DeleteElementFromMapComplex("inet", "filter", name,
+						[]string{entry.ipv4, entry.ifname, entry.mac})
 					if err != nil {
 						log.Println("nft delete failed", err)
 					}
 				} else {
-					key := entry.ipv4 + "." + entry.ifname + ":" + verdict
-					err := DeleteElementFromMap("inet", "filter", name, key)
+					err := DeleteElementFromMapComplex("inet", "filter", name,
+						[]string{entry.ipv4, entry.ifname})
 					if err != nil {
 						log.Println("nft delete failed", err)
 						return
