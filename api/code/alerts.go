@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	sprbus "github.com/spr-networks/sprbus-json"
 
 	"github.com/PaesslerAG/gval"
 	"github.com/PaesslerAG/jsonpath"
@@ -824,59 +823,73 @@ func AlertsRunEventListener() {
 	wg.Add(1)
 	go doStore(storeChan)
 
-	busEvent := func(topic string, value string) {
-
-		var data map[string]interface{}
-		decodeErr := json.Unmarshal([]byte(value), &data)
-		if decodeErr == nil {
-			WSNotifyWildcardListeners(topic, data)
-		} else {
-			log.Println("failed to decode eventbus json:", decodeErr)
-			return
-		}
-
-		//wifi:auth events and plugin: events are special, we always send them up the websocket
-		// for the UI to react to
-		if strings.HasPrefix(topic, "wifi:auth") || strings.HasPrefix(topic, "plugin:") {
-			if decodeErr == nil {
-				WSNotifyValue(topic, data)
+	//decide from the topic alone whether anything consumes this event,
+	//so unconsumed bus traffic costs no json decoding at all
+	alertRuleMatches := func(topic string) bool {
+		AlertSettingsmtx.RLock()
+		defer AlertSettingsmtx.RUnlock()
+		for _, rule := range gAlertsConfig {
+			if !rule.Disabled && strings.HasPrefix(topic, rule.TopicPrefix) {
+				return true
 			}
 		}
+		return false
+	}
 
-		event := interface{}(nil)
-		err := json.Unmarshal([]byte(value), &event)
-		if err != nil {
-			log.Println("invalid json for event", err)
+	busEvent := func(topic string, raw []byte) {
+		//wifi:auth events and plugin: events are special, we always send them up the websocket
+		// for the UI to react to
+		wantUI := strings.HasPrefix(topic, "wifi:auth") || strings.HasPrefix(topic, "plugin:")
+		wantWS := WSHasWildcardListener()
+		wantAlert := alertRuleMatches(topic)
+
+		if !wantUI && !wantWS && !wantAlert {
 			return
 		}
 
-		processEventAlerts(notifyChan, storeChan, topic, event)
-
-	}
-
-	// wait for sprbus server to start
-	for i := 0; i < 4; i++ {
-		if _, err := os.Stat(ServerEventSock); err == nil {
-			break
+		var msg struct {
+			Value string `json:"value"`
+		}
+		if err := json.Unmarshal(raw, &msg); err != nil {
+			log.Println("failed to decode eventbus json:", err)
+			return
 		}
 
+		var data map[string]interface{}
+		if err := json.Unmarshal([]byte(msg.Value), &data); err != nil {
+			log.Println("failed to decode eventbus json:", err)
+			return
+		}
+
+		if wantWS {
+			WSNotifyWildcardListeners(topic, data)
+		}
+
+		if wantUI {
+			WSNotifyValue(topic, data)
+		}
+
+		if wantAlert {
+			processEventAlerts(notifyChan, storeChan, topic, data)
+		}
+	}
+
+	// wait for the in-process sprbus server to start
+	for i := 0; i < 40 && gSprbusServer == nil; i++ {
 		time.Sleep(time.Second / 4)
 	}
 
-	//retry 3 times to set this up
-	for i := 3; i > 0; i-- {
-		err := sprbus.HandleEvent("", busEvent)
-		if err != nil {
-			log.Println(err)
-		}
-		time.Sleep(1 * time.Second)
+	if gSprbusServer == nil {
+		logStd.Println("sprbus server unavailable, alerts listener exiting")
+		close(notifyChan)
+		close(storeChan)
+		wg.Wait()
+		return
 	}
 
-	close(notifyChan)
-	close(storeChan)
-
-	wg.Wait()
-	logStd.Println("sprbus client exit")
+	//subscribe in-process: no socket round trip for our own events
+	gSprbusServer.HandleEventRaw("", busEvent)
+	select {}
 }
 
 type CrashEvent struct {

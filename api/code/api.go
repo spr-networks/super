@@ -2847,18 +2847,20 @@ func SprbusPublish(topic string, bytes interface{}) error {
 	return err
 }
 
+var gSprbusServer *sprbus.Server
+
 func startEventBus() {
 	// make sure the client dont connect to the prev socket
 	os.Remove(ServerEventSock)
 
 	log.Println("starting sprbus server...")
 
-	_, err := sprbus.NewServer(ServerEventSock)
+	server, err := sprbus.NewServer(ServerEventSock)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// not reached
+	gSprbusServer = server
 }
 
 func registerEventClient() {
