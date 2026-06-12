@@ -206,7 +206,7 @@ func (c *NFTClient) ListMapElements(family TableFamily, tableName, mapName strin
 					"family": familyToString(family),
 					"name":   mapName,
 					"table":  tableName,
-					"elem":   formatElements(elements),
+					"elem":   formatElements(mapName, elements),
 				},
 			},
 		},
@@ -641,10 +641,10 @@ func familyToString(family TableFamily) string {
 }
 
 // formatElements formats set elements for JSON output
-func formatElements(elements []nftables.SetElement) []interface{} {
+func formatElements(mapName string, elements []nftables.SetElement) []interface{} {
 	var result []interface{}
 	for _, elem := range elements {
-		formatted := formatElement(elem)
+		formatted := formatElement(mapName, elem)
 		if formatted != nil {
 			result = append(result, formatted)
 		}
@@ -664,8 +664,77 @@ func formatSetElements(elements []nftables.SetElement) []interface{} {
 	return result
 }
 
+// concatKeySchema returns the field layout of a map's concatenated key,
+// or nil for plain single-typed keys
+func concatKeySchema(mapName string, keyLen int) []string {
+	switch mapName {
+	case "dhcp_access":
+		// type ifname . ether_addr
+		return []string{"iface", "mac"}
+	case "ethernet_filter":
+		// type ipv4_addr . ifname . ether_addr
+		return []string{"ip", "iface", "mac"}
+	case "fwd_iface_lan", "fwd_iface_wan":
+		// type ifname . ipv4_addr
+		return []string{"iface", "ip"}
+	}
+
+	// internet_access, dns_access, lan_access and the per-group
+	// <zone>_src_access / <zone>_dst_access maps: ipv4_addr . ifname
+	if keyLen == 20 {
+		return []string{"ip", "iface"}
+	}
+
+	return nil
+}
+
+var concatFieldBytes = map[string]int{"ip": 4, "iface": 16, "mac": 8}
+
+// splitConcatKey decodes a concatenated key into its string parts,
+// or returns nil when the map/key is not a known concatenation
+func splitConcatKey(mapName string, key []byte) []string {
+	schema := concatKeySchema(mapName, len(key))
+	if schema == nil {
+		return nil
+	}
+
+	total := 0
+	for _, field := range schema {
+		total += concatFieldBytes[field]
+	}
+	if total != len(key) {
+		return nil
+	}
+
+	parts := []string{}
+	off := 0
+	for _, field := range schema {
+		seg := key[off : off+concatFieldBytes[field]]
+		off += concatFieldBytes[field]
+		switch field {
+		case "ip":
+			parts = append(parts, net.IP(seg).String())
+		case "iface":
+			parts = append(parts, strings.TrimRight(string(seg), "\x00"))
+		case "mac":
+			// ether_addr is 6 significant bytes, padded to 8 in concatenations
+			parts = append(parts, net.HardwareAddr(seg[:6]).String())
+		}
+	}
+	return parts
+}
+
 // formatElement formats a single set element for JSON output
-func formatElement(elem nftables.SetElement) interface{} {
+func formatElement(mapName string, elem nftables.SetElement) interface{} {
+	// concatenated keys keep the nft -j structure: {"concat": [...]}
+	if parts := splitConcatKey(mapName, elem.Key); parts != nil {
+		concat := make([]interface{}, len(parts))
+		for i, p := range parts {
+			concat[i] = p
+		}
+		return map[string]interface{}{"concat": concat}
+	}
+
 	key := formatElementKey(elem.Key)
 	if key == nil {
 		return nil
