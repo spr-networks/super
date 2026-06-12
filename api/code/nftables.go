@@ -131,59 +131,12 @@ func (c *NFTClient) GetMap(family TableFamily, tableName, mapName string) (*nfta
 		return nil, fmt.Errorf("table %s not found", tableName)
 	}
 
-	sets, err := c.conn.GetSets(table)
+	set, err := c.conn.GetSetByName(table, mapName)
 	if err != nil {
-		// Check if this is the known concatenated type issue
-		if strings.Contains(err.Error(), "conn.Receive: netlink receive: invalid argument") {
-			// For known concatenated maps, return a basic set structure
-			// This is a workaround for the google/nftables issue
-			switch mapName {
-			case "tcpfwd", "udpfwd":
-				// ipv4_addr . inet_service : ipv4_addr . inet_service
-				return &nftables.Set{
-					Table:    table,
-					Name:     mapName,
-					KeyType:  nftables.SetDatatype{Name: "ipv4_addr . inet_service", Bytes: 8},
-					DataType: nftables.SetDatatype{Name: "ipv4_addr . inet_service", Bytes: 8},
-					IsMap:    true,
-				}, nil
-			case "tcpanyfwd", "udpanyfwd":
-				// ipv4_addr : ipv4_addr
-				return &nftables.Set{
-					Table:    table,
-					Name:     mapName,
-					KeyType:  nftables.TypeIPAddr,
-					DataType: nftables.TypeIPAddr,
-					IsMap:    true,
-				}, nil
-			case "block":
-				// ipv4_addr . ipv4_addr . inet_proto : verdict
-				return &nftables.Set{
-					Table:    table,
-					Name:     mapName,
-					KeyType:  nftables.SetDatatype{Name: "ipv4_addr . ipv4_addr . inet_proto", Bytes: 9},
-					DataType: nftables.SetDatatype{Name: "verdict", Bytes: 0},
-					IsMap:    true,
-				}, nil
-			default:
-				// For other maps, return a generic structure
-				return &nftables.Set{
-					Table: table,
-					Name:  mapName,
-					IsMap: true,
-				}, nil
-			}
-		}
 		return nil, err
 	}
 
-	for _, set := range sets {
-		if set.Name == mapName {
-			return set, nil
-		}
-	}
-
-	return nil, fmt.Errorf("map %s not found in table %s", mapName, tableName)
+	return set, nil
 }
 
 // ListMapElements lists all elements in a map and returns them as JSON

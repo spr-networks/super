@@ -3067,7 +3067,13 @@ func establishDevice(devices map[string]DeviceEntry, groups []GroupEntry,
 		updateArp(new_iface, entry.RecentIP, entry.MAC)
 	}
 
-	//6. add entry to appropriate verdict maps
+	//6. add entry to appropriate verdict maps -- but not for disabled
+	//devices, which must stay out of the maps (flushVmaps above already
+	//removed any stale entries)
+	if slices.Contains(entry.Policies, "disabled") || entry.DeviceDisabled {
+		return
+	}
+
 	//add this MAC and IP to the ethernet filter. wg will be a no-op
 	addVerdictMac(entry.RecentIP, entry.MAC, new_iface, "ethernet_filter", "return")
 
@@ -3301,19 +3307,24 @@ func dynamicRouteLoop() {
 				//update the iface map with the designated interface
 				newIfaceMap[entry.RecentIP] = new_iface
 
+				device_disabled := slices.Contains(entry.Policies, "disabled") || entry.DeviceDisabled
+
+				//disabled devices must stay out of the verdict maps. flush
+				//once when an entry is present, then leave them alone -- never
+				//fall through to establishDevice, which would re-add them.
+				if device_disabled {
+					if entry.MAC != "" && hasVerdictMac(entry.RecentIP, entry.MAC, new_iface, "ethernet_filter", "return") {
+						flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface))
+					}
+					continue
+				}
+
 				//happy state -- the established interface matches the calculated interface to route to
 				if established_route_device != "" && established_route_device == new_iface {
-
-					device_disabled := slices.Contains(entry.Policies, "disabled")
 
 					//investigate verdict maps and make sure device is there
 					if hasVmapEntries(devices, entry, new_iface) {
 						//vmaps happy, skip updating this device
-
-						if device_disabled {
-							//do flush the device
-							flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface))
-						}
 						continue
 					}
 

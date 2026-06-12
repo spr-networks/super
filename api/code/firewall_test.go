@@ -2074,6 +2074,47 @@ func TestFlushVmaps(t *testing.T) {
 
 // flushVmaps must actually remove entries it added: the delete key has to be
 // the same binary concatenation the add used, not a dotted ascii string.
+// establishDevice (the dynamicRouteLoop path) must not add a disabled device
+// to ethernet_filter, otherwise the loop oscillates: flush, re-add, flush...
+func TestEstablishDeviceSkipsDisabled(t *testing.T) {
+	setupFirewallTest(t)
+	defer teardownFirewallTest(t)
+
+	iface := "eth0"
+	groups := []GroupEntry{}
+
+	enabled := DeviceEntry{
+		MAC: "aa:00:00:00:00:01", RecentIP: "192.168.9.10",
+		Name: "enabled", Groups: []string{}, Policies: []string{},
+	}
+	disabled := DeviceEntry{
+		MAC: "aa:00:00:00:00:02", RecentIP: "192.168.9.11",
+		Name: "disabled", Groups: []string{}, Policies: []string{"disabled"},
+		DeviceDisabled: true,
+	}
+	devices := map[string]DeviceEntry{enabled.MAC: enabled, disabled.MAC: disabled}
+
+	establishDevice(devices, groups, enabled, iface, "", "192.168.9.8/30", "192.168.9.9")
+	establishDevice(devices, groups, disabled, iface, "", "192.168.9.12/30", "192.168.9.13")
+
+	if GetMACVerdictElement("inet", "filter", "ethernet_filter",
+		enabled.RecentIP, iface, enabled.MAC, "return") != nil {
+		t.Error("enabled device should be in ethernet_filter")
+	}
+	if GetMACVerdictElement("inet", "filter", "ethernet_filter",
+		disabled.RecentIP, iface, disabled.MAC, "return") == nil {
+		t.Error("disabled device should NOT be in ethernet_filter")
+	}
+
+	// re-establishing a now-disabled device must remove its stale entry
+	addVerdictMac(disabled.RecentIP, disabled.MAC, iface, "ethernet_filter", "return")
+	establishDevice(devices, groups, disabled, iface, iface, "192.168.9.12/30", "192.168.9.13")
+	if GetMACVerdictElement("inet", "filter", "ethernet_filter",
+		disabled.RecentIP, iface, disabled.MAC, "return") == nil {
+		t.Error("disabled device entry should be flushed on re-establish")
+	}
+}
+
 func TestFlushVmapsRemovesEntries(t *testing.T) {
 	setupFirewallTest(t)
 	defer teardownFirewallTest(t)
