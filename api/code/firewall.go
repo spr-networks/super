@@ -1281,11 +1281,17 @@ func refreshDeviceGroupsAndPolicy(devices map[string]DeviceEntry, groups []Group
 		}
 	}
 
-	//check dhcp vmap for the interface
-	entries := getNFTVerdictMap("dhcp_access")
-	for _, entry := range entries {
-		if equalMAC(entry.mac, dev.MAC) {
-			ifname = entry.ifname
+	//the most recent DHCP interface is authoritative; the dhcp_access lookup
+	//below is ambiguous when stale entries exist for a moved device
+	ifname = dev.DHCPLastInterface
+
+	if ifname == "" {
+		//fall back to the dhcp vmap for devices without a recorded interface
+		entries := getNFTVerdictMap("dhcp_access")
+		for _, entry := range entries {
+			if equalMAC(entry.mac, dev.MAC) {
+				ifname = entry.ifname
+			}
 		}
 	}
 
@@ -1299,7 +1305,7 @@ func refreshDeviceGroupsAndPolicy(devices map[string]DeviceEntry, groups []Group
 	}
 
 	//remove from existing verdict maps
-	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), isAPVlan(ifname))
+	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), isAPVlan(ifname), false)
 
 	device_disabled := slices.Contains(dev.Policies, "disabled") || dev.DeviceDisabled == true
 	if !device_disabled {
@@ -2414,7 +2420,7 @@ func hasVmapEntries(snap *MapSnapshot, devices map[string]DeviceEntry, entry Dev
 	return true
 }
 
-func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, matchInterface bool) {
+func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, matchInterface bool, disabled bool) {
 	is_mesh := isMeshPluginEnabled()
 	mesh_downlink := ""
 	if is_mesh {
@@ -3037,7 +3043,7 @@ func establishDevice(devices map[string]DeviceEntry, groups []GroupEntry,
 	}
 
 	//2. delete this ip, mac from any existing verdict maps
-	flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface))
+	flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface), false)
 
 	//3. delete the old router address
 	exec.Command("ip", "addr", "del", routeIP, "dev", established_route_device).Run()
@@ -3318,7 +3324,7 @@ func dynamicRouteLoop() {
 				//fall through to establishDevice, which would re-add them.
 				if device_disabled {
 					if entry.MAC != "" && vmapSnap.HasElement("ethernet_filter", []string{entry.RecentIP, new_iface, entry.MAC}) {
-						flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface))
+						flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface), true)
 					}
 					continue
 				}
