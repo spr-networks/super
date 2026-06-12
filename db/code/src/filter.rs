@@ -36,52 +36,70 @@ fn is_empty(v: &Value) -> bool {
 
 /// Rewrite gval `<lhs>=~"<re>"` comparisons into RFC 9535 `search(<lhs>, "<re>")`.
 fn rewrite_regex_ops(expr: &str) -> String {
-    let bytes = expr.as_bytes();
     let mut out = String::with_capacity(expr.len());
-    let mut i = 0;
+    let mut rest = expr;
 
-    while i < bytes.len() {
-        if bytes[i] == b'=' && i + 1 < bytes.len() && bytes[i + 1] == b'~' {
-            // backtrack over the left-hand side: trailing spaces, then a
-            // run of path characters (@.Foo.Bar, @['x'], etc.)
-            let trimmed = out.trim_end();
+    while let Some(pos) = rest.find("=~") {
+        let before = &rest[..pos];
+        let after = &rest[pos + 2..];
 
-            let lhs_start = trimmed
-                .rfind(|c: char| {
-                    !(c.is_alphanumeric()
-                        || matches!(c, '@' | '.' | '_' | '[' | ']' | '\'' | '"' | '-' | '$'))
-                })
-                .map(|p| p + 1)
-                .unwrap_or(0);
-            let lhs = trimmed[lhs_start..].to_string();
-
-            // right-hand side: optional spaces then a quoted string
-            let mut j = i + 2;
-            while j < bytes.len() && bytes[j] == b' ' {
-                j += 1;
-            }
-            if !lhs.is_empty() && j < bytes.len() && (bytes[j] == b'"' || bytes[j] == b'\'') {
-                let quote = bytes[j];
-                let mut k = j + 1;
-                while k < bytes.len() && bytes[k] != quote {
-                    if bytes[k] == b'\\' {
-                        k += 1;
-                    }
-                    k += 1;
-                }
-                if k < bytes.len() {
-                    let rhs = &expr[j..=k];
-                    out.truncate(lhs_start);
-                    out.push_str(&format!("search({}, {})", lhs, rhs));
-                    i = k + 1;
-                    continue;
-                }
+        if let Some((prefix, lhs)) = split_lhs(before) {
+            if let Some((rhs, remainder)) = take_quoted(after.trim_start()) {
+                out.push_str(prefix);
+                out.push_str("search(");
+                out.push_str(lhs);
+                out.push_str(", ");
+                out.push_str(rhs);
+                out.push(')');
+                rest = remainder;
+                continue;
             }
         }
-        out.push(bytes[i] as char);
-        i += 1;
+
+        // not a rewritable occurrence: emit verbatim and move on
+        out.push_str(before);
+        out.push_str("=~");
+        rest = after;
     }
+    out.push_str(rest);
     out
+}
+
+/// Split off the trailing run of path characters (@.Foo.Bar, @['x'], ...)
+/// before the operator. Returns (prefix, lhs); None when there is no lhs.
+fn split_lhs(before: &str) -> Option<(&str, &str)> {
+    let trimmed = before.trim_end();
+    let lhs_start = trimmed
+        .char_indices()
+        .rev()
+        .take_while(|(_, c)| {
+            c.is_alphanumeric()
+                || matches!(c, '@' | '.' | '_' | '[' | ']' | '\'' | '"' | '-' | '$')
+        })
+        .last()
+        .map(|(i, _)| i)?;
+    Some((&trimmed[..lhs_start], &trimmed[lhs_start..]))
+}
+
+/// Take a leading quoted string (honoring backslash escapes), returning it
+/// and the remainder after the closing quote.
+fn take_quoted(s: &str) -> Option<(&str, &str)> {
+    let quote = match s.chars().next() {
+        Some(q @ ('"' | '\'')) => q,
+        _ => return None,
+    };
+    let mut escaped = false;
+    for (i, c) in s.char_indices().skip(1) {
+        if escaped {
+            escaped = false;
+        } else if c == '\\' {
+            escaped = true;
+        } else if c == quote {
+            let end = i + quote.len_utf8();
+            return Some((&s[..end], &s[end..]));
+        }
+    }
+    None
 }
 
 #[cfg(test)]
@@ -125,5 +143,34 @@ mod tests {
     #[test]
     fn invalid_expression_errors() {
         assert!(test_filter("$[?(", &event()).is_err());
+    }
+
+    #[test]
+    fn non_ascii_expressions_pass_through_intact() {
+        // no =~ at all: must be byte-identical
+        assert_eq!(
+            rewrite_regex_ops(r#"$[?(@.City=="Zürich")]"#),
+            r#"$[?(@.City=="Zürich")]"#
+        );
+        // =~ with non-ASCII in the pattern and elsewhere
+        assert_eq!(
+            rewrite_regex_ops(r#"$[?(@.Café=="ok" && @.City=~"Zü.*")]"#),
+            r#"$[?(@.Café=="ok" && search(@.City, "Zü.*"))]"#
+        );
+
+        let ev = json!([{ "City": "Zürich" }]);
+        assert!(test_filter(r#"$[?(@.City=="Zürich")]"#, &ev).unwrap());
+        assert!(test_filter(r#"$[?(@.City=~"Zü")]"#, &ev).unwrap());
+        assert!(!test_filter(r#"$[?(@.City=~"München")]"#, &ev).unwrap());
+    }
+
+    #[test]
+    fn escaped_quotes_in_pattern() {
+        assert_eq!(
+            rewrite_regex_ops(r#"$[?(@.f=~"a\"b")]"#),
+            r#"$[?(search(@.f, "a\"b"))]"#
+        );
+        // unterminated quote: left untouched rather than mangled
+        assert_eq!(rewrite_regex_ops(r#"$[?(@.f=~"abc)]"#), r#"$[?(@.f=~"abc)]"#);
     }
 }

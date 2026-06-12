@@ -26,8 +26,8 @@ async fn sweep_deletes_oldest_quarter_of_big_buckets_only() {
     seed(&store, "big2", 300).await;
     seed(&store, "small", 10).await;
 
-    // tiny MaxSize forces the haircut even without `force`
-    let compacted = check_size_iteration(&store, 1, false, false).await.unwrap();
+    // tiny MaxSize puts the db over the 1.25x gate
+    let compacted = check_size_iteration(&store, 1, false).await.unwrap();
     assert!(compacted);
 
     assert_eq!(store.count_items("big1").await.unwrap(), 300);
@@ -49,8 +49,8 @@ async fn no_sweep_below_threshold() {
     let store = Store::open(dir.join("db").to_str().unwrap()).await.unwrap();
     seed(&store, "big", 400).await;
 
-    // huge MaxSize, not forced: nothing happens
-    let compacted = check_size_iteration(&store, u64::MAX / 2, false, false)
+    // huge MaxSize: nothing happens
+    let compacted = check_size_iteration(&store, u64::MAX / 2, false)
         .await
         .unwrap();
     assert!(!compacted);
@@ -58,15 +58,18 @@ async fn no_sweep_below_threshold() {
 }
 
 #[tokio::test]
-async fn forced_run_sweeps_regardless_of_size() {
-    let dir = common::tempdir("retention-force");
+async fn startup_run_does_not_sweep_below_capacity() {
+    let dir = common::tempdir("retention-startup");
     let store = Store::open(dir.join("db").to_str().unwrap()).await.unwrap();
     seed(&store, "big", 400).await;
 
-    // forced first run ignores the size gate (bolt-era startup behavior)
-    let compacted = check_size_iteration(&store, u64::MAX / 2, false, true)
-        .await
-        .unwrap();
-    assert!(compacted);
-    assert_eq!(store.count_items("big").await.unwrap(), 300);
+    // startup iterations honor the size gate like any other run; repeated
+    // restarts must never delete data below capacity
+    for _ in 0..5 {
+        let compacted = check_size_iteration(&store, u64::MAX / 2, false)
+            .await
+            .unwrap();
+        assert!(!compacted);
+    }
+    assert_eq!(store.count_items("big").await.unwrap(), 400);
 }

@@ -124,6 +124,35 @@ async fn items_filter_counts_matches() {
 }
 
 #[tokio::test]
+async fn items_filter_scans_across_batches() {
+    // filtered scans fetch in batches of 1000; seed enough rows that matches
+    // span multiple batches in both directions
+    let env = test_env("items-batches").await;
+    let base = Utc::now() - Duration::hours(1);
+    for i in 0..2500i64 {
+        let stamp = keys::format_rfc3339_nano(base + Duration::milliseconds(i));
+        let key = keys::time_key(&stamp).unwrap();
+        env.state
+            .store
+            .put_item("ev", &key, &format!("{{\"n\":{}}}", i), true)
+            .await
+            .unwrap();
+    }
+
+    // matches at n = 0, 700, 1400, 2100 — one per batch region
+    let filter = urlencode("$[?(@.n==0 || @.n==700 || @.n==1400 || @.n==2100)]");
+    let items = get_json(&env.app, &format!("/items/ev?filter={}", filter)).await;
+    assert_eq!(ns(&items), vec![2100, 1400, 700, 0]);
+
+    let items = get_json(&env.app, &format!("/items/ev?order=asc&filter={}", filter)).await;
+    assert_eq!(ns(&items), vec![0, 700, 1400, 2100]);
+
+    // num stops the scan after enough matches
+    let items = get_json(&env.app, &format!("/items/ev?filter={}&num=2", filter)).await;
+    assert_eq!(ns(&items), vec![2100, 1400]);
+}
+
+#[tokio::test]
 async fn items_ascending_fallback_for_old_data() {
     let env = test_env("items-fallback").await;
 

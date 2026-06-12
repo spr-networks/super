@@ -36,6 +36,15 @@ impl From<turso::Error> for Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// Key window for range scans.
+#[derive(Clone)]
+pub struct KeyRange {
+    pub min: Vec<u8>,
+    pub max: Vec<u8>,
+    pub min_exclusive: bool,
+    pub max_exclusive: bool,
+}
+
 struct Handles {
     // Database must outlive its connections; kept for drop ordering.
     _db: Database,
@@ -236,31 +245,28 @@ impl Store {
         Ok(int(row.get_value(0)?))
     }
 
-    /// Indexed range scan. `max_exclusive` reproduces the bolt cursor's
-    /// descending-strict semantics where the max bound is excluded.
-    /// `limit` of None streams the full range (used by filtered queries,
-    /// which count matches rather than rows).
+    /// Indexed range scan over a key window. `max_exclusive` reproduces the
+    /// bolt cursor's descending-strict semantics where the max bound is
+    /// excluded; `min_exclusive` lets callers advance a keyset-paginated
+    /// window.
     pub async fn range_items(
         &self,
         bucket: &str,
-        min: &[u8],
-        max: &[u8],
+        range: &KeyRange,
         descending: bool,
-        max_exclusive: bool,
-        limit: Option<i64>,
+        limit: i64,
     ) -> Result<Vec<(Vec<u8>, String)>> {
         let inner = self.inner.lock().await;
         let conn = conn(&inner)?;
-        let max_op = if max_exclusive { "<" } else { "<=" };
+        let min_op = if range.min_exclusive { ">" } else { ">=" };
+        let max_op = if range.max_exclusive { "<" } else { "<=" };
         let order = if descending { "DESC" } else { "ASC" };
         let sql = format!(
-            "SELECT key, value FROM items WHERE bucket = ? AND key >= ? AND key {} ? ORDER BY key {}{}",
-            max_op,
-            order,
-            limit.map(|n| format!(" LIMIT {}", n)).unwrap_or_default()
+            "SELECT key, value FROM items WHERE bucket = ? AND key {} ? AND key {} ? ORDER BY key {} LIMIT {}",
+            min_op, max_op, order, limit
         );
         let mut rows = conn
-            .query(&sql, (bucket, min.to_vec(), max.to_vec()))
+            .query(&sql, (bucket, range.min.clone(), range.max.clone()))
             .await?;
         let mut items = Vec::new();
         while let Some(row) = rows.next().await? {
@@ -282,27 +288,6 @@ impl Store {
             )
             .await?;
         Ok(rows.next().await?.is_some())
-    }
-
-    /// Ascending scan without a lower bound, for the bolt c.First() fallback.
-    pub async fn items_until(
-        &self,
-        bucket: &str,
-        max: &[u8],
-        limit: Option<i64>,
-    ) -> Result<Vec<(Vec<u8>, String)>> {
-        let inner = self.inner.lock().await;
-        let conn = conn(&inner)?;
-        let sql = format!(
-            "SELECT key, value FROM items WHERE bucket = ? AND key <= ? ORDER BY key ASC{}",
-            limit.map(|n| format!(" LIMIT {}", n)).unwrap_or_default()
-        );
-        let mut rows = conn.query(&sql, (bucket, max.to_vec())).await?;
-        let mut items = Vec::new();
-        while let Some(row) = rows.next().await? {
-            items.push((blob(row.get_value(0)?), text(row.get_value(1)?)));
-        }
-        Ok(items)
     }
 
     /// Delete the oldest n items of a bucket (retention haircut).

@@ -15,7 +15,7 @@ use serde_json::{json, Map, Value};
 use crate::config::ConfigStore;
 use crate::filter::test_filter;
 use crate::keys;
-use crate::store::{Store, ERR_BUCKET_MISSING};
+use crate::store::{KeyRange, Store, ERR_BUCKET_MISSING};
 
 // Error strings preserved from boltapi.go.
 const ERR_BUCKET_DECODE_NAME: &str = "error reading bucket name";
@@ -332,61 +332,91 @@ async fn get_bucket_items(
 
     // bolt cursor semantics: descending-strict excludes the max bound
     // (the cursor walked Prev() until start < max), all other bounds are
-    // inclusive. LIMIT pushes down unless a filter counts matches instead.
-    let limit = if filter.is_empty() { Some(num) } else { None };
-    let max_exclusive = descending && is_strict;
+    // inclusive. Unfiltered queries fetch exactly `num` rows; filtered ones
+    // stream the range in bounded batches and count matches, like the old
+    // cursor iteration, so a large range never loads into memory at once.
+    let batch_limit = if filter.is_empty() { num } else { 1000 };
 
-    let mut rows = match state
-        .store
-        .range_items(&name, &min_key, &max_key, descending, max_exclusive, limit)
-        .await
-    {
-        Ok(rows) => rows,
-        Err(e) => return internal_error(&e.0),
+    let mut window = KeyRange {
+        min: min_key.clone(),
+        max: max_key.clone(),
+        min_exclusive: false,
+        max_exclusive: descending && is_strict,
     };
-
-    // ascending non-strict fallback: when nothing is >= min, bolt fell back
-    // to c.First() and returned the oldest data below the window
-    if rows.is_empty() && !descending && !is_strict {
-        let has_newer = state.store.has_key_ge(&name, &min_key).await.unwrap_or(true);
-        if !has_newer {
-            rows = match state.store.items_until(&name, &max_key, limit).await {
-                Ok(rows) => rows,
-                Err(e) => return internal_error(&e.0),
-            };
-        }
-    }
+    let mut first_batch = true;
 
     let mut items: Option<Vec<Value>> = None;
     let mut fetched = 0i64;
-    for (key, raw) in rows {
-        let mut obj = match serde_json::from_str::<Value>(&raw) {
-            Ok(Value::Object(m)) => m,
-            // bolt aborted the scan on the first undecodable value,
-            // returning what it had so far
-            _ => break,
+
+    'scan: loop {
+        let rows = match state
+            .store
+            .range_items(&name, &window, descending, batch_limit)
+            .await
+        {
+            Ok(rows) => rows,
+            Err(e) => return internal_error(&e.0),
         };
 
-        if !obj.contains_key("time") {
-            obj.insert(
-                "time".to_string(),
-                Value::String(keys::key_to_time_string(&key)),
-            );
-        }
-        let obj = Value::Object(obj);
-
-        let keep = if filter.is_empty() {
-            true
-        } else {
-            test_filter(&filter, &json!([obj])).unwrap_or(false)
-        };
-
-        if keep {
-            items.get_or_insert_with(Vec::new).push(obj);
-            fetched += 1;
-            if fetched >= num {
-                break;
+        // ascending non-strict fallback: when nothing is >= min, bolt fell
+        // back to c.First() and returned the oldest data below the window
+        if first_batch && rows.is_empty() && !descending && !is_strict {
+            let has_newer = state.store.has_key_ge(&name, &min_key).await.unwrap_or(true);
+            if !has_newer {
+                window.min = Vec::new(); // the empty key sorts before all keys
+                first_batch = false;
+                continue;
             }
+        }
+        first_batch = false;
+
+        if rows.is_empty() {
+            break;
+        }
+        let exhausted = (rows.len() as i64) < batch_limit;
+        let last_key = rows.last().map(|(k, _)| k.clone()).unwrap_or_default();
+
+        for (key, raw) in rows {
+            let mut obj = match serde_json::from_str::<Value>(&raw) {
+                Ok(Value::Object(m)) => m,
+                // bolt aborted the scan on the first undecodable value,
+                // returning what it had so far
+                _ => break 'scan,
+            };
+
+            if !obj.contains_key("time") {
+                obj.insert(
+                    "time".to_string(),
+                    Value::String(keys::key_to_time_string(&key)),
+                );
+            }
+            let obj = Value::Object(obj);
+
+            let keep = if filter.is_empty() {
+                true
+            } else {
+                test_filter(&filter, &json!([obj])).unwrap_or(false)
+            };
+
+            if keep {
+                items.get_or_insert_with(Vec::new).push(obj);
+                fetched += 1;
+                if fetched >= num {
+                    break 'scan;
+                }
+            }
+        }
+
+        if exhausted {
+            break;
+        }
+        // advance the keyset window past the last seen key
+        if descending {
+            window.max = last_key;
+            window.max_exclusive = true;
+        } else {
+            window.min = last_key;
+            window.min_exclusive = true;
         }
     }
 
