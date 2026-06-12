@@ -33,6 +33,31 @@ func mockAlertSettings() []AlertSetting {
 	return alertSettings
 }
 
+func TestAnyAlertRuleMatches(t *testing.T) {
+	AlertSettingsmtx.Lock()
+	saved := gAlertsConfig
+	gAlertsConfig = []AlertSetting{
+		{TopicPrefix: "wifi:auth:", Name: "a"},
+		{TopicPrefix: "nft:drop:", Name: "b", Disabled: true},
+	}
+	AlertSettingsmtx.Unlock()
+	defer func() {
+		AlertSettingsmtx.Lock()
+		gAlertsConfig = saved
+		AlertSettingsmtx.Unlock()
+	}()
+
+	if !anyAlertRuleMatches("wifi:auth:success") {
+		t.Error("enabled rule prefix should match")
+	}
+	if anyAlertRuleMatches("nft:drop:lan") {
+		t.Error("disabled rule must not match")
+	}
+	if anyAlertRuleMatches("dns:serve:wan") {
+		t.Error("no rule should match")
+	}
+}
+
 func TestProcessEventAlerts(t *testing.T) {
 	var wg sync.WaitGroup
 	gAlertsConfig = mockAlertSettings()
