@@ -1305,7 +1305,7 @@ func refreshDeviceGroupsAndPolicy(devices map[string]DeviceEntry, groups []Group
 	}
 
 	//remove from existing verdict maps
-	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), isAPVlan(ifname), false)
+	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), isAPVlan(ifname), false, nil)
 
 	device_disabled := slices.Contains(dev.Policies, "disabled") || dev.DeviceDisabled == true
 	if !device_disabled {
@@ -2420,7 +2420,7 @@ func hasVmapEntries(snap *MapSnapshot, devices map[string]DeviceEntry, entry Dev
 	return true
 }
 
-func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, matchInterface bool, disabled bool) {
+func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, matchInterface bool, disabled bool, snap *MapSnapshot) {
 	is_mesh := isMeshPluginEnabled()
 	mesh_downlink := ""
 	if is_mesh {
@@ -2436,7 +2436,12 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 	}
 
 	for _, name := range vmap_names {
-		entries := getNFTVerdictMap(name)
+		var entries []verdictEntry
+		if snap != nil {
+			entries = snap.Entries(name)
+		} else {
+			entries = getNFTVerdictMap(name)
+		}
 		for _, entry := range entries {
 
 			//do not flush wireguard entries from vmaps unless the incoming device is on the same interface
@@ -3045,7 +3050,7 @@ func establishDevice(devices map[string]DeviceEntry, groups []GroupEntry,
 	}
 
 	//2. delete this ip, mac from any existing verdict maps
-	flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface), false)
+	flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface), false, nil)
 
 	//3. delete the old router address
 	exec.Command("ip", "addr", "del", routeIP, "dev", established_route_device).Run()
@@ -3321,12 +3326,11 @@ func dynamicRouteLoop() {
 
 				device_disabled := slices.Contains(entry.Policies, "disabled") || entry.DeviceDisabled
 
-				//disabled devices must stay out of the verdict maps. flush
-				//once when an entry is present, then leave them alone -- never
-				//fall through to establishDevice, which would re-add them.
+				//disabled devices stay out of the verdict maps. match by MAC
+				//to catch entries left on a stale interface
 				if device_disabled {
-					if entry.MAC != "" && vmapSnap.HasElement("ethernet_filter", []string{entry.RecentIP, new_iface, entry.MAC}) {
-						flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface), true)
+					if entry.MAC != "" && vmapSnap.HasMAC("ethernet_filter", entry.MAC) {
+						flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface), true, vmapSnap)
 					}
 					continue
 				}
