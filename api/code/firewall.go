@@ -3266,6 +3266,7 @@ func dynamicRouteLoop() {
 
 			//snapshot the verdict maps once instead of re-dumping per device
 			vmapSnap := GetNFTClient().SnapshotMaps(TableFamilyInet, "filter", getVerdictMapNames())
+			routeSnap := SnapshotRoutes()
 
 			//now get the existing route and make an update if needed
 			for ident, entry := range devices {
@@ -3275,7 +3276,7 @@ func dynamicRouteLoop() {
 				}
 
 				// this gets the current device destination for this entry (LANIF, wifi vlan, )
-				established_route_device := getRouteInterface(entry.RecentIP)
+				established_route_device := routeSnap.InterfaceForIP(entry.RecentIP)
 
 				// try the ident (MAC) first for what the new route should be
 				new_iface, exists := suggested_device[ident]
