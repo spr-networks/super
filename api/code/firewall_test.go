@@ -2067,7 +2067,7 @@ func TestFlushVmaps(t *testing.T) {
 			}()
 
 			// Call flushVmaps - it should handle all edge cases gracefully
-			flushVmaps(tt.IPString, tt.MACString, tt.iface, tt.tags, tt.flush)
+			flushVmaps(tt.IPString, tt.MACString, tt.iface, tt.tags, tt.flush, false)
 		})
 	}
 }
@@ -2144,8 +2144,8 @@ func TestMapSnapshotMatchesLive(t *testing.T) {
 		{"ethernet_filter", []string{ip, iface, mac}},
 		{"ethernet_filter", []string{otherIP, iface, mac}}, // absent
 		{"dns_access", []string{ip, iface}},
-		{"dns_access", []string{otherIP, iface}},     // absent
-		{"internet_access", []string{ip, iface}},     // empty map
+		{"dns_access", []string{otherIP, iface}}, // absent
+		{"internet_access", []string{ip, iface}}, // empty map
 	}
 	for _, c := range cases {
 		live := GetElementFromMapComplex("inet", "filter", c.name, c.parts) == nil
@@ -2186,7 +2186,7 @@ func TestFlushVmapsRemovesEntries(t *testing.T) {
 		t.Fatal("ethernet_filter entry not present after add")
 	}
 
-	flushVmaps(ip, mac, iface, []string{"internet_access", "ethernet_filter"}, true)
+	flushVmaps(ip, mac, iface, []string{"internet_access", "ethernet_filter"}, true, false)
 
 	if err := GetElementFromMapComplex("inet", "filter", "internet_access", []string{ip, iface}); err == nil {
 		t.Error("internet_access entry still present after flushVmaps")
