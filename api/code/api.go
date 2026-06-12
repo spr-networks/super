@@ -193,7 +193,7 @@ func ipAddr(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, string(stdout))
+	fmt.Fprintf(w, "%s", string(stdout))
 }
 
 func ipLinkUpDown(w http.ResponseWriter, r *http.Request) {
@@ -358,7 +358,7 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, string(data))
+	fmt.Fprintf(w, "%s", string(data))
 }
 
 // get spr version
@@ -370,7 +370,7 @@ func getGitVersion(w http.ResponseWriter, r *http.Request) {
 
 	req, err := http.NewRequest(http.MethodGet, "http://localhost/git_version?"+params.Encode(), nil)
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to make request for version "+plugin).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to make request for version %s", plugin).Error(), 400)
 		return
 	}
 
@@ -379,7 +379,7 @@ func getGitVersion(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := c.Do(req)
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to request version from superd "+plugin).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to request version from superd %s", plugin).Error(), 400)
 		return
 	}
 
@@ -435,7 +435,7 @@ func releaseInfo(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			http.Error(w, fmt.Errorf("failed to get info "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+			http.Error(w, fmt.Errorf("failed to get info %d", resp.StatusCode).Error(), 400)
 			return
 		}
 
@@ -461,7 +461,7 @@ func releaseInfo(w http.ResponseWriter, r *http.Request) {
 		_, err = ioutil.ReadAll(resp.Body)
 
 		if resp.StatusCode != http.StatusOK {
-			http.Error(w, fmt.Errorf("failed to set superd release "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+			http.Error(w, fmt.Errorf("failed to set superd release %d", resp.StatusCode).Error(), 400)
 			return
 		}
 
@@ -493,7 +493,7 @@ func releaseInfo(w http.ResponseWriter, r *http.Request) {
 	_, err = ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		http.Error(w, fmt.Errorf("failed to set superd release "+fmt.Sprint(resp.StatusCode)).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to set superd release %d", resp.StatusCode).Error(), 400)
 		return
 	}
 	//fall through success
@@ -628,7 +628,7 @@ func checkUpdates(w http.ResponseWriter, r *http.Request) {
 func update(w http.ResponseWriter, r *http.Request) {
 	errorStr := performUpdate()
 	if errorStr != "" {
-		http.Error(w, fmt.Errorf(errorStr).Error(), 400)
+		http.Error(w, fmt.Errorf("%s", errorStr).Error(), 400)
 		return
 	}
 }
@@ -716,7 +716,7 @@ func releasesAvailable(w http.ResponseWriter, r *http.Request) {
 
 	req, err := http.NewRequest(http.MethodPost, "http://localhost/remote_container_tags"+appended, bytes.NewBuffer(jsonValue))
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to make request for tags "+container).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to make request for tags %s", container).Error(), 400)
 		return
 	}
 
@@ -725,7 +725,7 @@ func releasesAvailable(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := c.Do(req)
 	if err != nil {
-		http.Error(w, fmt.Errorf("failed to request tags from superd "+appended).Error(), 400)
+		http.Error(w, fmt.Errorf("failed to request tags from superd %s", appended).Error(), 400)
 		return
 	}
 

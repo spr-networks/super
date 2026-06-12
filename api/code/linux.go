@@ -67,12 +67,10 @@ func getRouteGatewayForTable(Table string) string {
 		return ""
 	}
 
-	// Find the default route (0.0.0.0/0) and return its gateway
-	for _, route := range routes {
-		if route.Dst == nil && route.Gw != nil {
-			// This is a default route
-			return route.Gw.String()
-		}
+	// only a table holding exactly one route identifies the gateway,
+	// otherwise the caller resets the table with a route replace
+	if len(routes) == 1 && routes[0].Gw != nil {
+		return routes[0].Gw.String()
 	}
 
 	return ""

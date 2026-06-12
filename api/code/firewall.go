@@ -578,7 +578,7 @@ func rebuildUplink() {
 
 		// Add a rule that matches the packet mark to the routing table.
 		cmd = exec.Command("ip", "rule", "add", "fwmark", fmt.Sprintf("%d", markNumber), "table", indexStr)
-
+		_, err = cmd.Output()
 		if err != nil {
 			log.Printf("failed to add rule for mark %d: %v", markNumber, err)
 			continue
@@ -1113,7 +1113,7 @@ func deleteDeviceEndpointEntry(srcIP string, e Endpoint) {
 func deleteEndpoint(e Endpoint) error {
 	//NOTE: Domains not implemented yet. This handles the IP case
 	if e.IP == "" {
-		return fmt.Errorf("Domain not implemented yet for " + e.RuleName)
+		return fmt.Errorf("Domain not implemented yet for %s", e.RuleName)
 	}
 
 	Devicesmtx.Lock()
@@ -1624,7 +1624,7 @@ func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container
 
 		ip := net.ParseIP(container_rule.RouteDst)
 		if ip == nil {
-			return fmt.Errorf("invalid ip " + container_rule.RouteDst)
+			return fmt.Errorf("invalid ip %s", container_rule.RouteDst)
 		}
 
 		if action == "add" {
@@ -1747,7 +1747,7 @@ func showNFMap(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, string(stdout))
+	fmt.Fprintf(w, "%s", string(stdout))
 }
 
 func showNFTable(w http.ResponseWriter, r *http.Request) {
@@ -1763,7 +1763,7 @@ func showNFTable(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "plain/text")
-	fmt.Fprintf(w, stdout)
+	fmt.Fprintf(w, "%s", stdout)
 }
 
 func listNFTables(w http.ResponseWriter, r *http.Request) {
@@ -1776,7 +1776,7 @@ func listNFTables(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, string(stdout))
+	fmt.Fprintf(w, "%s", string(stdout))
 }
 
 func getFirewallConfig(w http.ResponseWriter, r *http.Request) {
@@ -1791,7 +1791,7 @@ func CIDRorIP(IP string) error {
 	if err != nil {
 		ip := net.ParseIP(IP)
 		if ip == nil {
-			return fmt.Errorf("invalid ip " + IP)
+			return fmt.Errorf("invalid ip %s", IP)
 		} else {
 			return nil
 		}
@@ -3189,6 +3189,26 @@ func dynamicRouteLoop() {
 
 			//add wg0 as a valid sink
 			downlinks = append(downlinks, "wg0")
+
+			lanif := getFirstDownlink()
+			lanif_vlan_trunk := false
+
+			meshDownlink := ""
+			if meshPluginEnabled {
+				meshDownlink = meshPluginDownlink()
+			}
+
+			Interfacesmtx.Lock()
+			interfaces := loadInterfacesConfigLocked()
+			Interfacesmtx.Unlock()
+
+			for _, ifconfig := range interfaces {
+				if ifconfig.Name == lanif {
+					if ifconfig.Subtype == "VLAN-Trunk" {
+						lanif_vlan_trunk = true
+					}
+				}
+			}
 			wireguard_peers, remote_endpoints := getWireguardActivePeers()
 			wifi_peers := getWifiPeers()
 
@@ -3263,11 +3283,20 @@ func dynamicRouteLoop() {
 				}
 
 				if !exists {
-
-					// We don't know which interface to use
-					// The device wasn't in suggested_device map (from DHCP/WiFi/WireGuard)
-					// Without DHCP information, we can't route the device
-					continue
+					wifiDevice := isWifiDevice(entry)
+					if lanif != "" && !wifiDevice {
+						if lanif_vlan_trunk == false || entry.VLANTag == "" {
+							new_iface = lanif
+						} else {
+							new_iface = lanif + "." + entry.VLANTag
+						}
+					} else if meshPluginEnabled && wifiDevice {
+						//mesh plugin was enabled and it was a wifi device
+						new_iface = meshDownlink
+					} else {
+						// disconnected wifi devices will have empty new_iface, skip
+						continue
+					}
 				}
 
 				//update the iface map with the designated interface

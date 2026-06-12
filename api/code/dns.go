@@ -164,7 +164,9 @@ func collectCaptivePortalDomains() []string {
 	domainMap := make(map[string]bool)
 
 	// Read interfaces configuration
+	Interfacesmtx.Lock()
 	interfaces := loadInterfacesConfigLocked()
+	Interfacesmtx.Unlock()
 
 	// Collect domains from uplinks with captive portal passthrough enabled
 	for _, iface := range interfaces {
@@ -342,11 +344,13 @@ func updateDNSCorefileMulti(dns DNSSettings) {
 	if len(captivePortalDomains) > 0 && len(upstreamDNS) > 0 {
 		var captivePortalForward []string
 
-		// Build the forward line with domains and upstream DNS servers
-		forwardLine := "  forward " + strings.Join(captivePortalDomains, " ") + " " + strings.Join(upstreamDNS, " ") + " {"
-		captivePortalForward = append(captivePortalForward, forwardLine)
-		captivePortalForward = append(captivePortalForward, "    max_concurrent 1000")
-		captivePortalForward = append(captivePortalForward, "  }")
+		// the forward plugin takes a single FROM zone: one block per domain
+		for _, domain := range captivePortalDomains {
+			forwardLine := "  forward " + domain + " " + strings.Join(upstreamDNS, " ") + " {"
+			captivePortalForward = append(captivePortalForward, forwardLine)
+			captivePortalForward = append(captivePortalForward, "    max_concurrent 1000")
+			captivePortalForward = append(captivePortalForward, "  }")
+		}
 
 		// Find where to insert (right after the . { line, inside the main block)
 		insertIdx := -1

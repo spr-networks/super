@@ -181,12 +181,12 @@ func configureInterface(interfaceType string, subType string, name string, MACRa
 	defer Interfacesmtx.Unlock()
 
 	if !isValidIface(name) {
-		return fmt.Errorf("Invalid interace name " + name)
+		return fmt.Errorf("Invalid interace name %s", name)
 	}
 
 	if interfaceType != "AP" && interfaceType != "Uplink" {
 		//generate a hostap config if it is not there yet (?)
-		return fmt.Errorf("Unknown interface type " + interfaceType)
+		return fmt.Errorf("Unknown interface type %s", interfaceType)
 	}
 
 	if interfaceType == "AP" {
@@ -318,7 +318,7 @@ func getInterfacesConfiguration(w http.ResponseWriter, r *http.Request) {
 func updateInterfaceType(Iface string, Type string, Subtype string, Enabled bool) ([]InterfaceConfig, error) {
 
 	if !isValidIface(Iface) {
-		return []InterfaceConfig{}, fmt.Errorf("Invalid iface name " + Iface)
+		return []InterfaceConfig{}, fmt.Errorf("Invalid iface name %s", Iface)
 	}
 
 	Interfacesmtx.Lock()
@@ -946,16 +946,27 @@ func getDownlinkInterfaces() []string {
 }
 
 func refreshDownlinksLocked() {
+	interfaces := loadInterfacesConfigLocked()
+
 	//empty the wired lan interfaces list
 	FlushSetWithTable("inet", "filter", "wired_lan_interfaces")
 
-	// Get all downlink interfaces and add them
-	downlinks := getDownlinkInterfacesLocked()
-	for _, iface := range downlinks {
-		addWiredLanInterface(iface)
-		//Set interfaces up
-		if isValidIface(iface) {
-			exec.Command("ip", "link", "set", iface, "up").Run()
+	// and repopulate it
+	lanif := os.Getenv("LANIF")
+	if lanif != "" {
+		addWiredLanInterface(lanif)
+	}
+	for _, ifconfig := range interfaces {
+		if ifconfig.Type == "Downlink" {
+			if lanif != "" && ifconfig.Name == lanif {
+				//already covered
+				continue
+			}
+			addWiredLanInterface(ifconfig.Name)
+			//Set interfaces up
+			if ifconfig.Enabled && isValidIface(ifconfig.Name) {
+				exec.Command("ip", "link", "set", ifconfig.Name, "up").Run()
+			}
 		}
 	}
 }
@@ -976,7 +987,7 @@ type IPAddrInfo struct {
 // This adds secondary IPs without affecting the primary IP managed by DHCP
 func applyAdditionalIPs(ifaceName string, additionalIPs []AdditionalIP) error {
 	if !isValidIface(ifaceName) {
-		return fmt.Errorf("Invalid interface name: " + ifaceName)
+		return fmt.Errorf("Invalid interface name: %s", ifaceName)
 	}
 
 	// Get current IP addresses on the interface using JSON output
