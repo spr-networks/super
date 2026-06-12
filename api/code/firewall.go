@@ -2450,9 +2450,11 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 
 			//when in mesh mode, dont flush the downlink
 			//for faster transitions
-			if is_mesh && name == "ethernet_filter" {
-				if entry.ifname == mesh_downlink {
-					continue
+			if !disabled {
+				if is_mesh && name == "ethernet_filter" {
+					if entry.ifname == mesh_downlink {
+						continue
+					}
 				}
 			}
 
