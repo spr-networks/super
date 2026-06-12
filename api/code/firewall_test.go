@@ -2072,6 +2072,44 @@ func TestFlushVmaps(t *testing.T) {
 	}
 }
 
+// flushVmaps must actually remove entries it added: the delete key has to be
+// the same binary concatenation the add used, not a dotted ascii string.
+func TestFlushVmapsRemovesEntries(t *testing.T) {
+	setupFirewallTest(t)
+	defer teardownFirewallTest(t)
+
+	ip := "192.168.5.42"
+	iface := "eth0"
+	mac := "aa:bb:cc:dd:ee:ff"
+
+	// 2-part map: ipv4 . ifname
+	if err := AddElementToMapComplex("inet", "filter", "internet_access",
+		[]string{ip, iface}, "accept"); err != nil {
+		t.Fatalf("add internet_access: %v", err)
+	}
+	// 3-part map: ipv4 . ifname . ether_addr
+	if err := AddElementToMapComplex("inet", "filter", "ethernet_filter",
+		[]string{ip, iface, mac}, "return"); err != nil {
+		t.Fatalf("add ethernet_filter: %v", err)
+	}
+
+	if GetElementFromMapComplex("inet", "filter", "internet_access", []string{ip, iface}) != nil {
+		t.Fatal("internet_access entry not present after add")
+	}
+	if GetElementFromMapComplex("inet", "filter", "ethernet_filter", []string{ip, iface, mac}) != nil {
+		t.Fatal("ethernet_filter entry not present after add")
+	}
+
+	flushVmaps(ip, mac, iface, []string{"internet_access", "ethernet_filter"}, true)
+
+	if err := GetElementFromMapComplex("inet", "filter", "internet_access", []string{ip, iface}); err == nil {
+		t.Error("internet_access entry still present after flushVmaps")
+	}
+	if err := GetElementFromMapComplex("inet", "filter", "ethernet_filter", []string{ip, iface, mac}); err == nil {
+		t.Error("ethernet_filter entry still present after flushVmaps")
+	}
+}
+
 func TestDockerDNSAccessIntegration(t *testing.T) {
 	setupFirewallTest(t)
 	defer teardownFirewallTest(t)
