@@ -15,7 +15,6 @@ require (
 	github.com/influxdata/influxdb-client-go/v2 v2.14.0
 	github.com/pquerna/otp v1.5.0
 	github.com/spr-networks/spr-apns-proxy v0.0.0-20240313234339-74463a982772
-	github.com/spr-networks/sprbus v0.1.9
 	github.com/vishvananda/netlink v1.3.1
 	golang.org/x/crypto v0.50.0
 	golang.org/x/net v0.52.0
@@ -30,14 +29,10 @@ require (
 	github.com/influxdata/line-protocol v0.0.0-20210922203350-b1ad95c89adf // indirect
 	github.com/mdlayher/netlink v1.7.3-0.20250702063131-0f7746f74615 // indirect
 	github.com/mdlayher/socket v0.5.1 // indirect
-	github.com/moby/pubsub v1.0.0 // indirect
 	github.com/oapi-codegen/runtime v1.3.1 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
+	github.com/spr-networks/sprbus-json v0.0.0-20260612035203-793538d3de15
 	github.com/vishvananda/netns v0.0.5 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/text v0.36.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260319201613-d00831a3d3e7 // indirect
-	google.golang.org/grpc v1.79.3 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
 )

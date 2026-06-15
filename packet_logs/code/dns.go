@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/spr-networks/sprbus"
+	sprbus "github.com/spr-networks/sprbus-json"
 )
 
 type DNSRecord struct {

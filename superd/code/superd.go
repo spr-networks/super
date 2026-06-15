@@ -33,7 +33,7 @@ import (
 )
 
 import (
-	"github.com/spr-networks/sprbus"
+	sprbus "github.com/spr-networks/sprbus-json"
 )
 
 var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"

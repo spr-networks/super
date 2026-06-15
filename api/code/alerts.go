@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/spr-networks/sprbus"
 
 	"github.com/PaesslerAG/gval"
 	"github.com/PaesslerAG/jsonpath"
@@ -837,11 +836,9 @@ func AlertsRunEventListener() {
 	wg.Add(1)
 	go doStore(storeChan)
 
-	busEvent := func(topic string, value string) {
-		//decide from the topic alone whether anything consumes this event, so
-		//unmatched bus traffic costs no json decoding
-
-		//wifi:auth and plugin: events always go up the websocket for the UI
+	busEvent := func(topic string, raw []byte) {
+		//decide from the topic alone whether anything consumes this event,
+		//so unconsumed bus traffic costs no json decoding at all
 		wantUI := strings.HasPrefix(topic, "wifi:auth") || strings.HasPrefix(topic, "plugin:")
 		wantWS := WSHasWildcardListener()
 		wantAlert := anyAlertRuleMatches(topic)
@@ -850,8 +847,16 @@ func AlertsRunEventListener() {
 			return
 		}
 
+		var msg struct {
+			Value string `json:"value"`
+		}
+		if err := json.Unmarshal(raw, &msg); err != nil {
+			log.Println("failed to decode eventbus json:", err)
+			return
+		}
+
 		var data map[string]interface{}
-		if err := json.Unmarshal([]byte(value), &data); err != nil {
+		if err := json.Unmarshal([]byte(msg.Value), &data); err != nil {
 			log.Println("failed to decode eventbus json:", err)
 			return
 		}
@@ -869,29 +874,22 @@ func AlertsRunEventListener() {
 		}
 	}
 
-	// wait for sprbus server to start
-	for i := 0; i < 4; i++ {
-		if _, err := os.Stat(ServerEventSock); err == nil {
-			break
-		}
-
+	// wait for the in-process sprbus server to start
+	for i := 0; i < 40 && gSprbusServer == nil; i++ {
 		time.Sleep(time.Second / 4)
 	}
 
-	//retry 3 times to set this up
-	for i := 3; i > 0; i-- {
-		err := sprbus.HandleEvent("", busEvent)
-		if err != nil {
-			log.Println(err)
-		}
-		time.Sleep(1 * time.Second)
+	if gSprbusServer == nil {
+		logStd.Println("sprbus server unavailable, alerts listener exiting")
+		close(notifyChan)
+		close(storeChan)
+		wg.Wait()
+		return
 	}
 
-	close(notifyChan)
-	close(storeChan)
-
-	wg.Wait()
-	logStd.Println("sprbus client exit")
+	//subscribe in-process: no socket round trip for our own events
+	gSprbusServer.HandleEventRaw("", busEvent)
+	select {}
 }
 
 type CrashEvent struct {
