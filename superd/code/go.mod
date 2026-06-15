@@ -6,7 +6,6 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/sigstore/protobuf-specs v0.5.1
 	github.com/sigstore/sigstore-go v1.2.1
-	github.com/spr-networks/sprbus v0.1.9
 )
 
 require (
@@ -48,7 +47,6 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
 	github.com/in-toto/attestation v1.2.0 // indirect
 	github.com/in-toto/in-toto-golang v0.11.0 // indirect
-	github.com/moby/pubsub v1.0.0 // indirect
 	github.com/oklog/ulid/v2 v2.1.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -59,6 +57,7 @@ require (
 	github.com/sigstore/sigstore v1.10.8 // indirect
 	github.com/sigstore/timestamp-authority/v2 v2.1.2 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
+	github.com/spr-networks/sprbus-json v0.0.0-20260612035203-793538d3de15
 	github.com/theupdateframework/go-tuf/v2 v2.4.2-0.20260407074541-7e8f69f906ef // indirect
 	github.com/transparency-dev/formats v0.1.1 // indirect
 	github.com/transparency-dev/merkle v0.0.2 // indirect

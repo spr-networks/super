@@ -10,7 +10,7 @@ import (
 	"github.com/florianl/go-nflog/v2"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
-	"github.com/spr-networks/sprbus"
+	sprbus "github.com/spr-networks/sprbus-json"
 	"log"
 	"os"
 	"strings"

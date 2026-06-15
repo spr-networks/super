@@ -26,7 +26,7 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/spr-networks/sprbus"
+	sprbus "github.com/spr-networks/sprbus-json"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -2866,18 +2866,20 @@ func SprbusPublish(topic string, bytes interface{}) error {
 	return err
 }
 
+var gSprbusServer *sprbus.Server
+
 func startEventBus() {
 	// make sure the client dont connect to the prev socket
 	os.Remove(ServerEventSock)
 
 	log.Println("starting sprbus server...")
 
-	_, err := sprbus.NewServer(ServerEventSock)
+	server, err := sprbus.NewServer(ServerEventSock)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// not reached
+	gSprbusServer = server
 }
 
 func registerEventClient() {

@@ -13,7 +13,7 @@ import (
 )
 
 import (
-	"github.com/spr-networks/sprbus"
+	sprbus "github.com/spr-networks/sprbus-json"
 )
 
 import bolt "go.etcd.io/bbolt"

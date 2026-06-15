@@ -25,7 +25,7 @@ import (
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/verify"
 
-	"github.com/spr-networks/sprbus"
+	sprbus "github.com/spr-networks/sprbus-json"
 )
 
 var AttestationRepo = "spr-networks/super"

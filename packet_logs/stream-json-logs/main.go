@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/google/gopacket/layers"
-	"github.com/spr-networks/sprbus"
+	sprbus "github.com/spr-networks/sprbus-json"
 )
 
 var ServerEventSock = "/state/api/eventbus.sock"

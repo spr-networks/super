@@ -15,7 +15,7 @@ import (
 //SPRBUS example
 //to use, also uncomment the /state/api line in docker-compose.yml
 import (
-	"github.com/spr-networks/sprbus"
+	sprbus "github.com/spr-networks/sprbus-json"
 )
 
 func handleDnsEvent(topic string, value string) {
