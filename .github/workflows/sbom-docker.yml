@@ -5,22 +5,25 @@ on:
     workflows: ['Docker Image CI']
     types:
       - completed
-    branches: [main]
-  push:
-    branches: [dev]
+    branches: [main, dev]
 
 jobs:
   get-images:
+    # only run once the build that pushed the images actually succeeded,
+    # and key everything off that build's commit (workflow_run checks out
+    # the default branch by default, which would mis-derive the dev tag)
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: '0'
       - name: Get version from git
         run: echo "RELEASE_VERSION=$(git describe --tags --abbrev=0 | grep -Eo '[0-9]+\.[0-9]+.[0-9]+')" >> $GITHUB_ENV
       - name: Set release channel for dev
         run: echo "RELEASE_CHANNEL=-dev" >> $GITHUB_ENV
-        if: ${{ github.ref_name == 'dev' }}
+        if: ${{ github.event.workflow_run.head_branch == 'dev' }}
       - name: Test release tag version and channel
         run: echo "RELEASE_VERSION == $RELEASE_VERSION  CHANNEL == $RELEASE_CHANNEL"
       - name: Install jq

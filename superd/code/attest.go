@@ -43,7 +43,7 @@ type attestPolicy struct {
 }
 
 var attestPolicies = map[string]attestPolicy{
-	"ghcr.io/spr-networks/super_":                                    {AttestationSANRegex, false},
+	"ghcr.io/spr-networks/super_":                                    {AttestationSANRegex, true},
 	"ghcr.io/spr-networks/pfw_extension_":                            {PfwAttestationSANRegex, true},
 	"ghcr.io/spr-networks/mesh_extension_":                           {MeshAttestationSANRegex, true},
 	"containers.plus.supernetworks.org/spr-networks/pfw_extension_":  {PfwAttestationSANRegex, true},

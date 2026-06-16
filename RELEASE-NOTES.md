@@ -1,6 +1,11 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+
+## v1.1.2
+** Fixes **
+- api.github aggressively limits public attestation checks so switch to ghcr registry
+
 ## v1.1.1
 ** Fixes **
 - Fix db/bus buffering 

@@ -51,7 +51,7 @@ jobs:
           draft: false
           prerelease: true
       - name: Attest ISO Provenance
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v4.1.0
         with:
           subject-path: "./installer/data/spr.img.xz"
           subject-name: "clearfog-spr.img.xz"
