@@ -1,5 +1,14 @@
 
 # Secure Programmable Router (SPR) Release Notes
+
+## v1.1.1
+** Fixes **
+- Fix db/bus buffering 
+- Fix iOS select menu for dns log filter 
+** Improvements **
+- New UI for bulk device edits
+
+
 ## v1.1.0 
 ** Fixes **
 - address hostapd use-after-free bug with mld
