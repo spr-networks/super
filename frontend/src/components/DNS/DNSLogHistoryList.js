@@ -651,7 +651,7 @@ const DNSLogHistoryList = (props) => {
         bg="$backgroundCardLight"
         space="md"
         p="$4"
-        h={Platform.OS == 'web' ? 'auto' : showForm ? 180 : 70}
+        h={Platform.OS == 'web' ? 'auto' : showForm ? undefined : 70}
         sx={{
           '@md': {
             flexDirection: 'row',
