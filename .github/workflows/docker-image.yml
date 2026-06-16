@@ -166,7 +166,7 @@ jobs:
         name: Authenticate to ghcr
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - name: Attest Build Provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4.1.0
         with:
           subject-name: ${{ matrix.image.name }}
           subject-digest: ${{ matrix.image.digest }}

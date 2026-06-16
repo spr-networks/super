@@ -44,7 +44,7 @@ jobs:
       #    sudo mv ./installer/ubuntu/data/spr.img ./installer/ubuntu/data/spr-ubuntu.img
       #    sudo xz -T 0 -9 -z ./installer/ubuntu/data/spr-ubuntu.img
       #- name: Attest Ubuntu ISO Provenance
-      #  uses: actions/attest-build-provenance@v2
+      #  uses: actions/attest-build-provenance@v4.1.0
       #  with:
       #    subject-path: "./installer/ubuntu/data/spr-ubuntu.img.xz"
       #    subject-name: "spr-ubuntu.img.xz"
@@ -64,7 +64,7 @@ jobs:
           sudo mv ./installer/raspbian/data/spr.img ./installer/raspbian/data/spr-debian.img
           sudo xz -T 0 -9 -z ./installer/raspbian/data/spr-debian.img
       - name: Attest Debian ISO Provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4.1.0
         with:
           subject-path: "./installer/raspbian/data/spr-debian.img.xz"
           subject-name: "spr-debian.img.xz"
