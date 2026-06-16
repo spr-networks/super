@@ -115,6 +115,9 @@ const ContainerInterfaceRulesList = (props) => {
                 {item.Interface}
               </Text>
               <Text flex={1}>{item.RuleName}</Text>
+              <Text flex={1} color="$muted500" isTruncated>
+                {item.Description}
+              </Text>
               <Text flex={1}>{item.SrcIP}</Text>
               <Text flex={1}>{item.RouteDst}</Text>
             </VStack>

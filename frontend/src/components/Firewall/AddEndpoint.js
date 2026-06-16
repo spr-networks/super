@@ -25,6 +25,7 @@ import ProtocolRadio from 'components/Form/ProtocolRadio'
 class AddEndpointImpl extends React.Component {
   state = {
     RuleName: '',
+    Description: '',
     Protocol: 'tcp',
     IP: '',
     Port: 'any',
@@ -47,6 +48,7 @@ class AddEndpointImpl extends React.Component {
   handleSubmit() {
     let rule = {
       RuleName: this.state.RuleName,
+      Description: this.state.Description,
       IP: this.state.IP,
       Domain: this.state.Domain,
       Protocol: this.state.Protocol,
@@ -92,6 +94,19 @@ class AddEndpointImpl extends React.Component {
               onSubmitEditing={(value) => this.handleChange('RuleName', value)}
               onChangeText={(value) => this.handleChange('RuleName', value)}
               onChange={(value) => this.handleChange('RuleName', value)}
+            />
+          </Input>
+        </FormControl>
+
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Description</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              placeholder="Optional label"
+              value={this.state.Description}
+              onChangeText={(value) => this.handleChange('Description', value)}
             />
           </Input>
         </FormControl>

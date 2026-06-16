@@ -36,6 +36,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
   state = {
     Disabled: false,
     RuleName: '',
+    Description: '',
     SrcIP: '',
     Interface: '',
     RouteDst: '',
@@ -72,6 +73,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
 
     let crule = {
       RuleName: this.state.RuleName,
+      Description: this.state.Description,
       Disabled: this.state.Disabled,
       SrcIP: this.state.SrcIP,
       RouteDst: this.state.RouteDst,
@@ -139,6 +141,19 @@ class AddContainerInterfaceRuleImpl extends React.Component {
               Friendly name for rule
             </FormControlHelperText>
           </FormControlHelper>
+        </FormControl>
+
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Description</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              placeholder="Optional label"
+              value={this.state.Description}
+              onChangeText={(value) => this.handleChange('Description', value)}
+            />
+          </Input>
         </FormControl>
 
         <FormControl isRequired>

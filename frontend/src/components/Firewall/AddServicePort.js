@@ -22,13 +22,15 @@ const AddServicePort = ({ notifyChange, ...props }) => {
   const [Protocol, setProtocol] = useState('tcp')
   const [Port, setPort] = useState('0')
   const [UpstreamEnabled, setUpstreamEnabled] = useState(false)
+  const [Description, setDescription] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = () => {
     let rule = {
       Protocol,
       Port,
-      UpstreamEnabled
+      UpstreamEnabled,
+      Description
     }
 
     setIsLoading(true)
@@ -80,6 +82,18 @@ const AddServicePort = ({ notifyChange, ...props }) => {
           />
         </Box>
       </HStack>
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Description</FormControlLabelText>
+        </FormControlLabel>
+        <Input size="md" variant="underlined">
+          <InputField
+            placeholder="Optional label"
+            value={Description}
+            onChangeText={(value) => setDescription(value)}
+          />
+        </Input>
+      </FormControl>
       <Button
         action="primary"
         size="md"

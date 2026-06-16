@@ -28,6 +28,7 @@ class AddForwardBlockImpl extends React.Component {
     DstIP: '',
     DstPort: '',
     Protocol: 'tcp',
+    Description: '',
     isLoading: false
   }
 
@@ -50,7 +51,8 @@ class AddForwardBlockImpl extends React.Component {
       SrcIP: this.state.SrcIP,
       DstIP: this.state.DstIP,
       DstPort: this.state.DstPort,
-      Protocol: this.state.Protocol
+      Protocol: this.state.Protocol,
+      Description: this.state.Description
     }
 
     this.setState({ isLoading: true })
@@ -134,6 +136,19 @@ class AddForwardBlockImpl extends React.Component {
             value={this.state.Protocol}
             onChange={(value) => this.handleChange('Protocol', value)}
           />
+        </FormControl>
+
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Description</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              placeholder="Optional label"
+              value={this.state.Description}
+              onChangeText={(value) => this.handleChange('Description', value)}
+            />
+          </Input>
         </FormControl>
 
         <Button

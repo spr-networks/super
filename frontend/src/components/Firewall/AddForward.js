@@ -29,6 +29,7 @@ class AddForwardImpl extends React.Component {
     SrcPort: 'any',
     DstIP: '',
     DstPort: '',
+    Description: '',
     isLoading: false
   }
 
@@ -50,7 +51,8 @@ class AddForwardImpl extends React.Component {
       SrcIP: this.state.SrcIP,
       SrcPort: this.state.SrcPort || 'any',
       DstIP: this.state.DstIP,
-      DstPort: this.state.DstPort || 'any'
+      DstPort: this.state.DstPort || 'any',
+      Description: this.state.Description
     }
 
     this.setState({ isLoading: true })
@@ -150,6 +152,19 @@ class AddForwardImpl extends React.Component {
             value={this.state.Protocol}
             onChange={(value) => this.handleChange('Protocol', value)}
           />
+        </FormControl>
+
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Description</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              placeholder="Optional label"
+              value={this.state.Description}
+              onChangeText={(value) => this.handleChange('Description', value)}
+            />
+          </Input>
         </FormControl>
 
         <Button

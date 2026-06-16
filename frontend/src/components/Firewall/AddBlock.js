@@ -23,6 +23,7 @@ class AddBlockImpl extends React.Component {
     SrcIP: '0.0.0.0/0',
     DstIP: '',
     Protocol: 'tcp',
+    Description: '',
     isLoading: false
   }
 
@@ -43,7 +44,8 @@ class AddBlockImpl extends React.Component {
     let block = {
       SrcIP: this.state.SrcIP,
       DstIP: this.state.DstIP,
-      Protocol: this.state.Protocol
+      Protocol: this.state.Protocol,
+      Description: this.state.Description
     }
 
     this.setState({ isLoading: true })
@@ -107,6 +109,18 @@ class AddBlockImpl extends React.Component {
             value={this.state.Protocol}
             onChange={(value) => this.handleChange('Protocol', value)}
           />
+        </FormControl>
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Description</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              placeholder="Optional label"
+              value={this.state.Description}
+              onChangeText={(value) => this.handleChange('Description', value)}
+            />
+          </Input>
         </FormControl>
         <Button
           action="primary"

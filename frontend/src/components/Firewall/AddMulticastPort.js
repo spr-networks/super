@@ -23,6 +23,7 @@ class AddMulticastPortImpl extends React.Component {
   state = {
     Address: '',
     Port: '0',
+    Description: '',
     isLoading: false
   }
 
@@ -66,13 +67,17 @@ class AddMulticastPortImpl extends React.Component {
 
     Multicast.config().then((config) => {
       config.Addresses.push({
-        Address: this.state.Address + ':' + this.state.Port
+        Address: this.state.Address + ':' + this.state.Port,
+        Description: this.state.Description
       })
       Multicast.setConfig(config)
         .then((res) => {
           //great, now update the firewall also
           firewallAPI
-            .setMulticast({ Port: this.state.Port, Upstream: false })
+            .setMulticast({
+              Port: this.state.Port,
+              Upstream: false
+            })
             .then(() => {
               if (this.props.notifyChange) {
                 this.props.notifyChange('multicast')
@@ -132,6 +137,18 @@ class AddMulticastPortImpl extends React.Component {
             </Input>
           </FormControl>
         </HStack>
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Description</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              placeholder="Optional label"
+              value={this.state.Description}
+              onChangeText={(value) => this.handleChange('Description', value)}
+            />
+          </Input>
+        </FormControl>
         <Button
           action="primary"
           size="md"

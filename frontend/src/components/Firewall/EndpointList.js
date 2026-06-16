@@ -173,6 +173,10 @@ const EndpointList = (props) => {
 
             <Text bold>{item.RuleName}</Text>
 
+            <Text flex={1} color="$muted500" isTruncated>
+              {item.Description}
+            </Text>
+
             <ArrowRightIcon color="$muted400" />
 
             <HStack space="sm">

@@ -26,8 +26,9 @@ import (
 var FWmtx sync.Mutex
 
 type BaseRule struct {
-	RuleName string
-	Disabled bool
+	RuleName    string
+	Description string
+	Disabled    bool
 }
 
 type ForwardingRule struct {
@@ -161,6 +162,7 @@ type ServicePort struct {
 	Protocol        string
 	Port            string
 	UpstreamEnabled bool
+	Description     string
 }
 
 // an endpoint describes an arbitrary service. It serves
@@ -295,7 +297,7 @@ func setDefaultServicePortsLocked() {
 	enable_upstream := os.Getenv("UPSTREAM_SERVICES_ENABLE") != ""
 
 	for _, port := range ports {
-		service_ports = append(service_ports, ServicePort{"tcp", port, enable_upstream})
+		service_ports = append(service_ports, ServicePort{Protocol: "tcp", Port: port, UpstreamEnabled: enable_upstream})
 	}
 
 	gFirewallConfig.ServicePorts = service_ports
@@ -2044,6 +2046,11 @@ func modifyServicePort(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(port.Description) > 256 {
+		http.Error(w, "Description too long (max 256 characters)", 400)
+		return
+	}
+
 	if r.Method == http.MethodDelete {
 		for i := range gFirewallConfig.ServicePorts {
 			a := gFirewallConfig.ServicePorts[i]
@@ -2064,6 +2071,7 @@ func modifyServicePort(w http.ResponseWriter, r *http.Request) {
 		a := gFirewallConfig.ServicePorts[i]
 		if port.Protocol == a.Protocol && port.Port == a.Port {
 			gFirewallConfig.ServicePorts[i].UpstreamEnabled = port.UpstreamEnabled
+			gFirewallConfig.ServicePorts[i].Description = port.Description
 			saveFirewallRulesLocked()
 			applyFirewallRulesLocked()
 			return

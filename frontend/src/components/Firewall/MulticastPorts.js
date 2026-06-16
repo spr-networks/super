@@ -181,6 +181,10 @@ const MulticastPorts = (props) => {
           <ListItem>
             <Text flex={1}>{item.Address}</Text>
 
+            <Text flex={1} color="$muted500" isTruncated>
+              {item.Description}
+            </Text>
+
             <HStack space="sm">
               {item.Tags?.map((entry) => (
                 <TagItem name={entry} />

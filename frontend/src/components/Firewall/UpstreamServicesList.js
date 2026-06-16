@@ -150,6 +150,9 @@ const UpstreamServicesList = (props) => {
                 <BadgeText>{item.Protocol}</BadgeText>
               </Badge>
               <Text w={100}>{item.Port}</Text>
+              <Text flex={1} color="$muted500" isTruncated>
+                {item.Description}
+              </Text>
               <Box w={100} alignItems="center" alignSelf="center">
                 <Switch
                   value={item.UpstreamEnabled}
