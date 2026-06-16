@@ -19,7 +19,7 @@ FROM ghcr.io/spr-networks/container_template:latest
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update
-RUN apt-get install ca-certificates curl
+RUN apt-get install -y ca-certificates curl
 RUN install -m 0755 -d /etc/apt/keyrings
 COPY scripts/docker.asc /etc/apt/keyrings/docker.asc
 RUN chmod a+r /etc/apt/keyrings/docker.asc
