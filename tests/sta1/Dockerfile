@@ -1,4 +1,4 @@
-FROM ubuntu:23.10
+FROM ubuntu:24.04
 
 RUN apt-get update && apt-get -y install iproute2 wireless-tools iw nano tcpdump inetutils-ping netcat.traditional wpasupplicant curl hostapd isc-dhcp-client
 

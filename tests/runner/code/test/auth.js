@@ -1,4 +1,5 @@
 const { request, request_auth } = require('../agent')
+const assert = require('assert')
 
 describe('auth', () => {
   it('should return 401', (done) => {
