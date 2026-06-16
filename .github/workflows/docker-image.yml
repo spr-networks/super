@@ -87,6 +87,35 @@ jobs:
         run: |
           cosign sign --yes ${{ steps.extract_info.outputs.IMAGE_INFO }}
 
+      # Attest the images with cosign so the provenance is reachable from the
+      # registry at the predictable sha256-<digest>.att tag. superd verifies
+      # super_* from the registry (no api.github.com rate limit); the
+      # attest-build-provenance job below still populates the GitHub store for
+      # `gh attestation verify`.
+      - name: Attest the images with cosign for registry verification
+        if: ${{ github.event_name == 'workflow_run' && github.ref_name == 'main' || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
+        run: |
+          jq -n \
+            --arg repo "${{ github.server_url }}/${{ github.repository }}" \
+            --arg ref "${{ github.ref }}" \
+            --arg sha "${{ github.sha }}" \
+            --arg run "${{ github.run_id }}" \
+            '{
+              buildType: "https://github.com/spr-networks/super/.github/workflows/docker-image.yml",
+              builder: { id: ($repo + "/.github/workflows/docker-image.yml@" + $ref) },
+              invocation: {
+                configSource: {
+                  uri: ("git+" + $repo + "@" + $ref),
+                  digest: { sha1: $sha },
+                  entryPoint: ".github/workflows/docker-image.yml"
+                }
+              },
+              metadata: { buildInvocationID: $run }
+            }' > /tmp/spr-provenance.json
+          for img in ${{ steps.extract_info.outputs.IMAGE_INFO }}; do
+            cosign attest --yes --type slsaprovenance --predicate /tmp/spr-provenance.json "$img"
+          done
+
       - name: Prepare Attestation Matrix
         id: container_digests
         run: |
