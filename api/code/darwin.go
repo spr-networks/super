@@ -393,5 +393,5 @@ func isLinkReallyUpNetlink(interfaceName string) bool {
 
 type RouteSnapshot struct{}
 
-func SnapshotRoutes() *RouteSnapshot              { return &RouteSnapshot{} }
+func SnapshotRoutes() *RouteSnapshot                  { return &RouteSnapshot{} }
 func (s *RouteSnapshot) InterfaceForIP(string) string { return "" }
