@@ -45,7 +45,7 @@ jobs:
       -
         name: Build and push with bake action
         id: bake
-        uses: docker/bake-action@v6
+        uses: docker/bake-action@v7.2.0
         with:
           source: .
           sbom: true
@@ -110,18 +110,28 @@ jobs:
             --arg repo "${{ github.server_url }}/${{ github.repository }}" \
             --arg ref "${{ github.ref }}" \
             --arg sha "${{ github.sha }}" \
+            --arg event "${{ github.event_name }}" \
+            --arg repoId "${{ github.repository_id }}" \
+            --arg ownerId "${{ github.repository_owner_id }}" \
             --arg run "${{ github.run_id }}" \
+            --arg attempt "${{ github.run_attempt }}" \
             '{
-              buildType: "https://github.com/spr-networks/super/.github/workflows/docker-image.yml",
-              builder: { id: ($repo + "/.github/workflows/docker-image.yml@" + $ref) },
-              invocation: {
-                configSource: {
-                  uri: ("git+" + $repo + "@" + $ref),
-                  digest: { sha1: $sha },
-                  entryPoint: ".github/workflows/docker-image.yml"
-                }
+              buildDefinition: {
+                buildType: "https://actions.github.io/buildtypes/workflow/v1",
+                externalParameters: {
+                  workflow: { ref: $ref, repository: $repo, path: ".github/workflows/docker-image.yml" }
+                },
+                internalParameters: {
+                  github: { event_name: $event, repository_id: $repoId, repository_owner_id: $ownerId }
+                },
+                resolvedDependencies: [
+                  { uri: ("git+" + $repo + "@" + $ref), digest: { gitCommit: $sha } }
+                ]
               },
-              metadata: { buildInvocationID: $run }
+              runDetails: {
+                builder: { id: ($repo + "/.github/workflows/docker-image.yml@" + $ref) },
+                metadata: { invocationId: ($repo + "/actions/runs/" + $run + "/attempts/" + $attempt) }
+              }
             }' > /tmp/spr-provenance.json
           retry() {
             local n=1 max=5
@@ -131,7 +141,7 @@ jobs:
             done
           }
           for img in ${{ steps.extract_info.outputs.IMAGE_INFO }}; do
-            retry cosign attest --yes --type slsaprovenance --predicate /tmp/spr-provenance.json "$img"
+            retry cosign attest --yes --type slsaprovenance1 --predicate /tmp/spr-provenance.json "$img"
           done
 
       - name: Prepare Attestation Matrix
@@ -155,6 +165,7 @@ jobs:
       id-token: write
       packages: write
       attestations: write
+      artifact-metadata: write
     needs: build-images
     if: ${{ github.event_name == 'push' || github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch' }}
     runs-on: self-hosted
