@@ -326,6 +326,9 @@ func ChanCalc(mode string, channel int, bw int, ht_enabled bool, vht_enabled boo
 	case 40:
 		//center is 10 mhz above freq1 center
 		center_channel = channel + 2
+		if (mode == "b" || mode == "g") && channel >= 8 {
+			center_channel = channel - 2
+		}
 		if is_6e {
 			calculated.Op_class = 132
 		}
@@ -379,14 +382,16 @@ func ChanCalc(mode string, channel int, bw int, ht_enabled bool, vht_enabled boo
 
 	if center_channel != 0 {
 		freq2 = base + center_channel*5
-		if vht_enabled {
-			calculated.Vht_oper_centr_freq_seg0_idx = center_channel
-		}
-		if he_enabled {
-			calculated.He_oper_centr_freq_seg0_idx = center_channel
-		}
-		if eht {
-			calculated.Eht_oper_centr_freq_seg0_idx = center_channel
+		if mode == "a" {
+			if vht_enabled {
+				calculated.Vht_oper_centr_freq_seg0_idx = center_channel
+			}
+			if he_enabled {
+				calculated.He_oper_centr_freq_seg0_idx = center_channel
+			}
+			if eht {
+				calculated.Eht_oper_centr_freq_seg0_idx = center_channel
+			}
 		}
 	}
 
