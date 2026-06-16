@@ -44,12 +44,17 @@ describe('calc channel', () => {
       .expect('Content-Type', /json/)
       .end((err, res) => {
         assert(res.status == 200)
+        // field order must match the Go struct (CalculatedChannelParameters)
+        // since this compares JSON.stringify output. EHT (Wi-Fi 7) fields and
+        // an always-set Op_class were added with 802.11be support.
         let expected ={
           Vht_oper_centr_freq_seg0_idx: 42,
           He_oper_centr_freq_seg0_idx: 42,
+          Eht_oper_centr_freq_seg0_idx: -1,
           Vht_oper_chwidth: 1,
           He_oper_chwidth: 1,
-          Op_class:0,
+          Eht_oper_chwidth: 0,
+          Op_class: 128,
           Is_6e: false,
           Freq1: 5180,
           Freq2: 5210,
