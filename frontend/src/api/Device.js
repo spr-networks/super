@@ -71,6 +71,13 @@ export class APIDevice extends API {
   deleteDevice(id) {
     return this.delete(`/device?identity=${encodeURIComponent(id)}`, {})
   }
+  deleteDevices(identities) {
+    return this.delete('/devices', identities)
+  }
+  updateDevices(data) {
+    // data: { Identities: [...], Groups: [...], Tags: [...] }
+    return this.put('/devices/bulk', data)
+  }
   setPSK(MAC, Psk, Type, Name) {
     return this.update({ MAC, Name, PSKEntry: { Psk, Type } })
   }

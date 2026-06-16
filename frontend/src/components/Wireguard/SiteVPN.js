@@ -70,6 +70,11 @@ const SiteVPN = (props) => {
           context.error('Failed to query pfw', e)
         })
     })
+    .catch(() => {
+      //pfw is an optional plugin; a 502/unavailable here just means there
+      //are no site VPNs to show, so render an empty list rather than throw.
+      setSites([])
+    })
   }
   useEffect(() => {
     refreshSites()

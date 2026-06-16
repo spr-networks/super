@@ -131,6 +131,8 @@ type DeviceEntry struct {
 
 var ValidPolicyStrings = []string{"wan", "lan", "dns", "api", "lan_upstream", "noapi", "guestonly", "disabled", "quarantine", "dns:family"}
 
+var BulkSettablePolicyStrings = []string{"wan", "lan", "dns", "dns:family", "lan_upstream", "noapi", "quarantine"}
+
 var config = APIConfig{}
 
 var Configmtx sync.Mutex
@@ -1307,6 +1309,200 @@ func deleteDeviceLocked(devices map[string]DeviceEntry, groups []GroupEntry, ide
 	//notify the bus
 	SprbusPublish("device:delete", scrubDevice(val))
 
+}
+
+func handleDeleteDevices(w http.ResponseWriter, r *http.Request) {
+	var identities []string
+	if err := json.NewDecoder(r.Body).Decode(&identities); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if len(identities) == 0 {
+		http.Error(w, "no device identities provided", 400)
+		return
+	}
+
+	Groupsmtx.Lock()
+	defer Groupsmtx.Unlock()
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+
+	devices := getDevicesJson()
+	groups := getGroupsJson()
+
+	deletedVals := []DeviceEntry{}
+	deleted := []string{}
+	seen := map[string]bool{}
+
+	for _, identity := range identities {
+		id := identity
+		if strings.Contains(id, ":") {
+			id = trimLower(id)
+		}
+		if id == "" || seen[id] {
+			continue
+		}
+		seen[id] = true
+
+		val, exists := devices[id]
+		if !exists {
+			continue
+		}
+
+		delete(devices, id)
+		deletedVals = append(deletedVals, val)
+		deleted = append(deleted, id)
+	}
+
+	if len(deletedVals) > 0 {
+		saveDevicesJson(devices)
+
+		refreshVlans := false
+		for _, val := range deletedVals {
+			refreshDeviceGroupsAndPolicy(devices, groups, val)
+			if val.VLANTag != "" {
+				refreshVlans = true
+			}
+		}
+
+		doReloadPSKFiles()
+
+		if refreshVlans {
+			refreshVLANTrunks(devices)
+		}
+
+		for _, val := range deletedVals {
+			SprbusPublish("device:delete", scrubDevice(val))
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"deleted": deleted,
+		"count":   len(deleted),
+	})
+}
+
+type bulkDeviceUpdate struct {
+	Identities []string
+	Groups     []string
+	Tags       []string
+	Policies   []string
+}
+
+func handleBulkUpdateDevices(w http.ResponseWriter, r *http.Request) {
+	var req bulkDeviceUpdate
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if len(req.Identities) == 0 {
+		http.Error(w, "no device identities provided", 400)
+		return
+	}
+
+	addGroups := normalizeStringSlice(req.Groups)
+	addTags := normalizeStringSlice(req.Tags)
+	addPolicies := normalizeStringSlice(req.Policies)
+
+	if len(addGroups) == 0 && len(addTags) == 0 && len(addPolicies) == 0 {
+		http.Error(w, "no groups, tags, or policies provided", 400)
+		return
+	}
+
+	for _, g := range addGroups {
+		if slices.Contains(ValidPolicyStrings, g) {
+			http.Error(w, "Invalid group name provided collides with policy name", 400)
+			return
+		}
+	}
+	for _, t := range addTags {
+		if slices.Contains(ValidPolicyStrings, t) {
+			http.Error(w, "Invalid tag name provided collides with policy name", 400)
+			return
+		}
+	}
+	for _, p := range addPolicies {
+		if !slices.Contains(BulkSettablePolicyStrings, p) {
+			http.Error(w, "policy not settable in bulk: "+p, 400)
+			return
+		}
+	}
+
+	Groupsmtx.Lock()
+	defer Groupsmtx.Unlock()
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+
+	devices := getDevicesJson()
+	groups := getGroupsJson()
+
+	updatedVals := []DeviceEntry{}
+	updated := []string{}
+
+	for _, identity := range req.Identities {
+		id := identity
+		if strings.Contains(id, ":") {
+			id = trimLower(id)
+		}
+
+		val, exists := devices[id]
+		if !exists {
+			continue
+		}
+
+		changed := false
+		for _, g := range addGroups {
+			if !slices.Contains(val.Groups, g) {
+				val.Groups = append(val.Groups, g)
+				changed = true
+			}
+		}
+		for _, t := range addTags {
+			if !slices.Contains(val.DeviceTags, t) {
+				val.DeviceTags = append(val.DeviceTags, t)
+				changed = true
+			}
+		}
+		for _, p := range addPolicies {
+			if !slices.Contains(val.Policies, p) {
+				val.Policies = append(val.Policies, p)
+				changed = true
+			}
+		}
+
+		if changed {
+			devices[id] = val
+			updatedVals = append(updatedVals, val)
+			updated = append(updated, id)
+		}
+	}
+
+	if len(updatedVals) > 0 {
+		if len(addGroups) > 0 {
+			addGroupsIfMissing(groups, addGroups)
+		}
+		saveDevicesJson(devices)
+
+		for _, val := range updatedVals {
+			if len(addGroups) > 0 || len(addPolicies) > 0 {
+				refreshDeviceGroupsAndPolicy(devices, groups, val)
+				SprbusPublish("device:groups:update", scrubDevice(val))
+			}
+			if len(addTags) > 0 {
+				refreshDeviceTags(val)
+				SprbusPublish("device:tags:update", scrubDevice(val))
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"updated": updated,
+		"count":   len(updated),
+	})
 }
 
 func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, identity string) (string, int) {
@@ -3015,6 +3211,8 @@ func main() {
 	external_router_authenticated.HandleFunc("/device", applyJwtOtpCheck(getDevice)).Methods("GET")
 	external_router_authenticated.HandleFunc("/device", handleUpdateDevice).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/devices", syncDevices).Methods("PUT")
+	external_router_authenticated.HandleFunc("/devices", handleDeleteDevices).Methods("DELETE")
+	external_router_authenticated.HandleFunc("/devices/bulk", handleBulkUpdateDevices).Methods("PUT")
 
 	external_router_authenticated.HandleFunc("/pendingPSK", pendingPSK).Methods("GET")
 

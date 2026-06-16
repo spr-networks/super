@@ -3,6 +3,7 @@ import { Platform } from 'react-native'
 import AddDevice from 'views/Devices/AddDevice'
 import {WifiConnect} from 'views/Devices/ConnectDevice'
 import Devices from 'views/Devices/Devices'
+import DevicesTabView from 'views/Devices/DevicesTabView'
 import Device from 'views/Devices/Device'
 import Home from 'views/Home'
 import Login from 'views/pages/Login'
@@ -98,7 +99,7 @@ const routes = [
     name: 'Devices',
     icon: LaptopIcon,
     path: 'devices',
-    component: Devices,
+    component: DevicesTabView,
     layout: 'admin'
   },
   {

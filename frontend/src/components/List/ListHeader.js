@@ -31,9 +31,11 @@ const ListHeader = ({ title, description, info, ...props }) => {
         sx={{ '@md': { flexDirection: 'row', alignItems: 'center' } }}
         space="sm"
       >
-        <Text size="md" bold>
-          {title}
-        </Text>
+        {title ? (
+          <Text size="md" bold>
+            {title}
+          </Text>
+        ) : null}
         <HStack space="sm">
           {description ? (
             <Text size="sm" color="$muted500">
