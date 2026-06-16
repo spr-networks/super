@@ -984,6 +984,7 @@ const UplinkInfo = (props) => {
 
         <FlatList
           data={uplinks}
+          ItemSeparatorComponent={() => <Box h="$3" />}
           keyExtractor={(item) => `${item.Interface}_${item.Type}`}
           renderItem={({ item }) => (
             <ListItem>
@@ -1044,6 +1045,7 @@ const UplinkInfo = (props) => {
 
         <FlatList
           data={links}
+          ItemSeparatorComponent={() => <Box h="$3" />}
           keyExtractor={(item) => `${item.Interface}_${item.Type}`}
           renderItem={({ item }) => (
             <ListItem>

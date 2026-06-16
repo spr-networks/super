@@ -130,28 +130,52 @@ func shouldLogEvent(topic string) bool {
 }
 
 // subscribe to sprbus and store in db
+type storeEvent struct {
+	topic string
+	value string
+}
+
+// buffered hand-off from the bus reader to the bolt writer. The bus reader must
+// never block on a bolt write -- the event bus evicts a subscriber that stalls
+// -- so when the writer falls behind we drop rather than block.
+var storeQueue = make(chan storeEvent, 16384)
+var droppedEvents uint64
+
 func handleLogEvent(topic string, value string) {
 	// keep a list of unique events
 	boltapi.LogEvent(topic)
-
 
 	if !shouldLogEvent(topic) {
 		return
 	}
 
-	if *gDebug {
-		log.Println("[event]", topic, value)
+	select {
+	case storeQueue <- storeEvent{topic, value}:
+	default:
+		droppedEvents++
+		if droppedEvents%1000 == 1 {
+			log.Printf("db store: queue full, dropped %d events", droppedEvents)
+		}
 	}
+}
 
-	var jsonData map[string]interface{} // json object
-	if err := json.Unmarshal([]byte(value), &jsonData); err != nil {
-		log.Println("db store, invalid json", err)
-		return
-	}
+// storeWriter persists events off the bus read path so a slow bolt write can
+// never stall the subscriber and get it evicted from the bus.
+func storeWriter() {
+	for ev := range storeQueue {
+		if *gDebug {
+			log.Println("[event]", ev.topic, ev.value)
+		}
 
-	if _, err := boltapi.PutItem(topic, jsonData); err != nil {
-		log.Println("error saving data:", err)
-		return
+		var jsonData map[string]interface{} // json object
+		if err := json.Unmarshal([]byte(ev.value), &jsonData); err != nil {
+			log.Println("db store, invalid json", err)
+			continue
+		}
+
+		if _, err := boltapi.PutItem(ev.topic, jsonData); err != nil {
+			log.Println("error saving data:", err)
+		}
 	}
 }
 
@@ -187,6 +211,9 @@ func main() {
 		topic := config.SaveEvents[k]
 		boltapi.LogEvent(topic)
 	}
+
+	// drain stored events off the bus read path
+	go storeWriter()
 
 	// loops to rm old items if db size is too big
 	go boltapi.CheckSizeLoop(*gDBPath, db, config, *gDebug)

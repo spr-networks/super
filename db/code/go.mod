@@ -15,6 +15,6 @@ require golang.org/x/sync v0.20.0 // indirect
 require (
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
-	github.com/spr-networks/sprbus-json v0.0.0-20260612035203-793538d3de15
+	github.com/spr-networks/sprbus-json v0.0.0-20260616150305-efdec19847c8
 	golang.org/x/sys v0.42.0 // indirect
 )

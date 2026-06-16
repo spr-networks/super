@@ -118,7 +118,7 @@ func CheckSizeIteration(dbpath string, db *bolt.DB, config LogConfig, debug bool
 }
 
 func CheckSizeLoop(dbpath string, db **bolt.DB, config LogConfig, debug bool) {
-	forceFirstRun := true
+	forceFirstRun := false
 	for {
 		//lock db pointer during deletion
 

@@ -365,7 +365,7 @@ const Devices = (props) => {
 
   return (
     <View h="$full">
-      <ListHeader title="Devices">
+      <ListHeader>
         {/*<Button
           size="xs"
           action="primary"

@@ -23,7 +23,10 @@ import {
   useColorMode,
   CopyIcon,
   TrashIcon,
-  ThreeDotsIcon
+  ThreeDotsIcon,
+  Checkbox,
+  CheckboxIndicator,
+  CheckboxIcon
 } from '@gluestack-ui/themed'
 
 import { TagItem, GroupItem, PolicyItem } from 'components/TagItem'
@@ -141,7 +144,7 @@ const DeviceInfo = ({ identity, ...props }) => {
   ))
 }
 
-const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
+const Device = React.memo(({ device, notifyChange, showMenu, isSelected, onSelect, ...props }) => {
   const context = useContext(AlertContext)
   const modalContext = useContext(ModalContext)
   const navigate = useNavigate()
@@ -304,8 +307,8 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
 
   return (
     <Pressable
-      onPress={() => navigate(deviceURL(device))}
-      disabled={device.MAC == 'pending'}
+      onPress={() => (onSelect ? onSelect() : navigate(deviceURL(device)))}
+      disabled={!onSelect && device.MAC == 'pending'}
     >
       <HStack
         key={device.MAC}
@@ -328,6 +331,19 @@ const Device = React.memo(({ device, notifyChange, showMenu, ...props }) => {
         borderBottomWidth={0}
         minH={120}
       >
+        {onSelect ? (
+          <Checkbox
+            value={device.MAC || device.WGPubKey}
+            isChecked={!!isSelected}
+            pointerEvents="none"
+            mr="$3"
+            aria-label="select device"
+          >
+            <CheckboxIndicator>
+              <CheckboxIcon />
+            </CheckboxIndicator>
+          </Checkbox>
+        ) : null}
         <VStack
           flex={1}
           space="md"

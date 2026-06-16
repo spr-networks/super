@@ -14,7 +14,7 @@ require (
 	github.com/mdlayher/netlink v1.9.1-0.20260312172110-2a932c0fc1ae // indirect
 	github.com/mdlayher/socket v0.5.1 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
-	github.com/spr-networks/sprbus-json v0.0.0-20260612035203-793538d3de15
+	github.com/spr-networks/sprbus-json v0.0.0-20260616150305-efdec19847c8
 	github.com/vishvananda/netns v0.0.5 // indirect
 	golang.org/x/net v0.52.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect

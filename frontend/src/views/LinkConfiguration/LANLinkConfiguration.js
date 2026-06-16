@@ -560,6 +560,7 @@ const LANLinkInfo = (props) => {
 
         <FlatList
           data={lanLinks}
+          ItemSeparatorComponent={() => <Box h="$3" />}
           keyExtractor={(item) => `${item.Interface}_${item.Type}`}
           renderItem={({ item }) => (
             <ListItem>
@@ -598,6 +599,7 @@ const LANLinkInfo = (props) => {
 
         <FlatList
           data={links}
+          ItemSeparatorComponent={() => <Box h="$3" />}
           keyExtractor={(item) => `${item.Interface}_${item.Type}`}
           renderItem={({ item }) => (
             <ListItem>
