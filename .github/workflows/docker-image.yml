@@ -85,7 +85,18 @@ jobs:
       - name: Sign the images with GitHub OIDC Token
         if: ${{ github.event_name == 'workflow_run' && github.ref_name == 'main' || env.RELEASE_CHANNEL != '' && github.event_name == 'push' }}
         run: |
-          cosign sign --yes ${{ steps.extract_info.outputs.IMAGE_INFO }}
+          # sign per-image with retry: ghcr.io intermittently resets the HTTP/2
+          # stream (INTERNAL_ERROR) when cosign pushes many sigs in one call
+          retry() {
+            local n=1 max=5
+            until "$@"; do
+              if [ "$n" -ge "$max" ]; then echo "::error::failed after $max attempts: $*"; return 1; fi
+              echo "attempt $n failed; retrying in $((n*10))s..."; sleep $((n*10)); n=$((n+1))
+            done
+          }
+          for img in ${{ steps.extract_info.outputs.IMAGE_INFO }}; do
+            retry cosign sign --yes "$img"
+          done
 
       # Attest the images with cosign so the provenance is reachable from the
       # registry at the predictable sha256-<digest>.att tag. superd verifies
@@ -112,8 +123,15 @@ jobs:
               },
               metadata: { buildInvocationID: $run }
             }' > /tmp/spr-provenance.json
+          retry() {
+            local n=1 max=5
+            until "$@"; do
+              if [ "$n" -ge "$max" ]; then echo "::error::failed after $max attempts: $*"; return 1; fi
+              echo "attempt $n failed; retrying in $((n*10))s..."; sleep $((n*10)); n=$((n+1))
+            done
+          }
           for img in ${{ steps.extract_info.outputs.IMAGE_INFO }}; do
-            cosign attest --yes --type slsaprovenance --predicate /tmp/spr-provenance.json "$img"
+            retry cosign attest --yes --type slsaprovenance --predicate /tmp/spr-provenance.json "$img"
           done
 
       - name: Prepare Attestation Matrix
