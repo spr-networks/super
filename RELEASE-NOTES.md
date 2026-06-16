@@ -1,5 +1,12 @@
 
 # Secure Programmable Router (SPR) Release Notes
+## v1.1.0 
+** Fixes **
+- address hostapd use-after-free bug with mld
+** Improvements **
+- Enforce build attestation for updates
+- Remove gRPC dependency for sprbus, migrating to sprbus-json
+- Switch to direct nftables calls to reduce overhead 
 
 ## v1.0.35
 **Fixes**
