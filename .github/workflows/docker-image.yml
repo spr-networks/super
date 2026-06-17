@@ -51,10 +51,15 @@ jobs:
           fi
           echo "push=$push" >> "$GITHUB_OUTPUT"
       -
+        # Authenticate to Docker Hub so the pinned docker.io pulls (base images,
+        # dockerfile frontend, binfmt, moby/buildkit) avoid the unauthenticated
+        # pull-rate-limit. Set repo/org variable DOCKERHUB_USERNAME + secret
+        # DOCKERHUB_TOKEN. Skipped (non-fatal) when the variable is unset.
         name: Authenticate to Docker Hub
+        if: ${{ vars.DOCKERHUB_USERNAME != '' }}
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       -
         name: Authenticate to ghcr
