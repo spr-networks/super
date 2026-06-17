@@ -11,12 +11,18 @@ import {
   FormControlHelperText,
   FormControlLabel,
   FormControlLabelText,
+  Icon,
   Input,
   InputField,
   HStack,
+  Pressable,
+  Text,
   VStack,
   Spinner
 } from '@gluestack-ui/themed'
+
+import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react-native'
+
 import ProtocolRadio from 'components/Form/ProtocolRadio'
 
 class AddOutputBlockImpl extends React.Component {
@@ -25,6 +31,8 @@ class AddOutputBlockImpl extends React.Component {
     DstIP: '',
     DstPort: '',
     Protocol: 'tcp',
+    Description: '',
+    showAdvanced: false,
     isLoading: false
   }
 
@@ -46,7 +54,8 @@ class AddOutputBlockImpl extends React.Component {
       SrcIP: this.state.SrcIP,
       DstIP: this.state.DstIP,
       DstPort: this.state.DstPort,
-      Protocol: this.state.Protocol
+      Protocol: this.state.Protocol,
+      Description: this.state.Description
     }
 
     this.setState({ isLoading: true })
@@ -74,30 +83,21 @@ class AddOutputBlockImpl extends React.Component {
       <VStack space="md">
         <FormControl isRequired>
           <FormControlLabel>
-            <FormControlLabelText>Source IP Address</FormControlLabelText>
+            <FormControlLabelText>
+              Block SPR from connecting to
+            </FormControlLabelText>
           </FormControlLabel>
           <Input size="md" variant="underlined">
             <InputField
-              value={this.state.SrcIP}
-              onChangeText={(value) => this.handleChange('SrcIP', value)}
-            />
-          </Input>
-          <FormControlHelper>
-            <FormControlHelperText>IP address or CIDR</FormControlHelperText>
-          </FormControlHelper>
-        </FormControl>
-        <FormControl isRequired>
-          <FormControlLabel>
-            <FormControlLabelText>Destination IP Address</FormControlLabelText>
-          </FormControlLabel>
-          <Input size="md" variant="underlined">
-            <InputField
+              autoComplete="off"
               value={this.state.DstIP}
               onChangeText={(value) => this.handleChange('DstIP', value)}
             />
           </Input>
           <FormControlHelper>
-            <FormControlHelperText>IP address or CIDR</FormControlHelperText>
+            <FormControlHelperText>
+              The external address or service the router should not reach.
+            </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
         <FormControl>
@@ -106,13 +106,14 @@ class AddOutputBlockImpl extends React.Component {
           </FormControlLabel>
           <Input size="md" variant="underlined">
             <InputField
+              autoComplete="off"
               value={this.state.DstPort}
               onChangeText={(value) => this.handleChange('DstPort', value)}
             />
           </Input>
           <FormControlHelper>
             <FormControlHelperText>
-              Optional port or port range, leave empty for all ports
+              Port to block. Leave empty for all ports.
             </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
@@ -125,6 +126,60 @@ class AddOutputBlockImpl extends React.Component {
             onChange={(value) => this.handleChange('Protocol', value)}
           />
         </FormControl>
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Description</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              autoComplete="off"
+              placeholder="Optional label"
+              value={this.state.Description}
+              onChangeText={(value) => this.handleChange('Description', value)}
+            />
+          </Input>
+        </FormControl>
+
+        <Pressable
+          onPress={() =>
+            this.setState({ showAdvanced: !this.state.showAdvanced })
+          }
+        >
+          <HStack space="sm" alignItems="center" py="$1">
+            <Icon
+              as={
+                this.state.showAdvanced ? ChevronDownIcon : ChevronRightIcon
+              }
+              size="sm"
+              color="$muted500"
+            />
+            <Text color="$muted500" size="sm">
+              Advanced
+            </Text>
+          </HStack>
+        </Pressable>
+
+        {this.state.showAdvanced ? (
+          <FormControl isRequired>
+            <FormControlLabel>
+              <FormControlLabelText>From (router source)</FormControlLabelText>
+            </FormControlLabel>
+            <Input size="md" variant="underlined">
+              <InputField
+                autoComplete="off"
+                value={this.state.SrcIP}
+                onChangeText={(value) => this.handleChange('SrcIP', value)}
+              />
+            </Input>
+            <FormControlHelper>
+              <FormControlHelperText>
+                Which router source address. Default 0.0.0.0/0 (any) — usually
+                leave as-is.
+              </FormControlHelperText>
+            </FormControlHelper>
+          </FormControl>
+        ) : null}
+
         <Button
           action="primary"
           size="md"

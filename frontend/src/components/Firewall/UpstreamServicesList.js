@@ -130,16 +130,18 @@ const UpstreamServicesList = (props) => {
       </ListHeader>
 
       <VStack space="md">
-        <HStack
-          space="md"
-          justifyContent="space-between"
-          alignItems="center"
-          px="$4"
-        >
+        <HStack space="md" alignItems="center" px="$4">
           <Heading size="xs">Protocol</Heading>
-          <Heading size="xs">Port</Heading>
-          <Heading size="xs">Enabled From Upstream WAN</Heading>
-          <Heading size="xs"></Heading>
+          <Heading size="xs" w={100}>
+            Port
+          </Heading>
+          <Heading size="xs" flex={1}>
+            Description
+          </Heading>
+          <Heading size="xs" w={100} textAlign="center">
+            From Internet
+          </Heading>
+          <Box w={40} />
         </HStack>
 
         <FlatList
@@ -150,6 +152,9 @@ const UpstreamServicesList = (props) => {
                 <BadgeText>{item.Protocol}</BadgeText>
               </Badge>
               <Text w={100}>{item.Port}</Text>
+              <Text flex={1} color="$muted500" isTruncated>
+                {item.Description}
+              </Text>
               <Box w={100} alignItems="center" alignSelf="center">
                 <Switch
                   value={item.UpstreamEnabled}

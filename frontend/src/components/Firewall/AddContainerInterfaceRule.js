@@ -18,13 +18,17 @@ import {
   FormControlLabel,
   FormControlLabelText,
   HStack,
+  Icon,
   Input,
   InputField,
+  Pressable,
   Switch,
   Text,
   VStack,
   Spinner
 } from '@gluestack-ui/themed'
+
+import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react-native'
 
 import { TagItem, GroupItem, PolicyItem } from 'components/TagItem'
 import { GroupMenu, TagMenu, PolicyMenu } from 'components/TagMenu'
@@ -36,6 +40,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
   state = {
     Disabled: false,
     RuleName: '',
+    Description: '',
     SrcIP: '',
     Interface: '',
     RouteDst: '',
@@ -43,6 +48,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
     Groups: [],
     Tags: [],
     GroupOptions: [],
+    showAdvanced: false,
     isLoading: false
   }
 
@@ -72,6 +78,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
 
     let crule = {
       RuleName: this.state.RuleName,
+      Description: this.state.Description,
       Disabled: this.state.Disabled,
       SrcIP: this.state.SrcIP,
       RouteDst: this.state.RouteDst,
@@ -123,23 +130,11 @@ class AddContainerInterfaceRuleImpl extends React.Component {
     })
     return (
       <VStack space="md">
-        <FormControl>
-          <FormControlLabel>
-            <FormControlLabelText>Rule Name</FormControlLabelText>
-          </FormControlLabel>
-          <Input size="md" variant="underlined">
-            <InputField
-              variant="underlined"
-              value={this.state.RuleName}
-              onChangeText={(value) => this.handleChange('RuleName', value)}
-            />
-          </Input>
-          <FormControlHelper>
-            <FormControlHelperText>
-              Friendly name for rule
-            </FormControlHelperText>
-          </FormControlHelper>
-        </FormControl>
+        <Text color="$muted500" size="sm">
+          Give a container or custom network interface access to your SPR
+          network. Set its interface and address range, then choose what it can
+          reach.
+        </Text>
 
         <FormControl isRequired>
           <FormControlLabel>
@@ -165,33 +160,18 @@ class AddContainerInterfaceRuleImpl extends React.Component {
           </FormControlLabel>
           <Input size="md" variant="underlined">
             <InputField
+              autoComplete="off"
               variant="underlined"
+              placeholder="e.g. 10.0.0.0/24"
               value={this.state.SrcIP}
               onChangeText={(value) => this.handleChange('SrcIP', value)}
             />
           </Input>
           <FormControlHelper>
             <FormControlHelperText>
-              IP address or CIDR allowed as Source IPs for the interface.
+              The IP or CIDR range used by this container/interface (e.g.
+              10.0.0.0/24).
             </FormControlHelperText>
-          </FormControlHelper>
-        </FormControl>
-
-        <FormControl>
-          <FormControlLabel>
-            <FormControlLabelText>
-              Set Route Destination (optional)
-            </FormControlLabelText>
-          </FormControlLabel>
-          <Input size="md" variant="underlined">
-            <InputField
-              variant="underlined"
-              value={this.state.RouteDst}
-              onChangeText={(value) => this.handleChange('RouteDst', value)}
-            />
-          </Input>
-          <FormControlHelper>
-            <FormControlHelperText>IP address</FormControlHelperText>
           </FormControlHelper>
         </FormControl>
 
@@ -235,7 +215,10 @@ class AddContainerInterfaceRuleImpl extends React.Component {
 
             <TagMenu
               items={[
-                ...new Set(this.defaultTags.concat(this.state.TagOptions))
+                ...new Set([
+                  ...(this.defaultTags || []),
+                  ...(this.state.Tags || [])
+                ])
               ]}
               selectedKeys={this.state.Tags}
               onSelectionChange={this.handleTags}
@@ -244,15 +227,86 @@ class AddContainerInterfaceRuleImpl extends React.Component {
 
           <FormControlHelper>
             <FormControlHelperText>
-              Add 'api' for access to SPR API. 'dns', 'wan' for internet access,
-              and 'lan' for network access to all SPR devices.
+              Choose what this interface can reach. Add 'wan' + 'dns' for
+              internet, 'lan' for other SPR devices, 'api' for the SPR API.
+              (lan_upstream isn't supported for an address range.)
             </FormControlHelperText>
           </FormControlHelper>
+        </FormControl>
+
+        <Pressable
+          onPress={() =>
+            this.setState({ showAdvanced: !this.state.showAdvanced })
+          }
+        >
+          <HStack space="sm" alignItems="center" py="$1">
+            <Icon
+              as={
+                this.state.showAdvanced ? ChevronDownIcon : ChevronRightIcon
+              }
+              size="sm"
+              color="$muted500"
+            />
+            <Text color="$muted500" size="sm">
+              Advanced
+            </Text>
+          </HStack>
+        </Pressable>
+
+        {this.state.showAdvanced ? (
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText>Set Route Destination</FormControlLabelText>
+            </FormControlLabel>
+            <Input size="md" variant="underlined">
+              <InputField
+                autoComplete="off"
+                variant="underlined"
+                value={this.state.RouteDst}
+                onChangeText={(value) => this.handleChange('RouteDst', value)}
+              />
+            </Input>
+            <FormControlHelper>
+              <FormControlHelperText>
+                Optional: send this interface's traffic to a specific gateway IP.
+                Leave blank for default routing.
+              </FormControlHelperText>
+            </FormControlHelper>
+          </FormControl>
+        ) : null}
+
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Rule Name</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              autoComplete="off"
+              variant="underlined"
+              placeholder="e.g. media-server access"
+              value={this.state.RuleName}
+              onChangeText={(value) => this.handleChange('RuleName', value)}
+            />
+          </Input>
           <FormControlHelper>
             <FormControlHelperText>
-              The lan_upstream tag is not accepted for a range at this time
+              A label to recognize this rule later.
             </FormControlHelperText>
           </FormControlHelper>
+        </FormControl>
+
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Description</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              autoComplete="off"
+              placeholder="Optional label"
+              value={this.state.Description}
+              onChangeText={(value) => this.handleChange('Description', value)}
+            />
+          </Input>
         </FormControl>
 
         <Button

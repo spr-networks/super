@@ -67,9 +67,10 @@ type InfluxConfig struct {
 }
 
 type MulticastAddress struct {
-	Address  string //adderss:port pair
-	Disabled bool
-	Tags     []string
+	Address     string //adderss:port pair
+	Disabled    bool
+	Tags        []string
+	Description string
 }
 
 type MulticastSettings struct {

@@ -13,12 +13,17 @@ import {
   FormControlHelperText,
   FormControlLabel,
   FormControlLabelText,
+  Icon,
   Input,
   InputField,
   HStack,
+  Pressable,
+  Text,
   VStack,
   Spinner
 } from '@gluestack-ui/themed'
+
+import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react-native'
 
 import ProtocolRadio from 'components/Form/ProtocolRadio'
 
@@ -29,6 +34,8 @@ class AddForwardImpl extends React.Component {
     SrcPort: 'any',
     DstIP: '',
     DstPort: '',
+    Description: '',
+    showAdvanced: false,
     isLoading: false
   }
 
@@ -50,7 +57,8 @@ class AddForwardImpl extends React.Component {
       SrcIP: this.state.SrcIP,
       SrcPort: this.state.SrcPort || 'any',
       DstIP: this.state.DstIP,
-      DstPort: this.state.DstPort || 'any'
+      DstPort: this.state.DstPort || 'any',
+      Description: this.state.Description
     }
 
     this.setState({ isLoading: true })
@@ -84,42 +92,7 @@ class AddForwardImpl extends React.Component {
       <VStack space="md">
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Source IP Address</FormControlLabelText>
-          </FormControlLabel>
-          <Input size="md" variant="underlined">
-            <InputField
-              variant="underlined"
-              value={this.state.SrcIP}
-              onChangeText={(value) => this.handleChange('SrcIP', value)}
-            />
-          </Input>
-          <FormControlHelper>
-            <FormControlHelperText>Accepts IP or CIDR</FormControlHelperText>
-          </FormControlHelper>
-        </FormControl>
-        <FormControl>
-          <FormControlLabel>
-            <FormControlLabelText>
-              Original Destination Port
-            </FormControlLabelText>
-          </FormControlLabel>
-          <Input size="md" variant="underlined">
-            <InputField
-              value={this.state.SrcPort}
-              onChangeText={(value) => this.handleChange('SrcPort', value)}
-            />
-          </Input>
-
-          <FormControlHelper>
-            <FormControlHelperText>
-              Optional port or port range, leave empty for all ports
-            </FormControlHelperText>
-          </FormControlHelper>
-        </FormControl>
-
-        <FormControl>
-          <FormControlLabel>
-            <FormControlLabelText>Destination IP Address</FormControlLabelText>
+            <FormControlLabelText>Forward to Device</FormControlLabelText>
           </FormControlLabel>
           <ClientSelect
             name="DstIP"
@@ -129,16 +102,42 @@ class AddForwardImpl extends React.Component {
             onChange={(value) => this.handleChange('DstIP', value)}
           />
         </FormControl>
+
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Destination Port</FormControlLabelText>
+            <FormControlLabelText>Incoming Port (WAN)</FormControlLabelText>
           </FormControlLabel>
           <Input size="md" variant="underlined">
             <InputField
+              autoComplete="off"
+              placeholder="any"
+              value={this.state.SrcPort}
+              onChangeText={(value) => this.handleChange('SrcPort', value)}
+            />
+          </Input>
+          <FormControlHelper>
+            <FormControlHelperText>
+              The external port to forward. Leave empty for any.
+            </FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
+
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Device Port</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              autoComplete="off"
               value={this.state.DstPort}
               onChangeText={(value) => this.handleChange('DstPort', value)}
             />
           </Input>
+          <FormControlHelper>
+            <FormControlHelperText>
+              Port on the device. Leave empty to keep the same port.
+            </FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
 
         <FormControl>
@@ -151,6 +150,59 @@ class AddForwardImpl extends React.Component {
             onChange={(value) => this.handleChange('Protocol', value)}
           />
         </FormControl>
+
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Description</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              autoComplete="off"
+              placeholder="Optional label"
+              value={this.state.Description}
+              onChangeText={(value) => this.handleChange('Description', value)}
+            />
+          </Input>
+        </FormControl>
+
+        <Pressable
+          onPress={() =>
+            this.setState({ showAdvanced: !this.state.showAdvanced })
+          }
+        >
+          <HStack space="sm" alignItems="center" py="$1">
+            <Icon
+              as={
+                this.state.showAdvanced ? ChevronDownIcon : ChevronRightIcon
+              }
+              size="sm"
+              color="$muted500"
+            />
+            <Text color="$muted500" size="sm">
+              Advanced
+            </Text>
+          </HStack>
+        </Pressable>
+
+        {this.state.showAdvanced ? (
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText>Allowed Source (CIDR)</FormControlLabelText>
+            </FormControlLabel>
+            <Input size="md" variant="underlined">
+              <InputField
+                autoComplete="off"
+                value={this.state.SrcIP}
+                onChangeText={(value) => this.handleChange('SrcIP', value)}
+              />
+            </Input>
+            <FormControlHelper>
+              <FormControlHelperText>
+                Restrict who can connect. Default 0.0.0.0/0 (anywhere).
+              </FormControlHelperText>
+            </FormControlHelper>
+          </FormControl>
+        ) : null}
 
         <Button
           action="primary"

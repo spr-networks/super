@@ -71,6 +71,10 @@ const BlockList = (props) => {
             <Text>{item.SrcIP}</Text>
             <Text>{item.DstIP}</Text>
 
+            <Text flex={1} color="$muted500" isTruncated>
+              {item.Description}
+            </Text>
+
             <Button
               alignSelf="center"
               size="sm"

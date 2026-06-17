@@ -481,6 +481,7 @@ const ClientSelect = (props) => {
               }}
             >
               <InputField
+                autoComplete="off"
                 placeholder={props.placeholder || 'Enter value...'}
                 value={inputValue}
                 onChangeText={handleInputChange}

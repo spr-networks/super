@@ -10,12 +10,18 @@ import {
   FormControlHelperText,
   FormControlLabel,
   FormControlLabelText,
+  Icon,
   Input,
   InputField,
   HStack,
+  Pressable,
+  Text,
   VStack,
   Spinner
 } from '@gluestack-ui/themed'
+
+import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react-native'
+
 import ProtocolRadio from 'components/Form/ProtocolRadio'
 
 class AddBlockImpl extends React.Component {
@@ -23,6 +29,8 @@ class AddBlockImpl extends React.Component {
     SrcIP: '0.0.0.0/0',
     DstIP: '',
     Protocol: 'tcp',
+    Description: '',
+    showAdvanced: false,
     isLoading: false
   }
 
@@ -43,7 +51,8 @@ class AddBlockImpl extends React.Component {
     let block = {
       SrcIP: this.state.SrcIP,
       DstIP: this.state.DstIP,
-      Protocol: this.state.Protocol
+      Protocol: this.state.Protocol,
+      Description: this.state.Description
     }
 
     this.setState({ isLoading: true })
@@ -71,21 +80,7 @@ class AddBlockImpl extends React.Component {
       <VStack space="md">
         <FormControl isRequired>
           <FormControlLabel>
-            <FormControlLabelText>Source IP Address</FormControlLabelText>
-          </FormControlLabel>
-          <Input size="md" variant="underlined">
-            <InputField
-              value={this.state.SrcIP}
-              onChangeText={(value) => this.handleChange('SrcIP', value)}
-            />
-          </Input>
-          <FormControlHelper>
-            <FormControlHelperText>IP address or CIDR</FormControlHelperText>
-          </FormControlHelper>
-        </FormControl>
-        <FormControl isRequired>
-          <FormControlLabel>
-            <FormControlLabelText>Destination IP Address</FormControlLabelText>
+            <FormControlLabelText>Block traffic to</FormControlLabelText>
           </FormControlLabel>
           <ClientSelect
             name="DstIP"
@@ -96,7 +91,9 @@ class AddBlockImpl extends React.Component {
             show_CIDR_Defaults={true}
           />
           <FormControlHelper>
-            <FormControlHelperText>IP address or CIDR</FormControlHelperText>
+            <FormControlHelperText>
+              The device or address on your network to protect.
+            </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
         <FormControl>
@@ -108,6 +105,60 @@ class AddBlockImpl extends React.Component {
             onChange={(value) => this.handleChange('Protocol', value)}
           />
         </FormControl>
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Description</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              autoComplete="off"
+              placeholder="Optional label"
+              value={this.state.Description}
+              onChangeText={(value) => this.handleChange('Description', value)}
+            />
+          </Input>
+        </FormControl>
+
+        <Pressable
+          onPress={() =>
+            this.setState({ showAdvanced: !this.state.showAdvanced })
+          }
+        >
+          <HStack space="sm" alignItems="center" py="$1">
+            <Icon
+              as={
+                this.state.showAdvanced ? ChevronDownIcon : ChevronRightIcon
+              }
+              size="sm"
+              color="$muted500"
+            />
+            <Text color="$muted500" size="sm">
+              Advanced
+            </Text>
+          </HStack>
+        </Pressable>
+
+        {this.state.showAdvanced ? (
+          <FormControl isRequired>
+            <FormControlLabel>
+              <FormControlLabelText>Coming from (source)</FormControlLabelText>
+            </FormControlLabel>
+            <Input size="md" variant="underlined">
+              <InputField
+                autoComplete="off"
+                value={this.state.SrcIP}
+                onChangeText={(value) => this.handleChange('SrcIP', value)}
+              />
+            </Input>
+            <FormControlHelper>
+              <FormControlHelperText>
+                Where the blocked traffic comes from. Default 0.0.0.0/0
+                (anywhere).
+              </FormControlHelperText>
+            </FormControlHelper>
+          </FormControl>
+        ) : null}
+
         <Button
           action="primary"
           size="md"

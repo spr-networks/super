@@ -22,7 +22,8 @@ import InputSelect from 'components/InputSelect'
 class AddMulticastPortImpl extends React.Component {
   state = {
     Address: '',
-    Port: '0',
+    Port: '',
+    Description: '',
     isLoading: false
   }
 
@@ -66,13 +67,17 @@ class AddMulticastPortImpl extends React.Component {
 
     Multicast.config().then((config) => {
       config.Addresses.push({
-        Address: this.state.Address + ':' + this.state.Port
+        Address: this.state.Address + ':' + this.state.Port,
+        Description: this.state.Description
       })
       Multicast.setConfig(config)
         .then((res) => {
           //great, now update the firewall also
           firewallAPI
-            .setMulticast({ Port: this.state.Port, Upstream: false })
+            .setMulticast({
+              Port: this.state.Port,
+              Upstream: false
+            })
             .then(() => {
               if (this.props.notifyChange) {
                 this.props.notifyChange('multicast')
@@ -103,7 +108,7 @@ class AddMulticastPortImpl extends React.Component {
         <HStack space="md">
           <FormControl flex="2">
             <FormControlLabel>
-              <FormControlLabelText>Address</FormControlLabelText>
+              <FormControlLabelText>Multicast Service / Address</FormControlLabelText>
             </FormControlLabel>
             <InputSelect
               size="md"
@@ -115,7 +120,7 @@ class AddMulticastPortImpl extends React.Component {
             />
             <FormControlHelper>
               <FormControlHelperText>
-                Multicast IP Address
+                Pick a service below to auto-fill, or type a multicast IP (224.x–239.x).
               </FormControlHelperText>
             </FormControlHelper>
           </FormControl>
@@ -126,12 +131,32 @@ class AddMulticastPortImpl extends React.Component {
             <Input size="md" variant="underlined">
               <InputField
                 name="Port"
+                autoComplete="off"
+                placeholder="5353"
                 value={this.state.Port}
                 onChangeText={(value) => this.handleChange('Port', value)}
               />
             </Input>
+            <FormControlHelper>
+              <FormControlHelperText>
+                Auto-filled when you pick a service. Change only if your service uses a different port.
+              </FormControlHelperText>
+            </FormControlHelper>
           </FormControl>
         </HStack>
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Description</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              placeholder="Optional label"
+              autoComplete="off"
+              value={this.state.Description}
+              onChangeText={(value) => this.handleChange('Description', value)}
+            />
+          </Input>
+        </FormControl>
         <Button
           action="primary"
           size="md"

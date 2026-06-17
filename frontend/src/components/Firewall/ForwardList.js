@@ -121,6 +121,10 @@ const ForwardList = (props) => {
               <Text>{item.DstPort}</Text>
             </HStack>
 
+            <Text flex={1} color="$muted500" isTruncated>
+              {item.Description}
+            </Text>
+
             <Button
               alignSelf="center"
               size="sm"

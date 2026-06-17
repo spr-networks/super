@@ -197,7 +197,7 @@ const CoreDns = (props) => {
 
           <Checkbox
             value={disableRebindingCheck}
-            defaultIsChecked={disableRebindingCheck}
+            isChecked={disableRebindingCheck}
             onChange={setDisableRebindingCheck}
           >
             <CheckboxIndicator mr="$2">
@@ -212,7 +212,7 @@ const CoreDns = (props) => {
 
           <Checkbox
             value={useMultipleProviders}
-            defaultIsChecked={useMultipleProviders}
+            isChecked={useMultipleProviders}
             onChange={setUseMultipleProviders}
           >
             <CheckboxIndicator mr="$2">
@@ -243,7 +243,7 @@ const CoreDns = (props) => {
 
               <Checkbox
                 value={enableTls}
-                defaultIsChecked={enableTls}
+                isChecked={enableTls}
                 onChange={setEnableTls}
               >
                 <CheckboxIndicator mr="$2">
@@ -292,7 +292,7 @@ const CoreDns = (props) => {
                     </Input>
                     <Checkbox
                       value={!provider.DisableTls}
-                      defaultIsChecked={!provider.DisableTls}
+                      isChecked={!provider.DisableTls}
                       onChange={(v) => updateUpstreamProvider(index, 'DisableTls', !v)}
                     >
                       <CheckboxIndicator mr="$2">
@@ -347,7 +347,7 @@ const CoreDns = (props) => {
 
               <Checkbox
                 value={enableFamilyTls}
-                defaultIsChecked={enableFamilyTls}
+                isChecked={enableFamilyTls}
                 onChange={setEnableFamilyTls}
               >
                 <CheckboxIndicator mr="$2">
@@ -396,7 +396,7 @@ const CoreDns = (props) => {
                     </Input>
                     <Checkbox
                       value={!provider.DisableTls}
-                      defaultIsChecked={!provider.DisableTls}
+                      isChecked={!provider.DisableTls}
                       onChange={(v) => updateFamilyProvider(index, 'DisableTls', !v)}
                     >
                       <CheckboxIndicator mr="$2">
