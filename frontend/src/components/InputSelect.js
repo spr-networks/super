@@ -359,6 +359,7 @@ const InputSelect = (props) => {
     <>
       <Input size={props.size || 'md'} isDisabled={isDisabled}>
         <InputField
+          autoComplete="off"
           autoFocus={autoFocus}
           placeholder={title || ''}
           value={displayValue(value)}

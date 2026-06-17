@@ -13,22 +13,28 @@ import {
   FormControlHelperText,
   FormControlLabel,
   FormControlLabelText,
+  Icon,
   Input,
   InputField,
   HStack,
+  Pressable,
+  Text,
   VStack,
   Spinner
 } from '@gluestack-ui/themed'
+
+import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react-native'
 
 import ProtocolRadio from 'components/Form/ProtocolRadio'
 
 class AddForwardBlockImpl extends React.Component {
   state = {
-    SrcIP: '',
+    SrcIP: '0.0.0.0/0',
     DstIP: '',
     DstPort: '',
     Protocol: 'tcp',
     Description: '',
+    showAdvanced: false,
     isLoading: false
   }
 
@@ -80,22 +86,7 @@ class AddForwardBlockImpl extends React.Component {
       <VStack space="md">
         <FormControl isRequired>
           <FormControlLabel>
-            <FormControlLabelText>Source IP Address</FormControlLabelText>
-          </FormControlLabel>
-          <ClientSelect
-            name="SrcIP"
-            value={this.state.SrcIP}
-            onChangeText={(value) => this.handleChange('SrcIP', value)}
-            onChange={(value) => this.handleChange('SrcIP', value)}
-            show_CIDR_Defaults={true}
-          />
-          <FormControlHelper>
-            <FormControlHelperText>IP address or CIDR</FormControlHelperText>
-          </FormControlHelper>
-        </FormControl>
-        <FormControl isRequired>
-          <FormControlLabel>
-            <FormControlLabelText>Destination IP Address</FormControlLabelText>
+            <FormControlLabelText>To (destination)</FormControlLabelText>
           </FormControlLabel>
           <ClientSelect
             name="DstIP"
@@ -106,7 +97,9 @@ class AddForwardBlockImpl extends React.Component {
             show_CIDR_Defaults={true}
           />
           <FormControlHelper>
-            <FormControlHelperText>IP address or CIDR</FormControlHelperText>
+            <FormControlHelperText>
+              The device or address the traffic is trying to reach.
+            </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
 
@@ -116,13 +109,14 @@ class AddForwardBlockImpl extends React.Component {
           </FormControlLabel>
           <Input size="md" variant="underlined">
             <InputField
+              autoComplete="off"
               value={this.state.DstPort}
               onChangeText={(value) => this.handleChange('DstPort', value)}
             />
           </Input>
           <FormControlHelper>
             <FormControlHelperText>
-              Optional port or port range, leave empty for all ports
+              Port to block. Leave empty for all ports.
             </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
@@ -144,12 +138,52 @@ class AddForwardBlockImpl extends React.Component {
           </FormControlLabel>
           <Input size="md" variant="underlined">
             <InputField
+              autoComplete="off"
               placeholder="Optional label"
               value={this.state.Description}
               onChangeText={(value) => this.handleChange('Description', value)}
             />
           </Input>
         </FormControl>
+
+        <Pressable
+          onPress={() =>
+            this.setState({ showAdvanced: !this.state.showAdvanced })
+          }
+        >
+          <HStack space="sm" alignItems="center" py="$1">
+            <Icon
+              as={
+                this.state.showAdvanced ? ChevronDownIcon : ChevronRightIcon
+              }
+              size="sm"
+              color="$muted500"
+            />
+            <Text color="$muted500" size="sm">
+              Advanced
+            </Text>
+          </HStack>
+        </Pressable>
+
+        {this.state.showAdvanced ? (
+          <FormControl isRequired>
+            <FormControlLabel>
+              <FormControlLabelText>From (source)</FormControlLabelText>
+            </FormControlLabel>
+            <ClientSelect
+              name="SrcIP"
+              value={this.state.SrcIP}
+              onChangeText={(value) => this.handleChange('SrcIP', value)}
+              onChange={(value) => this.handleChange('SrcIP', value)}
+              show_CIDR_Defaults={true}
+            />
+            <FormControlHelper>
+              <FormControlHelperText>
+                Where the traffic comes from. Default 0.0.0.0/0 (anywhere).
+              </FormControlHelperText>
+            </FormControlHelper>
+          </FormControl>
+        ) : null}
 
         <Button
           action="primary"

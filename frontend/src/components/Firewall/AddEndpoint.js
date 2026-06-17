@@ -50,7 +50,6 @@ class AddEndpointImpl extends React.Component {
       RuleName: this.state.RuleName,
       Description: this.state.Description,
       IP: this.state.IP,
-      Domain: this.state.Domain,
       Protocol: this.state.Protocol,
       Port: this.state.Port
     }
@@ -88,27 +87,22 @@ class AddEndpointImpl extends React.Component {
           <FormControlLabel>
             <FormControlLabelText>Name</FormControlLabelText>
           </FormControlLabel>
-          <Input>
+          <Input size="md" variant="underlined">
             <InputField
+              autoComplete="off"
+              placeholder="e.g. home-nas"
               value={this.state.RuleName}
               onSubmitEditing={(value) => this.handleChange('RuleName', value)}
               onChangeText={(value) => this.handleChange('RuleName', value)}
               onChange={(value) => this.handleChange('RuleName', value)}
             />
           </Input>
-        </FormControl>
-
-        <FormControl>
-          <FormControlLabel>
-            <FormControlLabelText>Description</FormControlLabelText>
-          </FormControlLabel>
-          <Input size="md" variant="underlined">
-            <InputField
-              placeholder="Optional label"
-              value={this.state.Description}
-              onChangeText={(value) => this.handleChange('Description', value)}
-            />
-          </Input>
+          <FormControlHelper>
+            <FormControlHelperText>
+              A short, unique name. Used to reference this service in firewall
+              rules and tags.
+            </FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
 
         <FormControl>
@@ -124,19 +118,28 @@ class AddEndpointImpl extends React.Component {
             show_CIDR_Defaults={true}
           />
           <FormControlHelper>
-            <FormControlHelperText>Accepts IP or CIDR</FormControlHelperText>
+            <FormControlHelperText>
+              The service's address — a single IP (e.g. 192.168.2.10) or CIDR
+              range. Required.
+            </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
         <FormControl flex={1}>
           <FormControlLabel>
             <FormControlLabelText>Port</FormControlLabelText>
           </FormControlLabel>
-          <Input size="sm" variant="underlined">
+          <Input size="md" variant="underlined">
             <InputField
+              autoComplete="off"
               value={this.state.Port}
               onChangeText={(value) => this.handleChange('Port', value)}
             />
           </Input>
+          <FormControlHelper>
+            <FormControlHelperText>
+              A single port (e.g. 443), or `any` for all ports.
+            </FormControlHelperText>
+          </FormControlHelper>
         </FormControl>
 
         {/* //domains are not yet implemented.
@@ -163,6 +166,20 @@ class AddEndpointImpl extends React.Component {
             value={this.state.Protocol}
             onChange={(value) => this.handleChange('Protocol', value)}
           />
+        </FormControl>
+
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Description</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              autoComplete="off"
+              placeholder="Optional label"
+              value={this.state.Description}
+              onChangeText={(value) => this.handleChange('Description', value)}
+            />
+          </Input>
         </FormControl>
 
         <Button
