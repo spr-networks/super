@@ -4,7 +4,7 @@ x-logging:
 
 x-labels:
   &default-labels
-  org.supernetworks.ci: ${CI:-false}
+  org.supernetworks.ci: "true"
   org.supernetworks.version: ${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
 
 services:
