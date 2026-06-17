@@ -1,2 +1,21 @@
+# Keep the build context to web sources only: this both shrinks the context and
+# keeps non-source cruft out of the image, which matters for reproducibility
+# (COPY . ./ would otherwise pull in working-tree state that varies per machine).
 node_modules/
 build/
+
+# Mobile/desktop app trees — not used by the web `yarn run build`
+android/
+ios/
+macos/
+.bundle/
+
+# VCS, tooling, logs, editor/OS cruft, ad-hoc saves
+.git
+.gitignore
+.claude/
+*.log
+hs_err_pid*.log
+*.save
+*.bak
+.DS_Store

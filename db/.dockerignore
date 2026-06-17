@@ -1,0 +1,9 @@
+# Keep build context to source only (reproducibility + smaller context).
+# Reproducible builds assume a clean checkout; this drops common working-tree cruft.
+.git
+**/*.tar.gz
+**/*.diff
+**/*.log
+**/*.save
+**/*.bak
+**/.DS_Store
