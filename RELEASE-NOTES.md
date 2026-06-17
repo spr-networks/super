@@ -1,6 +1,13 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.1.3
+** Fixes **
+- Build improvements for attestation, node updates
+- Improve firewall settings UI forms, add descriptions
+- Fix removal of expired roles in coredns-block
+- Fix 40MHz channel selection bugs
+- Fix DNS settings checkboxes
 
 ## v1.1.2
 ** Fixes **
