@@ -32,6 +32,7 @@ var OldPfwGitURL = "github.com/spr-networks/pfw_extension"
 var OldMeshGitURL = "github.com/spr-networks/mesh_extension"
 
 var MeshdSocketPath = TEST_PREFIX + "/state/plugins/mesh/socket"
+var DbSocketPath = TEST_PREFIX + "/state/plugins/db/socket"
 var CustomComposeAllowPath = TEST_PREFIX + "/configs/base/custom_compose_paths.json"
 
 type NetworkCapabilities struct {
@@ -1153,6 +1154,37 @@ func callSuperdRestart(composePath string, target string) {
 
 	defer resp.Body.Close()
 	_, err = ioutil.ReadAll(resp.Body)
+}
+
+func deleteDNSBucketForIP(ip string) {
+	if ip == "" {
+		return
+	}
+
+	go func() {
+		c := http.Client{
+			Timeout: 5 * time.Second,
+			Transport: &http.Transport{
+				Dial: func(network, addr string) (net.Conn, error) {
+					return net.DialTimeout("unix", DbSocketPath, 2*time.Second)
+				},
+			},
+		}
+		defer c.CloseIdleConnections()
+
+		req, err := http.NewRequest(http.MethodDelete, "http://localhost/bucket/dns:serve:"+ip, nil)
+		if err != nil {
+			return
+		}
+
+		resp, err := c.Do(req)
+		if err != nil {
+			log.Println("[-] dns bucket cleanup failed for", ip, ":", err)
+			return
+		}
+		defer resp.Body.Close()
+		_, _ = ioutil.ReadAll(resp.Body)
+	}()
 }
 
 // docker ps can infer service status

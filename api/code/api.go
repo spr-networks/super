@@ -1310,6 +1310,7 @@ func deleteDeviceLocked(devices map[string]DeviceEntry, groups []GroupEntry, ide
 	//notify the bus
 	SprbusPublish("device:delete", scrubDevice(val))
 
+	deleteDNSBucketForIP(val.RecentIP)
 }
 
 func handleDeleteDevices(w http.ResponseWriter, r *http.Request) {
@@ -1375,6 +1376,7 @@ func handleDeleteDevices(w http.ResponseWriter, r *http.Request) {
 
 		for _, val := range deletedVals {
 			SprbusPublish("device:delete", scrubDevice(val))
+			deleteDNSBucketForIP(val.RecentIP)
 		}
 	}
 
