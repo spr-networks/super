@@ -16,7 +16,7 @@ import {
   Spinner,
   Divider
 } from '@gluestack-ui/themed'
-import { MonitorCheckIcon, EditIcon } from 'lucide-react-native'
+import { MonitorCheckIcon, EditIcon, RotateCwIcon } from 'lucide-react-native'
 
 import { ListItem } from 'components/List'
 import { Tooltip } from 'components/Tooltip'
@@ -26,7 +26,7 @@ import EditPlugin from 'components/Plugins/EditPlugin'
 import { pluginAPI } from 'api'
 import { alertState } from 'AppContext'
 
-const PluginListItem = ({ item, deleteListItem, handleChange, notifyChange, ...props }) => {
+const PluginListItem = ({ item, deleteListItem, handleChange, handleRestart, notifyChange, ...props }) => {
   const navigate = useNavigate()
   const editModalRef = useRef(null)
 
@@ -98,6 +98,19 @@ const PluginListItem = ({ item, deleteListItem, handleChange, notifyChange, ...p
           />
         </Box>
 
+        {item.Enabled && item.ComposeFilePath ? (
+          <Tooltip label={'Restart plugin'}>
+            <Button
+              variant="solid"
+              action="secondary"
+              size="sm"
+              onPress={() => handleRestart(item)}
+            >
+              <ButtonIcon as={RotateCwIcon} />
+            </Button>
+          </Tooltip>
+        ) : null}
+
         {item.Enabled && item.HasUI && (
           <Tooltip label={'Show plugin UI'}>
             <Button
@@ -164,11 +177,23 @@ const PluginList = ({ list, deleteListItem, notifyChange, ...props }) => {
     }
   }
 
+  const handleRestart = (plugin) => {
+    pluginAPI
+      .restart(plugin.Name)
+      .then(() => {
+        alertState.success(`Restarted plugin: ${plugin.Name}`)
+      })
+      .catch((err) => {
+        alertState.error('Failed to restart plugin: ' + err.message)
+      })
+  }
+
   const renderItem = ({ item }) => (
     <PluginListItem
       item={item}
       deleteListItem={deleteListItem}
       handleChange={handleChange}
+      handleRestart={handleRestart}
       notifyChange={notifyChange}
     />
   )

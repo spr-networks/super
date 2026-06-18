@@ -26,6 +26,9 @@ export class APIPlugin extends API {
   setPlusToken(data) {
     return this.put('/plusToken', data)
   }
+  restart(name) {
+    return this.put(`/plugins/${encodeURIComponent(name)}/restart`)
+  }
   stopPlusExtension(name) {
     return this.put(`/stopPlusExtension`, name)
   }
