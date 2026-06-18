@@ -104,11 +104,10 @@ else
     esac
   done
 
-  # gobuilder is a build-only context => never exported.
   docker buildx bake \
     --builder super-builder \
     --file docker-compose.yml \
-    "${BAKE_SET[@]}" --set "*.output=${OUTPUT}" --set "gobuilder.output=cacheonly" "${ARGS[@]}" || exit 1
+    "${BAKE_SET[@]}" --set "*.output=${OUTPUT}" "${ARGS[@]}" || exit 1
 
   for plugin in $PLUGINS
   do

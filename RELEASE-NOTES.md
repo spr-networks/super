@@ -1,6 +1,15 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.1.4
+** Fixes **
+- iOS UI glitches
+- Improved wireguard disable from plugins toggle
+- Deleting a device now deletes its dns history bucket
+** Improvements **
+- Enable bit-reproducible docker builds
+- Plugin restart button
+
 ## v1.1.3
 ** Fixes **
 - Build improvements for attestation, node updates
