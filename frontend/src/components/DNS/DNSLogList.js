@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
+import { Platform } from 'react-native'
 
 import PropTypes from 'prop-types'
 import { AlertContext } from 'layouts/Admin'
@@ -13,6 +14,8 @@ import {
   ButtonIcon,
   ButtonText,
   FlatList,
+  HStack,
+  Pressable,
   VStack,
   Text,
   CloseIcon,
@@ -20,6 +23,7 @@ import {
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
+import { SwipeListView } from 'components/SwipeListView'
 
 const DNSLogList = ({ title, description, ...props }) => {
   const context = useContext(AlertContext)
@@ -145,26 +149,64 @@ const DNSLogList = ({ title, description, ...props }) => {
             </Button>
           </VStack>
         ) : null}
-        <FlatList
-          data={list}
-          keyExtractor={(item, index) => index}
-          estimatedItemSize={100}
-          renderItem={({ item }) => (
-            <ListItem>
-              <Text>{item}</Text>
-              {type == 'IP' ? <Text> {ip_to_name(item)}</Text> : null}
-              <Button
-                size="sm"
-                action="secondary"
-                variant="link"
-                onPress={() => deleteListItem(item)}
-                marginLeft="auto"
-              >
-                <ButtonIcon as={CloseIcon} color="$red700" />
-              </Button>
-            </ListItem>
-          )}
-        />
+        {Platform.OS == 'ios' ? (
+          <SwipeListView
+            data={list}
+            keyExtractor={(item, index) => `${item}`}
+            renderItem={({ item }) => (
+              <ListItem>
+                <Text>{item}</Text>
+                {type == 'IP' ? <Text> {ip_to_name(item)}</Text> : null}
+              </ListItem>
+            )}
+            renderHiddenItem={(data, rowMap) => (
+              <HStack flex={1} pl="$2">
+                <Pressable
+                  w={70}
+                  ml="auto"
+                  cursor="pointer"
+                  bg="$red500"
+                  justifyContent="center"
+                  onPress={() => {
+                    if (rowMap[data.item]) {
+                      rowMap[data.item].closeRow()
+                    }
+                    deleteListItem(data.item)
+                  }}
+                >
+                  <VStack alignItems="center" space="md">
+                    <CloseIcon color="$white" />
+                    <Text size="xs" color="$white" fontWeight="$medium">
+                      Delete
+                    </Text>
+                  </VStack>
+                </Pressable>
+              </HStack>
+            )}
+            rightOpenValue={-70}
+          />
+        ) : (
+          <FlatList
+            data={list}
+            keyExtractor={(item, index) => index}
+            estimatedItemSize={100}
+            renderItem={({ item }) => (
+              <ListItem>
+                <Text>{item}</Text>
+                {type == 'IP' ? <Text> {ip_to_name(item)}</Text> : null}
+                <Button
+                  size="sm"
+                  action="secondary"
+                  variant="link"
+                  onPress={() => deleteListItem(item)}
+                  marginLeft="auto"
+                >
+                  <ButtonIcon as={CloseIcon} color="$red700" />
+                </Button>
+              </ListItem>
+            )}
+          />
+        )}
       </Box>
     </>
   )
