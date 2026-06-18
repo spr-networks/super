@@ -40,6 +40,15 @@ jobs:
         name: Load reproducible build pins
         run: grep -vE '^[[:space:]]*(#|$)' reproducible.env >> "$GITHUB_ENV"
       -
+        name: Build bake arg overrides from reproducible.env
+        id: bakeargs
+        run: |
+          {
+            echo 'set<<EOF'
+            grep -vE '^[[:space:]]*(#|$)' reproducible.env | sed 's/^/*.args./'
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+      -
         name: Compute SOURCE_DATE_EPOCH (commit time) and push flag
         id: repro
         run: |
@@ -88,13 +97,7 @@ jobs:
           set: |
             *.platform=linux/amd64,linux/arm64
             *.args.SOURCE_DATE_EPOCH=${{ env.SOURCE_DATE_EPOCH }}
-            *.args.ALPINE_REF=${{ env.ALPINE_REF }}
-            *.args.UBUNTU_REF=${{ env.UBUNTU_REF }}
-            *.args.CONTAINER_TEMPLATE_REF=${{ env.CONTAINER_TEMPLATE_REF }}
-            *.args.UBUNTU_SNAPSHOT=${{ env.UBUNTU_SNAPSHOT }}
-            *.args.GO_VERSION=${{ env.GO_VERSION }}
-            *.args.GO_SHA256_AMD64=${{ env.GO_SHA256_AMD64 }}
-            *.args.GO_SHA256_ARM64=${{ env.GO_SHA256_ARM64 }}
+            ${{ steps.bakeargs.outputs.set }}
             *.output=type=image,push=${{ steps.repro.outputs.push }},rewrite-timestamp=true
             dyndns*.context=./dyndns
             wifiuplink*.context=./wifi_uplink
