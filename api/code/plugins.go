@@ -400,6 +400,11 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 					stopExtension(oldComposeFilePath)
 					// Remove network capabilities firewall rules
 					removePluginNetworkCapabilities(config.Plugins[idx])
+
+					//wireguard is built-in (no compose); bring its interface down
+					if name == "wireguard" {
+						callWireguardDown()
+					}
 				}
 				config.Plugins[idx] = plugin
 			}
@@ -1185,6 +1190,31 @@ func deleteDNSBucketForIP(ip string) {
 		defer resp.Body.Close()
 		_, _ = ioutil.ReadAll(resp.Body)
 	}()
+}
+
+func callWireguardDown() {
+	c := http.Client{
+		Timeout: 5 * time.Second,
+		Transport: &http.Transport{
+			Dial: func(network, addr string) (net.Conn, error) {
+				return net.DialTimeout("unix", WireguardSocketPath, 2*time.Second)
+			},
+		},
+	}
+	defer c.CloseIdleConnections()
+
+	req, err := http.NewRequest(http.MethodPut, "http://localhost/down", nil)
+	if err != nil {
+		return
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		log.Println("[-] wireguard down failed:", err)
+		return
+	}
+	defer resp.Body.Close()
+	_, _ = ioutil.ReadAll(resp.Body)
 }
 
 // docker ps can infer service status
