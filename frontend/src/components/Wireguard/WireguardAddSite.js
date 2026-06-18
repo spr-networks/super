@@ -25,7 +25,8 @@ export default class WireguardAddSite extends React.Component {
     PrivateKey: '',
     PresharedKey: '',
     Endpoint: '',
-    PublicKey: ''
+    PublicKey: '',
+    DNS: ''
   }
 
   constructor(props) {
@@ -42,7 +43,8 @@ export default class WireguardAddSite extends React.Component {
         PrivateKey: props.site.PrivateKey || '',
         PresharedKey: props.site.PresharedKey || '',
         Endpoint: props.site.Endpoint || '',
-        PublicKey: props.site.PublicKey || ''
+        PublicKey: props.site.PublicKey || '',
+        DNS: props.site.DNS || ''
       }
     }
   }
@@ -58,7 +60,8 @@ export default class WireguardAddSite extends React.Component {
       PeerPublicKey: this.state.PeerPublicKey,
       PrivateKey: this.state.PrivateKey,
       PresharedKey: this.state.PresharedKey,
-      Endpoint: this.state.Endpoint
+      Endpoint: this.state.Endpoint,
+      DNS: this.state.DNS
     }
 
     const isEdit = this.props.site != null
@@ -151,6 +154,27 @@ export default class WireguardAddSite extends React.Component {
           <FormControlHelper>
             <FormControlHelperText>
               The local interface address
+            </FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
+
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Site DNS</FormControlLabelText>
+          </FormControlLabel>
+
+          <Input variant="underlined">
+            <InputField
+              placeholder="10.10.10.1"
+              value={this.state.DNS}
+              onChangeText={(value) => this.handleChange('DNS', value)}
+            />
+          </Input>
+
+          <FormControlHelper>
+            <FormControlHelperText>
+              DNS server reachable over this tunnel. Devices fully routed over this
+              site send DNS here. Leave empty to keep using SPR.
             </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
