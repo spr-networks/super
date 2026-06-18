@@ -85,7 +85,6 @@ jobs:
             ppp/docker-compose.yml
             wifi_uplink/docker-compose.yml
             dyndns/docker-compose.yml
-          # rewrite-timestamp => reproducible digests; gobuilder is build-only (cacheonly)
           set: |
             *.platform=linux/amd64,linux/arm64
             *.args.SOURCE_DATE_EPOCH=${{ env.SOURCE_DATE_EPOCH }}
