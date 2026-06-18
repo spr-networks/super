@@ -8,7 +8,6 @@ x-logging:
   &default-logging
   driver: journald
 
-# shared build-only Go toolchain context (see gobuilder service)
 x-gobuilder-ctx:
   &gobuilder-ctx
   gobuilder: "service:gobuilder"
@@ -16,7 +15,8 @@ x-gobuilder-ctx:
 services:
   gobuilder:
     image: ghcr.io/spr-networks/super_gobuilder:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
-    profiles: ["build"]
+    deploy:
+      replicas: 0
     build:
       context: gobuilder
       labels: *default-labels
