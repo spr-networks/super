@@ -100,20 +100,18 @@ const TabViewComponent = ({ tabs, ...props }) => {
 
   return (
     <View style={{ height: "100%" }}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <TabView
-          navigationState={{
-            index,
-            routes
-          }}
-          renderScene={renderScene}
-          renderTabBar={renderTabBar}
-          onIndexChange={setIndex}
-          initialLayout={initialLayout}
-          swipeEnabled={false}
-          style={{ flex: 1 }}
-        />
-      </ScrollView>
+      <TabView
+        navigationState={{
+          index,
+          routes
+        }}
+        renderScene={renderScene}
+        renderTabBar={renderTabBar}
+        onIndexChange={setIndex}
+        initialLayout={initialLayout}
+        swipeEnabled={false}
+        style={{ flex: 1 }}
+      />
     </View>
   )
 }
