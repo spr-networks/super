@@ -17,3 +17,7 @@ DOCKERNET=172.17.0.0/16
 DOCKERIF=docker0
 
 WIREGUARD_PORT=51280
+
+if [ "$LANIF" = "$WANIF" ]; then
+	unset LANIF
+fi
