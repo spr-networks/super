@@ -8,21 +8,7 @@ x-logging:
   &default-logging
   driver: journald
 
-x-gobuilder-ctx:
-  &gobuilder-ctx
-  gobuilder: "service:gobuilder"
-
 services:
-  gobuilder:
-    image: ghcr.io/spr-networks/super_gobuilder:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
-    deploy:
-      replicas: 0
-    build:
-      context: gobuilder
-      labels: *default-labels
-      x-bake:
-        tags:
-        - ghcr.io/spr-networks/super_gobuilder:latest${RELEASE_CHANNEL:-}
   base:
     container_name: superbase
     image: ghcr.io/spr-networks/super_base:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
@@ -62,7 +48,6 @@ services:
     image: ghcr.io/spr-networks/super_superd:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: superd
-      additional_contexts: *gobuilder-ctx
       labels: *default-labels
       x-bake:
         tags:
@@ -81,7 +66,6 @@ services:
     image: ghcr.io/spr-networks/super_dhcp:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: dhcp
-      additional_contexts: *gobuilder-ctx
       labels: *default-labels
       x-bake:
         tags:
@@ -103,7 +87,6 @@ services:
     image: ghcr.io/spr-networks/super_dhcp_client:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: dhcp
-      additional_contexts: *gobuilder-ctx
       labels: *default-labels
       x-bake:
         tags:
@@ -123,7 +106,6 @@ services:
     image: ghcr.io/spr-networks/super_dns:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: dns
-      additional_contexts: *gobuilder-ctx
       labels: *default-labels
       x-bake:
         tags:
@@ -145,7 +127,6 @@ services:
     image: ghcr.io/spr-networks/super_wifid:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: wifid
-      additional_contexts: *gobuilder-ctx
       labels: *default-labels
       x-bake:
         tags:
@@ -167,7 +148,6 @@ services:
     image: ghcr.io/spr-networks/super_multicast_udp_proxy:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: multicast_udp_proxy
-      additional_contexts: *gobuilder-ctx
       labels: *default-labels
       x-bake:
         tags:
@@ -188,7 +168,6 @@ services:
     image: ghcr.io/spr-networks/super_wireguard:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: wireguard
-      additional_contexts: *gobuilder-ctx
       labels: *default-labels
       x-bake:
         tags:
@@ -226,7 +205,6 @@ services:
     image: ghcr.io/spr-networks/super_api:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: api
-      additional_contexts: *gobuilder-ctx
       labels: *default-labels
       x-bake:
         tags:
@@ -270,7 +248,6 @@ services:
     image: ghcr.io/spr-networks/super_plugin-lookup:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: plugin-lookup
-      additional_contexts: *gobuilder-ctx
       labels: *default-labels
       x-bake:
         tags:
@@ -288,7 +265,6 @@ services:
     image: ghcr.io/spr-networks/super_packet_logs:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: packet_logs
-      additional_contexts: *gobuilder-ctx
       labels: *default-labels
       x-bake:
         tags:
@@ -308,7 +284,6 @@ services:
     image: ghcr.io/spr-networks/super_db:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: db
-      additional_contexts: *gobuilder-ctx
       labels: *default-labels
       x-bake:
         tags:
