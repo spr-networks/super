@@ -717,10 +717,10 @@ const FlowList = (props) => {
                             >
                               <HStack space="md" alignItems="center">
                                 {item.triggers[0]?.icon && (
-                                  <Icon as={item.triggers[0].icon} color={item.triggers[0].color} size="sm" />
+                                  <Icon as={item.triggers[0].icon} color={item.triggers[0].color} size={16} />
                                 )}
                                 {item.actions[0]?.icon && (
-                                  <Icon as={item.actions[0].icon} color={item.actions[0].color} size="sm" />
+                                  <Icon as={item.actions[0].icon} color={item.actions[0].color} size={16} />
                                 )}
                                 <Text size="sm" flex={1}>{item.title}</Text>
                                 {item.disabled && (
