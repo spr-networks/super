@@ -605,7 +605,7 @@ func plusToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func getSuperdClient() http.Client {
-	c := http.Client{}
+	c := http.Client{Timeout: 120 * time.Second}
 	c.Transport = &http.Transport{
 		Dial: func(network, addr string) (net.Conn, error) {
 			return net.Dial("unix", SuperdSocketPath)
@@ -615,7 +615,7 @@ func getSuperdClient() http.Client {
 }
 
 func getMeshdClient() http.Client {
-	c := http.Client{}
+	c := http.Client{Timeout: 20 * time.Second}
 	c.Transport = &http.Transport{
 		Dial: func(network, addr string) (net.Conn, error) {
 			return net.Dial("unix", MeshdSocketPath)

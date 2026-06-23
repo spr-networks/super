@@ -42,10 +42,7 @@ func WSNotifyMessage(msg_type string, data interface{}, notification bool, wildc
 	select {
 	case WSNotify <- message:
 	default:
-		//channel was full, send async
-		go func() {
-			WSNotify <- message
-		}()
+		log.Printf("WSNotify channel full, dropping %s notification", msg_type)
 	}
 
 }
@@ -78,6 +75,19 @@ func WSHasWildcardListenerUnlocked() bool {
 		}
 	}
 	return false
+}
+
+type apnsJob struct {
+	msgType string
+	data    string
+}
+
+var apnsQueue = make(chan apnsJob, 64)
+
+func apnsWorker() {
+	for j := range apnsQueue {
+		APNSNotify(j.msgType, j.data)
+	}
 }
 
 func WSRunBroadcast() {
@@ -117,7 +127,11 @@ func WSRunBroadcast() {
 		//if no WS clients got data sent, then run APNS instead
 		// if it was not a wildcardall message
 		if clients_len == 0 && !message.WildcardAll {
-			APNSNotify(message.Type, message.Data)
+			select {
+			case apnsQueue <- apnsJob{message.Type, message.Data}:
+			default:
+				log.Printf("APNS queue full, dropping %s notification", message.Type)
+			}
 		}
 
 	}
@@ -125,6 +139,7 @@ func WSRunBroadcast() {
 
 func WSRunNotify() {
 	go WSRunBroadcast()
+	go apnsWorker()
 }
 
 func authWebsocket(r *http.Request, c *websocket.Conn, OtpOff bool) bool {
