@@ -40,7 +40,7 @@ type GodyndnsConfig struct {
 	Ipv6Url     string           `json:"ipv6_url"` //deprecated entry, replaced by ip_urls
 	IpType      string           `json:"ip_type"`
 	Interval    int              `json:"interval"`
-	Socks5Proxy string           `json:"socks5"`
+	Socks5Proxy string           `json:"socks5_proxy"`
 	Resolver    string           `json:"resolver"`
 	RunOnce     bool             `json:"run_once"`
 	WebPanel    WebPanelConfig   `json:"web_panel,omitempty"` // Internal use only
@@ -373,12 +373,12 @@ func migrate_ip_urls() {
 		config.IpUrls = urls
 		config.RunOnce = true
 		data, _ := json.Marshal(config)
-		
+
 		// Only lock when writing
 		Configmtx.Lock()
 		err := ioutil.WriteFile(GoDyndnsConfigFile, data, 0600)
 		Configmtx.Unlock()
-		
+
 		if err != nil {
 			fmt.Println("[-] Failed to save migration")
 		}
