@@ -2557,7 +2557,7 @@ func deleteForwardBlock(br ForwardingBlockRule) error {
 }
 
 func getWireguardClient() http.Client {
-	c := http.Client{}
+	c := http.Client{Timeout: 20 * time.Second}
 	c.Transport = &http.Transport{
 		Dial: func(network, addr string) (net.Conn, error) {
 			return net.Dial("unix", WireguardSocketPath)

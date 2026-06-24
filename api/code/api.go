@@ -249,7 +249,7 @@ func getFeatures(w http.ResponseWriter, r *http.Request) {
 func dockerRequest(method, path string, body io.Reader) ([]byte, error) {
 	DockerSocketPath := "/var/run/docker.sock"
 
-	c := http.Client{}
+	c := http.Client{Timeout: 60 * time.Second}
 	c.Transport = &http.Transport{
 		Dial: func(network, addr string) (net.Conn, error) {
 			return net.Dial("unix", DockerSocketPath)
@@ -1310,6 +1310,7 @@ func deleteDeviceLocked(devices map[string]DeviceEntry, groups []GroupEntry, ide
 	//notify the bus
 	SprbusPublish("device:delete", scrubDevice(val))
 
+	deleteDNSBucketForIP(val.RecentIP)
 }
 
 func handleDeleteDevices(w http.ResponseWriter, r *http.Request) {
@@ -1375,6 +1376,7 @@ func handleDeleteDevices(w http.ResponseWriter, r *http.Request) {
 
 		for _, val := range deletedVals {
 			SprbusPublish("device:delete", scrubDevice(val))
+			deleteDNSBucketForIP(val.RecentIP)
 		}
 	}
 
@@ -2710,7 +2712,7 @@ func ReportInstall() {
 	}
 	Configmtx.Unlock()
 
-	c := http.Client{}
+	c := http.Client{Timeout: 15 * time.Second}
 
 	defer c.CloseIdleConnections()
 

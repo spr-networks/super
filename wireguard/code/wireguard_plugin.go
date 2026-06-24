@@ -27,6 +27,7 @@ var WireguardInterface = "wg0"
 var WireguardConfigFile = TEST_PREFIX + "/configs/wireguard/wg0.conf"
 var DNSIPPath = TEST_PREFIX + "/configs/base/lanip"
 var WireguardSPRConfigFile = TEST_PREFIX + "/configs/wireguard/wg.json"
+var ApiConfigPath = TEST_PREFIX + "/configs/base/api.json"
 
 var Configmtx sync.Mutex
 
@@ -838,7 +839,39 @@ func informPeersToApi() {
 
 }
 
+func wireguardEnabledInConfig() bool {
+	data, err := ioutil.ReadFile(ApiConfigPath)
+	if err != nil {
+		return true
+	}
+
+	cfg := struct {
+		Plugins []struct {
+			Name    string
+			Enabled bool
+		}
+	}{}
+
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return true
+	}
+
+	for _, p := range cfg.Plugins {
+		if p.Name == "wireguard" {
+			return p.Enabled
+		}
+	}
+
+	return true
+}
+
 func main() {
+	if wireguardEnabledInConfig() {
+		if _, err := exec.Command("/scripts/up.sh").Output(); err != nil {
+			fmt.Println("wg up failed at startup", err)
+		}
+	}
+
 	unix_plugin_router := mux.NewRouter().StrictSlash(true)
 
 	unix_plugin_router.HandleFunc("/genkey", pluginGenKey).Methods("GET")

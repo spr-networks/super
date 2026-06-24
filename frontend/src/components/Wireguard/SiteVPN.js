@@ -47,6 +47,9 @@ const SiteVPN = (props) => {
         s.push(new_obj)
       }
 
+      //render the list now; online status is fetched below and fills in after
+      setSites(s)
+
       //wake up each site first
       const putPromises = s.map((site) => {
         return api.put(`/ping/${site.Interface}/127.0.0.1`).catch(() => {})
@@ -63,7 +66,6 @@ const SiteVPN = (props) => {
               }
             }
             setSiteStatus(newStatus)
-            setSites(s)
           })
         })
         .catch((e) => {
@@ -197,6 +199,22 @@ const SiteVPN = (props) => {
               <VStack space="sm" flex={2}>
                 <Text>{item.Address}</Text>
                 <Text>{item.Endpoint}</Text>
+                <HStack space="xs" alignItems="center">
+                  <Text size="xs" bold>DNS:</Text>
+                  {item.DNS ? (
+                    <Text size="xs">{item.DNS}</Text>
+                  ) : (
+                    <Button
+                      size="xs"
+                      variant="link"
+                      onPress={() => handleEdit(item)}
+                    >
+                      <ButtonText size="xs" color="$muted500">
+                        Not set
+                      </ButtonText>
+                    </Button>
+                  )}
+                </HStack>
               </VStack>
               <VStack space="sm">
                 <HStack

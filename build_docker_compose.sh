@@ -13,6 +13,22 @@ if ! which docker-compose > /dev/null 2>&1; then
     alias docker-compose='docker compose'
 fi
 
+# Reproducible build: thread the pinned inputs into the build and set
+# SOURCE_DATE_EPOCH from the commit. See REPRODUCIBLE.md.
+REPRO_ENV="$(dirname "$0")/reproducible.env"
+BAKE_SET=()
+if [ -f "$REPRO_ENV" ]; then
+  while IFS='=' read -r k v; do
+    case "$k" in ''|\#*) continue;; esac
+    BAKE_SET+=(--set "*.args.${k}=${v}")
+  done < <(grep -vE '^[[:space:]]*(#|$)' "$REPRO_ENV")
+fi
+export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git log -1 --pretty=%ct 2>/dev/null || echo 0)}"
+BAKE_SET+=(--set "*.args.SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}")
+echo "SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}"
+# shellcheck disable=SC1090
+[ -f "$REPRO_ENV" ] && . "$REPRO_ENV"
+
 # remove prebuilt images
 FOUND_PREBUILT_IMAGE=false
 for SERVICE in $(docker-compose config --services); do
@@ -52,9 +68,8 @@ mkdir -p state/wifi/
 touch state/dns/local_mappings state/dhcp/leases.txt
 
 PLUGINS="dyndns ppp wifi_uplink"
-BUILDARGS=""
 if [ -f .github_creds ]; then
-  BUILDARGS="--set *.args.GITHUB_CREDS=`cat .github_creds`"
+  BAKE_SET+=(--set "*.args.GITHUB_CREDS=$(cat .github_creds)")
 fi
 
 docker --help | grep buildx
@@ -62,41 +77,37 @@ missing_buildx=$?
 
 if [ "$missing_buildx" -eq "1" ];
 then
+  # Fallback (no buildx): NOT bit-for-bit (docker exporter can't rewrite timestamps).
   export DOCKER_BUILDKIT=1
   export COMPOSE_DOCKER_CLI_BUILD=1
-  docker-compose build ${BUILDARGS} $@ || exit 1
+  docker-compose build "$@" || exit 1
 
   for plugin in $PLUGINS
   do
-    docker-compose --file ${plugin}/docker-compose.yml build ${BUILDARGS} || exit 1
+    docker-compose --file ${plugin}/docker-compose.yml build "$@" || exit 1
   done
 else
-  # We use docker buildx so we can build multi-platform images. Unfortunately,
-  # a limitation is that multi-platform images cannot be loaded from the builder
-  # into Docker.
+  # buildx (docker-container) for multi-platform + reproducible exporter. Pin the
+  # BuildKit backend (rewrite-timestamp needs >= 0.13).
   docker buildx create --name super-builder --driver docker-container \
+    --driver-opt "image=${BUILDKIT_REF}" \
     2>/dev/null || true
 
-  # Look for any images that would be built multi-platform
-  IS_MULTIPLATFORM=$(
-    docker buildx bake \
-      --builder super-builder \
-      --file docker-compose.yml \
-      ${BUILDARGS} "$@" \
-      --print --progress none \
-    | jq 'any(.target[].platforms//[]|map(split(",";"")[])|unique; length >= 2)'
-  )
-
-  # If this is a single-platform build, then by default load it into Docker
-  echo Is this a multi-platform build? ${IS_MULTIPLATFORM}
-  if [ "$IS_MULTIPLATFORM" = "false" ]; then
-    BUILDARGS="$BUILDARGS --load"
-  fi
+  # Always export with rewrite-timestamp; map --load/--push onto the exporter.
+  OUTPUT="type=docker,rewrite-timestamp=true"
+  ARGS=()
+  for a in "$@"; do
+    case "$a" in
+      --load) ;;
+      --push) OUTPUT="type=registry,rewrite-timestamp=true" ;;
+      *) ARGS+=("$a") ;;
+    esac
+  done
 
   docker buildx bake \
     --builder super-builder \
     --file docker-compose.yml \
-    ${BUILDARGS} "$@" || exit 1
+    "${BAKE_SET[@]}" --set "*.output=${OUTPUT}" "${ARGS[@]}" || exit 1
 
   for plugin in $PLUGINS
   do
@@ -104,7 +115,7 @@ else
     docker buildx bake \
       --builder super-builder \
       --file docker-compose.yml \
-      ${BUILDARGS} "$@" || exit 1
+      "${BAKE_SET[@]}" --set "*.output=${OUTPUT}" "${ARGS[@]}" || exit 1
     popd
   done
 fi

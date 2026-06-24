@@ -1,6 +1,7 @@
 x-labels:
   &default-labels
-  org.supernetworks.ci: ${CI:-false}
+  # constant (not $CI) so digests are reproducible across CI/local
+  org.supernetworks.ci: "true"
   org.supernetworks.version: ${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
 
 x-logging:

@@ -436,7 +436,7 @@ const DNSLogHistoryList = (props) => {
 
   useEffect(() => {
     if (filterIps.length) {
-      navigate(`/admin/dnsLog/${filterIps.join(',')}/${filterText || ':text'}`)
+      navigate(`/admin/dnsLog/${filterIps.join(',') || ':ips'}/${filterText || ':text'}`)
     }
   }, [filterIps, filterText])
 
@@ -651,7 +651,7 @@ const DNSLogHistoryList = (props) => {
         bg="$backgroundCardLight"
         space="md"
         p="$4"
-        h={Platform.OS == 'web' ? 'auto' : showForm ? undefined : 70}
+        minHeight={Platform.OS == 'web' ? undefined : 70}
         sx={{
           '@md': {
             flexDirection: 'row',
@@ -687,13 +687,12 @@ const DNSLogHistoryList = (props) => {
         </HStack>
 
         <VStack
-          flex={1}
           space="sm"
           sx={{
             '@base': {
               display: filterIps.length && showForm ? 'flex' : 'none'
             },
-            '@md': { flexDirection: 'row' }
+            '@md': { flexDirection: 'row', flex: 1 }
           }}
         >
           <FormControl>
@@ -707,7 +706,7 @@ const DNSLogHistoryList = (props) => {
             </HStack>
           </FormControl>
 
-          <FormControl flex={1}>
+          <FormControl sx={{ '@md': { flex: 1 } }}>
             <FormControlLabel
               sx={{
                 '@base': { display: 'none' },

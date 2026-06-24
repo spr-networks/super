@@ -289,7 +289,7 @@ const RouteJump = ({ ...props }) => {
                       }}
                     >
                       <HStack>
-                        <Icon as={item.icon} mr="$2" size="md" />
+                        <Icon as={item.icon} mr="$2" size={18} />
                         <Text size="sm">{item.name}</Text>
                       </HStack>
                     </Pressable>

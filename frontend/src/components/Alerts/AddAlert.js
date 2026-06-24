@@ -164,9 +164,7 @@ const AddAlert = ({ onSubmit, curItem, ...props }) => {
   const handleSubmit = () => {
     //validate here?
     let action = ActionConfig
-    if (GrabFields.length > 0) {
-      action.GrabFields = GrabFields
-    }
+    action.GrabFields = GrabFields
 
     action.NotificationType = notificationType
 

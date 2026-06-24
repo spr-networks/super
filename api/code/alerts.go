@@ -274,13 +274,20 @@ func (a *AlertDevice) Validate() error {
 var AlertDevicesmtx sync.RWMutex
 var gAlertDevices = []AlertDevice{}
 
+var gAlertDevicesLoaded time.Time
+
 func loadAlertDevices() {
+	if !gAlertDevicesLoaded.IsZero() && time.Since(gAlertDevicesLoaded) < 10*time.Second {
+		return
+	}
 	data, err := ioutil.ReadFile(AlertDevicesFile)
 	if err == nil {
 		err = json.Unmarshal(data, &gAlertDevices)
 		if err != nil {
 			log.Println(err)
+			return
 		}
+		gAlertDevicesLoaded = time.Now()
 	}
 }
 
@@ -401,8 +408,13 @@ func testSendAlertDevice(w http.ResponseWriter, r *http.Request) {
 
 var gMobileAlertProxySettings = MobileAlertProxySettings{}
 
+var gMobileProxySettingsLoaded time.Time
+
 func loadMobileProxySettings() {
 	//assumes lock is held
+	if !gMobileProxySettingsLoaded.IsZero() && time.Since(gMobileProxySettingsLoaded) < 10*time.Second {
+		return
+	}
 	data, err := ioutil.ReadFile(MobileProxySettingsFile)
 	if err != nil {
 		log.Println(err)
@@ -410,7 +422,9 @@ func loadMobileProxySettings() {
 		err = json.Unmarshal(data, &gMobileAlertProxySettings)
 		if err != nil {
 			log.Println(err)
+			return
 		}
+		gMobileProxySettingsLoaded = time.Now()
 	}
 }
 
@@ -552,6 +566,10 @@ func sendDeviceAlertLocked(device AlertDevice, title string, message string) err
 		pubKey, ok := parsedKey.(*rsa.PublicKey)
 		if !ok {
 			return fmt.Errorf("invalid pubkey for device")
+		}
+
+		if max := pubKey.Size() - 11; len(jsonValue) > max {
+			return fmt.Errorf("alert payload %dB exceeds RSA capacity %dB for device %s; skipped", len(jsonValue), max, device.DeviceId)
 		}
 
 		dataRaw, err := rsa.EncryptPKCS1v15(rand.Reader, pubKey, []byte(jsonValue))

@@ -21,6 +21,4 @@ if [ $? -eq 0 ]; then
 	mv /tmp/wg0.conf $WIREGUARD_CONFIG
 fi
 
-. /scripts/up.sh
-
 /wireguard_plugin
