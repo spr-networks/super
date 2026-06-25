@@ -41,12 +41,16 @@ RUN --mount=type=tmpfs,target=/tmpfs \
 FROM ${CONTAINER_TEMPLATE_REF}
 ENV DEBIAN_FRONTEND=noninteractive
 
+ARG UBUNTU_SNAPSHOT
 ARG DOCKER_CE_VERSION=5:29.5.3-1~ubuntu.24.04~noble
 ARG DOCKER_CE_CLI_VERSION=5:29.5.3-1~ubuntu.24.04~noble
 ARG CONTAINERD_VERSION=2.2.4-1~ubuntu.24.04~noble
 ARG DOCKER_BUILDX_PLUGIN_VERSION=0.34.1-1~ubuntu.24.04~noble
 ARG DOCKER_COMPOSE_PLUGIN_VERSION=5.1.4-1~ubuntu.24.04~noble
 
+RUN set -eux; \
+    printf 'Types: deb\nURIs: https://snapshot.ubuntu.com/ubuntu/%s\nSuites: noble noble-updates noble-security\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' "${UBUNTU_SNAPSHOT}" > /etc/apt/sources.list.d/ubuntu.sources; \
+    printf 'APT::Install-Recommends "false";\nAcquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99reproducible
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl
 RUN install -m 0755 -d /etc/apt/keyrings
 COPY scripts/docker.asc /etc/apt/keyrings/docker.asc

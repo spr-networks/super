@@ -60,6 +60,9 @@ jobs:
           fi
           echo "push=$push" >> "$GITHUB_OUTPUT"
       -
+        name: Normalize source mtimes for reproducible COPY layers
+        run: git ls-files -z | xargs -0 touch -h -d "@${SOURCE_DATE_EPOCH}"
+      -
         name: Authenticate to Docker Hub
         if: ${{ vars.DOCKERHUB_USERNAME != '' }}
         uses: docker/login-action@v3

@@ -29,6 +29,12 @@ echo "SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}"
 # shellcheck disable=SC1090
 [ -f "$REPRO_ENV" ] && . "$REPRO_ENV"
 
+# rewrite-timestamp only clamps mtimes newer than SOURCE_DATE_EPOCH; force all
+# tracked files to a single value so COPY layers don't depend on host state.
+if [ -d .git ]; then
+  git ls-files -z | xargs -0 touch -h -d "@${SOURCE_DATE_EPOCH}" 2>/dev/null || true
+fi
+
 # remove prebuilt images
 FOUND_PREBUILT_IMAGE=false
 for SERVICE in $(docker-compose config --services); do
@@ -87,8 +93,15 @@ then
     docker-compose --file ${plugin}/docker-compose.yml build "$@" || exit 1
   done
 else
-  # buildx (docker-container) for multi-platform + reproducible exporter. Pin the
-  # BuildKit backend (rewrite-timestamp needs >= 0.13).
+  # Recreate super-builder if its BuildKit image doesn't match BUILDKIT_REF.
+  if docker buildx inspect super-builder >/dev/null 2>&1; then
+    CURRENT_BUILDKIT=$(docker buildx inspect super-builder \
+      | sed -n 's/.*image="\([^"]*\)".*/\1/p' | head -1)
+    if [ -n "${BUILDKIT_REF}" ] && [ "$CURRENT_BUILDKIT" != "${BUILDKIT_REF}" ]; then
+      echo "super-builder has wrong BuildKit image, recreating"
+      docker buildx rm super-builder
+    fi
+  fi
   docker buildx create --name super-builder --driver docker-container \
     --driver-opt "image=${BUILDKIT_REF}" \
     2>/dev/null || true
