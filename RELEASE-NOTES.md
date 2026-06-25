@@ -1,6 +1,10 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.1.5
+** Fixes **
+- FS timestamp fixes for bit-reproducible docker builds
+
 ## v1.1.4
 ** Fixes **
 - iOS UI glitches

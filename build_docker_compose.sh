@@ -23,7 +23,9 @@ if [ -f "$REPRO_ENV" ]; then
     BAKE_SET+=(--set "*.args.${k}=${v}")
   done < <(grep -vE '^[[:space:]]*(#|$)' "$REPRO_ENV")
 fi
-export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git log -1 --pretty=%ct 2>/dev/null || echo 0)}"
+# Use epoch 0 so BuildKit's rewrite-timestamp clamp normalizes every file's
+# mtime to a single value, regardless of host filesystem state.
+export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-0}"
 BAKE_SET+=(--set "*.args.SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}")
 echo "SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}"
 # shellcheck disable=SC1090
@@ -87,8 +89,15 @@ then
     docker-compose --file ${plugin}/docker-compose.yml build "$@" || exit 1
   done
 else
-  # buildx (docker-container) for multi-platform + reproducible exporter. Pin the
-  # BuildKit backend (rewrite-timestamp needs >= 0.13).
+  # Recreate super-builder if its BuildKit image doesn't match BUILDKIT_REF.
+  if docker buildx inspect super-builder >/dev/null 2>&1; then
+    CURRENT_BUILDKIT=$(docker buildx inspect super-builder \
+      | sed -n 's/.*image="\([^"]*\)".*/\1/p' | head -1)
+    if [ -n "${BUILDKIT_REF}" ] && [ "$CURRENT_BUILDKIT" != "${BUILDKIT_REF}" ]; then
+      echo "super-builder has wrong BuildKit image, recreating"
+      docker buildx rm super-builder
+    fi
+  fi
   docker buildx create --name super-builder --driver docker-container \
     --driver-opt "image=${BUILDKIT_REF}" \
     2>/dev/null || true
