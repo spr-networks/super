@@ -23,17 +23,13 @@ if [ -f "$REPRO_ENV" ]; then
     BAKE_SET+=(--set "*.args.${k}=${v}")
   done < <(grep -vE '^[[:space:]]*(#|$)' "$REPRO_ENV")
 fi
-export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git log -1 --pretty=%ct 2>/dev/null || echo 0)}"
+# Use epoch 0 so BuildKit's rewrite-timestamp clamp normalizes every file's
+# mtime to a single value, regardless of host filesystem state.
+export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-0}"
 BAKE_SET+=(--set "*.args.SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}")
 echo "SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}"
 # shellcheck disable=SC1090
 [ -f "$REPRO_ENV" ] && . "$REPRO_ENV"
-
-# rewrite-timestamp only clamps mtimes newer than SOURCE_DATE_EPOCH; force all
-# tracked files to a single value so COPY layers don't depend on host state.
-if [ -d .git ]; then
-  git ls-files -z | xargs -0 touch -h -d "@${SOURCE_DATE_EPOCH}" 2>/dev/null || true
-fi
 
 # remove prebuilt images
 FOUND_PREBUILT_IMAGE=false

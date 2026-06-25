@@ -49,19 +49,16 @@ jobs:
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
       -
-        name: Compute SOURCE_DATE_EPOCH (commit time) and push flag
+        name: Set SOURCE_DATE_EPOCH and push flag
         id: repro
         run: |
-          echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
+          echo "SOURCE_DATE_EPOCH=0" >> "$GITHUB_ENV"
           push=false
           if { [ "${{ github.event_name }}" = "workflow_run" ] && [ "${{ github.ref_name }}" = "main" ]; } \
              || { [ -n "${{ env.RELEASE_CHANNEL }}" ] && [ "${{ github.event_name }}" = "push" ]; }; then
             push=true
           fi
           echo "push=$push" >> "$GITHUB_OUTPUT"
-      -
-        name: Normalize source mtimes for reproducible COPY layers
-        run: git ls-files -z | xargs -0 touch -h -d "@${SOURCE_DATE_EPOCH}"
       -
         name: Authenticate to Docker Hub
         if: ${{ vars.DOCKERHUB_USERNAME != '' }}
