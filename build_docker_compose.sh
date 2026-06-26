@@ -31,6 +31,10 @@ echo "SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}"
 # shellcheck disable=SC1090
 [ -f "$REPRO_ENV" ] && . "$REPRO_ENV"
 
+# Strip group/world write so COPY layer modes don't depend on the umask of
+# whoever ran git checkout.
+[ -d .git ] && find . -path ./.git -prune -o -exec chmod go-w {} +
+
 # remove prebuilt images
 FOUND_PREBUILT_IMAGE=false
 for SERVICE in $(docker-compose config --services); do
