@@ -3,6 +3,8 @@
 
 
 ## v1.1.6
+** Features **
+- Begin showing attestation info in the System info pane
 ** Fixes **
 - Update hostapd
 - Add missing add device button removed during bulk edits
