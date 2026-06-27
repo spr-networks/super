@@ -1,6 +1,13 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+
+## v1.1.6
+** Fixes **
+- Update hostapd
+- Add missing add device button removed during bulk edits
+- Fix more FS timestamp fixes for bit-reproducible docker builds
+
 ## v1.1.5
 ** Fixes **
 - FS timestamp fixes for bit-reproducible docker builds
