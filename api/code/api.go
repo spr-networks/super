@@ -767,6 +767,38 @@ func releaseChannels(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(reply)
 }
 
+func attestStatus(w http.ResponseWriter, r *http.Request) {
+	method := http.MethodGet
+	if r.Method == http.MethodPut {
+		method = http.MethodPut
+	}
+
+	c := getSuperdClient()
+	defer c.CloseIdleConnections()
+
+	req, err := http.NewRequest(method, "http://localhost/attest_status", nil)
+	if err != nil {
+		http.Error(w, "failed to make superd request", 400)
+		return
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		http.Error(w, "failed to request attestation status from superd", 400)
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		http.Error(w, "failed to get attestation status", 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(body)
+}
+
 // return "version" if <= 1 params else {"name": "version"}
 func getContainerVersion(w http.ResponseWriter, r *http.Request) {
 	var containers []string
@@ -3203,6 +3235,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/releasesAvailable", releasesAvailable).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/update", update).Methods("PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/version", getContainerVersion).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/attestStatus", attestStatus).Methods("GET", "PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/features", getFeatures).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/autoupdate", autoUpdate).Methods("GET", "PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/checkupdates", checkUpdates).Methods("GET", "PUT", "DELETE")

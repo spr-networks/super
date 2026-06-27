@@ -4,7 +4,7 @@
 # which were the only non-reproducible part of this image.
 ARG ALPINE_REF=alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
 ARG UBUNTU_REF=ubuntu:24.04@sha256:786a8b558f7be160c6c8c4a54f9a57274f3b4fb1491cf65146521ae77ff1dc54
-ARG CONTAINER_TEMPLATE_REF=ghcr.io/spr-networks/container_template@sha256:295e44462ab12776c716e28a64dc5a00131576d606e7db6189af2f7869b9bb4e
+ARG CONTAINER_TEMPLATE_REF=ghcr.io/spr-networks/container_template@sha256:8906ef0651221ea67f3db0e9e630ac17eb363eae7ebccd829e613e40616a12dc
 ARG SOURCE_DATE_EPOCH
 
 FROM ${ALPINE_REF} AS cacerts

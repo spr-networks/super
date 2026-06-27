@@ -21,10 +21,21 @@ import {
   ThreeDotsIcon,
   EyeIcon,
   EyeOffIcon,
-  ArrowRightIcon
+  ArrowRightIcon,
+  Pressable,
+  Link,
+  LinkText,
+  Spinner
 } from '@gluestack-ui/themed'
 
-import { HardDriveIcon, ListIcon, CableIcon } from 'lucide-react-native'
+import {
+  HardDriveIcon,
+  ListIcon,
+  CableIcon,
+  ShieldCheckIcon,
+  ShieldXIcon,
+  ExternalLinkIcon
+} from 'lucide-react-native'
 
 import { ListHeader, ListItem } from 'components/List'
 
@@ -47,12 +58,123 @@ const stateColor = (state) => {
   return stateColors[state] || 'muted'
 }
 
+// drop the :tag and @sha256 so a running container's image matches the
+// attestation result keyed by repo tag
+const normalizeRepo = (img) => (img || '').split('@')[0].replace(/:[^/]+$/, '')
+
 const DockerInfo = ({ ...props }) => {
   const context = useContext(AlertContext)
   const modalContext = useContext(ModalContext)
   const navigate = useNavigate()
 
   const [containers, setContainers] = useState([])
+  const [attestByImage, setAttestByImage] = useState({})
+
+  const loadAttest = (method = 'get') => {
+    const req =
+      method === 'put' ? api.put('/attestStatus') : api.get('/attestStatus')
+    return req.then((results) => {
+      const list = results || []
+      let m = {}
+      list.forEach((r) => {
+        m[normalizeRepo(r.Image)] = r
+      })
+      setAttestByImage(m)
+      return list.length
+    })
+  }
+
+  const signatureDetails = (attest) => (
+    <VStack space="md">
+      <VStack space="xs">
+        <Heading size="xs">Image digest</Heading>
+        <Text size="xs" color="$muted500">
+          {attest.Digest}
+        </Text>
+      </VStack>
+      {attest.Signer ? (
+        <VStack space="xs">
+          <Heading size="xs">Signed by</Heading>
+          <Text size="xs" color="$muted500">
+            {attest.Signer}
+          </Text>
+          {attest.Issuer ? (
+            <Text size="xs" color="$muted500">
+              {attest.Issuer}
+            </Text>
+          ) : null}
+        </VStack>
+      ) : null}
+      {attest.Config ? (
+        <VStack space="xs">
+          <Heading size="xs">Config layer</Heading>
+          <Text size="xs" color="$muted500">
+            {attest.Config}
+          </Text>
+        </VStack>
+      ) : null}
+      {attest.Layers?.length ? (
+        <VStack space="xs">
+          <Heading size="xs">Container layers ({attest.Layers.length})</Heading>
+          {attest.Layers.map((l, i) => (
+            <Text key={i} size="xs" color="$muted500">
+              {l}
+            </Text>
+          ))}
+        </VStack>
+      ) : null}
+      {attest.Error ? (
+        <VStack space="xs">
+          <Heading size="xs">Error</Heading>
+          <Text size="xs" color="$error600">
+            {attest.Error}
+          </Text>
+        </VStack>
+      ) : null}
+      {attest.RekorURL ? (
+        <Link isExternal href={attest.RekorURL}>
+          <HStack space="xs" alignItems="center">
+            <LinkText size="sm">
+              Verify in Sigstore{attest.LogIndex ? ` (Rekor #${attest.LogIndex})` : ''}
+            </LinkText>
+            <Icon as={ExternalLinkIcon} color="$muted500" size="xs" />
+          </HStack>
+        </Link>
+      ) : null}
+    </VStack>
+  )
+
+  const signatureBadge = (item) => {
+    let attest = attestByImage[normalizeRepo(item.Image)]
+    if (!attest) {
+      return null
+    }
+    let verified = attest.Verified
+    return (
+      <Pressable
+        onPress={() =>
+          modalContext.modal(
+            `${niceName(item.Names)} signature`,
+            signatureDetails(attest)
+          )
+        }
+      >
+        <Badge
+          action={verified ? 'success' : 'error'}
+          variant="outline"
+          size="sm"
+        >
+          <Icon
+            as={verified ? ShieldCheckIcon : ShieldXIcon}
+            size="xs"
+            mr="$1"
+            color={verified ? '$success700' : '$error700'}
+          />
+          <BadgeText>{verified ? 'verified' : 'unverified'}</BadgeText>
+        </Badge>
+      </Pressable>
+    )
+  }
 
   const renderDockerContainer = ({ item, navigate }) => {
     let containerName = niceName(item.Names)
@@ -198,6 +320,7 @@ const DockerInfo = ({ ...props }) => {
               <BadgeText>{item.State}</BadgeText>
             </Badge>
             {networkSummary(item)}
+            {signatureBadge(item)}
           </HStack>
         </VStack>
 
@@ -236,16 +359,36 @@ const DockerInfo = ({ ...props }) => {
       .catch((err) => context.error(err))
   }, [])
 
+  const [verifying, setVerifying] = useState(false)
+
+  // auto: show cached results immediately, then re-verify in the background so
+  // the displayed signatures are always fresh — no user action needed
+  useEffect(() => {
+    loadAttest().catch(() => {})
+    setVerifying(true)
+    loadAttest('put')
+      .catch(() => {})
+      .finally(() => setVerifying(false))
+  }, [])
+
   const [showDocker, setShowDocker] = useState(false)
 
   return (
     <Box {...props}>
       <ListHeader title="Docker Containers">
+        {verifying ? (
+          <HStack ml="auto" space="xs" alignItems="center">
+            <Spinner size="small" />
+            <Text size="xs" color="$muted500">
+              Verifying signatures…
+            </Text>
+          </HStack>
+        ) : null}
         <Button
-          ml="auto"
           size="sm"
           action="muted"
           variant="link"
+          ml={verifying ? '$2' : 'auto'}
           onPress={() => setShowDocker(!showDocker)}
         >
           <ButtonText color="$muted500">
