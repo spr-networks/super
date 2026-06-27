@@ -8,6 +8,7 @@ import {
   HStack,
   Button,
   ButtonText,
+  ButtonIcon,
   Fab,
   FabIcon,
   FabLabel,
@@ -367,20 +368,6 @@ const Devices = (props) => {
     <View h="$full">
       <ListHeader>
         {/*<Button
-          size="xs"
-          action="primary"
-          variant="solid"
-          display="none"
-          sx={{
-            '@md': { display: 'flex' }
-          }}
-          onPress={handleRedirect}
-        >
-          <ButtonText>Add</ButtonText>
-          <ButtonIcon as={AddIcon} ml="$2" />
-        </Button>*/}
-
-        {/*<Button
             size="sm"
             variant="ghost"
             colorScheme="blueGray"
@@ -423,6 +410,17 @@ const Devices = (props) => {
               <Select.Item key={opt} label={opt} value={opt} />
             ))}
           </Select>
+
+          <Button
+            action="primary"
+            size="sm"
+            onPress={handleRedirect}
+            display="none"
+            sx={{ '@md': { display: 'flex' } }}
+          >
+            <ButtonText>Add Device</ButtonText>
+            <ButtonIcon as={AddIcon} ml="$1" />
+          </Button>
         </HStack>
 
         {/*
