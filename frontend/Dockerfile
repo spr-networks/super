@@ -7,6 +7,9 @@ FROM --platform=$BUILDPLATFORM ${NODE_REF} AS build
 
 WORKDIR /app
 COPY . ./
+# Normalize source modes so yarn-build's output directories don't inherit
+# whatever umask the host clone happened to use.
+RUN find . -exec chmod go-w {} +
 ARG USE_TMPFS=true
 RUN --mount=type=tmpfs,target=/tmpfs \
     [ "$USE_TMPFS" = "true" ] && \

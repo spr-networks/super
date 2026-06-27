@@ -60,6 +60,9 @@ jobs:
           fi
           echo "push=$push" >> "$GITHUB_OUTPUT"
       -
+        name: Normalize file modes for reproducible COPY layers
+        run: find . -path ./.git -prune -o -exec chmod go-w {} +
+      -
         name: Authenticate to Docker Hub
         if: ${{ vars.DOCKERHUB_USERNAME != '' }}
         uses: docker/login-action@v3

@@ -57,8 +57,6 @@ func dockerConfigBasicAuth(host string) string {
 	return config.Auths[host].Auth
 }
 
-// newRegClient performs the distribution token dance for a registry,
-// anonymously or with credentials from the docker config.
 func newRegClient(host, repo string) (*regClient, error) {
 	r := &regClient{host: host, c: http.Client{Timeout: 30 * time.Second}}
 	r.basic = dockerConfigBasicAuth(host)
@@ -367,41 +365,50 @@ func assembleBundle(att *cosignAttestation) (*bundle.Bundle, error) {
 	return bundle.NewBundle(pb)
 }
 
-// verifyRegistryAttestation verifies the cosign provenance attestation for an
-// image digest against a workflow identity. The attestation is fetched from
-// the image's own registry with the same credentials that pull the image.
 func verifyRegistryAttestation(host, repo, digest, sanRegex string) error {
+	_, err := verifyRegistryAttestationInfo(host, repo, digest, sanRegex)
+	return err
+}
+
+func verifyRegistryAttestationInfo(host, repo, digest, sanRegex string) (*attestInfo, error) {
 	att, err := fetchRegistryAttestation(host, repo, digest)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	b, err := assembleBundle(att)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	verifier, err := getSigstoreVerifier()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	digestBytes, err := hex.DecodeString(strings.TrimPrefix(digest, "sha256:"))
 	if err != nil || len(digestBytes) != 32 {
-		return fmt.Errorf("invalid digest %s", digest)
+		return nil, fmt.Errorf("invalid digest %s", digest)
 	}
 
 	certID, err := verify.NewShortCertificateIdentity(AttestationIssuer, "", "", sanRegex)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	policy := verify.NewPolicy(verify.WithArtifactDigest("sha256", digestBytes),
 		verify.WithCertificateIdentity(certID))
 
-	_, err = verifier.Verify(b, policy)
-	if err != nil {
-		return fmt.Errorf("attestation verification failed for %s: %v", digest, err)
+	if _, err = verifier.Verify(b, policy); err != nil {
+		return nil, fmt.Errorf("attestation verification failed for %s: %v", digest, err)
 	}
 
-	return nil
+	info := &attestInfo{
+		Signer:   certIdentitySAN(att.certPEM),
+		Issuer:   AttestationIssuer,
+		LogIndex: rekorLogIndex(att.rekorBundle),
+	}
+	if info.LogIndex > 0 {
+		info.RekorURL = fmt.Sprintf("https://search.sigstore.dev/?logIndex=%d", info.LogIndex)
+	}
+	return info, nil
 }

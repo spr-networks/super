@@ -66,6 +66,12 @@ type AttestResult struct {
 	Verified bool
 	Error    string `json:",omitempty"`
 	Time     string
+	Signer   string   `json:",omitempty"`
+	Issuer   string   `json:",omitempty"`
+	RekorURL string   `json:",omitempty"`
+	LogIndex int64    `json:",omitempty"`
+	Config   string   `json:",omitempty"`
+	Layers   []string `json:",omitempty"`
 }
 
 var Attestmtx sync.Mutex
@@ -341,15 +347,24 @@ func verifyPulledImages() {
 		result := AttestResult{Image: tag, Digest: digest, Time: time.Now().UTC().Format(time.RFC3339)}
 		if digest == "" {
 			result.Error = "no repo digest (locally built image)"
-		} else {
-			var err error
-			if policy.registry {
-				host, repo, _ := splitImageRef(tag)
-				err = verifyRegistryAttestation(host, repo, digest, policy.sanRegex)
-			} else {
-				err = verifyGithubAttestation(digest, policy.sanRegex)
-			}
+		} else if policy.registry {
+			host, repo, _ := splitImageRef(tag)
+			info, err := verifyRegistryAttestationInfo(host, repo, digest, policy.sanRegex)
 			if err != nil {
+				result.Error = err.Error()
+			} else {
+				result.Verified = true
+				result.Signer = info.Signer
+				result.Issuer = info.Issuer
+				result.RekorURL = info.RekorURL
+				result.LogIndex = info.LogIndex
+				if mi, mErr := fetchManifestInfo(host, repo, digest); mErr == nil {
+					result.Config = mi.Config
+					result.Layers = mi.Layers
+				}
+			}
+		} else {
+			if err := verifyGithubAttestation(digest, policy.sanRegex); err != nil {
 				result.Error = err.Error()
 			} else {
 				result.Verified = true
