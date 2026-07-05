@@ -859,11 +859,6 @@ func buildIPIPKey(srcIP, dstIP string) []byte {
 	return append(IPToBytes(srcIP), IPToBytes(dstIP)...)
 }
 
-// buildIPIPPortKey builds a key from src IP, dst IP, and port
-func buildIPIPPortKey(srcIP, dstIP, port string) []byte {
-	return append(append(IPToBytes(srcIP), IPToBytes(dstIP)...), PortToBytesForConcatenated(port)...)
-}
-
 // buildIPIfaceKey builds a key from IP and interface
 func buildIPIfaceKey(ip, iface string) []byte {
 	return append(IPToBytes(ip), InterfaceToBytes(iface)...)
@@ -1278,17 +1273,21 @@ func DeleteServicePort(protocol, port string, upstream bool) error {
 	return client.DeleteMapElement(TableFamilyInet, "filter", mapName, key)
 }
 
+func endpointKey(srcIP, dstIP, port string) (key, keyEnd []byte) {
+	return concatRangeKeys(ipField(srcIP), ipField(dstIP), portField(port))
+}
+
 // AddEndpoint adds an endpoint rule
 func AddEndpoint(protocol, srcIP, dstIP, port string) error {
 	client := GetNFTClient()
 
 	mapName := "ept_" + protocol + "fwd"
-	key := buildIPIPPortKey(srcIP, dstIP, port)
+	key, keyEnd := endpointKey(srcIP, dstIP, port)
+	if key == nil {
+		return fmt.Errorf("invalid IP or port")
+	}
 
-	// Pass verdict as string - AddMapElement will handle the conversion for verdict maps
-	value := []byte("accept")
-
-	return client.AddMapElement(TableFamilyInet, "filter", mapName, key, value)
+	return client.AddMapElementRange(TableFamilyInet, "filter", mapName, key, keyEnd, []byte("accept"))
 }
 
 // DeleteEndpoint removes an endpoint rule
@@ -1296,9 +1295,12 @@ func DeleteEndpoint(protocol, srcIP, dstIP, port string) error {
 	client := GetNFTClient()
 
 	mapName := "ept_" + protocol + "fwd"
-	key := buildIPIPPortKey(srcIP, dstIP, port)
+	key, keyEnd := endpointKey(srcIP, dstIP, port)
+	if key == nil {
+		return fmt.Errorf("invalid IP or port")
+	}
 
-	return client.DeleteMapElement(TableFamilyInet, "filter", mapName, key)
+	return client.DeleteMapElementRange(TableFamilyInet, "filter", mapName, key, keyEnd)
 }
 
 // HasEndpoint checks if an endpoint rule exists
@@ -1306,7 +1308,10 @@ func HasEndpoint(protocol, srcIP, dstIP, port string) bool {
 	client := GetNFTClient()
 
 	mapName := "ept_" + protocol + "fwd"
-	key := buildIPIPPortKey(srcIP, dstIP, port)
+	key, _ := endpointKey(srcIP, dstIP, port)
+	if key == nil {
+		return false
+	}
 
 	err := client.GetMapElement(TableFamilyInet, "filter", mapName, key)
 	return err == nil
