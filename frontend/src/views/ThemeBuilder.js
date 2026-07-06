@@ -2,7 +2,8 @@ import React, { useContext, useState } from 'react'
 import { Linking, Platform } from 'react-native'
 
 import { AppContext, AlertContext } from 'AppContext'
-import { DEFAULT_CUSTOM, deriveCustomColors } from 'Themes'
+import { DEFAULT_CUSTOM } from 'Themes'
+import ThemePreview from 'components/ThemePreview'
 
 import {
   Box,
@@ -90,54 +91,6 @@ const ColorField = ({ label, help, value, onChange }) => {
         ))}
       </HStack>
     </VStack>
-  )
-}
-
-const Preview = ({ spec }) => {
-  let c = deriveCustomColors(spec)
-  let get = (k, fb) => c[k] || fb
-  let dark = spec.colorMode == 'dark'
-  let border = dark ? get('borderColorCardDark') : get('borderColorCardLight')
-  let secondary = get('muted500')
-
-  return (
-    <Box
-      rounded="$lg"
-      p="$4"
-      bg={spec.background}
-      borderWidth={1}
-      borderColor={border}
-    >
-      <Text bold mb="$3" style={{ color: spec.text }}>
-        Preview
-      </Text>
-      <Box
-        rounded="$md"
-        p="$3"
-        bg={spec.card}
-        borderWidth={1}
-        borderColor={border}
-      >
-        <Text bold style={{ color: spec.text }}>
-          Living room TV
-        </Text>
-        <Text size="sm" style={{ color: secondary }}>
-          192.168.2.24 · online
-        </Text>
-        <HStack space="sm" mt="$2" alignItems="center">
-          <Box rounded="$md" px="$3" py="$1" bg={get('primary600')}>
-            <Text size="sm" style={{ color: '#ffffff' }}>
-              Save
-            </Text>
-          </Box>
-          <Box rounded="$lg" px="$2" py="$1" bg={get('primary400')}>
-            <Text size="xs" style={{ color: spec.card }}>
-              wan
-            </Text>
-          </Box>
-        </HStack>
-      </Box>
-    </Box>
   )
 }
 
@@ -285,7 +238,7 @@ export default function ThemeBuilder() {
           </VStack>
 
           <VStack space="md" flex={1} minWidth={280}>
-            <Preview spec={spec} />
+            <ThemePreview spec={spec} />
           </VStack>
         </HStack>
 

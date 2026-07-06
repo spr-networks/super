@@ -290,7 +290,7 @@ const FilterSelect = ({ items, onSubmitEditing, topic, query, ...props }) => {
       <ScrollView
         bg="$backgroundCardLight"
         sx={{ _dark: { bg: '$backgroundCardDark' } }}
-        rounded="md"
+        rounded="$md"
         p="$2"
         maxHeight={150}
         display={showSample ? 'flex' : 'none'}

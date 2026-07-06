@@ -1,4 +1,5 @@
 import React, { useContext, useEffect } from 'react'
+import { Platform } from 'react-native'
 import {
   NativeRouter as Router,
   Route,
@@ -59,8 +60,12 @@ export default function App() {
   useEffect(() => {
     loadSettings()
 
-    //iOS specific, setup notifications
     DeviceInfo.initDevice()
+
+    //iOS specific, setup notifications
+    if (Platform.OS !== 'ios') {
+      return
+    }
 
     PushNotificationIOS.addEventListener(
       'notification',

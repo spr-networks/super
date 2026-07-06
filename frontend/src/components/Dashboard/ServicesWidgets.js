@@ -107,7 +107,7 @@ const ServicesEnabled = ({ features, isFeaturesInitialized, isMeshNode, serviceS
         space="lg"
         justifyContent="space-around"
         p="$4"
-        rounded="lg"
+        rounded="$lg"
         flexWrap="wrap"
       >
         <ServiceIcon

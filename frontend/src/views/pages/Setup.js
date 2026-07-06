@@ -51,6 +51,7 @@ import {
 import { Select } from 'components/Select'
 
 import { themeList, themeKeyFor, themes, DEFAULT_THEME } from 'Themes'
+import ThemePreview from 'components/ThemePreview'
 import { AlertContext } from 'AppContext'
 import {
   AlertCircle,
@@ -153,6 +154,7 @@ const Setup = (props) => {
   const [alertBody, setAlertBody] = useState('')
   const [theme, setThemeState] = useState(DEFAULT_THEME)
   const [themeColorMode, setThemeColorMode] = useState('light')
+  const [previewKey, setPreviewKey] = useState(null)
 
   const [addrs, setAddrs] = useState([])
   const [apiReachable, setApiReachable] = useState(false)
@@ -779,57 +781,91 @@ const Setup = (props) => {
   }
 
   if (setupStage == 3) {
+    const selectedKey = themeKeyFor(theme, themeColorMode)
+    const activeKey = previewKey || selectedKey
+    const previewEntry =
+      themeList.find((t) => t.key === activeKey) || themeList[0]
+    const previewRecord = previewEntry
+      ? {
+          colorMode: previewEntry.colorMode,
+          colors: themes[previewEntry.id]?.colors || {}
+        }
+      : null
+
     return (
       <SetupScrollView>
         <SetupHeading title="Choose a Theme" justifyContent="center" />
         <VStack space="md" my="$2">
-          <Text color="$muted500" alignSelf="center" textAlign="center">
-            Pick a look for SPR. You can change it anytime later in Settings.
-          </Text>
-          {themeList.map((t) => {
-            const selected = themeKeyFor(theme, themeColorMode) === t.key
-            return (
-              <Pressable
-                key={t.key}
-                onPress={() => selectTheme(t)}
-                accessibilityLabel={`Select theme ${t.name}`}
-              >
-                <HStack
-                  space="md"
-                  alignItems="center"
-                  p="$3"
-                  rounded="$lg"
-                  borderWidth={1}
-                  borderColor={selected ? '$primary500' : '$muted200'}
-                  sx={{
-                    _dark: {
-                      borderColor: selected ? '$primary500' : '$muted700'
-                    }
-                  }}
-                >
-                  <Box
-                    w={12}
-                    h={12}
-                    rounded="$full"
-                    bg={t.swatch?.bg}
-                    borderWidth={1}
-                    borderColor="$muted300"
-                    alignItems="center"
-                    justifyContent="center"
-                    mr="$1"
+          <HStack
+            space="lg"
+            alignItems="stretch"
+            sx={{
+              '@base': { flexDirection: 'column' },
+              '@md': { flexDirection: 'row' }
+            }}
+          >
+            <VStack flex={1} space="xs" minWidth={220}>
+              {themeList.map((t) => {
+                const selected = selectedKey === t.key
+                return (
+                  <Pressable
+                    key={t.key}
+                    onPress={() => selectTheme(t)}
+                    onHoverIn={() => setPreviewKey(t.key)}
+                    onHoverOut={() => setPreviewKey(null)}
+                    accessibilityLabel={`Select theme ${t.name}`}
                   >
-                    <Box w={6} h={6} rounded="$full" bg={t.swatch?.accent} />
-                  </Box>
-                  <Text flex={1} size="md">
-                    {t.name}
-                  </Text>
-                  {selected ? (
-                    <Icon as={CheckIcon} color="$primary600" />
-                  ) : null}
-                </HStack>
-              </Pressable>
-            )
-          })}
+                    <HStack
+                      space="sm"
+                      alignItems="center"
+                      p="$3"
+                      rounded="$lg"
+                      borderWidth={1}
+                      borderColor={selected ? '$primary500' : '$muted200'}
+                      sx={{
+                        _dark: {
+                          borderColor: selected ? '$primary500' : '$muted700'
+                        }
+                      }}
+                    >
+                      <Box
+                        w={8}
+                        h={8}
+                        rounded="$full"
+                        bg={t.swatch?.bg}
+                        borderWidth={1}
+                        borderColor="$muted300"
+                        alignItems="center"
+                        justifyContent="center"
+                      >
+                        <Box
+                          w={4}
+                          h={4}
+                          rounded="$full"
+                          bg={t.swatch?.accent}
+                        />
+                      </Box>
+                      <Text flex={1} size="md">
+                        {t.name}
+                      </Text>
+                      {selected ? (
+                        <Icon as={CheckIcon} color="$primary600" />
+                      ) : null}
+                    </HStack>
+                  </Pressable>
+                )
+              })}
+            </VStack>
+            <Box flex={1} minWidth={220}>
+              <ThemePreview theme={previewRecord} width="100%" />
+              <Text bold size="sm" mt="$2">
+                {previewEntry?.name}
+              </Text>
+              <Text size="xs" color="$muted500">
+                {previewEntry?.colorMode === 'light' ? 'Light' : 'Dark'} theme
+              </Text>
+            </Box>
+          </HStack>
         </VStack>
         <ButtonSetup
           onPress={() => setSetupStage(4)}

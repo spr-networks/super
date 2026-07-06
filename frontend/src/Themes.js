@@ -686,3 +686,64 @@ export const customThemeCss = (customTheme, id = CUSTOM_THEME_ID) => {
     .join(' ')
   return body ? `[data-theme-id="${id}"] { ${body} }` : ''
 }
+
+// Representative surface colors for a theme's mini preview (built-in or
+// custom). Falls back to gluestack-ish defaults when a theme omits tokens
+// (e.g. the `default` theme, which carries no overrides).
+const PREVIEW_FALLBACK = {
+  light: {
+    page: '#f5f5f5',
+    side: '#f1f5f9',
+    navbar: '#ffffff',
+    card: '#ffffff',
+    text: '#11181c',
+    accent: '#64748b',
+    border: '#e5e7eb'
+  },
+  dark: {
+    page: '#0f172a',
+    side: '#0b1220',
+    navbar: '#0b1220',
+    card: '#1e293b',
+    text: '#f8fafc',
+    accent: '#64748b',
+    border: '#1f2937'
+  }
+}
+
+const cap = (m) => m.charAt(0).toUpperCase() + m.slice(1)
+
+export const previewColorsFor = (record) => {
+  if (!record) return PREVIEW_FALLBACK.light
+  let mode = record.colorMode === 'light' ? 'light' : 'dark'
+  let c = record.colors || {}
+  let g = (k) => c[k]
+  let fb = PREVIEW_FALLBACK[mode]
+  let val = (...keys) => {
+    for (let k of keys) {
+      let v = g(k)
+      if (v && HEX_COLOR.test(v)) return v
+    }
+    return null
+  }
+  return {
+    page:
+      val(
+        `backgroundContent${cap(mode)}`,
+        mode === 'dark' ? 'black' : 'coolGray50'
+      ) || fb.page,
+    side: val(`sidebarBackground${cap(mode)}`) || fb.side,
+    navbar: val(`navbarBackground${cap(mode)}`) || fb.navbar,
+    card:
+      val(
+        `backgroundCard${cap(mode)}`,
+        mode === 'dark' ? 'blueGray900' : 'coolGray50'
+      ) || fb.card,
+    text:
+      (mode === 'dark'
+        ? val('textDark100', 'textDark50')
+        : val('textLight900', 'textLight600')) || fb.text,
+    accent: val('primary400') || fb.accent,
+    border: val(`borderColorCard${cap(mode)}`) || fb.border
+  }
+}

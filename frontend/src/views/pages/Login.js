@@ -209,6 +209,8 @@ const Login = (props) => {
               onSubmitEditing={handleLogin}
               type="password"
               placeholder="Password"
+              autoCapitalize="none"
+              autoCorrect={false}
             />
             <InputSlot pr="$3">
               <InputIcon as={LockIcon} color="$muted400" />
@@ -222,7 +224,7 @@ const Login = (props) => {
           ) : null}
         </FormControl>
         <Button
-          rounded="full"
+          rounded="$full"
           colorScheme="yellow"
           bg="#fbc658"
           sx={{
