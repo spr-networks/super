@@ -6,6 +6,7 @@
 #                                               # (matches CI runner umask=002)
 #   verify-reproducibility.sh [tag]             # default tag = git tag on HEAD
 #   verify-reproducibility.sh diff <container>  # show what differs in one container
+#   verify-reproducibility.sh sigstore [tag]    # only verify sigstore attestations
 #
 #   cd ~/super
 #   ./scripts/verify-reproducibility.sh prep
@@ -21,6 +22,12 @@ ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 # the remote side.
 LOCAL_TAG="${LOCAL_TAG:-latest}"
 REMOTE_TAG=$(git describe --tags --abbrev=0 2>/dev/null | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' || echo "latest")
+
+ATTEST_REPO="spr-networks/super"
+ATTEST_WORKFLOW="spr-networks/super/.github/workflows/docker-image.yml"
+SIGSTORE_ISSUER="https://token.actions.githubusercontent.com"
+SIGSTORE_IDENTITY_REGEXP='^https://github\.com/spr-networks/super/\.github/workflows/docker-image\.yml@'
+SIGSTORE_TOOL=""
 
 CONTAINERS=(
   super_base super_api super_dns super_dhcp super_dhcp_client
@@ -103,31 +110,101 @@ layers_match() {
   [ -n "$rem" ] && [ "$rem" = "$loc" ]
 }
 
+# Select the sigstore verifier once. Prefer gh (canonical for
+# actions/attest-build-provenance); fall back to cosign.
+detect_sigstore_tool() {
+  if command -v gh >/dev/null 2>&1 && gh attestation --help >/dev/null 2>&1; then
+    SIGSTORE_TOOL="gh"
+  elif command -v cosign >/dev/null 2>&1; then
+    SIGSTORE_TOOL="cosign"
+  fi
+}
+
+# Verify the published image carries a valid sigstore build-provenance
+# attestation from the SPR release workflow — the same identity superd enforces
+# on update. Returns 0 verified, 1 failed, 2 no tooling.
+verify_sigstore() {
+  local ref="$1"
+  case "$SIGSTORE_TOOL" in
+    gh)
+      gh attestation verify "oci://$ref" --repo "$ATTEST_REPO" \
+        --signer-workflow "$ATTEST_WORKFLOW" >/dev/null 2>&1
+      ;;
+    cosign)
+      cosign verify-attestation --type slsaprovenance1 \
+        --certificate-identity-regexp "$SIGSTORE_IDENTITY_REGEXP" \
+        --certificate-oidc-issuer "$SIGSTORE_ISSUER" \
+        "$ref" >/dev/null 2>&1
+      ;;
+    *)
+      return 2 ;;
+  esac
+}
+
+run_sigstore() {
+  detect_sigstore_tool
+  if [ -z "$SIGSTORE_TOOL" ]; then
+    echo "no sigstore tool found; install 'gh' (gh extension: attestation) or 'cosign'" >&2
+    exit 2
+  fi
+  local fails=0 checked=0
+  for c in "${CONTAINERS[@]}"; do
+    local remote_ref="ghcr.io/spr-networks/${c}:${REMOTE_TAG}"
+    docker manifest inspect "$remote_ref" >/dev/null 2>&1 || { printf "SKIP   %s (no published image)\n" "$c"; continue; }
+    checked=$((checked + 1))
+    if verify_sigstore "$remote_ref"; then
+      printf "SIGOK  %s\n" "$c"
+    else
+      printf "SIGBAD %s\n" "$c"
+      fails=$((fails + 1))
+    fi
+  done
+  echo
+  echo "sigstore verified ${checked} image(s) at :${REMOTE_TAG} via ${SIGSTORE_TOOL}"
+  [ "$fails" -eq 0 ] || { echo "${fails} image(s) failed sigstore verification"; exit 1; }
+}
+
 run_verify() {
-  local fails=0
+  detect_sigstore_tool
+  [ -z "$SIGSTORE_TOOL" ] && echo "note: no gh/cosign found — skipping sigstore checks (install gh or cosign to enable)"
+  local fails=0 sig_fails=0
   for c in "${CONTAINERS[@]}"; do
     local local_ref="ghcr.io/spr-networks/${c}:${LOCAL_TAG}"
     local remote_ref="ghcr.io/spr-networks/${c}:${REMOTE_TAG}"
-    local local_id remote_cfg
+    local local_id remote_cfg sig=""
     local_id=$(docker image inspect "$local_ref" -f '{{.Id}}' 2>/dev/null) || { printf "SKIP   %s (not built locally)\n" "$c"; continue; }
     remote_cfg=$(remote_config_digest "$remote_ref") || { printf "SKIP   %s (no published manifest for $ARCH)\n" "$c"; continue; }
+
+    if [ -n "$SIGSTORE_TOOL" ]; then
+      if verify_sigstore "$remote_ref"; then
+        sig="  [sig OK]"
+      else
+        sig="  [SIG FAIL]"
+        sig_fails=$((sig_fails + 1))
+      fi
+    fi
+
     if [ "$local_id" = "$remote_cfg" ]; then
-      printf "OK     %s\n" "$c"
+      printf "OK     %s%s\n" "$c" "$sig"
     elif layers_match "$local_ref" "$remote_cfg"; then
-      printf "OK*    %s  (layers identical; config differs — likely just the version label)\n" "$c"
+      printf "OK*    %s  (layers identical; config differs — likely just the version label)%s\n" "$c" "$sig"
     else
-      printf "DIFFER %s\n  local:  %s\n  remote: %s\n" "$c" "$local_id" "$remote_cfg"
+      printf "DIFFER %s%s\n  local:  %s\n  remote: %s\n" "$c" "$sig" "$local_id" "$remote_cfg"
       fails=$((fails + 1))
     fi
   done
   echo
   echo "compared local :${LOCAL_TAG} against remote :${REMOTE_TAG}"
-  if [ "$fails" -eq 0 ]; then
-    echo "all containers reproduce"
-  else
+  [ -n "$SIGSTORE_TOOL" ] && echo "sigstore attestations checked via ${SIGSTORE_TOOL}"
+  if [ "$fails" -ne 0 ]; then
     echo "${fails} container(s) differ at the layer level; run: $0 diff <container>"
     exit 1
   fi
+  if [ "$sig_fails" -ne 0 ]; then
+    echo "${sig_fails} container(s) failed sigstore verification"
+    exit 1
+  fi
+  echo "all containers reproduce${SIGSTORE_TOOL:+ and pass sigstore verification}"
 }
 
 case "${1:-}" in
@@ -138,6 +215,10 @@ case "${1:-}" in
     [ $# -lt 2 ] && { echo "usage: $0 diff <container> [remote-tag]"; exit 2; }
     [ -n "${3:-}" ] && REMOTE_TAG="$3"
     diff_container "$2"
+    ;;
+  sigstore)
+    [ -n "${2:-}" ] && REMOTE_TAG="$2"
+    run_sigstore
     ;;
   "")
     run_verify
