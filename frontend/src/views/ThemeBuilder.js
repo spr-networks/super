@@ -1,4 +1,5 @@
 import React, { useContext, useState } from 'react'
+import { Linking, Platform } from 'react-native'
 
 import { AppContext, AlertContext } from 'AppContext'
 import { DEFAULT_CUSTOM, deriveCustomColors } from 'Themes'
@@ -14,7 +15,8 @@ import {
   Pressable,
   ScrollView,
   Text,
-  VStack
+  VStack,
+  CloseIcon
 } from '@gluestack-ui/themed'
 
 const HEX = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/
@@ -95,9 +97,7 @@ const Preview = ({ spec }) => {
   let c = deriveCustomColors(spec)
   let get = (k, fb) => c[k] || fb
   let dark = spec.colorMode == 'dark'
-  let border = dark
-    ? get('borderColorCardDark')
-    : get('borderColorCardLight')
+  let border = dark ? get('borderColorCardDark') : get('borderColorCardLight')
   let secondary = get('muted500')
 
   return (
@@ -145,13 +145,13 @@ export default function ThemeBuilder() {
   const appContext = useContext(AppContext)
   const alertContext = useContext(AlertContext)
 
-  const [spec, setSpec] = useState(
-    (appContext.customTheme && appContext.customTheme.spec) || DEFAULT_CUSTOM
-  )
+  const [spec, setSpec] = useState(DEFAULT_CUSTOM)
+  const [name, setName] = useState('Custom')
 
   const update = (key) => (value) => setSpec({ ...spec, [key]: value })
 
   const valid =
+    name.trim().length > 0 &&
     HEX.test(spec.accent) &&
     HEX.test(spec.background) &&
     HEX.test(spec.card) &&
@@ -159,11 +159,52 @@ export default function ThemeBuilder() {
 
   const onSave = () => {
     if (!valid) {
-      alertContext.error('Enter valid #RRGGBB colors for all four fields')
+      alertContext.error('Enter a name and valid #RRGGBB colors for all fields')
       return
     }
-    appContext.saveCustomTheme(spec)
-    alertContext.success('Custom theme applied')
+    appContext.saveCustomTheme(name.trim(), spec)
+    alertContext.success(`Custom theme "${name.trim()}" applied`)
+  }
+
+  const onShare = () => {
+    if (!valid) return
+    const trimmed = name.trim()
+    const title = `Shared SPR theme: ${trimmed}`
+    const body = [
+      `My custom SPR theme, "${trimmed}".`,
+      '',
+      '```json',
+      JSON.stringify(
+        {
+          name: trimmed,
+          colorMode: spec.colorMode,
+          accent: spec.accent,
+          background: spec.background,
+          card: spec.card,
+          text: spec.text
+        },
+        null,
+        2
+      ),
+      '```',
+      '',
+      '#489'
+    ].join('\n')
+
+    const url =
+      'https://github.com/spr-networks/super/issues/new' +
+      '?title=' +
+      encodeURIComponent(title) +
+      '&body=' +
+      encodeURIComponent(body)
+
+    if (Platform.OS == 'web' && typeof window != 'undefined') {
+      window.open(url, '_blank')
+    } else {
+      Linking.openURL(url).catch(() =>
+        alertContext.error('Could not open browser')
+      )
+    }
   }
 
   return (
@@ -172,10 +213,28 @@ export default function ThemeBuilder() {
         <VStack space="xs">
           <Heading size="md">Custom theme</Heading>
           <Text color="$muted500">
-            Pick four colors and a base mode. The accent ramp, borders and
-            secondary text are derived automatically. Saving applies it live and
-            adds a “Custom” entry to the theme menu.
+            Name your theme, pick four colors and a base mode. The accent ramp,
+            borders and secondary text are derived automatically. Saving applies
+            it live and adds an entry to the theme menu.
           </Text>
+        </VStack>
+
+        <VStack space="xs">
+          <Text bold size="sm">
+            Theme name
+          </Text>
+          <Input size="sm" w={280}>
+            <InputField
+              value={name}
+              name="spr-theme-name"
+              autoComplete="off"
+              textContentType="none"
+              placeholder="e.g. Sunset"
+              onChangeText={setName}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </Input>
         </VStack>
 
         <VStack space="xs">
@@ -237,11 +296,78 @@ export default function ThemeBuilder() {
           <Button
             variant="outline"
             action="secondary"
-            onPress={() => setSpec(DEFAULT_CUSTOM)}
+            onPress={() => {
+              setSpec(DEFAULT_CUSTOM)
+              setName('Custom')
+            }}
           >
             <ButtonText>Reset</ButtonText>
           </Button>
+          <Button
+            variant="outline"
+            action="secondary"
+            onPress={onShare}
+            isDisabled={!valid}
+          >
+            <ButtonText>Share my theme</ButtonText>
+          </Button>
         </HStack>
+
+        {Object.keys(appContext.customThemes || {}).length > 0 ? (
+          <VStack space="sm">
+            <Text bold size="sm">
+              Saved themes
+            </Text>
+            <VStack space="xs">
+              {Object.values(appContext.customThemes).map((t) => (
+                <HStack
+                  key={t.id || t.name}
+                  alignItems="center"
+                  justifyContent="space-between"
+                  p="$2"
+                  rounded="$md"
+                  borderWidth={1}
+                  borderColor="$muted200"
+                  sx={{ _dark: { borderColor: '$muted700' } }}
+                >
+                  <HStack alignItems="center" space="sm">
+                    <Box
+                      w={8}
+                      h={8}
+                      rounded="$full"
+                      bg={t.swatch?.bg || t.spec?.background}
+                      borderWidth={1}
+                      borderColor="$muted300"
+                      alignItems="center"
+                      justifyContent="center"
+                    >
+                      <Box
+                        w={3}
+                        h={3}
+                        rounded="$full"
+                        bg={t.swatch?.accent || t.spec?.accent}
+                      />
+                    </Box>
+                    <Text size="sm">{t.name}</Text>
+                    {appContext.theme === t.id ? (
+                      <Text size="xs" color="$muted500">
+                        active
+                      </Text>
+                    ) : null}
+                  </HStack>
+                  <Button
+                    size="sm"
+                    variant="link"
+                    action="negative"
+                    onPress={() => appContext.deleteCustomTheme(t.id)}
+                  >
+                    <ButtonText>Delete</ButtonText>
+                  </Button>
+                </HStack>
+              ))}
+            </VStack>
+          </VStack>
+        ) : null}
       </VStack>
     </ScrollView>
   )

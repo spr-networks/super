@@ -20,8 +20,6 @@ import {
   MenuItem,
   MenuItemLabel,
   MenuIcon,
-  MoonIcon,
-  SunIcon,
   VStack,
   useColorMode,
   Pressable
@@ -36,7 +34,7 @@ import {
 } from 'lucide-react-native'
 
 import { AppContext } from 'AppContext'
-import { themeList } from 'Themes'
+import { themeList, themeKeyFor } from 'Themes'
 
 import RouteJump from './RouteJump'
 
@@ -47,17 +45,15 @@ const AdminNavbar = ({
   setIsOpenSidebar,
   isSimpleMode,
   setIsSimpleMode,
-  toggleColorMode,
   theme,
   setTheme,
-  customTheme,
+  customThemes,
   ...props
 }) => {
   const { isMeshNode, setActiveSidebarItem } = useContext(AppContext)
   const [versionStatus, setVersionStatus] = useState('')
 
   const colorMode = useColorMode()
-  //const toggleColorModeNB = useColorModeNB().toggleColorMode
 
   const navigate = useNavigate()
   const logout = async () => {
@@ -164,10 +160,29 @@ const AdminNavbar = ({
               }}
             >
               <HStack>
-                <Text size="lg" bold>
+                <Text
+                  size="lg"
+                  bold
+                  color={
+                    colorMode == 'light'
+                      ? '$navbarTextColorLight'
+                      : '$navbarTextColorDark'
+                  }
+                >
                   SPR
                 </Text>
-                {isMeshNode ? <Text size="lg">MESH</Text> : null}
+                {isMeshNode ? (
+                  <Text
+                    size="lg"
+                    color={
+                      colorMode == 'light'
+                        ? '$navbarTextColorLight'
+                        : '$navbarTextColorDark'
+                    }
+                  >
+                    MESH
+                  </Text>
+                ) : null}
               </HStack>
             </Pressable>
 
@@ -180,7 +195,14 @@ const AdminNavbar = ({
                 size="md"
                 py="$1"
               >
-                <BadgeText textTransform="none">
+                <BadgeText
+                  textTransform="none"
+                  color={
+                    colorMode == 'light'
+                      ? '$navbarTextColorLight'
+                      : '$navbarTextColorDark'
+                  }
+                >
                   {niceVersion(version)}
                 </BadgeText>
 
@@ -194,35 +216,18 @@ const AdminNavbar = ({
           <RouteJump />
 
           <HStack marginLeft="auto" space="2xl" alignItems="center">
-            <Link
-              isExternal
-              href="https://www.supernetworks.org/pages/docs/intro"
-              sx={{
-                '@base': { display: 'none' },
-                '@lg': { display: 'flex' },
-                _text: {
-                  textDecorationLine: 'none',
-                  color:
-                    colorMode == 'light'
-                      ? '$navbarTextColorLight'
-                      : '$navbarTextColorDark'
-                }
-              }}
-            >
-              <ButtonIcon as={BookOpenText} size="lg" />
-            </Link>
-
             {setTheme ? (
               <Menu
                 placement="bottom right"
                 selectionMode="single"
-                selectedKeys={theme ? [theme] : []}
+                selectedKeys={theme ? [themeKeyFor(theme, colorMode)] : []}
                 onSelectionChange={(e) => {
                   let key = e.currentKey
                   if (key == '__customize') {
                     navigate('/admin/theme')
                   } else if (key) {
-                    setTheme(key)
+                    let [id, mode] = key.split(':')
+                    setTheme(id, mode)
                   }
                 }}
                 trigger={(triggerProps) => (
@@ -240,7 +245,28 @@ const AdminNavbar = ({
                 )}
               >
                 {themeList.map((t) => (
-                  <MenuItem key={t.id} textValue={t.name}>
+                  <MenuItem key={t.key} textValue={t.key}>
+                    <Box
+                      w={16}
+                      h={16}
+                      rounded="$full"
+                      bg={t.swatch?.bg}
+                      borderWidth={1}
+                      borderColor="$borderColorCardDark"
+                      alignItems="center"
+                      justifyContent="center"
+                      mr="$2"
+                    >
+                      <Box w={7} h={7} rounded="$full" bg={t.swatch?.accent} />
+                    </Box>
+                    <MenuItemLabel size="sm">{t.name}</MenuItemLabel>
+                    {themeKeyFor(theme, colorMode) == t.key ? (
+                      <Icon as={CheckIcon} size="sm" ml="$2" />
+                    ) : null}
+                  </MenuItem>
+                ))}
+                {Object.values(customThemes || {}).map((t) => (
+                  <MenuItem key={t.id || t.name} textValue={t.id || t.name}>
                     <Box
                       w={16}
                       h={16}
@@ -260,32 +286,6 @@ const AdminNavbar = ({
                     ) : null}
                   </MenuItem>
                 ))}
-                {customTheme ? (
-                  <MenuItem key="custom" textValue="Custom">
-                    <Box
-                      w={16}
-                      h={16}
-                      rounded="$full"
-                      bg={customTheme.swatch?.bg}
-                      borderWidth={1}
-                      borderColor="$borderColorCardDark"
-                      alignItems="center"
-                      justifyContent="center"
-                      mr="$2"
-                    >
-                      <Box
-                        w={7}
-                        h={7}
-                        rounded="$full"
-                        bg={customTheme.swatch?.accent}
-                      />
-                    </Box>
-                    <MenuItemLabel size="sm">Custom</MenuItemLabel>
-                    {theme == 'custom' ? (
-                      <Icon as={CheckIcon} size="sm" ml="$2" />
-                    ) : null}
-                  </MenuItem>
-                ) : null}
                 <MenuItem key="__customize" textValue="Customize">
                   <Icon as={PaletteIcon} size="sm" mr="$2" />
                   <MenuItemLabel size="sm">Customize…</MenuItemLabel>
@@ -293,23 +293,23 @@ const AdminNavbar = ({
               </Menu>
             ) : null}
 
-            <Button
-              onPress={() => {
-                toggleColorMode()
-                //toggleColorModeNB()
-              }}
-              variant="link"
-            >
-              <ButtonIcon
-                as={colorMode == 'light' ? MoonIcon : SunIcon}
-                size="xl"
-                color={
-                  colorMode == 'light'
-                    ? '$navbarTextColorLight'
-                    : '$navbarTextColorDark'
+            <Link
+              isExternal
+              href="https://www.supernetworks.org/pages/docs/intro"
+              sx={{
+                '@base': { display: 'none' },
+                '@lg': { display: 'flex' },
+                _text: {
+                  textDecorationLine: 'none',
+                  color:
+                    colorMode == 'light'
+                      ? '$navbarTextColorLight'
+                      : '$navbarTextColorDark'
                 }
-              />
-            </Button>
+              }}
+            >
+              <ButtonIcon as={BookOpenText} size="lg" />
+            </Link>
 
             <Button
               variant="link"

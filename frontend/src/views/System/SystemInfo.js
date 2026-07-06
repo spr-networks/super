@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import {
   Box,
@@ -22,39 +23,38 @@ import {
 } from '@gluestack-ui/themed'
 
 import { api } from 'api'
-import { AlertContext } from 'AppContext'
+import { AlertContext, AppContext } from 'AppContext'
 import { ucFirst } from 'utils'
+import { themeList, themeKeyFor } from 'Themes'
 
 import ReleaseInfo from 'components/System/Release'
 import ConfigsBackup from 'views/System/Configs'
 import Database from 'views/System/Database'
 import TimeSync from 'components/System/TimeSync'
+import { Select } from 'components/Select'
 import { ListHeader } from 'components/List'
-
 
 const TimeDisplay = ({ utcTime }) => {
   const convertToLocalTime = (utcTimeString) => {
-    const currentDate = new Date();
-    const currentDateString = currentDate.toISOString().split('T')[0];
-    const utcDate = new Date(`${currentDateString}T${utcTimeString}Z`);
+    const currentDate = new Date()
+    const currentDateString = currentDate.toISOString().split('T')[0]
+    const utcDate = new Date(`${currentDateString}T${utcTimeString}Z`)
 
     return utcDate.toLocaleTimeString(undefined, {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
       hour12: false // Use 24-hour format
-    });
-  };
+    })
+  }
 
-  return (
-    <Text color="$muted500">
-      {convertToLocalTime(utcTime)}
-    </Text>
-  );
-};
+  return <Text color="$muted500">{convertToLocalTime(utcTime)}</Text>
+}
 
 const SystemInfo = (props) => {
   const context = useContext(AlertContext)
+  const { theme, setTheme, customThemes } = useContext(AppContext)
+  const navigate = useNavigate()
 
   const [uptime, setUptime] = useState({})
   const [hostname, setHostname] = useState('')
@@ -109,6 +109,50 @@ const SystemInfo = (props) => {
       <ReleaseInfo />
       <TimeSync />
       <VStack space="md">
+        <HStack
+          space="md"
+          p="$4"
+          bg={
+            colorMode == 'light'
+              ? '$backgroundCardLight'
+              : '$backgroundCardDark'
+          }
+          justifyContent="space-between"
+          alignItems="center"
+        >
+          <VStack>
+            <Text size="sm" bold>
+              Theme
+            </Text>
+          </VStack>
+          <HStack space="sm" alignItems="center">
+            <Box minWidth="$48" maxWidth="$72">
+              <Select
+                selectedValue={themeKeyFor(theme, colorMode)}
+                onValueChange={(value) => {
+                  if (!value) return
+                  let [id, mode] = value.split(':')
+                  setTheme(id, mode)
+                }}
+              >
+                {themeList.map((t) => (
+                  <Select.Item key={t.key} label={t.name} value={t.key} />
+                ))}
+                {Object.values(customThemes || {}).map((t) => (
+                  <Select.Item
+                    key={t.id || t.name}
+                    label={t.name}
+                    value={t.id || t.name}
+                  />
+                ))}
+              </Select>
+            </Box>
+            <Button variant="link" onPress={() => navigate('/admin/theme')}>
+              <ButtonText>Customize…</ButtonText>
+            </Button>
+          </HStack>
+        </HStack>
+
         <ListHeader title="System Info">
           <Button action="primary" size="sm" onPress={doRestart}>
             <ButtonText>Restart SPR</ButtonText>
@@ -191,7 +235,7 @@ const SystemInfo = (props) => {
                 >
                   <Text size="sm">{niceKey(item)}</Text>
                   {item == 'time' ? (
-                    <TimeDisplay utcTime={uptime[item]}/>
+                    <TimeDisplay utcTime={uptime[item]} />
                   ) : (
                     <Text color="$muted500">{uptime[item]}</Text>
                   )}

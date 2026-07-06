@@ -2,7 +2,12 @@ import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Platform } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { api, wifiAPI, saveLogin } from 'api'
-import { generateConfigForBand, getBestWifiConfig, isSPRCompat, generateCapabilitiesString } from 'api/Wifi'
+import {
+  generateConfigForBand,
+  getBestWifiConfig,
+  isSPRCompat,
+  generateCapabilitiesString
+} from 'api/Wifi'
 import { useNavigate } from 'react-router-dom'
 import AddDevice from 'components/Setup/AddDevice'
 import { countryCodes } from 'utils'
@@ -38,11 +43,14 @@ import {
   useColorMode,
   Badge,
   BadgeText,
-  BadgeIcon
+  BadgeIcon,
+  Box,
+  Pressable
 } from '@gluestack-ui/themed'
 
 import { Select } from 'components/Select'
 
+import { themeList, themeKeyFor, themes, DEFAULT_THEME } from 'Themes'
 import { AlertContext } from 'AppContext'
 import {
   AlertCircle,
@@ -143,6 +151,8 @@ const Setup = (props) => {
   const [setupStage, setSetupStage] = useState(0)
   const [alertType, setAlertType] = useState('')
   const [alertBody, setAlertBody] = useState('')
+  const [theme, setThemeState] = useState(DEFAULT_THEME)
+  const [themeColorMode, setThemeColorMode] = useState('light')
 
   const [addrs, setAddrs] = useState([])
   const [apiReachable, setApiReachable] = useState(false)
@@ -165,6 +175,27 @@ const Setup = (props) => {
   context.error = (title, body) => setupAlert('error', title, body)
   context.info = (title, body) => setupAlert('info', title, body)
 
+  const saveTheme = async (entry) => {
+    try {
+      let raw = await AsyncStorage.getItem('settings')
+      let s = raw ? JSON.parse(raw) : {}
+      s.theme = entry.id
+      let mode = entry.colorMode || themes[entry.id]?.colorMode
+      if (mode) {
+        s.colorMode = mode
+      }
+      await AsyncStorage.setItem('settings', JSON.stringify(s))
+    } catch (err) {
+      // ignore persistence errors during setup
+    }
+  }
+
+  const selectTheme = (entry) => {
+    setThemeState(entry.id)
+    setThemeColorMode(entry.colorMode || 'light')
+    saveTheme(entry)
+  }
+
   const pollApi = async () => {
     try {
       const addrs = await wifiAPI.ipAddr()
@@ -175,6 +206,7 @@ const Setup = (props) => {
 
       //check if ap is up
       if (setupStage == 1) {
+        // config form: stop polling once reachable
         clearInterval(pollingRef?.current)
       } else if (setupStage == 2) {
         const ifaces = await wifiAPI.interfaces('AP') // should be one
@@ -189,7 +221,10 @@ const Setup = (props) => {
           }
         }
       } else if (setupStage == 3) {
-        //3 == call /setup_done once
+        // theme picker: no polling needed
+        clearInterval(pollingRef?.current)
+      } else if (setupStage == 4) {
+        //4 == call /setup_done once
         clearInterval(pollingRef?.current)
         removeSetupAP()
       }
@@ -327,6 +362,20 @@ const Setup = (props) => {
           .catch((e) => {})
       })
       .catch((e) => {})
+  }, [])
+
+  useEffect(() => {
+    AsyncStorage.getItem('settings')
+      .then((raw) => {
+        const s = raw ? JSON.parse(raw) : null
+        if (s?.theme && themes[s.theme]) {
+          setThemeState(s.theme)
+        }
+        if (s?.colorMode) {
+          setThemeColorMode(s.colorMode)
+        }
+      })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -578,12 +627,7 @@ const Setup = (props) => {
           : null
       // If the router moved to a new subnet, jump to the new IP so the user
       // doesn't end up at a dead address from the old setup AP.
-      if (
-        Platform.OS == 'web' &&
-        newIP &&
-        curHost &&
-        newIP !== curHost
-      ) {
+      if (Platform.OS == 'web' && newIP && curHost && newIP !== curHost) {
         window.location =
           window.location.protocol + '//' + newIP + '/auth/login'
         return
@@ -734,7 +778,72 @@ const Setup = (props) => {
     )
   }
 
-  if (setupStage === 3) {
+  if (setupStage == 3) {
+    return (
+      <SetupScrollView>
+        <SetupHeading title="Choose a Theme" justifyContent="center" />
+        <VStack space="md" my="$2">
+          <Text color="$muted500" alignSelf="center" textAlign="center">
+            Pick a look for SPR. You can change it anytime later in Settings.
+          </Text>
+          {themeList.map((t) => {
+            const selected = themeKeyFor(theme, themeColorMode) === t.key
+            return (
+              <Pressable
+                key={t.key}
+                onPress={() => selectTheme(t)}
+                accessibilityLabel={`Select theme ${t.name}`}
+              >
+                <HStack
+                  space="md"
+                  alignItems="center"
+                  p="$3"
+                  rounded="$lg"
+                  borderWidth={1}
+                  borderColor={selected ? '$primary500' : '$muted200'}
+                  sx={{
+                    _dark: {
+                      borderColor: selected ? '$primary500' : '$muted700'
+                    }
+                  }}
+                >
+                  <Box
+                    w={12}
+                    h={12}
+                    rounded="$full"
+                    bg={t.swatch?.bg}
+                    borderWidth={1}
+                    borderColor="$muted300"
+                    alignItems="center"
+                    justifyContent="center"
+                    mr="$1"
+                  >
+                    <Box w={6} h={6} rounded="$full" bg={t.swatch?.accent} />
+                  </Box>
+                  <Text flex={1} size="md">
+                    {t.name}
+                  </Text>
+                  {selected ? (
+                    <Icon as={CheckIcon} color="$primary600" />
+                  ) : null}
+                </HStack>
+              </Pressable>
+            )
+          })}
+        </VStack>
+        <ButtonSetup
+          onPress={() => setSetupStage(4)}
+          alignSelf="center"
+          px="$8"
+          mt="$2"
+        >
+          <ButtonText>Continue</ButtonText>
+        </ButtonSetup>
+      </SetupScrollView>
+    )
+  }
+
+  if (setupStage === 4) {
     return (
       <SetupScrollView>
         <SetupHeading title="Setup Finished" />
@@ -764,15 +873,11 @@ const Setup = (props) => {
 
           {(() => {
             const newIP = getNewRouterIP()
-            const curHost =
-              Platform.OS == 'web' && window?.location?.hostname
+            const curHost = Platform.OS == 'web' && window?.location?.hostname
             const willJump =
               Platform.OS == 'web' && newIP && curHost && newIP !== curHost
             return (
-              <ButtonSetup
-                onPress={handlePressFinish}
-                disabled={!apiReachable}
-              >
+              <ButtonSetup onPress={handlePressFinish} disabled={!apiReachable}>
                 {apiReachable ? (
                   <ButtonText>
                     {willJump ? `Continue to ${newIP}` : 'Finish'}
