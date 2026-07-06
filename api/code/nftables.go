@@ -188,7 +188,7 @@ func (c *NFTClient) ListSetElements(family TableFamily, tableName, setName strin
 					"family": familyToString(family),
 					"name":   setName,
 					"table":  tableName,
-					"elem":   formatSetElements(elements),
+					"elem":   formatSetElements(setName, elements),
 				},
 			},
 		},
@@ -680,12 +680,33 @@ func formatElements(mapName string, elements []nftables.SetElement) []interface{
 }
 
 // formatSetElements formats set elements (no values) for JSON output
-func formatSetElements(elements []nftables.SetElement) []interface{} {
+func formatSetElements(setName string, elements []nftables.SetElement) []interface{} {
 	var result []interface{}
 	for _, elem := range elements {
-		formatted := formatElementKey(elem.Key)
-		if formatted != nil {
-			result = append(result, formatted)
+		val := formatElement(setName, elem)
+		if val == nil {
+			continue
+		}
+
+		// match nft -j: elements carrying counters/timeouts are wrapped
+		// as {"elem": {...}}, plain elements stay bare values
+		if elem.Counter != nil || elem.Timeout > 0 || elem.Expires > 0 {
+			inner := map[string]interface{}{"val": val}
+			if elem.Counter != nil {
+				inner["counter"] = map[string]interface{}{
+					"packets": elem.Counter.Packets,
+					"bytes":   elem.Counter.Bytes,
+				}
+			}
+			if elem.Timeout > 0 {
+				inner["timeout"] = uint64(elem.Timeout.Seconds())
+			}
+			if elem.Expires > 0 {
+				inner["expires"] = uint64(elem.Expires.Seconds())
+			}
+			result = append(result, map[string]interface{}{"elem": inner})
+		} else {
+			result = append(result, val)
 		}
 	}
 	return result
@@ -704,6 +725,9 @@ func concatKeySchema(mapName string, keyLen int) []string {
 	case "fwd_iface_lan", "fwd_iface_wan":
 		// type ifname . ipv4_addr
 		return []string{"iface", "ip"}
+	case "all_ip":
+		// type ifname . ipv4_addr . ipv4_addr
+		return []string{"iface", "ip", "ip"}
 	}
 
 	// internet_access, dns_access, lan_access and the per-group
