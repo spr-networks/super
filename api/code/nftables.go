@@ -460,7 +460,7 @@ func (s *MapSnapshot) HasElement(mapName string, keyParts []string) bool {
 	if !ok {
 		return false
 	}
-	key, err := buildConcatenatedKey(mapName, keyParts)
+	key, _, err := buildConcatenatedKey(mapName, keyParts)
 	if err != nil {
 		return false
 	}
@@ -1087,6 +1087,9 @@ func portRangeBytesConcat(port string) (start, end []byte) {
 		binary.BigEndian.PutUint16(b, uint16(p))
 		return b
 	}
+	if port == "any" {
+		port = "0-65535"
+	}
 	if strings.Contains(port, "-") {
 		parts := strings.SplitN(port, "-", 2)
 		start, end = conv(parts[0]), conv(parts[1])
@@ -1115,6 +1118,24 @@ func ipField(ip string) [2][]byte   { s, e := ipRangeBytes(ip); return [2][]byte
 func portField(p string) [2][]byte  { s, e := portRangeBytesConcat(p); return [2][]byte{s, e} }
 func exactField(b []byte) [2][]byte { return [2][]byte{b, b} }
 
+func ifaceField(iface string) [2][]byte {
+	if strings.HasSuffix(iface, "*") {
+		prefix := strings.TrimSuffix(iface, "*")
+		if len(prefix) == 0 || len(prefix) > 16 {
+			return [2][]byte{nil, nil}
+		}
+		start := make([]byte, 16)
+		copy(start, prefix)
+		end := make([]byte, 16)
+		copy(end, prefix)
+		for i := len(prefix); i < 16; i++ {
+			end[i] = 0xff
+		}
+		return [2][]byte{start, end}
+	}
+	return exactField(InterfaceToBytes(iface))
+}
+
 // blockKey builds the ipv4 . ipv4 . inet_proto interval key pair for block and output_block
 func blockKey(srcIP, dstIP, protocol string) (key, keyEnd []byte) {
 	return concatRangeKeys(ipField(srcIP), ipField(dstIP),
@@ -1142,14 +1163,14 @@ func AddForwardingRule(protocol, srcIP, srcPort, dstIP, dstPort string) error {
 	}
 
 	mapName := protocol + "fwd"
-	srcPortBytes := PortToBytesForConcatenated(srcPort)
+	srcPortStart, srcPortEnd := portRangeBytesConcat(srcPort)
 	dstPortBytes := PortToBytesForConcatenated(dstPort)
-	if srcPortBytes == nil || dstPortBytes == nil {
+	if srcPortStart == nil || srcPortEnd == nil || dstPortBytes == nil {
 		return fmt.Errorf("invalid port")
 	}
 
-	key := append(append([]byte{}, startIP...), srcPortBytes...)
-	keyEnd := append(append([]byte{}, endIP...), srcPortBytes...)
+	key := append(append([]byte{}, startIP...), srcPortStart...)
+	keyEnd := append(append([]byte{}, endIP...), srcPortEnd...)
 	value := append(append([]byte{}, dstIPBytes...), dstPortBytes...)
 
 	return client.AddMapElementRange(TableFamilyInet, "nat", mapName, key, keyEnd, value)
@@ -1170,12 +1191,12 @@ func DeleteForwardingRule(protocol, srcIP, srcPort, dstIP, dstPort string) error
 	}
 
 	mapName := protocol + "fwd"
-	srcPortBytes := PortToBytesForConcatenated(srcPort)
-	if srcPortBytes == nil {
+	srcPortStart, srcPortEnd := portRangeBytesConcat(srcPort)
+	if srcPortStart == nil || srcPortEnd == nil {
 		return fmt.Errorf("invalid port")
 	}
-	key := append(append([]byte{}, startIP...), srcPortBytes...)
-	keyEnd := append(append([]byte{}, endIP...), srcPortBytes...)
+	key := append(append([]byte{}, startIP...), srcPortStart...)
+	keyEnd := append(append([]byte{}, endIP...), srcPortEnd...)
 
 	return client.DeleteMapElementRange(TableFamilyInet, "nat", mapName, key, keyEnd)
 }
@@ -1342,19 +1363,24 @@ func DeleteMulticastPort(port, iface string) error {
 func AddPingRule(ip, iface string) error {
 	client := GetNFTClient()
 
-	key := buildIPIfaceKey(ip, iface)
-	value := []byte("accept")
+	key, keyEnd := concatRangeKeys(ipField(ip), ifaceField(iface))
+	if key == nil {
+		return fmt.Errorf("invalid IP or interface")
+	}
 
-	return client.AddMapElement(TableFamilyInet, "filter", "ping_rules", key, value)
+	return client.AddMapElementRange(TableFamilyInet, "filter", "ping_rules", key, keyEnd, []byte("accept"))
 }
 
 // DeletePingRule removes a ping rule
 func DeletePingRule(ip, iface string) error {
 	client := GetNFTClient()
 
-	key := buildIPIfaceKey(ip, iface)
+	key, keyEnd := concatRangeKeys(ipField(ip), ifaceField(iface))
+	if key == nil {
+		return fmt.Errorf("invalid IP or interface")
+	}
 
-	return client.DeleteMapElement(TableFamilyInet, "filter", "ping_rules", key)
+	return client.DeleteMapElementRange(TableFamilyInet, "filter", "ping_rules", key, keyEnd)
 }
 
 // FlushPingRules clears all ping rules
@@ -1545,69 +1571,51 @@ func GetElementFromMap(family, tableName, mapName, key string) error {
 	return client.GetMapElement(f, tableName, mapName, keyBytes)
 }
 
-// buildConcatenatedKey builds a properly encoded key for concatenated map types
-func buildConcatenatedKey(mapName string, keyParts []string) ([]byte, error) {
-	var keyBytes []byte
+func buildConcatenatedKey(mapName string, keyParts []string) ([]byte, []byte, error) {
+	var fields [][2][]byte
 
-	// Check for known concatenated map patterns
 	if mapName == "ethernet_filter" && len(keyParts) == 3 {
-		// Type: ipv4_addr . ifname . ether_addr
 		ipBytes := IPToBytes(keyParts[0])
 		if ipBytes == nil {
-			return nil, fmt.Errorf("invalid IP address: %s", keyParts[0])
+			return nil, nil, fmt.Errorf("invalid IP address: %s", keyParts[0])
 		}
-		keyBytes = append(keyBytes, ipBytes...)
-
-		ifaceBytes := InterfaceToBytes(keyParts[1])
-		keyBytes = append(keyBytes, ifaceBytes...)
-
 		macBytes := MACToBytes(keyParts[2])
 		if macBytes == nil {
-			return nil, fmt.Errorf("invalid MAC address: %s", keyParts[2])
+			return nil, nil, fmt.Errorf("invalid MAC address: %s", keyParts[2])
 		}
-		keyBytes = append(keyBytes, macBytes...)
+		fields = append(fields, exactField(ipBytes), ifaceField(keyParts[1]), exactField(macBytes))
 
 	} else if mapName == "dhcp_access" && len(keyParts) == 2 {
-		// Type: ifname . ether_addr
-		ifaceBytes := InterfaceToBytes(keyParts[0])
-		keyBytes = append(keyBytes, ifaceBytes...)
-
 		macBytes := MACToBytes(keyParts[1])
 		if macBytes == nil {
-			return nil, fmt.Errorf("invalid MAC address: %s", keyParts[1])
+			return nil, nil, fmt.Errorf("invalid MAC address: %s", keyParts[1])
 		}
-		keyBytes = append(keyBytes, macBytes...)
+		fields = append(fields, ifaceField(keyParts[0]), exactField(macBytes))
 
 	} else if (mapName == "internet_access" || mapName == "dns_access" || mapName == "lan_access") && len(keyParts) == 2 {
-		// Type: ipv4_addr . ifname
-		ipBytes := IPToBytes(keyParts[0])
-		if ipBytes == nil {
-			return nil, fmt.Errorf("invalid IP address: %s", keyParts[0])
+		if IPToBytes(keyParts[0]) == nil {
+			return nil, nil, fmt.Errorf("invalid IP address: %s", keyParts[0])
 		}
-		keyBytes = append(keyBytes, ipBytes...)
-
-		ifaceBytes := InterfaceToBytes(keyParts[1])
-		keyBytes = append(keyBytes, ifaceBytes...)
+		fields = append(fields, ipField(keyParts[0]), ifaceField(keyParts[1]))
 	} else {
-		// For other maps or unknown patterns, try to intelligently parse
 		for _, part := range keyParts {
-			// Try IP first
 			if ipBytes := IPToBytes(part); ipBytes != nil {
-				keyBytes = append(keyBytes, ipBytes...)
+				fields = append(fields, ipField(part))
 			} else if macBytes := MACToBytes(part); macBytes != nil {
-				// Try MAC
-				keyBytes = append(keyBytes, macBytes...)
+				fields = append(fields, exactField(macBytes))
 			} else if portNum, err := strconv.Atoi(part); err == nil && portNum <= 65535 {
-				// Try port number
-				keyBytes = append(keyBytes, PortToBytes(part)...)
+				fields = append(fields, exactField(PortToBytes(part)))
 			} else {
-				// Assume interface name
-				keyBytes = append(keyBytes, InterfaceToBytes(part)...)
+				fields = append(fields, ifaceField(part))
 			}
 		}
 	}
 
-	return keyBytes, nil
+	key, keyEnd := concatRangeKeys(fields...)
+	if key == nil {
+		return nil, nil, fmt.Errorf("invalid key parts %v for %s", keyParts, mapName)
+	}
+	return key, keyEnd, nil
 }
 
 // AddElementToMapComplex adds element with complex key to a map
@@ -1617,14 +1625,13 @@ func AddElementToMapComplex(family, tableName, mapName string, keyParts []string
 		return err
 	}
 
-	// Build the concatenated key
-	keyBytes, err := buildConcatenatedKey(mapName, keyParts)
+	key, keyEnd, err := buildConcatenatedKey(mapName, keyParts)
 	if err != nil {
 		return err
 	}
 
 	valueBytes := []byte(value)
-	return client.AddMapElement(f, tableName, mapName, keyBytes, valueBytes)
+	return client.AddMapElementRange(f, tableName, mapName, key, keyEnd, valueBytes)
 }
 
 // DeleteElementFromMapComplex deletes element with complex key from a map
@@ -1634,13 +1641,12 @@ func DeleteElementFromMapComplex(family, tableName, mapName string, keyParts []s
 		return err
 	}
 
-	// Build the concatenated key
-	keyBytes, err := buildConcatenatedKey(mapName, keyParts)
+	key, keyEnd, err := buildConcatenatedKey(mapName, keyParts)
 	if err != nil {
 		return err
 	}
 
-	return client.DeleteMapElement(f, tableName, mapName, keyBytes)
+	return client.DeleteMapElementRange(f, tableName, mapName, key, keyEnd)
 }
 
 // GetElementFromMapComplex checks if element with complex key exists in a map
@@ -1650,13 +1656,12 @@ func GetElementFromMapComplex(family, tableName, mapName string, keyParts []stri
 		return err
 	}
 
-	// Build the concatenated key
-	keyBytes, err := buildConcatenatedKey(mapName, keyParts)
+	key, _, err := buildConcatenatedKey(mapName, keyParts)
 	if err != nil {
 		return err
 	}
 
-	return client.GetMapElement(f, tableName, mapName, keyBytes)
+	return client.GetMapElement(f, tableName, mapName, key)
 }
 
 // AddMACVerdictElement adds an element with IP.Interface.MAC:Verdict format
