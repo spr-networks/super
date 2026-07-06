@@ -30,7 +30,7 @@ import {
 } from '@gluestack-ui/themed'
 
 import { TagItem, GroupItem, PolicyItem } from 'components/TagItem'
-import IconItem from 'components/IconItem'
+import IconItem, { deviceIcons, groupIcons } from 'components/IconItem'
 import { PencilIcon, PowerOffIcon, WaypointsIcon, WifiIcon } from 'lucide-react-native'
 
 const DeviceIcon = ({
@@ -40,7 +40,22 @@ const DeviceIcon = ({
   isAssociatedOnly,
   ...props
 }) => {
+  // Brand/OS logos (e.g. the Linux penguin) are detailed dark silhouettes and
+  // default to #000, unlike the simple lucide device glyphs. Recoloring the SVG
+  // isn't reliable, so render them on a light "coin" — crisp in every theme.
+  let isSimpleIcon =
+    Object.keys(deviceIcons).includes(icon) ||
+    Object.keys(groupIcons).includes(icon)
+
   let color = _color ? `$${_color}400` : '$blueGray400'
+  let chipBg = '$white'
+  let chipBgDark = '$blueGray700'
+  if (!isSimpleIcon) {
+    color = '$blueGray800'
+    chipBg = '$blueGray100'
+    chipBgDark = '$blueGray100'
+  }
+
   let opacity = isConnected ? 1 : 0.4
   let borderColor = isConnected
     ? '$green600'
@@ -51,13 +66,13 @@ const DeviceIcon = ({
 
   return (
     <Box
-      bg="$white"
+      bg={chipBg}
       display="none"
       sx={{
         '@md': {
           display: 'flex'
         },
-        _dark: { bg: '$blueGray700' }
+        _dark: { bg: chipBgDark }
       }}
       p="$3"
       rounded="$full"

@@ -60,6 +60,7 @@ import { PuzzleIcon } from 'lucide-react-native'
 
 import { KeyboardAvoidingView } from '@gluestack-ui/themed'
 import OTPValidate from 'components/Auth/OTPValidate'
+import { themes, CUSTOM_THEME_ID } from 'Themes'
 
 const ConfirmTrafficAlert = (props) => {
   const { type, title, body, showAlert, onClose } = props
@@ -146,7 +147,14 @@ const AppAlert = (props) => {
   )
 }
 
-const AdminLayout = ({ toggleColorMode, ...props }) => {
+const AdminLayout = ({
+  toggleColorMode,
+  theme,
+  setTheme,
+  customTheme,
+  setCustomTheme,
+  ...props
+}) => {
   const mainPanel = React.useRef()
   const location = useLocation()
   const navigate = useNavigate()
@@ -521,7 +529,33 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     }
   }, [viewSettings])
 
-  const backgroundColor = colorMode === 'light' ? 'white' : 'black'
+  // SafeAreaViews take a raw color, not a $token, so resolve the active
+  // theme's surface colors here (falls back to the default literals).
+  const themeColors =
+    (theme === CUSTOM_THEME_ID ? customTheme?.colors : themes[theme]?.colors) ||
+    {}
+  const pick = (light, dark, litLight, litDark) =>
+    colorMode === 'light'
+      ? themeColors[light] || litLight
+      : themeColors[dark] || litDark
+  const backgroundColor = pick(
+    'navbarBackgroundLight',
+    'navbarBackgroundDark',
+    'white',
+    'black'
+  )
+  const contentBackground = pick(
+    'backgroundContentLight',
+    'backgroundContentDark',
+    '#f3f4f6',
+    'black'
+  )
+  const sidebarBackground = pick(
+    'sidebarBackgroundLight',
+    'sidebarBackgroundDark',
+    '#f9fafb',
+    'black'
+  )
 
   //this is to sync the settings. TODO: in App
   const toggleColorModeHook = () => {
@@ -531,6 +565,21 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     })
 
     toggleColorMode()
+  }
+
+  const setThemeHook = (name) => {
+    setViewSettings({ ...viewSettings, theme: name })
+    setTheme(name)
+  }
+
+  const saveCustomTheme = (spec) => {
+    setViewSettings({
+      ...viewSettings,
+      customTheme: spec,
+      theme: CUSTOM_THEME_ID
+    })
+    setCustomTheme(spec)
+    setTheme(CUSTOM_THEME_ID)
   }
 
   const webConfirm = (title, body, data) => {
@@ -588,7 +637,11 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         getDevice,
         getGroups,
         viewSettings,
-        setViewSettings
+        setViewSettings,
+        theme,
+        setTheme: setThemeHook,
+        customTheme,
+        saveCustomTheme
       }}
     >
       <WebSocketComponent notify={doNotify} confirm={doConfirm} />
@@ -631,6 +684,9 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
               isOpenSidebar={isOpenSidebar}
               setIsOpenSidebar={setIsOpenSidebar}
               toggleColorMode={toggleColorModeHook}
+              theme={theme}
+              setTheme={setThemeHook}
+              customTheme={customTheme}
             />
           </Box>
           {/*mobile*/}
@@ -651,6 +707,9 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
               isOpenSidebar={isOpenSidebar}
               setIsOpenSidebar={setIsOpenSidebar}
               toggleColorMode={toggleColorModeHook}
+              theme={theme}
+              setTheme={setThemeHook}
+              customTheme={customTheme}
             />
           </Box>
 
@@ -677,6 +736,8 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
                 setIsOpenSidebar={setIsOpenSidebar}
                 isSimpleMode={isSimpleMode}
                 setIsSimpleMode={setIsSimpleMode}
+                theme={theme}
+                setTheme={setThemeHook}
                 routes={routes}
               />
             </Box>
@@ -692,7 +753,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
                 <SafeAreaView
                   style={{
                     width: '100%',
-                    backgroundColor: colorMode == 'light' ? '#f9fafb' : 'black'
+                    backgroundColor: sidebarBackground
                   }}
                 >
                   <Sidebar
@@ -702,6 +763,8 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
                     setIsOpenSidebar={setIsOpenSidebar}
                     isSimpleMode={isSimpleMode}
                     setIsSimpleMode={setIsSimpleMode}
+                    theme={theme}
+                    setTheme={setThemeHook}
                     routes={routes}
                   />
                 </SafeAreaView>
@@ -712,7 +775,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
               <SafeAreaView
                 style={{
                   width: '100%',
-                  backgroundColor: colorMode == 'light' ? '#f3f4f6' : 'black'
+                  backgroundColor: contentBackground
                 }}
               >
                 <Outlet />

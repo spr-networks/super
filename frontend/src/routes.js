@@ -6,6 +6,7 @@ import Devices from 'views/Devices/Devices'
 import DevicesTabView from 'views/Devices/DevicesTabView'
 import Device from 'views/Devices/Device'
 import Home from 'views/Home'
+import ThemeBuilder from 'views/ThemeBuilder'
 import Login from 'views/pages/Login'
 import Setup from 'views/pages/Setup'
 import SignalStrength from 'views/Traffic/SignalStrength'
@@ -120,6 +121,12 @@ const routes = [
     path: 'connect_device',
     redirect: true,
     component: WifiConnect
+  },
+  {
+    layout: 'admin',
+    path: 'theme',
+    hidden: true,
+    component: ThemeBuilder
   },
   {
     name: 'Network',

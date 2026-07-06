@@ -8,12 +8,17 @@ import {
   Badge,
   BadgeIcon,
   BadgeText,
+  Box,
   Button,
   ButtonIcon,
   HStack,
+  Icon,
   Link,
   LinkText,
   Text,
+  Menu,
+  MenuItem,
+  MenuItemLabel,
   MenuIcon,
   MoonIcon,
   SunIcon,
@@ -22,9 +27,16 @@ import {
   Pressable
 } from '@gluestack-ui/themed'
 
-import { BookOpenText, AlertCircleIcon, LogOutIcon } from 'lucide-react-native'
+import {
+  BookOpenText,
+  AlertCircleIcon,
+  LogOutIcon,
+  PaletteIcon,
+  CheckIcon
+} from 'lucide-react-native'
 
 import { AppContext } from 'AppContext'
+import { themeList } from 'Themes'
 
 import RouteJump from './RouteJump'
 
@@ -36,6 +48,9 @@ const AdminNavbar = ({
   isSimpleMode,
   setIsSimpleMode,
   toggleColorMode,
+  theme,
+  setTheme,
+  customTheme,
   ...props
 }) => {
   const { isMeshNode, setActiveSidebarItem } = useContext(AppContext)
@@ -196,6 +211,87 @@ const AdminNavbar = ({
             >
               <ButtonIcon as={BookOpenText} size="lg" />
             </Link>
+
+            {setTheme ? (
+              <Menu
+                placement="bottom right"
+                selectionMode="single"
+                selectedKeys={theme ? [theme] : []}
+                onSelectionChange={(e) => {
+                  let key = e.currentKey
+                  if (key == '__customize') {
+                    navigate('/admin/theme')
+                  } else if (key) {
+                    setTheme(key)
+                  }
+                }}
+                trigger={(triggerProps) => (
+                  <Button variant="link" {...triggerProps}>
+                    <ButtonIcon
+                      as={PaletteIcon}
+                      size="lg"
+                      color={
+                        colorMode == 'light'
+                          ? '$navbarTextColorLight'
+                          : '$navbarTextColorDark'
+                      }
+                    />
+                  </Button>
+                )}
+              >
+                {themeList.map((t) => (
+                  <MenuItem key={t.id} textValue={t.name}>
+                    <Box
+                      w={16}
+                      h={16}
+                      rounded="$full"
+                      bg={t.swatch?.bg}
+                      borderWidth={1}
+                      borderColor="$borderColorCardDark"
+                      alignItems="center"
+                      justifyContent="center"
+                      mr="$2"
+                    >
+                      <Box w={7} h={7} rounded="$full" bg={t.swatch?.accent} />
+                    </Box>
+                    <MenuItemLabel size="sm">{t.name}</MenuItemLabel>
+                    {theme == t.id ? (
+                      <Icon as={CheckIcon} size="sm" ml="$2" />
+                    ) : null}
+                  </MenuItem>
+                ))}
+                {customTheme ? (
+                  <MenuItem key="custom" textValue="Custom">
+                    <Box
+                      w={16}
+                      h={16}
+                      rounded="$full"
+                      bg={customTheme.swatch?.bg}
+                      borderWidth={1}
+                      borderColor="$borderColorCardDark"
+                      alignItems="center"
+                      justifyContent="center"
+                      mr="$2"
+                    >
+                      <Box
+                        w={7}
+                        h={7}
+                        rounded="$full"
+                        bg={customTheme.swatch?.accent}
+                      />
+                    </Box>
+                    <MenuItemLabel size="sm">Custom</MenuItemLabel>
+                    {theme == 'custom' ? (
+                      <Icon as={CheckIcon} size="sm" ml="$2" />
+                    ) : null}
+                  </MenuItem>
+                ) : null}
+                <MenuItem key="__customize" textValue="Customize">
+                  <Icon as={PaletteIcon} size="sm" mr="$2" />
+                  <MenuItemLabel size="sm">Customize…</MenuItemLabel>
+                </MenuItem>
+              </Menu>
+            ) : null}
 
             <Button
               onPress={() => {
