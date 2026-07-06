@@ -6,7 +6,7 @@
 - Add new ui themes
 - base/scripts now includes a tool to verify reproducible container builds against sigstore
 ** Fixes **
-- Fix endpoint fw rules, further nft cleanup
+- Fix endpoint fw rules, further nft cleanup and bug fixes
 
 ## v1.1.6
 ** Features **
