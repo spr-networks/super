@@ -7,6 +7,7 @@ import DevicesTabView from 'views/Devices/DevicesTabView'
 import Device from 'views/Devices/Device'
 import Home from 'views/Home'
 import ThemeBuilder from 'views/ThemeBuilder'
+import NotificationsLogView from 'views/NotificationsLog'
 import Login from 'views/pages/Login'
 import Setup from 'views/pages/Setup'
 import SignalStrength from 'views/Traffic/SignalStrength'
@@ -321,6 +322,13 @@ const routes = [
         name: 'Events',
         icon: EyeIcon,
         component: Events,
+        layout: 'admin'
+      },
+      {
+        path: 'notifications',
+        name: 'Notifications',
+        icon: BellIcon,
+        component: NotificationsLogView,
         layout: 'admin'
       },
       {
