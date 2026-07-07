@@ -319,7 +319,7 @@ PODS:
     - React-Core
   - react-native-rsa-native (2.0.5):
     - React
-  - react-native-safe-area-context (4.7.3):
+  - react-native-safe-area-context (4.14.1):
     - React-Core
   - React-NativeModulesApple (0.72.10):
     - hermes-engine
@@ -431,13 +431,13 @@ PODS:
     - React-jsi (= 0.72.10)
     - React-logger (= 0.72.10)
     - React-perflogger (= 0.72.10)
-  - RNCAsyncStorage (1.19.3):
+  - RNCAsyncStorage (1.24.0):
     - React-Core
-  - RNCClipboard (1.12.1):
+  - RNCClipboard (1.16.3):
     - React-Core
-  - RNCPushNotificationIOS (1.11.0):
+  - RNCPushNotificationIOS (1.12.0):
     - React-Core
-  - RNDeviceInfo (10.13.1):
+  - RNDeviceInfo (15.0.2):
     - React-Core
   - RNSVG (13.4.0):
     - React-Core
@@ -623,7 +623,7 @@ SPEC CHECKSUMS:
   React-logger: 13a8b7094f27626adf648a8458e842e27fa70e13
   react-native-pager-view: 294879207fd0e01ec97691c1806c94700dd72770
   react-native-rsa-native: a7931cdda1f73a8576a46d7f431378c5550f0c38
-  react-native-safe-area-context: 71b3a0d71549684af7f975f12f3bd7039ea54b14
+  react-native-safe-area-context: 758e894ca5a9bd1868d2a9cfbca7326a2b6bf9dc
   React-NativeModulesApple: cb6d3c0f057dbd98545ddf1ec047f225d1dd9bf9
   React-perflogger: 43287389ea08993c300897a46f95cfac04bb6c1a
   React-RCTActionSheet: 923afe77f9bb89da7c1f98e2730bfc9dde0eed6d
@@ -641,10 +641,10 @@ SPEC CHECKSUMS:
   React-runtimescheduler: 1f51ecd9eaa819eb66267ad66d8ac42d2173768f
   React-utils: a4a93189d0daacb5e8215250dc87907ff303744a
   ReactCommon: 5307bd88aa11a192d8a75717e66d7b630d9bc8bd
-  RNCAsyncStorage: b934e5ab140257f25f5d67ded2464646731e4349
-  RNCClipboard: 9d33327413fe87aa0c8ef83e1b9a939d7c4f535d
-  RNCPushNotificationIOS: 6c4ca3388c7434e4a662b92e4dfeeee858e6f440
-  RNDeviceInfo: 538b62f03991eb4a2a15cf6fec5fff6bb5edc34e
+  RNCAsyncStorage: b6410dead2732b5c72a7fdb1ecb5651bbcf4674b
+  RNCClipboard: f6679d470d0da2bce2a37b0af7b9e0bf369ecda5
+  RNCPushNotificationIOS: 85957a0534fd1309b4c028ccbe5b1baf9ab5cf57
+  RNDeviceInfo: 4c852998208b60dc192ae3529e5867817719ad1e
   RNSVG: 6ebe31273563567f36f6a871b989bca09cd3827b
   SocketRocket: f32cd54efbe0f095c4d7594881e52619cfe80b17
   Yoga: d0003f849d2b5224c072cef6568b540d8bb15cd3

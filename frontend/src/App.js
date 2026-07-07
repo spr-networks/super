@@ -1,5 +1,5 @@
 import React, { useContext, useEffect } from 'react'
-import { Platform } from 'react-native'
+import { Platform, View } from 'react-native'
 import {
   NativeRouter as Router,
   Route,
@@ -21,14 +21,62 @@ import { parseLogMessage } from 'api/WebSocket'
 import { routesAuth, routesAdmin } from 'routes'
 
 import { GluestackUIProvider } from '@gluestack-ui/themed'
-import { Theme } from '@gluestack-style/react'
+import {
+  Theme,
+  propertyTokenMap,
+  set as setGluestackColorMode
+} from '@gluestack-style/react'
+import { GluestackStyleSheet } from '@gluestack-style/react/src/style-sheet'
 import { config } from 'gluestack-ui.config'
-import { themes, DEFAULT_THEME, buildCustomTheme, customThemeCss } from 'Themes'
+import {
+  themes,
+  DEFAULT_THEME,
+  buildCustomTheme,
+  customThemeCss,
+  mergeCustomThemes
+} from 'Themes'
+
+const EMPTY_THEME_COLORS = {}
+
+const syncThemeColors = (target, themeColors) => {
+  Object.keys(target).forEach((key) => {
+    delete target[key]
+  })
+  Object.assign(target, config.tokens.colors, themeColors)
+  return target
+}
+
+const refreshNativeGluestackStyles = (runtimeConfig, colorMode) => {
+  if (Platform.OS == 'web') {
+    return
+  }
+
+  setGluestackColorMode(colorMode)
+
+  const styleMap = GluestackStyleSheet.getStyleMap()
+  if (!styleMap?.size) {
+    return
+  }
+
+  GluestackStyleSheet.resolve(
+    Array.from(styleMap.keys()),
+    { ...runtimeConfig, propertyTokenMap },
+    undefined,
+    true
+  )
+}
 
 export default function App() {
   const [colorMode, setColorMode] = React.useState('light')
   const [theme, setTheme] = React.useState(DEFAULT_THEME)
   const [customThemes, setCustomThemes] = React.useState({})
+  const [settingsLoaded, setSettingsLoaded] = React.useState(false)
+  const [nativeStyleRevision, setNativeStyleRevision] = React.useState(0)
+  const nativeColorsRef = React.useRef({ ...config.tokens.colors })
+  const nativeTokensRef = React.useRef({
+    ...config.tokens,
+    colors: nativeColorsRef.current
+  })
 
   const toggleColorMode = () => {
     setColorMode((prev) => (prev === 'light' ? 'dark' : 'light'))
@@ -39,7 +87,7 @@ export default function App() {
       .then((settings) => {
         let viewSettings = JSON.parse(settings)
         if (viewSettings?.colorMode && viewSettings.colorMode !== colorMode) {
-          toggleColorMode()
+          setColorMode(viewSettings.colorMode)
         }
         if (viewSettings?.customThemes) {
           setCustomThemes(viewSettings.customThemes)
@@ -54,6 +102,9 @@ export default function App() {
       })
       .catch((err) => {
         console.error('ERR:', err)
+      })
+      .finally(() => {
+        setSettingsLoaded(true)
       })
   }
 
@@ -207,51 +258,96 @@ export default function App() {
   const effectiveColorMode = activeCustom
     ? activeCustom.colorMode
     : themes[theme]?.colorMode || colorMode
+  const activeThemeColors =
+    activeCustom?.colors || themes[theme]?.colors || EMPTY_THEME_COLORS
+
+  const runtimeConfig = React.useMemo(
+    () => {
+      if (Platform.OS == 'web') {
+        return mergeCustomThemes(config, customThemeRecords)
+      }
+
+      const { themes: _themes, ...nativeConfig } = config
+      syncThemeColors(nativeColorsRef.current, activeThemeColors)
+
+      return {
+        ...nativeConfig,
+        tokens: nativeTokensRef.current
+      }
+    },
+    [activeThemeColors, customThemeRecords]
+  )
+
+  const providerKey = React.useMemo(
+    () =>
+      Platform.OS == 'web'
+        ? 'web'
+        : ['native', nativeStyleRevision].join('|'),
+    [nativeStyleRevision]
+  )
+
+  React.useLayoutEffect(() => {
+    if (!settingsLoaded || Platform.OS == 'web') {
+      return
+    }
+    refreshNativeGluestackStyles(runtimeConfig, effectiveColorMode)
+    setNativeStyleRevision((prev) => prev + 1)
+  }, [effectiveColorMode, runtimeConfig, settingsLoaded])
+
+  if (!settingsLoaded) {
+    return null
+  }
+
+  const appRoutes = (
+    <Routes>
+      <Route key="index" path="/" element={<Navigate to="/auth/login" />} />
+
+      <Route
+        key="auth"
+        path="/auth"
+        element={<AuthLayout toggleColorMode={toggleColorMode} />}
+      >
+        {routesAuth.map((r) => (
+          <Route key={r.path} path={r.path} element={<r.element />} />
+        ))}
+      </Route>
+
+      <Route
+        key="admin"
+        path="/admin"
+        element={
+          <AdminLayout
+            toggleColorMode={toggleColorMode}
+            setColorMode={setColorMode}
+            theme={theme}
+            setTheme={setTheme}
+            customThemes={customThemeRecords}
+            setCustomThemes={setCustomThemes}
+          />
+        }
+      >
+        {routesAdmin.map((r) => (
+          <Route key={r.path} path={r.path} element={<r.element />} />
+        ))}
+      </Route>
+    </Routes>
+  )
 
   return (
-    <>
-      <GluestackUIProvider config={config} colorMode={effectiveColorMode}>
-        <Theme name={theme} style={{ flex: 1 }}>
-          <Router>
-            <Routes>
-              <Route
-                key="index"
-                path="/"
-                element={<Navigate to="/auth/login" />}
-              />
-
-              <Route
-                key="auth"
-                path="/auth"
-                element={<AuthLayout toggleColorMode={toggleColorMode} />}
-              >
-                {routesAuth.map((r) => (
-                  <Route key={r.path} path={r.path} element={<r.element />} />
-                ))}
-              </Route>
-
-              <Route
-                key="admin"
-                path="/admin"
-                element={
-                  <AdminLayout
-                    toggleColorMode={toggleColorMode}
-                    setColorMode={setColorMode}
-                    theme={theme}
-                    setTheme={setTheme}
-                    customThemes={customThemeRecords}
-                    setCustomThemes={setCustomThemes}
-                  />
-                }
-              >
-                {routesAdmin.map((r) => (
-                  <Route key={r.path} path={r.path} element={<r.element />} />
-                ))}
-              </Route>
-            </Routes>
-          </Router>
-        </Theme>
+    <Router>
+      <GluestackUIProvider
+        key={providerKey}
+        config={runtimeConfig}
+        colorMode={effectiveColorMode}
+      >
+        {Platform.OS == 'web' ? (
+          <Theme name={theme} style={{ flex: 1 }}>
+            {appRoutes}
+          </Theme>
+        ) : (
+          <View style={{ flex: 1 }}>{appRoutes}</View>
+        )}
       </GluestackUIProvider>
-    </>
+    </Router>
   )
 }

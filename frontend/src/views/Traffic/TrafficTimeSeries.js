@@ -156,7 +156,7 @@ const TrafficTimeSeries = ({ ...props }) => {
 
     let index = 0
     for (let ip in ipStats) {
-      const c = chroma(colors[index++]).alpha(0.85).css()
+      const c = chroma(colors[index++]).alpha(0.85).hex()
       let data = drop_quarter_samples(ipStats[ip])
       let label = labelByIP(ip)
 

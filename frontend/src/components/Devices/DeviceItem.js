@@ -92,7 +92,7 @@ const DeviceItem = React.memo(({ item, show, size, ...props }) => {
 })
 
 DeviceItem.propTypes = {
-  item: PropTypes.object.isRequired,
+  item: PropTypes.object,
   show: PropTypes.array,
   size: PropTypes.string
 }

@@ -74,7 +74,6 @@ const TimeSeriesChart = (props) => {
         type: 'timeseries',
         distribution: 'linear',
         ticks: {
-          // chart.js 4: time scale callbacks receive a raw timestamp
           callback: function (value, index) {
             return index % 5 === 0 ? new Date(value).toLocaleTimeString() : ''
           }
@@ -115,8 +114,6 @@ const TimeSeriesChart = (props) => {
     delete options.scales.x.distribution
     //options.maintainAspectRatio = true
 
-    // re-normalize the percentages over the visible datasets when one is
-    // toggled off in the legend, so the remaining devices expand to 100%
     options.plugins.legend.onClick = (e, legendItem, legend) => {
       const chart = legend.chart
       const index = legendItem.datasetIndex

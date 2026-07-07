@@ -45,7 +45,7 @@ const StatsChartWidget = (props) => {
       backgroundGradientFromOpacity: 0,
       backgroundGradientToOpacity: 0,
       decimalPlaces: 0, // optional, defaults to 2dp
-      color: (opacity = 1) => chroma(colors[1]).alpha(opacity).css() //`rgba(0, 0, 0, ${opacity})`
+      color: (opacity = 1) => chroma(colors[1]).alpha(opacity).hex() //`rgba(0, 0, 0, ${opacity})`
     }
     charts.push(
       <ProgressChart
@@ -97,7 +97,7 @@ const StatsChartWidget = (props) => {
           color: (opacity = 1) =>
             chroma(colors[idx + 1])
               .alpha(0.6)
-              .css() /*`rgba(128,0,0,${opacity})` // optional*/
+              .hex() /*`rgba(128,0,0,${opacity})` // optional*/
         }
       ]
 

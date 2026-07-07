@@ -687,6 +687,19 @@ export const customThemeCss = (customTheme, id = CUSTOM_THEME_ID) => {
   return body ? `[data-theme-id="${id}"] { ${body} }` : ''
 }
 
+export const mergeCustomThemes = (baseConfig, customThemeRecords) => {
+  if (!customThemeRecords || Object.keys(customThemeRecords).length === 0) {
+    return baseConfig
+  }
+  let entries = Object.entries(customThemeRecords)
+    .filter(([id, t]) => /^[a-z0-9-]{1,72}$/.test(id) && t && t.colors)
+    .map(([id, t]) => [id, { colors: t.colors }])
+  return {
+    ...baseConfig,
+    themes: { ...(baseConfig.themes || {}), ...Object.fromEntries(entries) }
+  }
+}
+
 // Representative surface colors for a theme's mini preview (built-in or
 // custom). Falls back to gluestack-ish defaults when a theme omits tokens
 // (e.g. the `default` theme, which carries no overrides).

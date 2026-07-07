@@ -128,7 +128,7 @@ export default (props) => {
       colorMode == 'light' ? '$backgroundCardLigt' : '$backgroundCardDark',
     backgroundGradientFromOpacity: 0,
     backgroundGradientToOpacity: 0,
-    color: (opacity = 1) => chroma(colors[1]).darken().alpha(opacity).css()
+    color: (opacity = 1) => chroma(colors[1]).darken().alpha(opacity).hex()
   }
 
   let optionsRSSI = {
@@ -137,11 +137,11 @@ export default (props) => {
 
   let optionsRX = {
     ...options,
-    color: (opacity = 1) => chroma(colors[2]).alpha(opacity).css()
+    color: (opacity = 1) => chroma(colors[2]).alpha(opacity).hex()
   }
   let optionsTX = {
     ...options,
-    color: (opacity = 1) => chroma(colors[3]).alpha(opacity).css()
+    color: (opacity = 1) => chroma(colors[3]).alpha(opacity).hex()
   }
 
   let signalsRSSI = processData(signals, ['RSSI'])

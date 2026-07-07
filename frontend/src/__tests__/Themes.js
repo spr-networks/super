@@ -11,10 +11,12 @@ import {
   buildCustomTheme,
   deriveCustomColors,
   customThemeCss,
+  mergeCustomThemes,
   previewColorsFor,
   DEFAULT_CUSTOM,
   DEFAULT_THEME
 } from 'Themes'
+import { config as baseConfig } from 'gluestack-ui.config'
 
 import ThemePreview from 'components/ThemePreview'
 
@@ -309,6 +311,50 @@ describe('Themes.customThemeCss', () => {
     expect(css).not.toContain('};x{')
     // make sure it didn't break out of the selector
     expect(css.indexOf('{')).toBeLessThan(css.indexOf('--colors-good400'))
+  })
+})
+
+describe('Themes.mergeCustomThemes', () => {
+  test('returns the base config unchanged when no custom themes', () => {
+    expect(mergeCustomThemes(baseConfig, {})).toBe(baseConfig)
+    expect(mergeCustomThemes(baseConfig, null)).toBe(baseConfig)
+    expect(mergeCustomThemes(baseConfig, undefined)).toBe(baseConfig)
+  })
+
+  test('registers a custom theme into config.themes', () => {
+    const record = buildCustomTheme({ colorMode: 'dark' })
+    const id = customIdForName('My Demo')
+    const records = { [id]: { id, ...record } }
+    const merged = mergeCustomThemes(baseConfig, records)
+    expect(merged.themes[id]).toBeTruthy()
+    expect(merged.themes[id].colors).toEqual(record.colors)
+    expect(merged.themes).toMatchObject(baseConfig.themes)
+  })
+
+  test('does not mutate the base config', () => {
+    const id = customIdForName('Temp')
+    const records = { [id]: { id, ...buildCustomTheme({}) } }
+    const before = { ...baseConfig.themes }
+    mergeCustomThemes(baseConfig, records)
+    expect(baseConfig.themes).toEqual(before)
+  })
+
+  test('rejects invalid theme ids', () => {
+    const record = buildCustomTheme({})
+    const records = {
+      'BAD ID!': { id: 'BAD ID!', ...record },
+      alsoBad: { id: 'alsoBad', ...record }
+    }
+    const merged = mergeCustomThemes(baseConfig, records)
+    expect(merged.themes['BAD ID!']).toBeUndefined()
+    expect(merged.themes.alsoBad).toBeUndefined()
+  })
+
+  test('skips records with no colors', () => {
+    const merged = mergeCustomThemes(baseConfig, {
+      'custom-empty': { id: 'custom-empty', name: 'Empty' }
+    })
+    expect(merged.themes['custom-empty']).toBeUndefined()
   })
 })
 
