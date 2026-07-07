@@ -282,11 +282,16 @@ func verifyUpdateImages(composeFile string, target string) error {
 		digest, err := resolveRemoteDigestAny(image)
 		if err == nil {
 			result.Digest = digest
-			if policy.registry {
-				host, repo, _ := splitImageRef(image)
-				err = verifyRegistryAttestation(host, repo, digest, policy.sanRegex)
+			if cached, ok := cachedAttest(digest); ok {
+				result = cached
+				result.Image = image
 			} else {
-				err = verifyGithubAttestation(digest, policy.sanRegex)
+				if policy.registry {
+					host, repo, _ := splitImageRef(image)
+					err = verifyRegistryAttestation(host, repo, digest, policy.sanRegex)
+				} else {
+					err = verifyGithubAttestation(digest, policy.sanRegex)
+				}
 			}
 		}
 
@@ -297,6 +302,7 @@ func verifyUpdateImages(composeFile string, target string) error {
 			sprbus.Publish("superd:attest:failure", map[string]string{"Image": image, "Digest": digest, "Reason": err.Error()})
 		} else {
 			result.Verified = true
+			cacheAttestResult(digest, result)
 			sprbus.Publish("superd:attest:ok", map[string]string{"Image": image, "Digest": digest})
 		}
 
@@ -345,7 +351,10 @@ func verifyPulledImages() {
 		}
 
 		result := AttestResult{Image: tag, Digest: digest, Time: time.Now().UTC().Format(time.RFC3339)}
-		if digest == "" {
+		if cached, ok := cachedAttest(digest); ok {
+			result = cached
+			result.Image = tag
+		} else if digest == "" {
 			result.Error = "no repo digest (locally built image)"
 		} else if policy.registry {
 			host, repo, _ := splitImageRef(tag)
@@ -370,6 +379,8 @@ func verifyPulledImages() {
 				result.Verified = true
 			}
 		}
+
+		cacheAttestResult(digest, result)
 
 		Attestmtx.Lock()
 		gAttestResults[tag] = result
