@@ -81,12 +81,12 @@ type WPASupplicantConfig struct {
 }
 
 func (n *WPANetwork) Validate() error {
-	// Check for newlines in Password field
-	if strings.Contains(n.Password, "\n") {
-		return fmt.Errorf("Password field contains newline characters")
+	for i := 0; i < len(n.Password); i++ {
+		if n.Password[i] < 0x20 {
+			return fmt.Errorf("Password field contains control character 0x%02x", n.Password[i])
+		}
 	}
 
-	// Check for newlines in SSID field
 	if strings.Contains(n.SSID, "\n") {
 		return fmt.Errorf("SSID field contains newline characters")
 	}
@@ -140,7 +140,8 @@ func isWifiUplinkIfaceEnabled(Name string, interfaces []InterfaceConfig) bool {
 }
 
 func escapeWPAPassword(s string) string {
-	s = strings.Replace(s, `"`, `\"`, -1)
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `"`, `\"`)
 	return `"` + s + `"`
 }
 
@@ -374,12 +375,12 @@ func (p *PPPIface) Validate() error {
 		return fmt.Errorf("Username field empty")
 	}
 
-	if strings.Contains(p.Username, "\n") {
-		return fmt.Errorf("Username field contains newline characters")
+	if err := validatePPPField(p.Username, "Username"); err != nil {
+		return err
 	}
 
-	if strings.Contains(p.Secret, "\n") {
-		return fmt.Errorf("Secret field contains newline characters")
+	if err := validatePPPField(p.Secret, "Secret"); err != nil {
+		return err
 	}
 
 	if p.VLAN != "" {
@@ -398,6 +399,19 @@ func (p *PPPIface) Validate() error {
 		p.MTU = fmt.Sprintf("%d", v)
 	}
 
+	return nil
+}
+
+func validatePPPField(value string, name string) error {
+	for i := 0; i < len(value); i++ {
+		c := value[i]
+		if c < 0x20 {
+			return fmt.Errorf("%s field contains control character 0x%02x", name, c)
+		}
+		if c == '"' || c == '\\' {
+			return fmt.Errorf("%s field contains reserved character %q", name, rune(c))
+		}
+	}
 	return nil
 }
 

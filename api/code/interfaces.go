@@ -76,7 +76,10 @@ func isValidIface(Iface string) bool {
 	if Iface == "" {
 		return false
 	}
-	var validInterface = regexp.MustCompile(`^[a-zA-Z0-9-]*(\.[a-zA-Z0-9-]*)*$`).MatchString
+	if Iface[0] == '-' || strings.HasPrefix(Iface, ".") {
+		return false
+	}
+	var validInterface = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9-]*(\.[a-zA-Z0-9][a-zA-Z0-9-]*)*$`).MatchString
 	return validInterface(Iface)
 }
 
