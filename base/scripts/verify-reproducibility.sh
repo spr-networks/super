@@ -21,7 +21,7 @@ ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 # have to pass anything. Pass an explicit tag as the first arg to override
 # the remote side.
 LOCAL_TAG="${LOCAL_TAG:-latest}"
-REMOTE_TAG=$(git describe --tags --abbrev=0 2>/dev/null | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' || echo "latest")
+REMOTE_TAG="${REMOTE_TAG:-$(git describe --tags --abbrev=0 2>/dev/null | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' || echo 'latest')}"
 
 ATTEST_REPO="spr-networks/super"
 ATTEST_WORKFLOW="spr-networks/super/.github/workflows/docker-image.yml"
