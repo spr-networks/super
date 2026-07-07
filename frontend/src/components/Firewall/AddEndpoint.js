@@ -19,12 +19,11 @@ import {
   Input,
   InputField,
   Pressable,
+  TrashIcon,
   VStack,
   HStack,
   Spinner
 } from '@gluestack-ui/themed'
-
-import { XIcon } from 'lucide-react-native'
 
 import ProtocolRadio from 'components/Form/ProtocolRadio'
 
@@ -48,6 +47,18 @@ class AddEndpointImpl extends React.Component {
 
     this.handleChange = this.handleChange.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
+
+    if (props.item) {
+      this.state = {
+        ...this.state,
+        RuleName: props.item.RuleName || '',
+        Description: props.item.Description || '',
+        Protocol: props.item.Protocol || 'tcp',
+        IP: props.item.IP || '',
+        Port: props.item.Port || 'any',
+        Tag: (props.item.Tags && props.item.Tags[0]) || ''
+      }
+    }
   }
 
   deviceById(id) {
@@ -64,18 +75,19 @@ class AddEndpointImpl extends React.Component {
         (d.RecentIP === value || d.RecentIP.split('/')[0] === value)
     )
     let id = dev && (dev.MAC || dev.WGPubKey)
-    if (id && !this.state.selected.includes(id)) {
-      this.setState({
-        selected: [...this.state.selected, id],
-        pickerKey: this.state.pickerKey + 1
-      })
-    } else {
-      this.setState({ pickerKey: this.state.pickerKey + 1 })
-    }
+    this.setState((prevState) => {
+      let add = id && !prevState.selected.includes(id)
+      return {
+        selected: add ? [...prevState.selected, id] : prevState.selected,
+        pickerKey: prevState.pickerKey + 1
+      }
+    })
   }
 
   removeDevice = (id) => {
-    this.setState({ selected: this.state.selected.filter((x) => x !== id) })
+    this.setState((prevState) => ({
+      selected: prevState.selected.filter((x) => x !== id)
+    }))
   }
 
   handleChange(name, value) {
@@ -134,7 +146,22 @@ class AddEndpointImpl extends React.Component {
   componentDidMount() {
     deviceAPI
       .list()
-      .then((devices) => this.setState({ devices }))
+      .then((devices) => {
+        let next = { devices }
+
+        if (this.props.item && this.state.Tag) {
+          let tag = this.state.Tag.trim().toLowerCase()
+          let selected = Object.values(devices)
+            .filter((d) =>
+              (d.DeviceTags || []).some((t) => String(t).toLowerCase() === tag)
+            )
+            .map((d) => d.MAC || d.WGPubKey)
+            .filter(Boolean)
+          next.selected = selected
+        }
+
+        this.setState(next)
+      })
       .catch(() => {})
   }
 
@@ -285,9 +312,11 @@ class AddEndpointImpl extends React.Component {
                   let d = this.deviceById(id)
                   return (
                     <Badge key={id} action="muted" variant="outline" size="sm">
-                      <BadgeText>{d ? d.Name || d.RecentIP || id : id}</BadgeText>
+                      <BadgeText>
+                        {d ? d.Name || d.RecentIP || id : id}
+                      </BadgeText>
                       <Pressable ml="$1" onPress={() => this.removeDevice(id)}>
-                        <Icon as={XIcon} size="xs" />
+                        <Icon as={TrashIcon} size="xs" color="$red700" />
                       </Pressable>
                     </Badge>
                   )
@@ -322,6 +351,7 @@ export default function AddEndpoint(props) {
   let alertContext = useContext(AlertContext)
   return (
     <AddEndpointImpl
+      item={props.item}
       notifyChange={props.notifyChange}
       alertContext={alertContext}
     ></AddEndpointImpl>

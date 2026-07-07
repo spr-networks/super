@@ -31,7 +31,7 @@ class AddForwardImpl extends React.Component {
   state = {
     Protocol: 'tcp',
     SrcIP: '0.0.0.0/0',
-    SrcPort: 'any',
+    SrcPort: '80',
     DstIP: '',
     DstPort: '',
     Description: '',
@@ -44,6 +44,18 @@ class AddForwardImpl extends React.Component {
 
     this.handleChange = this.handleChange.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
+
+    if (props.item) {
+      this.state = {
+        ...this.state,
+        Protocol: props.item.Protocol || 'tcp',
+        SrcIP: props.item.SrcIP || '0.0.0.0/0',
+        SrcPort: props.item.SrcPort || 'any',
+        DstIP: props.item.DstIP || '',
+        DstPort: props.item.DstPort || '',
+        Description: props.item.Description || ''
+      }
+    }
   }
 
   handleChange(name, value) {
@@ -63,18 +75,31 @@ class AddForwardImpl extends React.Component {
 
     this.setState({ isLoading: true })
 
-    firewallAPI
-      .addForward(rule)
-      .then((res) => {
-        if (this.props.notifyChange) {
-          this.props.notifyChange('forward')
-        }
-        this.setState({ isLoading: false })
-      })
-      .catch((err) => {
-        this.props.alertContext.error('Firewall API Failure', err)
-        this.setState({ isLoading: false })
-      })
+    const persist = () =>
+      firewallAPI
+        .addForward(rule)
+        .then((res) => {
+          if (this.props.notifyChange) {
+            this.props.notifyChange('forward')
+          }
+          this.setState({ isLoading: false })
+        })
+        .catch((err) => {
+          this.props.alertContext.error('Firewall API Failure', err)
+          this.setState({ isLoading: false })
+        })
+
+    if (this.props.item) {
+      firewallAPI
+        .deleteForward(this.props.item)
+        .then(persist)
+        .catch((err) => {
+          this.props.alertContext.error('Firewall API Failure', err)
+          this.setState({ isLoading: false })
+        })
+    } else {
+      persist()
+    }
   }
 
   componentDidMount() {}
@@ -89,19 +114,20 @@ class AddForwardImpl extends React.Component {
     })
 
     return (
-      <VStack space="md">
-        <FormControl>
-          <FormControlLabel>
-            <FormControlLabelText>Forward to Device</FormControlLabelText>
-          </FormControlLabel>
-          <ClientSelect
-            name="DstIP"
-            value={this.state.DstIP}
-            onSubmitEditing={(value) => this.handleChange('DstIP', value)}
-            onChangeText={(value) => this.handleChange('DstIP', value)}
-            onChange={(value) => this.handleChange('DstIP', value)}
-          />
-        </FormControl>
+      <form onSubmit={(e) => e.preventDefault()} autoComplete="off">
+        <VStack space="md">
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText>Forward to Device</FormControlLabelText>
+            </FormControlLabel>
+            <ClientSelect
+              name="DstIP"
+              value={this.state.DstIP}
+              onSubmitEditing={(value) => this.handleChange('DstIP', value)}
+              onChangeText={(value) => this.handleChange('DstIP', value)}
+              onChange={(value) => this.handleChange('DstIP', value)}
+            />
+          </FormControl>
 
         <FormControl>
           <FormControlLabel>
@@ -216,7 +242,8 @@ class AddForwardImpl extends React.Component {
             <ButtonText>Save</ButtonText>
           )}
         </Button>
-      </VStack>
+        </VStack>
+      </form>
     )
   }
 }
@@ -229,6 +256,7 @@ export default function AddForward(props) {
   let alertContext = useContext(AlertContext)
   return (
     <AddForwardImpl
+      item={props.item}
       notifyChange={props.notifyChange}
       alertContext={alertContext}
     ></AddForwardImpl>

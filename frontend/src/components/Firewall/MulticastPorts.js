@@ -12,7 +12,8 @@ import {
   VStack,
   Text,
   AddIcon,
-  CloseIcon
+  TrashIcon,
+  EditIcon
 } from '@gluestack-ui/themed'
 
 import { AlertContext } from 'layouts/Admin'
@@ -99,9 +100,17 @@ const MulticastPorts = (props) => {
   }, [])
 
   let refModal = useRef(null)
+  let editRef = useRef(null)
+  const [editing, setEditing] = useState(null)
 
   const notifyChange = (type) => {
-    refModal.current()
+    refModal.current && refModal.current()
+    refreshList()
+  }
+
+  const notifyEditChange = (type) => {
+    editRef.current && editRef.current()
+    setEditing(null)
     refreshList()
   }
 
@@ -157,6 +166,10 @@ const MulticastPorts = (props) => {
 
   return (
     <VStack>
+      <ModalForm title="Edit Multicast Service" modalRef={editRef}>
+        <AddMulticastPort item={editing} notifyChange={notifyEditChange} />
+      </ModalForm>
+
       <ListHeader
         title="Multicast Proxy"
         description="Set ip:port addresses to proxy"
@@ -200,12 +213,23 @@ const MulticastPorts = (props) => {
               />
 
               <Button
+                variant="link"
+                alignSelf="center"
+                onPress={() => {
+                  setEditing(item)
+                  editRef.current && editRef.current()
+                }}
+              >
+                <ButtonIcon as={EditIcon} color="$muted600" />
+              </Button>
+
+              <Button
                 action="negative"
                 variant="link"
                 alignSelf="center"
                 onPress={() => deleteListItem(item)}
               >
-                <ButtonIcon as={CloseIcon} color="$red700" />
+                <ButtonIcon as={TrashIcon} color="$red700" />
               </Button>
             </HStack>
           </ListItem>

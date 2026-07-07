@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React, { useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 
 import { firewallAPI } from 'api'
@@ -16,7 +16,8 @@ import {
   VStack,
   Text,
   AddIcon,
-  CloseIcon
+  TrashIcon,
+  EditIcon
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
@@ -26,6 +27,8 @@ const BlockList = (props) => {
   let title = props.title || `BlockList:`
 
   let refModal = useRef(null)
+  let editRef = useRef(null)
+  const [editing, setEditing] = useState(null)
 
   const deleteListItem = (item) => {
     const done = (res) => {
@@ -40,8 +43,18 @@ const BlockList = (props) => {
     props.notifyChange('block')
   }
 
+  const notifyEditChange = (t) => {
+    editRef.current && editRef.current()
+    setEditing(null)
+    props.notifyChange('block')
+  }
+
   return (
     <VStack>
+      <ModalForm title="Edit IP Block" modalRef={editRef}>
+        <AddBlock item={editing} notifyChange={notifyEditChange} />
+      </ModalForm>
+
       <ListHeader
         title={title}
         description="Block traffic coming into the network at the PREROUTING stage"
@@ -76,13 +89,25 @@ const BlockList = (props) => {
             </Text>
 
             <Button
+              variant="link"
+              alignSelf="center"
+              onPress={() => {
+                setEditing(item)
+                editRef.current && editRef.current()
+              }}
+            >
+              <ButtonIcon as={EditIcon} color="$muted600" />
+            </Button>
+
+            <Button
+              ml="$3"
               alignSelf="center"
               size="sm"
               action="negative"
               variant="link"
               onPress={() => deleteListItem(item)}
             >
-              <ButtonIcon as={CloseIcon} color="$red700" />
+              <ButtonIcon as={TrashIcon} color="$red700" />
             </Button>
           </ListItem>
         )}

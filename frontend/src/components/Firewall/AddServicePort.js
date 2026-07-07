@@ -20,12 +20,15 @@ import {
 } from '@gluestack-ui/themed'
 import { Select, SelectItem } from 'components/Select'
 
-const AddServicePort = ({ notifyChange, ...props }) => {
+const AddServicePort = ({ notifyChange, item, ...props }) => {
   const context = useContext(AlertContext)
-  const [Protocol, setProtocol] = useState('tcp')
-  const [Port, setPort] = useState('')
-  const [UpstreamEnabled, setUpstreamEnabled] = useState(false)
-  const [Description, setDescription] = useState('')
+  const editing = !!item
+  const [Protocol, setProtocol] = useState(item?.Protocol || 'tcp')
+  const [Port, setPort] = useState(item?.Port || '')
+  const [UpstreamEnabled, setUpstreamEnabled] = useState(
+    item?.UpstreamEnabled || false
+  )
+  const [Description, setDescription] = useState(item?.Description || '')
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = () => {
@@ -38,18 +41,31 @@ const AddServicePort = ({ notifyChange, ...props }) => {
 
     setIsLoading(true)
 
-    firewallAPI
-      .addServicePort(rule)
-      .then((res) => {
-        if (notifyChange) {
-          notifyChange('service_port')
-        }
-        setIsLoading(false)
-      })
-      .catch((err) => {
-        context.error('Firewall API Failure: ' + err)
-        setIsLoading(false)
-      })
+    const persist = () =>
+      firewallAPI
+        .addServicePort(rule)
+        .then((res) => {
+          if (notifyChange) {
+            notifyChange('service_port')
+          }
+          setIsLoading(false)
+        })
+        .catch((err) => {
+          context.error('Firewall API Failure: ' + err)
+          setIsLoading(false)
+        })
+
+    if (editing) {
+      firewallAPI
+        .deleteServicePort(item)
+        .then(() => persist())
+        .catch((err) => {
+          context.error('Firewall API Failure: ' + err)
+          setIsLoading(false)
+        })
+    } else {
+      persist()
+    }
   }
 
   return (

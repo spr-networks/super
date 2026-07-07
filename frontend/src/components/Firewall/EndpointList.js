@@ -22,6 +22,7 @@ import {
   ArrowRightIcon,
   AddIcon,
   TrashIcon,
+  EditIcon,
   Menu,
   MenuItem,
   MenuItemLabel,
@@ -79,9 +80,17 @@ const EndpointList = (props) => {
   }, [])
 
   let refModal = useRef(null)
+  let editRef = useRef(null)
+  const [editing, setEditing] = useState(null)
 
   const notifyChange = (type) => {
-    refModal.current()
+    refModal.current && refModal.current()
+    refreshList()
+  }
+
+  const notifyEditChange = (type) => {
+    editRef.current && editRef.current()
+    setEditing(null)
     refreshList()
   }
 
@@ -122,7 +131,10 @@ const EndpointList = (props) => {
       selectionMode="single"
       onSelectionChange={(e) => {
         let key = e.currentKey
-        if (key == 'newTag') {
+        if (key == 'editItem') {
+          setEditing(item)
+          editRef.current && editRef.current()
+        } else if (key == 'newTag') {
           setModalType('Tag')
           setShowModal(true)
         } else if (key == 'deleteItem') {
@@ -134,6 +146,10 @@ const EndpointList = (props) => {
         }
       }}
     >
+      <MenuItem key="editItem" textValue="editItem">
+        <Icon as={EditIcon} mr="$2" />
+        <MenuItemLabel size="sm">Edit...</MenuItemLabel>
+      </MenuItem>
       {[...new Set(item?.Tags)].map((tag) => (
         <MenuItem key={tag} textValue={tag}>
           <CloseIcon mr="$2" />
@@ -155,6 +171,10 @@ const EndpointList = (props) => {
 
   return (
     <VStack>
+      <ModalForm title="Edit Service Endpoint" modalRef={editRef}>
+        <AddEndpoint item={editing} notifyChange={notifyEditChange} />
+      </ModalForm>
+
       <ListHeader
         title="Endpoints"
         description="Describe Service Endpoints for building One-Way Firewall Rules and short names"

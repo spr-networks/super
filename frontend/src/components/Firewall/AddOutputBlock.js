@@ -40,6 +40,17 @@ class AddOutputBlockImpl extends React.Component {
     super(props)
     this.handleChange = this.handleChange.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
+
+    if (props.item) {
+      this.state = {
+        ...this.state,
+        SrcIP: props.item.SrcIP || '0.0.0.0/0',
+        DstIP: props.item.DstIP || '',
+        DstPort: props.item.DstPort || '',
+        Protocol: props.item.Protocol || 'tcp',
+        Description: props.item.Description || ''
+      }
+    }
   }
 
   handleChange(name, value) {
@@ -67,13 +78,26 @@ class AddOutputBlockImpl extends React.Component {
       this.setState({ isLoading: false })
     }
 
-    firewallAPI
-      .addOutputBLock(block)
-      .then(done)
-      .catch((err) => {
-        this.props.alertContext.error('Firewall API Failure', err)
-        this.setState({ isLoading: false })
-      })
+    const persist = () =>
+      firewallAPI
+        .addOutputBLock(block)
+        .then(done)
+        .catch((err) => {
+          this.props.alertContext.error('Firewall API Failure', err)
+          this.setState({ isLoading: false })
+        })
+
+    if (this.props.item) {
+      firewallAPI
+        .deleteOutputBlock(this.props.item)
+        .then(persist)
+        .catch((err) => {
+          this.props.alertContext.error('Firewall API Failure', err)
+          this.setState({ isLoading: false })
+        })
+    } else {
+      persist()
+    }
   }
 
   componentDidMount() {}
@@ -205,6 +229,7 @@ export default function AddOutputBlock(props) {
   let alertContext = useContext(AlertContext)
   return (
     <AddOutputBlockImpl
+      item={props.item}
       notifyChange={props.notifyChange}
       alertContext={alertContext}
     ></AddOutputBlockImpl>
