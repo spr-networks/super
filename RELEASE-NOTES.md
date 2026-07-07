@@ -5,6 +5,7 @@
 ** Features **
 - Add new ui themes
 - base/scripts now includes a tool to verify reproducible container builds against sigstore
+- Add devices to a new service endpoint from within the UI
 ** Fixes **
 - Fix endpoint fw rules, further nft cleanup and bug fixes
 
