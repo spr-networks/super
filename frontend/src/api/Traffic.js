@@ -14,7 +14,10 @@ export class APITraffic extends API {
   }
 
   map(name){ return this.get(`/traffic/${name}`)}
-  history(){ return this.get('/traffic_history') }
+  history(minutes){
+    let qs = minutes ? `?minutes=${minutes}` : ''
+    return this.get(`/traffic_history${qs}`)
+  }
 }
 
 export const trafficAPI = new APITraffic()

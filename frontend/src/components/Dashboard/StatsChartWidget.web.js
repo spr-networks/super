@@ -87,7 +87,10 @@ const StatsChartWidget = (props) => {
           type: 'timeseries',
           distribution: 'linear',
           ticks: {
-            callback: (value, index, labels) => (index % 4 === 0 ? value : '')
+            // chart.js 4: time scale callbacks receive a raw timestamp
+            callback: function (value, index) {
+              return index % 4 === 0 ? new Date(value).toLocaleTimeString() : ''
+            }
           }
         },
         y: {

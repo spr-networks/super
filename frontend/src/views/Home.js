@@ -33,7 +33,7 @@ import {
 import HealthCheck from 'components/Dashboard/HealthCheck'
 import {
   TotalTraffic,
-  DeviceTraffic
+  DeviceTrafficPane
 } from 'components/Dashboard/TrafficWidgets'
 import {
   DNSMetrics,
@@ -371,10 +371,7 @@ const Home = (props) => {
           <VStack space="md">
             {show.traffic ? <TotalTraffic /> : null}
 
-            <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
-              <DeviceTraffic flex={1} minutes={5} />
-              <DeviceTraffic flex={1} minutes={60} />
-            </VStack>
+            <DeviceTrafficPane />
           </VStack>
         </VStack>
 

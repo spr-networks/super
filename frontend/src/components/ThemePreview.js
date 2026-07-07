@@ -21,6 +21,15 @@ const ThemePreview = ({ spec, theme, ...props }) => {
       text: c.text
     }
   }
+  if (!s) {
+    s = {
+      colorMode: 'dark',
+      accent: '#64748b',
+      background: '#0f172a',
+      card: '#1e293b',
+      text: '#f8fafc'
+    }
+  }
 
   let d = deriveCustomColors(s)
   let get = (k, fb) => d[k] || fb

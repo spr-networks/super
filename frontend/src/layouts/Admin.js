@@ -74,9 +74,12 @@ import { themes, customIdForName } from 'Themes'
 const ConfirmTrafficAlert = (props) => {
   const { type, title, body, showAlert, onClose } = props
 
-  const onPressDeny = () => onClose('deny')
-  const onPressAllow = () => onClose('allow')
-  const onPressClose = () => onClose('cancel')
+  const safeClose = (action) => {
+    if (typeof onClose === 'function') onClose(action)
+  }
+  const onPressDeny = () => safeClose('deny')
+  const onPressAllow = () => safeClose('allow')
+  const onPressClose = () => safeClose('cancel')
 
   const cancelRef = React.useRef(null)
 

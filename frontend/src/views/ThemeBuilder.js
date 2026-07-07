@@ -16,8 +16,7 @@ import {
   Pressable,
   ScrollView,
   Text,
-  VStack,
-  CloseIcon
+  VStack
 } from '@gluestack-ui/themed'
 
 const HEX = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/
