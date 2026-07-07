@@ -294,7 +294,7 @@ func updateWpaSupplicantConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, network := range wpa.Networks {
+	for i, network := range wpa.Networks {
 
 		//track whether at least one network is enabled.
 		if !enabled {
@@ -305,6 +305,7 @@ func updateWpaSupplicantConfig(w http.ResponseWriter, r *http.Request) {
 
 		if network.KeyMgmt == "" {
 			network.KeyMgmt = "WPA-PSK WPA-PSK-SHA256"
+			wpa.Networks[i] = network
 		}
 		err := network.Validate()
 		if err != nil {
