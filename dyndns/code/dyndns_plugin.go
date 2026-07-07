@@ -210,9 +210,6 @@ func validateConfig(config GodyndnsConfig) error {
 }
 
 func setConfiguration(w http.ResponseWriter, r *http.Request) {
-	Configmtx.Lock()
-	defer Configmtx.Unlock()
-
 	// Decode API config
 	apiConfig := GodyndnsConfigAPI{}
 	err := json.NewDecoder(r.Body).Decode(&apiConfig)
@@ -259,7 +256,9 @@ func setConfiguration(w http.ResponseWriter, r *http.Request) {
 
 	data, _ := json.Marshal(config)
 
+	Configmtx.Lock()
 	err = ioutil.WriteFile(GoDyndnsConfigFile, data, 0600)
+	Configmtx.Unlock()
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
@@ -273,9 +272,6 @@ func setConfiguration(w http.ResponseWriter, r *http.Request) {
 }
 
 func refreshDyndns(w http.ResponseWriter, r *http.Request) {
-	Configmtx.Lock()
-	defer Configmtx.Unlock()
-
 	runGoDyndns()
 }
 
