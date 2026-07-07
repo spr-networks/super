@@ -10,6 +10,7 @@ COPY . ./
 # Normalize source modes so yarn-build's output directories don't inherit
 # whatever umask the host clone happened to use.
 RUN find . -exec chmod go-w {} +
+RUN corepack enable
 ARG USE_TMPFS=true
 RUN --mount=type=tmpfs,target=/tmpfs \
     if [ "$USE_TMPFS" = "true" ]; then \
