@@ -8,6 +8,7 @@
 - Add devices to a new service endpoint from within the UI
 ** Fixes **
 - Fix endpoint fw rules, further nft cleanup and bug fixes
+- Update node dependencies & CI
 
 ## v1.1.6
 ** Features **
