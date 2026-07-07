@@ -73,7 +73,7 @@ mkdir -p state/dns/
 mkdir -p state/wifi/
 touch state/dns/local_mappings state/dhcp/leases.txt
 
-PLUGINS="dyndns ppp wifi_uplink"
+PLUGINS="${PLUGINS-dyndns ppp wifi_uplink}"
 if [ -f .github_creds ]; then
   BAKE_SET+=(--set "*.args.GITHUB_CREDS=$(cat .github_creds)")
 fi
@@ -86,7 +86,9 @@ then
   # Fallback (no buildx): NOT bit-for-bit (docker exporter can't rewrite timestamps).
   export DOCKER_BUILDKIT=1
   export COMPOSE_DOCKER_CLI_BUILD=1
-  docker-compose build "$@" || exit 1
+  if [ -z "$SKIP_MAIN" ]; then
+    docker-compose build "$@" || exit 1
+  fi
 
   for plugin in $PLUGINS
   do
@@ -117,10 +119,12 @@ else
     esac
   done
 
-  docker buildx bake \
-    --builder super-builder \
-    --file docker-compose.yml \
-    "${BAKE_SET[@]}" --set "*.output=${OUTPUT}" "${ARGS[@]}" || exit 1
+  if [ -z "$SKIP_MAIN" ]; then
+    docker buildx bake \
+      --builder super-builder \
+      --file docker-compose.yml \
+      "${BAKE_SET[@]}" --set "*.output=${OUTPUT}" "${ARGS[@]}" || exit 1
+  fi
 
   for plugin in $PLUGINS
   do
