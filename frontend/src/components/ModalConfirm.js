@@ -98,7 +98,7 @@ const ModalConfirm = (props) => {
       <Button
         variant="solid"
         colorScheme="primary"
-        rounded="full"
+        rounded="$full"
         leftIcon={<Icon icon={faPlus} />}
         onPress={() => setIsOpen(true)}
         {...props}

@@ -10,13 +10,16 @@ COPY . ./
 # Normalize source modes so yarn-build's output directories don't inherit
 # whatever umask the host clone happened to use.
 RUN find . -exec chmod go-w {} +
+RUN corepack enable
 ARG USE_TMPFS=true
 RUN --mount=type=tmpfs,target=/tmpfs \
-    [ "$USE_TMPFS" = "true" ] && \
+    if [ "$USE_TMPFS" = "true" ]; then \
         mkdir /tmpfs/cache /tmpfs/node_modules && \
         ln -s /tmpfs/node_modules /app/node_modules && \
-        ln -s /tmpfs/cache /usr/local/share/.cache; \
-    yarn install --frozen-lockfile --network-timeout 86400000 && yarn run build
+        ln -s /tmpfs/cache /usr/local/share/.cache && \
+        export YARN_GLOBAL_FOLDER=/tmpfs/cache; \
+    fi && \
+    yarn install --immutable && yarn run build
 
 FROM ${ALPINE_REF}
 COPY --from=build /app/build/ /app/build/

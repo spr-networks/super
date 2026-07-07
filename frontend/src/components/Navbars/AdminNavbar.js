@@ -8,23 +8,33 @@ import {
   Badge,
   BadgeIcon,
   BadgeText,
+  Box,
   Button,
   ButtonIcon,
   HStack,
+  Icon,
   Link,
   LinkText,
   Text,
+  Menu,
+  MenuItem,
+  MenuItemLabel,
   MenuIcon,
-  MoonIcon,
-  SunIcon,
   VStack,
   useColorMode,
   Pressable
 } from '@gluestack-ui/themed'
 
-import { BookOpenText, AlertCircleIcon, LogOutIcon } from 'lucide-react-native'
+import {
+  BookOpenText,
+  AlertCircleIcon,
+  LogOutIcon,
+  PaletteIcon,
+  CheckIcon
+} from 'lucide-react-native'
 
 import { AppContext } from 'AppContext'
+import { themeList, themeKeyFor } from 'Themes'
 
 import RouteJump from './RouteJump'
 
@@ -35,14 +45,15 @@ const AdminNavbar = ({
   setIsOpenSidebar,
   isSimpleMode,
   setIsSimpleMode,
-  toggleColorMode,
+  theme,
+  setTheme,
+  customThemes,
   ...props
 }) => {
   const { isMeshNode, setActiveSidebarItem } = useContext(AppContext)
   const [versionStatus, setVersionStatus] = useState('')
 
   const colorMode = useColorMode()
-  //const toggleColorModeNB = useColorModeNB().toggleColorMode
 
   const navigate = useNavigate()
   const logout = async () => {
@@ -149,10 +160,29 @@ const AdminNavbar = ({
               }}
             >
               <HStack>
-                <Text size="lg" bold>
+                <Text
+                  size="lg"
+                  bold
+                  color={
+                    colorMode == 'light'
+                      ? '$navbarTextColorLight'
+                      : '$navbarTextColorDark'
+                  }
+                >
                   SPR
                 </Text>
-                {isMeshNode ? <Text size="lg">MESH</Text> : null}
+                {isMeshNode ? (
+                  <Text
+                    size="lg"
+                    color={
+                      colorMode == 'light'
+                        ? '$navbarTextColorLight'
+                        : '$navbarTextColorDark'
+                    }
+                  >
+                    MESH
+                  </Text>
+                ) : null}
               </HStack>
             </Pressable>
 
@@ -165,7 +195,14 @@ const AdminNavbar = ({
                 size="md"
                 py="$1"
               >
-                <BadgeText textTransform="none">
+                <BadgeText
+                  textTransform="none"
+                  color={
+                    colorMode == 'light'
+                      ? '$navbarTextColorLight'
+                      : '$navbarTextColorDark'
+                  }
+                >
                   {niceVersion(version)}
                 </BadgeText>
 
@@ -179,6 +216,83 @@ const AdminNavbar = ({
           <RouteJump />
 
           <HStack marginLeft="auto" space="2xl" alignItems="center">
+            {setTheme ? (
+              <Menu
+                placement="bottom right"
+                selectionMode="single"
+                selectedKeys={theme ? [themeKeyFor(theme, colorMode)] : []}
+                onSelectionChange={(e) => {
+                  let key = e.currentKey
+                  if (key == '__customize') {
+                    navigate('/admin/theme')
+                  } else if (key) {
+                    let [id, mode] = key.split(':')
+                    setTheme(id, mode)
+                  }
+                }}
+                trigger={(triggerProps) => (
+                  <Button variant="link" {...triggerProps}>
+                    <ButtonIcon
+                      as={PaletteIcon}
+                      size="lg"
+                      color={
+                        colorMode == 'light'
+                          ? '$navbarTextColorLight'
+                          : '$navbarTextColorDark'
+                      }
+                    />
+                  </Button>
+                )}
+              >
+                {themeList.map((t) => (
+                  <MenuItem key={t.key} textValue={t.key}>
+                    <Box
+                      w={16}
+                      h={16}
+                      rounded="$full"
+                      bg={t.swatch?.bg}
+                      borderWidth={1}
+                      borderColor="$borderColorCardDark"
+                      alignItems="center"
+                      justifyContent="center"
+                      mr="$2"
+                    >
+                      <Box w={7} h={7} rounded="$full" bg={t.swatch?.accent} />
+                    </Box>
+                    <MenuItemLabel size="sm">{t.name}</MenuItemLabel>
+                    {themeKeyFor(theme, colorMode) == t.key ? (
+                      <Icon as={CheckIcon} size="sm" ml="$2" />
+                    ) : null}
+                  </MenuItem>
+                ))}
+                {Object.values(customThemes || {}).map((t) => (
+                  <MenuItem key={t.id || t.name} textValue={t.id || t.name}>
+                    <Box
+                      w={16}
+                      h={16}
+                      rounded="$full"
+                      bg={t.swatch?.bg}
+                      borderWidth={1}
+                      borderColor="$borderColorCardDark"
+                      alignItems="center"
+                      justifyContent="center"
+                      mr="$2"
+                    >
+                      <Box w={7} h={7} rounded="$full" bg={t.swatch?.accent} />
+                    </Box>
+                    <MenuItemLabel size="sm">{t.name}</MenuItemLabel>
+                    {theme == t.id ? (
+                      <Icon as={CheckIcon} size="sm" ml="$2" />
+                    ) : null}
+                  </MenuItem>
+                ))}
+                <MenuItem key="__customize" textValue="Customize">
+                  <Icon as={PaletteIcon} size="sm" mr="$2" />
+                  <MenuItemLabel size="sm">Customize…</MenuItemLabel>
+                </MenuItem>
+              </Menu>
+            ) : null}
+
             <Link
               isExternal
               href="https://www.supernetworks.org/pages/docs/intro"
@@ -196,24 +310,6 @@ const AdminNavbar = ({
             >
               <ButtonIcon as={BookOpenText} size="lg" />
             </Link>
-
-            <Button
-              onPress={() => {
-                toggleColorMode()
-                //toggleColorModeNB()
-              }}
-              variant="link"
-            >
-              <ButtonIcon
-                as={colorMode == 'light' ? MoonIcon : SunIcon}
-                size="xl"
-                color={
-                  colorMode == 'light'
-                    ? '$navbarTextColorLight'
-                    : '$navbarTextColorDark'
-                }
-              />
-            </Button>
 
             <Button
               variant="link"

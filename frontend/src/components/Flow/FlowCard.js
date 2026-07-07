@@ -201,7 +201,7 @@ const FlowCard = ({ card, size, edit, ...props }) => {
     >
       <Box
         height={size == 'xs' ? 30 : 50}
-        rounded="full"
+        rounded="$full"
         width={size == 'xs' ? 30 : 50}
         justifyContent="center"
         alignItems="center"

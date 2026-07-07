@@ -20,7 +20,8 @@ import {
   VStack,
   Text,
   AddIcon,
-  CloseIcon
+  TrashIcon,
+  EditIcon
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
@@ -73,9 +74,17 @@ const UpstreamServicesList = (props) => {
   }, [])
 
   let refModal = useRef(null)
+  let editRef = useRef(null)
+  const [editing, setEditing] = useState(null)
 
   const notifyChange = (type) => {
     refModal.current()
+    refreshList()
+  }
+
+  const notifyEditChange = (type) => {
+    editRef.current && editRef.current()
+    setEditing(null)
     refreshList()
   }
 
@@ -111,6 +120,10 @@ const UpstreamServicesList = (props) => {
 
   return (
     <>
+      <ModalForm title="Edit Port" modalRef={editRef}>
+        <AddServicePort item={editing} notifyChange={notifyEditChange} />
+      </ModalForm>
+
       <ListHeader
         title="Allowed SPR Services"
         description="Ports to allow to the router"
@@ -141,7 +154,7 @@ const UpstreamServicesList = (props) => {
           <Heading size="xs" w={100} textAlign="center">
             From Internet
           </Heading>
-          <Box w={40} />
+          <Box w={80} />
         </HStack>
 
         <FlatList
@@ -162,13 +175,24 @@ const UpstreamServicesList = (props) => {
                 />
               </Box>
               <Button
+                variant="link"
+                alignSelf="center"
+                onPress={() => {
+                  setEditing(item)
+                  editRef.current && editRef.current()
+                }}
+              >
+                <ButtonIcon as={EditIcon} color="$muted600" />
+              </Button>
+              <Button
+                ml="$3"
                 alignSelf="center"
                 size="sm"
                 action="negative"
                 variant="link"
                 onPress={() => deleteListItem(item)}
               >
-                <ButtonIcon as={CloseIcon} color="$red700" />
+                <ButtonIcon as={TrashIcon} color="$red700" />
               </Button>
             </ListItem>
           )}

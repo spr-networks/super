@@ -3227,6 +3227,7 @@ func main() {
 
 	external_router_authenticated.HandleFunc("/dnsSettings", dnsSettings).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/multicastSettings", multicastSettings).Methods("GET", "PUT")
+	external_router_authenticated.HandleFunc("/customThemes", customThemes).Methods("GET", "PUT")
 
 	//updates, version, feature info
 	external_router_authenticated.HandleFunc("/release", releaseInfo).Methods("GET", "OPTIONS")

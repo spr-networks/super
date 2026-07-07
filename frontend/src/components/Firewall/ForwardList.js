@@ -17,7 +17,8 @@ import {
   Text,
   AddIcon,
   ArrowRightIcon,
-  CloseIcon
+  TrashIcon,
+  EditIcon
 } from '@gluestack-ui/themed'
 
 import ListHeader from 'components/List/ListHeader'
@@ -65,14 +66,26 @@ const ForwardList = (props) => {
   }, [])
 
   let refModal = useRef(null)
+  let editRef = useRef(null)
+  const [editing, setEditing] = useState(null)
 
   const notifyChange = (type) => {
     refModal.current()
     refreshList()
   }
 
+  const notifyEditChange = (type) => {
+    editRef.current && editRef.current()
+    setEditing(null)
+    refreshList()
+  }
+
   return (
     <VStack>
+      <ModalForm title="Edit Port Forwarding Rule" modalRef={editRef}>
+        <AddForward item={editing} notifyChange={notifyEditChange} />
+      </ModalForm>
+
       <ListHeader
         title="Port Forwarding"
         description="Set rules to forward of incoming traffic"
@@ -126,13 +139,25 @@ const ForwardList = (props) => {
             </Text>
 
             <Button
+              variant="link"
+              alignSelf="center"
+              onPress={() => {
+                setEditing(item)
+                editRef.current && editRef.current()
+              }}
+            >
+              <ButtonIcon as={EditIcon} color="$muted600" />
+            </Button>
+
+            <Button
+              ml="$3"
               alignSelf="center"
               size="sm"
               action="negative"
               variant="link"
               onPress={() => deleteListItem(item)}
             >
-              <ButtonIcon as={CloseIcon} color="$red700" />
+              <ButtonIcon as={TrashIcon} color="$red700" />
             </Button>
           </ListItem>
         )}

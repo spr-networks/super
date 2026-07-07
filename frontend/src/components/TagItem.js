@@ -61,17 +61,8 @@ const PolicyItem = React.memo(({ name, size }) => {
 
   let colorMode = useColorMode()
 
-  let policyColors = {
-    dns: colorMode == 'light' ? '$blueGray300' : '$blueGray700',
-    lan: colorMode == 'light' ? '$blueGray300' : '$blueGray700',
-    wan: colorMode == 'light' ? '$blueGray300' : '$blueGray700',
-    api: colorMode == 'light' ? '$blueGray300' : '$blueGray700',
-    lan_upstream: colorMode == 'light' ? '$blueGray300' : '$blueGray700',
-    disabled: colorMode == 'light' ? '$blueGray300' : '$blueGray700'
-  }
-
   let icon = policyIcons[name] || UsersIcon
-  let bg = policyColors[name] || '$muted200'
+  let bg = colorMode == 'light' ? '$blueGray300' : '$blueGray600'
   let fg = colorMode == 'light' ? '$muted800' : '$muted100'
 
   return (

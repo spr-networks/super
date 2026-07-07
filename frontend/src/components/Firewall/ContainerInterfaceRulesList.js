@@ -18,7 +18,7 @@ import {
   VStack,
   Text,
   AddIcon,
-  CloseIcon
+  TrashIcon
 } from '@gluestack-ui/themed'
 
 import { ListHeader, ListItem } from 'components/List'
@@ -151,13 +151,14 @@ const ContainerInterfaceRulesList = (props) => {
             </HStack>
 
             <Button
+              ml="$3"
               alignSelf="center"
               size="sm"
               action="negative"
               variant="link"
               onPress={() => deleteListItem(item)}
             >
-              <ButtonIcon as={CloseIcon} color="$red700" />
+              <ButtonIcon as={TrashIcon} color="$red700" />
             </Button>
           </ListItem>
         )}

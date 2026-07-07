@@ -1,6 +1,6 @@
 # SPR UI
 
-The UI is built with [React Native](https://reactnative.dev/) and [Native Base](https://docs.nativebase.io/). 
+The UI is built with [React Native](https://reactnative.dev/) and [gluestack-ui](https://gluestack.io/).
 
 **Build status**
 

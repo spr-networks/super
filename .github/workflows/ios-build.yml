@@ -24,14 +24,18 @@ jobs:
           access_token: ${{ github.token }}
 
       - name: Check out Git repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v5
         with:
           fetch-depth: '0'
 
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v5
         with:
           node-version: 18
+
+      - name: Enable Corepack (yarn 4.17.0)
+        working-directory: ./frontend
+        run: corepack enable && corepack prepare yarn@4.17.0 --activate
 
       - name: Set up Xcode
         # Match local dev (Xcode 26.4.1, build 17E202)

@@ -13,6 +13,8 @@ import AuthLayout from 'layouts/Auth'
 import Setup from 'views/pages/Setup'
 import AddDevice from 'components/Setup/AddDevice'
 
+import AsyncStorage from '@react-native-async-storage/async-storage'
+
 //import { saveLogin } from 'api'
 
 import createServer from 'api/MockAPI'
@@ -174,5 +176,85 @@ describe('Setup', () => {
 
     //=> stage3
     //TODO /hostapd/restart_setup call
+  })
+
+  test('stage 3 - Theme', async () => {
+    // start from a clean settings blob so previous tests don't leak in
+    await AsyncStorage.removeItem('settings')
+
+    await setup()
+
+    let btnStart = screen.getByRole('button', { name: 'Start' })
+    await waitFor(
+      () => {
+        expect(btnStart).toBeTruthy()
+      },
+      { timeout: 3000 }
+    )
+    fireEvent.press(btnStart)
+
+    // fill the config form so Save succeeds and we advance to add-device
+    await waitFor(
+      () => {
+        expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy()
+      },
+      { timeout: 3000 }
+    )
+
+    const inputPassword = screen.getByPlaceholderText('Password')
+    const inputPasswordConfirm = screen.getByPlaceholderText('Confirm Password')
+    fireEvent.changeText(inputPassword, 'password1')
+    fireEvent.changeText(inputPasswordConfirm, 'password1')
+
+    let btnSave = screen.getByRole('button', { name: 'Save' })
+    fireEvent.press(btnSave)
+
+    await waitFor(
+      () => {
+        expect(screen.getByText('Add Your First WiFi Device')).toBeTruthy()
+      },
+      { timeout: 3000 }
+    )
+
+    // skip the device step -> theme picker
+    let btnSkip = screen.getByRole('button', { name: 'Skip' })
+    fireEvent.press(btnSkip)
+
+    await waitFor(
+      () => {
+        expect(screen.getByText('Choose a Theme')).toBeTruthy()
+      },
+      { timeout: 3000 }
+    )
+
+    // built-in themes are rendered with their swatches/labels
+    expect(screen.getByLabelText('Select theme Default Light')).toBeTruthy()
+    expect(screen.getByLabelText('Select theme Default Dark')).toBeTruthy()
+    expect(screen.getByLabelText('Select theme Lab Instrument')).toBeTruthy()
+
+    // selecting a theme updates local state and persists to AsyncStorage
+    let labOption = screen.getByLabelText('Select theme Lab Instrument')
+    fireEvent.press(labOption)
+
+    await waitFor(
+      async () => {
+        let raw = await AsyncStorage.getItem('settings')
+        let s = raw ? JSON.parse(raw) : {}
+        expect(s.theme).toBe('lab')
+        expect(s.colorMode).toBe('dark')
+      },
+      { timeout: 3000 }
+    )
+
+    // continue moves on to the finished step
+    let btnContinue = screen.getByRole('button', { name: 'Continue' })
+    fireEvent.press(btnContinue)
+
+    await waitFor(
+      () => {
+        expect(screen.getByText('SPR is now configured!')).toBeTruthy()
+      },
+      { timeout: 3000 }
+    )
   })
 })

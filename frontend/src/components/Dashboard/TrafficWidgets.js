@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import StatsChartWidget from './StatsChartWidget'
 import StatsWidget from './StatsWidget'
@@ -8,6 +8,8 @@ import { prettySize } from 'utils'
 
 import {
   Box,
+  Button,
+  ButtonIcon,
   Heading,
   HStack,
   Icon,
@@ -16,7 +18,12 @@ import {
   useColorMode,
   VStack
 } from '@gluestack-ui/themed'
-import { ArrowDownIcon, ArrowUpIcon } from 'lucide-react-native'
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon
+} from 'lucide-react-native'
 import DeviceItem from 'components/Devices/DeviceItem'
 
 export const TotalTraffic = (props) => {
@@ -187,6 +194,123 @@ export const DeviceTraffic = ({ minutes, showEmpty, ...props }) => {
             </HStack>
           </HStack>
         ))}
+      </VStack>
+    </VStack>
+  )
+}
+
+const trafficWindows = [
+  { label: 'Traffic Last 5 minutes', minutes: 5 },
+  { label: 'Traffic Last hour', minutes: 60 },
+  { label: 'Traffic Last day', minutes: 60 * 24 }
+]
+
+export const DeviceTrafficPane = ({ showEmpty, ...props }) => {
+  const context = useContext(AppContext)
+  const navigate = useNavigate()
+  const [history, setHistory] = useState([])
+  const [idx, setIdx] = useState(0)
+  const idxRef = useRef(idx)
+  idxRef.current = idx
+
+  const fetchData = (minutes = trafficWindows[idxRef.current].minutes) => {
+    trafficAPI
+      .history(minutes)
+      .then((h) => setHistory(Array.isArray(h) ? h : []))
+      .catch(() => {})
+  }
+
+  useEffect(() => {
+    fetchData()
+    const interval = setInterval(fetchData, 60 * 1e3)
+    return () => clearInterval(interval)
+  }, [])
+
+  const win = trafficWindows[idx]
+  const cycle = (dir) => {
+    const nextIdx = (idx + dir + trafficWindows.length) % trafficWindows.length
+    setIdx(nextIdx)
+    fetchData(trafficWindows[nextIdx].minutes)
+  }
+
+  let diffSize = (szs) => szs[0] - szs[szs.length - 1]
+
+  let total = {}
+  for (let timeWindow of history.slice(0, win.minutes)) {
+    for (let ip in timeWindow) {
+      let { WanIn, WanOut } = timeWindow[ip]
+      if (!total[ip]) {
+        total[ip] = { ip, WanIn: [WanIn], WanOut: [WanOut] }
+      } else {
+        total[ip].WanIn.push(WanIn)
+        total[ip].WanOut.push(WanOut)
+      }
+    }
+  }
+
+  let totalWithData = Object.values(total)
+  if (!showEmpty) {
+    totalWithData = totalWithData.filter(
+      (v) => diffSize(v.WanIn) && diffSize(v.WanOut)
+    )
+  }
+  totalWithData.sort((a, b) => diffSize(b.WanIn) - diffSize(a.WanIn))
+
+  return (
+    <VStack
+      bg={
+        useColorMode() == 'light'
+          ? '$backgroundCardLight'
+          : '$backgroundCardDark'
+      }
+      space="md"
+      borderRadius={10}
+      p="$4"
+      {...props}
+    >
+      <HStack alignItems="center" justifyContent="space-between">
+        <Button action="secondary" variant="link" onPress={() => cycle(-1)}>
+          <ButtonIcon as={ChevronLeftIcon} />
+        </Button>
+        <VStack alignItems="center">
+          <Heading size="md" fontWeight={300}>
+            {win.label}
+          </Heading>
+        </VStack>
+        <Button action="secondary" variant="link" onPress={() => cycle(1)}>
+          <ButtonIcon as={ChevronRightIcon} />
+        </Button>
+      </HStack>
+      <VStack space="md">
+        {totalWithData.map((item) => (
+          <HStack space="sm" key={item.ip}>
+            <Pressable
+              flex={1}
+              onPress={() => navigate(`/admin/trafficlist/${item.ip}`)}
+            >
+              <DeviceItem
+                size="sm"
+                item={context.getDevice(item.ip, 'RecentIP')}
+                noPress
+              />
+            </Pressable>
+            <HStack flex={1} space="xs" justifyContent="flex-end">
+              <HStack space="sm" alignItems="center" justifyContent="flex-end">
+                <Icon size="xs" as={ArrowDownIcon} />
+                <Text size="xs">{prettySize(diffSize(item.WanIn))}</Text>
+              </HStack>
+              <HStack space="sm" alignItems="center" justifyContent="flex-end">
+                <Icon size="xs" as={ArrowUpIcon} />
+                <Text size="xs">{prettySize(diffSize(item.WanOut))}</Text>
+              </HStack>
+            </HStack>
+          </HStack>
+        ))}
+        {!totalWithData.length ? (
+          <Text size="sm" color="$muted500">
+            No traffic recorded in this window yet
+          </Text>
+        ) : null}
       </VStack>
     </VStack>
   )

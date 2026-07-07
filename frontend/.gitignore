@@ -8,3 +8,10 @@ ios/spr.xcworkspace/xcuserdata
 macos/Pods
 macos/build
 macos/spr.xcworkspace/xcuserdata
+
+# yarn berry
+.yarn/*
+!.yarn/releases
+!.yarn/patches
+!.yarn/plugins
+.pnp.*

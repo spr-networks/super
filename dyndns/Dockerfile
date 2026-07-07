@@ -3,15 +3,15 @@
 # (stubbed below) — this drops the bun dependency and the bundled web assets,
 # which were the only non-reproducible part of this image.
 ARG ALPINE_REF=alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
-ARG UBUNTU_REF=ubuntu:24.04@sha256:786a8b558f7be160c6c8c4a54f9a57274f3b4fb1491cf65146521ae77ff1dc54
-ARG CONTAINER_TEMPLATE_REF=ghcr.io/spr-networks/container_template@sha256:8906ef0651221ea67f3db0e9e630ac17eb363eae7ebccd829e613e40616a12dc
+ARG UBUNTU_REF=ubuntu:24.04@sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06ba2cef9ebffbc7092d90
+ARG CONTAINER_TEMPLATE_REF=ghcr.io/spr-networks/container_template@sha256:869ada7b121e9a0c552674042d32e801da3c4d04145638d9e722918c6377e65f
 ARG SOURCE_DATE_EPOCH
 
 FROM ${ALPINE_REF} AS cacerts
 
 FROM ${UBUNTU_REF} AS builder
 ENV DEBIAN_FRONTEND=noninteractive
-ARG UBUNTU_SNAPSHOT=20260601T000000Z
+ARG UBUNTU_SNAPSHOT=20260701T000000Z
 ARG GO_VERSION=1.25.11
 ARG GO_SHA256_AMD64=34f14304e856893f4ba30c2cacfe93906e9de7915c5f6aaaf3a81cdccd7ba30b
 ARG GO_SHA256_ARM64=c30bf9e156a54ea4e31fbbbf31a712b32734b58cc9a22426fa5ee632d0885124

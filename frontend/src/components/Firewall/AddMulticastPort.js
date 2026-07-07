@@ -45,6 +45,17 @@ class AddMulticastPortImpl extends React.Component {
     super(props)
     this.handleChange = this.handleChange.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
+
+    if (props.item) {
+      let [addr, port] = String(props.item.Address || '').split(':')
+      this.state = {
+        ...this.state,
+        Address: addr || '',
+        Port: port || '',
+        Description: props.item.Description || ''
+      }
+      this.originalAddress = props.item.Address
+    }
   }
 
   handleChange(name, value) {
@@ -65,39 +76,56 @@ class AddMulticastPortImpl extends React.Component {
   handleSubmit() {
     this.setState({ isLoading: true })
 
-    Multicast.config().then((config) => {
-      config.Addresses.push({
-        Address: this.state.Address + ':' + this.state.Port,
-        Description: this.state.Description
+    let newAddress = this.state.Address + ':' + this.state.Port
+    let description = this.state.Description
+    let isEditing = !!this.props.item
+    let originalAddress = this.originalAddress
+
+    Multicast.config()
+      .then((config) => {
+        if (isEditing) {
+          // Preserve Tags on the replaced entry; only Address/Description come
+          // from the form (tags are managed via the row's TagMenu).
+          config.Addresses = config.Addresses.map((e) => {
+            if (e.Address === originalAddress) {
+              return { ...e, Address: newAddress, Description: description }
+            }
+            return e
+          })
+        } else {
+          config.Addresses.push({
+            Address: newAddress,
+            Description: description
+          })
+        }
+        Multicast.setConfig(config)
+          .then((res) => {
+            //great, now update the firewall also
+            firewallAPI
+              .setMulticast({
+                Port: this.state.Port,
+                Upstream: false
+              })
+              .then(() => {
+                if (this.props.notifyChange) {
+                  this.props.notifyChange('multicast')
+                }
+                this.setState({ isLoading: false })
+              })
+              .catch((err) => {
+                this.props.alertContext.error('Firewall API Failure', err)
+                this.setState({ isLoading: false })
+              })
+          })
+          .catch((err) => {
+            this.props.alertContext.error('Multicast API Failure', err)
+            this.setState({ isLoading: false })
+          })
       })
-      Multicast.setConfig(config)
-        .then((res) => {
-          //great, now update the firewall also
-          firewallAPI
-            .setMulticast({
-              Port: this.state.Port,
-              Upstream: false
-            })
-            .then(() => {
-              if (this.props.notifyChange) {
-                this.props.notifyChange('multicast')
-              }
-              this.setState({ isLoading: false })
-            })
-            .catch((err) => {
-              this.props.alertContext.error('Firewall API Failure', err)
-              this.setState({ isLoading: false })
-            })
-        })
-        .catch((err) => {
-          this.props.alertContext.error('Multicast API Failure', err)
-          this.setState({ isLoading: false })
-        })
-    })
-    .catch((err) => {
-      this.props.alertContext.error('Failed to get Multicast config', err)
-      this.setState({ isLoading: false })
-    })
+      .catch((err) => {
+        this.props.alertContext.error('Failed to get Multicast config', err)
+        this.setState({ isLoading: false })
+      })
   }
 
   componentDidMount() {}
@@ -108,7 +136,9 @@ class AddMulticastPortImpl extends React.Component {
         <HStack space="md">
           <FormControl flex="2">
             <FormControlLabel>
-              <FormControlLabelText>Multicast Service / Address</FormControlLabelText>
+              <FormControlLabelText>
+                Multicast Service / Address
+              </FormControlLabelText>
             </FormControlLabel>
             <InputSelect
               size="md"
@@ -120,7 +150,8 @@ class AddMulticastPortImpl extends React.Component {
             />
             <FormControlHelper>
               <FormControlHelperText>
-                Pick a service below to auto-fill, or type a multicast IP (224.x–239.x).
+                Pick a service below to auto-fill, or type a multicast IP
+                (224.x–239.x).
               </FormControlHelperText>
             </FormControlHelper>
           </FormControl>
@@ -139,7 +170,8 @@ class AddMulticastPortImpl extends React.Component {
             </Input>
             <FormControlHelper>
               <FormControlHelperText>
-                Auto-filled when you pick a service. Change only if your service uses a different port.
+                Auto-filled when you pick a service. Change only if your service
+                uses a different port.
               </FormControlHelperText>
             </FormControlHelper>
           </FormControl>
@@ -182,6 +214,7 @@ export default function AddMulticastPort(props) {
   let alertContext = useContext(AlertContext)
   return (
     <AddMulticastPortImpl
+      item={props.item}
       notifyChange={props.notifyChange}
       alertContext={alertContext}
     ></AddMulticastPortImpl>

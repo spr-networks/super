@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -361,7 +362,17 @@ func trafficTimer() {
 
 func getTrafficHistory(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(gTrafficHistory)
+
+	history := gTrafficHistory
+	if minutesStr := r.URL.Query().Get("minutes"); minutesStr != "" {
+		if n, err := strconv.Atoi(minutesStr); err == nil && n >= 0 {
+			if n < len(history) {
+				history = history[len(history)-n:]
+			}
+		}
+	}
+
+	json.NewEncoder(w).Encode(history)
 }
 
 func initTraffic(config APIConfig) {

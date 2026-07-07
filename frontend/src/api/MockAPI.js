@@ -776,7 +776,7 @@ export default function MockAPI(props = null) {
             broadcast: 'ff:ff:ff:ff:ff:ff',
             addr_info: [
               {
-                family: 'inet4',
+                family: 'inet',
                 local: '192.168.0.1',
                 prefixlen: 24,
                 scope: 'global',
@@ -1635,7 +1635,7 @@ export default function MockAPI(props = null) {
       })
 
       this.get('/version', () => {
-        return '"1.0"'
+        return '"1.1"'
       })
 
       this.get('/dockerPS', () => {

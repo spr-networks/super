@@ -11,12 +11,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v5
 
       - name: Use Node.js 18
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v5
         with:
           node-version: 18
+
+      - name: Enable Corepack (yarn 4.17.0)
+        working-directory: ./frontend
+        run: corepack enable && corepack prepare yarn@4.17.0 --activate
 
       - name: Cache node modules
         uses: actions/cache@v4

@@ -74,7 +74,10 @@ const TimeSeriesChart = (props) => {
         type: 'timeseries',
         distribution: 'linear',
         ticks: {
-          callback: (value, index, labels) => (index % 5 === 0 ? value : '')
+          // chart.js 4: time scale callbacks receive a raw timestamp
+          callback: function (value, index) {
+            return index % 5 === 0 ? new Date(value).toLocaleTimeString() : ''
+          }
         }
       }
     },
@@ -111,6 +114,32 @@ const TimeSeriesChart = (props) => {
 
     delete options.scales.x.distribution
     //options.maintainAspectRatio = true
+
+    // re-normalize the percentages over the visible datasets when one is
+    // toggled off in the legend, so the remaining devices expand to 100%
+    options.plugins.legend.onClick = (e, legendItem, legend) => {
+      const chart = legend.chart
+      const index = legendItem.datasetIndex
+      chart.setDatasetVisibility(index, !chart.isDatasetVisible(index))
+
+      const datasets = chart.data.datasets
+      const len = Math.max(...datasets.map((d) => d.data.length))
+      for (let i = 0; i < len; i++) {
+        let total = 0
+        datasets.forEach((d, di) => {
+          if (chart.isDatasetVisible(di) && d.data[i]) {
+            total += d.data[i].z
+          }
+        })
+        datasets.forEach((d, di) => {
+          if (d.data[i]) {
+            d.data[i].y =
+              chart.isDatasetVisible(di) && total > 0 ? d.data[i].z / total : 0
+          }
+        })
+      }
+      chart.update()
+    }
   }
 
   const chartRef = useRef(null)

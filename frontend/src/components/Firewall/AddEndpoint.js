@@ -3,9 +3,11 @@ import PropTypes from 'prop-types'
 import { AlertContext } from 'AppContext'
 
 import ClientSelect from 'components/ClientSelect'
-import { firewallAPI } from 'api'
+import { firewallAPI, deviceAPI } from 'api'
 
 import {
+  Badge,
+  BadgeText,
   Button,
   ButtonText,
   FormControl,
@@ -13,8 +15,11 @@ import {
   FormControlHelperText,
   FormControlLabel,
   FormControlLabelText,
+  Icon,
   Input,
   InputField,
+  Pressable,
+  TrashIcon,
   VStack,
   HStack,
   Spinner
@@ -30,6 +35,10 @@ class AddEndpointImpl extends React.Component {
     IP: '',
     Port: 'any',
     Address: '',
+    Tag: '',
+    devices: {},
+    selected: [],
+    pickerKey: 0,
     isLoading: false
   }
 
@@ -38,6 +47,47 @@ class AddEndpointImpl extends React.Component {
 
     this.handleChange = this.handleChange.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
+
+    if (props.item) {
+      this.state = {
+        ...this.state,
+        RuleName: props.item.RuleName || '',
+        Description: props.item.Description || '',
+        Protocol: props.item.Protocol || 'tcp',
+        IP: props.item.IP || '',
+        Port: props.item.Port || 'any',
+        Tag: (props.item.Tags && props.item.Tags[0]) || ''
+      }
+    }
+  }
+
+  deviceById(id) {
+    return Object.values(this.state.devices).find(
+      (d) => (d.MAC || d.WGPubKey) === id
+    )
+  }
+
+  addDevice = (value) => {
+    if (!value) return
+    let dev = Object.values(this.state.devices).find(
+      (d) =>
+        d.RecentIP &&
+        (d.RecentIP === value || d.RecentIP.split('/')[0] === value)
+    )
+    let id = dev && (dev.MAC || dev.WGPubKey)
+    this.setState((prevState) => {
+      let add = id && !prevState.selected.includes(id)
+      return {
+        selected: add ? [...prevState.selected, id] : prevState.selected,
+        pickerKey: prevState.pickerKey + 1
+      }
+    })
+  }
+
+  removeDevice = (id) => {
+    this.setState((prevState) => ({
+      selected: prevState.selected.filter((x) => x !== id)
+    }))
   }
 
   handleChange(name, value) {
@@ -45,20 +95,43 @@ class AddEndpointImpl extends React.Component {
     this.setState({ [name]: value })
   }
 
+  async tagSelectedDevices(tag) {
+    let byId = {}
+    Object.values(this.state.devices).forEach((d) => {
+      let id = d.MAC || d.WGPubKey
+      if (id) byId[id] = d
+    })
+    for (let id of this.state.selected) {
+      let d = byId[id]
+      if (!d) continue
+      let newTags = [...new Set([...(d.DeviceTags || []), tag])]
+      try {
+        await deviceAPI.updateTags(id, newTags)
+      } catch (e) {
+        this.props.alertContext.error('Failed to tag device ' + (d.Name || id))
+      }
+    }
+  }
+
   handleSubmit() {
+    let tag = this.state.Tag.trim().toLowerCase()
     let rule = {
       RuleName: this.state.RuleName,
       Description: this.state.Description,
       IP: this.state.IP,
       Protocol: this.state.Protocol,
-      Port: this.state.Port
+      Port: this.state.Port,
+      Tags: tag ? [tag] : []
     }
 
     this.setState({ isLoading: true })
 
     firewallAPI
       .addEndpoint(rule)
-      .then((res) => {
+      .then(async () => {
+        if (tag && this.state.selected.length) {
+          await this.tagSelectedDevices(tag)
+        }
         if (this.props.notifyChange) {
           this.props.notifyChange('endpoint')
         }
@@ -70,7 +143,27 @@ class AddEndpointImpl extends React.Component {
       })
   }
 
-  componentDidMount() {}
+  componentDidMount() {
+    deviceAPI
+      .list()
+      .then((devices) => {
+        let next = { devices }
+
+        if (this.props.item && this.state.Tag) {
+          let tag = this.state.Tag.trim().toLowerCase()
+          let selected = Object.values(devices)
+            .filter((d) =>
+              (d.DeviceTags || []).some((t) => String(t).toLowerCase() === tag)
+            )
+            .map((d) => d.MAC || d.WGPubKey)
+            .filter(Boolean)
+          next.selected = selected
+        }
+
+        this.setState(next)
+      })
+      .catch(() => {})
+  }
 
   render() {
     let selOpt = (value) => {
@@ -182,6 +275,57 @@ class AddEndpointImpl extends React.Component {
           </Input>
         </FormControl>
 
+        <FormControl>
+          <FormControlLabel>
+            <FormControlLabelText>Tag</FormControlLabelText>
+          </FormControlLabel>
+          <Input size="md" variant="underlined">
+            <InputField
+              autoComplete="off"
+              placeholder="e.g. nas-access"
+              value={this.state.Tag}
+              onChangeText={(value) => this.handleChange('Tag', value)}
+            />
+          </Input>
+          <FormControlHelper>
+            <FormControlHelperText>
+              Only devices with this tag can reach the endpoint. Add devices
+              below to apply the tag to them automatically.
+            </FormControlHelperText>
+          </FormControlHelper>
+        </FormControl>
+
+        {this.state.Tag.trim().length ? (
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText>Apply tag to devices</FormControlLabelText>
+            </FormControlLabel>
+            <ClientSelect
+              key={this.state.pickerKey}
+              value=""
+              onChange={(value) => this.addDevice(value)}
+              onSubmitEditing={(value) => this.addDevice(value)}
+            />
+            {this.state.selected.length ? (
+              <HStack space="sm" flexWrap="wrap" mt="$2">
+                {this.state.selected.map((id) => {
+                  let d = this.deviceById(id)
+                  return (
+                    <Badge key={id} action="muted" variant="outline" size="sm">
+                      <BadgeText>
+                        {d ? d.Name || d.RecentIP || id : id}
+                      </BadgeText>
+                      <Pressable ml="$1" onPress={() => this.removeDevice(id)}>
+                        <Icon as={TrashIcon} size="xs" color="$red700" />
+                      </Pressable>
+                    </Badge>
+                  )
+                })}
+              </HStack>
+            ) : null}
+          </FormControl>
+        ) : null}
+
         <Button
           action="primary"
           size="md"
@@ -207,6 +351,7 @@ export default function AddEndpoint(props) {
   let alertContext = useContext(AlertContext)
   return (
     <AddEndpointImpl
+      item={props.item}
       notifyChange={props.notifyChange}
       alertContext={alertContext}
     ></AddEndpointImpl>

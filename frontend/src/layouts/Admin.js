@@ -4,6 +4,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import Notifications from 'Notifications'
+import { logNotification } from 'NotificationsLog'
 import {
   AppContext,
   AlertContext,
@@ -14,7 +15,15 @@ import {
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Sidebar from 'components/Sidebar/Sidebar'
 import { WebSocketComponent } from 'api/WebSocket'
-import { api, deviceAPI, meshAPI, pfwAPI, pluginAPI, wifiAPI } from 'api'
+import {
+  api,
+  deviceAPI,
+  meshAPI,
+  pfwAPI,
+  pluginAPI,
+  themeAPI,
+  wifiAPI
+} from 'api'
 import { ucFirst } from 'utils'
 
 import {
@@ -60,13 +69,17 @@ import { PuzzleIcon } from 'lucide-react-native'
 
 import { KeyboardAvoidingView } from '@gluestack-ui/themed'
 import OTPValidate from 'components/Auth/OTPValidate'
+import { themes, customIdForName } from 'Themes'
 
 const ConfirmTrafficAlert = (props) => {
   const { type, title, body, showAlert, onClose } = props
 
-  const onPressDeny = () => onClose('deny')
-  const onPressAllow = () => onClose('allow')
-  const onPressClose = () => onClose('cancel')
+  const safeClose = (action) => {
+    if (typeof onClose === 'function') onClose(action)
+  }
+  const onPressDeny = () => safeClose('deny')
+  const onPressAllow = () => safeClose('allow')
+  const onPressClose = () => safeClose('cancel')
 
   const cancelRef = React.useRef(null)
 
@@ -146,7 +159,14 @@ const AppAlert = (props) => {
   )
 }
 
-const AdminLayout = ({ toggleColorMode, ...props }) => {
+const AdminLayout = ({
+  setColorMode,
+  theme,
+  setTheme,
+  customThemes,
+  setCustomThemes,
+  ...props
+}) => {
   const mainPanel = React.useRef()
   const location = useLocation()
   const navigate = useNavigate()
@@ -173,6 +193,8 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
       if (['error', 'success'].includes(type) && Platform.OS == 'web') {
         Notifications.notification(title, body)
       }
+
+      logNotification(type, title, body)
 
       setAlert({ type, title, body })
       setShowAlert(true)
@@ -521,17 +543,93 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
     }
   }, [viewSettings])
 
-  const backgroundColor = colorMode === 'light' ? 'white' : 'black'
+  // SafeAreaViews take a raw color, not a $token, so resolve the active
+  // theme's surface colors here (falls back to the default literals).
+  const themeColors = customThemes[theme]?.colors || themes[theme]?.colors || {}
+  const pick = (light, dark, litLight, litDark) =>
+    colorMode === 'light'
+      ? themeColors[light] || litLight
+      : themeColors[dark] || litDark
+  const backgroundColor = pick(
+    'navbarBackgroundLight',
+    'navbarBackgroundDark',
+    'white',
+    'black'
+  )
+  const contentBackground = pick(
+    'backgroundContentLight',
+    'backgroundContentDark',
+    '#f3f4f6',
+    'black'
+  )
+  const sidebarBackground = pick(
+    'sidebarBackgroundLight',
+    'sidebarBackgroundDark',
+    '#f9fafb',
+    'black'
+  )
 
-  //this is to sync the settings. TODO: in App
-  const toggleColorModeHook = () => {
-    setViewSettings({
-      ...viewSettings,
-      colorMode: colorMode == 'light' ? 'dark' : 'light'
-    })
-
-    toggleColorMode()
+  const setThemeHook = (name, mode) => {
+    let next = { ...viewSettings, theme: name }
+    if (mode) {
+      next.colorMode = mode
+    }
+    setViewSettings(next)
+    setTheme(name)
+    if (mode && setColorMode) {
+      setColorMode(mode)
+    }
   }
+
+  const syncThemesToAPI = (next) => {
+    themeAPI.save(Object.values(next)).catch((err) => {
+      alertState.error('Failed to save themes to API', err.message)
+    })
+  }
+
+  const saveCustomTheme = (name, spec) => {
+    let id = customIdForName(name)
+    let next = {
+      ...(viewSettings.customThemes || {}),
+      [id]: { id, name, spec }
+    }
+    setViewSettings({ ...viewSettings, customThemes: next, theme: id })
+    setCustomThemes(next)
+    setTheme(id)
+    syncThemesToAPI(next)
+  }
+
+  const deleteCustomTheme = (id) => {
+    let next = { ...(viewSettings.customThemes || {}) }
+    delete next[id]
+    let wasActive = theme === id
+    let patch = { ...viewSettings, customThemes: next }
+    if (wasActive) {
+      patch.theme = 'default'
+      patch.colorMode = 'light'
+    }
+    setViewSettings(patch)
+    setCustomThemes(next)
+    if (wasActive) {
+      setTheme('default', 'light')
+      if (setColorMode) setColorMode('light')
+    }
+    syncThemesToAPI(next)
+  }
+
+  useEffect(() => {
+    themeAPI
+      .list()
+      .then((list) => {
+        if (!Array.isArray(list) || !list.length) return
+        let next = {}
+        list.forEach((t) => {
+          if (t?.id) next[t.id] = t
+        })
+        setCustomThemes(next)
+      })
+      .catch(() => {})
+  }, [])
 
   const webConfirm = (title, body, data) => {
     alertState.confirm(title, body, (action) => {
@@ -588,7 +686,12 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
         getDevice,
         getGroups,
         viewSettings,
-        setViewSettings
+        setViewSettings,
+        theme,
+        setTheme: setThemeHook,
+        customThemes,
+        saveCustomTheme,
+        deleteCustomTheme
       }}
     >
       <WebSocketComponent notify={doNotify} confirm={doConfirm} />
@@ -630,7 +733,10 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
               isMobile={false}
               isOpenSidebar={isOpenSidebar}
               setIsOpenSidebar={setIsOpenSidebar}
-              toggleColorMode={toggleColorModeHook}
+              setColorMode={setColorMode}
+              theme={theme}
+              setTheme={setThemeHook}
+              customThemes={customThemes}
             />
           </Box>
           {/*mobile*/}
@@ -650,7 +756,10 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
               isMobile={true}
               isOpenSidebar={isOpenSidebar}
               setIsOpenSidebar={setIsOpenSidebar}
-              toggleColorMode={toggleColorModeHook}
+              setColorMode={setColorMode}
+              theme={theme}
+              setTheme={setThemeHook}
+              customThemes={customThemes}
             />
           </Box>
 
@@ -677,6 +786,8 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
                 setIsOpenSidebar={setIsOpenSidebar}
                 isSimpleMode={isSimpleMode}
                 setIsSimpleMode={setIsSimpleMode}
+                theme={theme}
+                setTheme={setThemeHook}
                 routes={routes}
               />
             </Box>
@@ -692,7 +803,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
                 <SafeAreaView
                   style={{
                     width: '100%',
-                    backgroundColor: colorMode == 'light' ? '#f9fafb' : 'black'
+                    backgroundColor: sidebarBackground
                   }}
                 >
                   <Sidebar
@@ -702,6 +813,8 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
                     setIsOpenSidebar={setIsOpenSidebar}
                     isSimpleMode={isSimpleMode}
                     setIsSimpleMode={setIsSimpleMode}
+                    theme={theme}
+                    setTheme={setThemeHook}
                     routes={routes}
                   />
                 </SafeAreaView>
@@ -712,7 +825,7 @@ const AdminLayout = ({ toggleColorMode, ...props }) => {
               <SafeAreaView
                 style={{
                   width: '100%',
-                  backgroundColor: colorMode == 'light' ? '#f3f4f6' : 'black'
+                  backgroundColor: contentBackground
                 }}
               >
                 <Outlet />
