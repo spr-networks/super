@@ -83,7 +83,7 @@ type WPASupplicantConfig struct {
 func (n *WPANetwork) Validate() error {
 	for i := 0; i < len(n.Password); i++ {
 		if n.Password[i] < 0x20 {
-			return fmt.Errorf("Password field contains control character 0x%02x", n.Password[i])
+			return fmt.Errorf("Password field contains control character at index %d", i)
 		}
 	}
 
@@ -406,10 +406,10 @@ func validatePPPField(value string, name string) error {
 	for i := 0; i < len(value); i++ {
 		c := value[i]
 		if c < 0x20 {
-			return fmt.Errorf("%s field contains control character 0x%02x", name, c)
+			return fmt.Errorf("%s field contains control character at index %d", name, i)
 		}
 		if c == '"' || c == '\\' {
-			return fmt.Errorf("%s field contains reserved character %q", name, rune(c))
+			return fmt.Errorf("%s field contains reserved character at index %d", name, i)
 		}
 	}
 	return nil
