@@ -80,55 +80,56 @@ func TestPersonaBlockedNow(t *testing.T) {
 
 	// over the daily limit -> blocked
 	p := Persona{Tag: "persona:kids", DailyLimitMinutes: 120}
-	if !personaBlockedNow(p, now, 120) {
+	if !personaBlockedNow(p, now, 120, 0, 0) {
 		t.Error("used == limit should block")
 	}
-	if !personaBlockedNow(p, now, 200) {
+	if !personaBlockedNow(p, now, 200, 0, 0) {
 		t.Error("used > limit should block")
 	}
-	if personaBlockedNow(p, now, 119) {
+	if personaBlockedNow(p, now, 119, 0, 0) {
 		t.Error("under limit should not block")
 	}
 
 	// no limit configured -> never blocked by usage
-	if personaBlockedNow(Persona{Tag: "persona:x"}, now, 9999) {
+	if personaBlockedNow(Persona{Tag: "persona:x"}, now, 9999, 0, 0) {
 		t.Error("DailyLimitMinutes==0 should never block on usage")
 	}
 
 	// disabled persona is never blocked, even over limit / in a window
 	pd := Persona{Tag: "persona:y", DailyLimitMinutes: 1, Disabled: true,
 		Schedules: []TimeWindow{allDays("00:00", "23:59")}}
-	if personaBlockedNow(pd, now, 999) {
+	if personaBlockedNow(pd, now, 999, 0, 0) {
 		t.Error("disabled persona should never block")
 	}
 
 	// manual pause in the future -> blocked; in the past -> not
-	pp := Persona{Tag: "persona:z", PauseUntil: now.Add(time.Hour).Unix()}
-	if !personaBlockedNow(pp, now, 0) {
-		t.Error("PauseUntil in the future should block")
+	pz := Persona{Tag: "persona:z"}
+	if !personaBlockedNow(pz, now, 0, now.Add(time.Hour).Unix(), 0) {
+		t.Error("pause in the future should block")
 	}
-	pp.PauseUntil = now.Add(-time.Hour).Unix()
-	if personaBlockedNow(pp, now, 0) {
-		t.Error("PauseUntil in the past should not block")
+	if personaBlockedNow(pz, now, 0, now.Add(-time.Hour).Unix(), 0) {
+		t.Error("pause in the past should not block")
 	}
 
 	// schedule window blocks regardless of usage
 	ps := Persona{Tag: "persona:s", Schedules: []TimeWindow{allDays("11:00", "13:00")}}
-	if !personaBlockedNow(ps, now, 0) {
+	if !personaBlockedNow(ps, now, 0, 0, 0) {
 		t.Error("time inside a block window should block")
 	}
 
-	// a temporary extension (GrantUntil in the future) overrides BOTH an
-	// exhausted limit and an active block schedule
+	// a temporary extension (grant in the future) overrides BOTH an
+	// exhausted limit and an active block schedule, and a pause
 	pe := Persona{Tag: "persona:e", DailyLimitMinutes: 60,
-		Schedules:  []TimeWindow{allDays("11:00", "13:00")},
-		GrantUntil: now.Add(30 * time.Minute).Unix()}
-	if personaBlockedNow(pe, now, 999) {
-		t.Error("GrantUntil in the future should unblock despite limit + schedule")
+		Schedules: []TimeWindow{allDays("11:00", "13:00")}}
+	grant := now.Add(30 * time.Minute).Unix()
+	if personaBlockedNow(pe, now, 999, 0, grant) {
+		t.Error("grant in the future should unblock despite limit + schedule")
 	}
-	pe.GrantUntil = now.Add(-time.Minute).Unix()
-	if !personaBlockedNow(pe, now, 999) {
-		t.Error("expired GrantUntil should fall back to blocked")
+	if personaBlockedNow(pe, now, 999, now.Add(time.Hour).Unix(), grant) {
+		t.Error("grant should override an active pause")
+	}
+	if !personaBlockedNow(pe, now, 999, 0, now.Add(-time.Minute).Unix()) {
+		t.Error("expired grant should fall back to blocked")
 	}
 }
 

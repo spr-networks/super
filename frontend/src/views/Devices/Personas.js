@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { AlertContext } from 'AppContext'
-import { deviceAPI, dbAPI, parentalAPI } from 'api'
+import { deviceAPI, parentalAPI } from 'api'
 
 import {
   AlertDialog,
@@ -303,11 +303,6 @@ const Personas = () => {
   }
 
   const refresh = () => {
-    dbAPI
-      .getItem('personas', 'list')
-      .then((result) => setPersonas(result || []))
-      .catch(() => {})
-
     deviceAPI
       .list()
       .then((result) => {
@@ -323,6 +318,12 @@ const Personas = () => {
           m[p.Tag] = p
         })
         setLimits(m)
+        setPersonas(
+          (list || []).map((p) => ({
+            Label: p.Name,
+            Description: p.Description || ''
+          }))
+        )
       })
       .catch(() => {})
 
@@ -339,9 +340,6 @@ const Personas = () => {
     devices.filter((device) =>
       device.DeviceTags?.includes(personaTag(persona.Label))
     )
-
-  const savePersonaList = (next) =>
-    dbAPI.putItem('personas', 'list', next).then(() => setPersonas(next))
 
   const syncDeviceTags = async (original, persona, selected) => {
     for (let device of selectableDevices(devices)) {
@@ -368,20 +366,6 @@ const Personas = () => {
     }
   }
 
-  // persist the time-limit + schedules for a persona, keyed by its tag; the
-  // backend enforcement engine reads these joined to device persona tags
-  const saveLimits = async (original, persona, limitData) => {
-    if (original && original.Label != persona.Label) {
-      await parentalAPI.deletePersona({ Name: original.Label }).catch(() => {})
-    }
-    await parentalAPI.savePersona({
-      Name: persona.Label,
-      Tag: personaTag(persona.Label),
-      DailyLimitMinutes: limitData.DailyLimitMinutes,
-      Schedules: limitData.Schedules
-    })
-  }
-
   const handleSave = (original) => async (persona, selected, limitData) => {
     if (!persona.Label) {
       context.error('Persona needs a name')
@@ -395,9 +379,17 @@ const Personas = () => {
     }
 
     try {
-      await savePersonaList(others.concat(persona))
+      if (original && original.Label != persona.Label) {
+        await parentalAPI.deletePersona({ Name: original.Label }).catch(() => {})
+      }
+      await parentalAPI.savePersona({
+        Name: persona.Label,
+        Tag: personaTag(persona.Label),
+        Description: persona.Description,
+        DailyLimitMinutes: limitData.DailyLimitMinutes,
+        Schedules: limitData.Schedules
+      })
       await syncDeviceTags(original, persona, selected)
-      await saveLimits(original, persona, limitData)
     } catch (err) {
       context.error('Failed to save persona: ' + err.message)
     }
@@ -426,8 +418,7 @@ const Personas = () => {
           )
         }
       }
-      await savePersonaList(personas.filter((p) => p.Label != persona.Label))
-      await parentalAPI.deletePersona({ Name: persona.Label }).catch(() => {})
+      await parentalAPI.deletePersona({ Name: persona.Label })
     } catch (err) {
       context.error('Failed to delete persona: ' + err.message)
     }

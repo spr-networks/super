@@ -12,8 +12,8 @@ import (
 )
 
 var ParentalMtx sync.RWMutex
-var TimeLimitsFile = TEST_PREFIX + "/configs/base/timelimits.json"
-var TimeUsageFile = TEST_PREFIX + "/state/api/timeusage.json"
+var PersonasConfigFile = TEST_PREFIX + "/configs/base/personas.json"
+var PersonasStateFile = TEST_PREFIX + "/state/api/personas.json"
 
 const PersonaTagPrefix = "persona:"
 
@@ -28,27 +28,32 @@ type TimeWindow struct {
 type Persona struct {
 	Name              string
 	Tag               string
+	Description       string
 	DailyLimitMinutes int
 	Schedules         []TimeWindow
 	Disabled          bool
-	PauseUntil        int64
-	GrantUntil        int64
 }
 
-type UsageState struct {
+type PersonasState struct {
 	Date        string
 	UsedMinutes map[string]int
+	PauseUntil  map[string]int64
+	GrantUntil  map[string]int64
 }
 
 var gParentalConfig = []Persona{}
-var gUsageState = UsageState{UsedMinutes: map[string]int{}}
+var gPersonasState = PersonasState{
+	UsedMinutes: map[string]int{},
+	PauseUntil:  map[string]int64{},
+	GrantUntil:  map[string]int64{},
+}
 var gPersonaBlocked = map[string]bool{}
 var gBlockedIPs = map[string]bool{}
 var gLastWanBytes = map[string]uint64{}
 var gDeviceBlocked = map[string]bool{}
 
 func loadParentalConfig() {
-	data, err := ioutil.ReadFile(TimeLimitsFile)
+	data, err := ioutil.ReadFile(PersonasConfigFile)
 	if err != nil {
 		return
 	}
@@ -60,29 +65,39 @@ func loadParentalConfig() {
 
 func saveParentalConfig() {
 	file, _ := json.MarshalIndent(gParentalConfig, "", " ")
-	if err := ioutil.WriteFile(TimeLimitsFile, file, 0600); err != nil {
-		log.Println("failed to save timelimits.json", err)
+	if err := ioutil.WriteFile(PersonasConfigFile, file, 0600); err != nil {
+		log.Println("failed to save personas.json", err)
 	}
 }
 
-func loadUsageState() {
-	data, err := ioutil.ReadFile(TimeUsageFile)
+func ensureStateMaps() {
+	if gPersonasState.UsedMinutes == nil {
+		gPersonasState.UsedMinutes = map[string]int{}
+	}
+	if gPersonasState.PauseUntil == nil {
+		gPersonasState.PauseUntil = map[string]int64{}
+	}
+	if gPersonasState.GrantUntil == nil {
+		gPersonasState.GrantUntil = map[string]int64{}
+	}
+}
+
+func loadPersonasState() {
+	data, err := ioutil.ReadFile(PersonasStateFile)
 	if err != nil {
 		return
 	}
-	st := UsageState{}
+	st := PersonasState{}
 	if json.Unmarshal(data, &st) == nil {
-		if st.UsedMinutes == nil {
-			st.UsedMinutes = map[string]int{}
-		}
-		gUsageState = st
+		gPersonasState = st
 	}
+	ensureStateMaps()
 }
 
-func saveUsageState() {
-	file, _ := json.MarshalIndent(gUsageState, "", " ")
-	if err := ioutil.WriteFile(TimeUsageFile, file, 0600); err != nil {
-		log.Println("failed to save timeusage.json", err)
+func savePersonasState() {
+	file, _ := json.MarshalIndent(gPersonasState, "", " ")
+	if err := ioutil.WriteFile(PersonasStateFile, file, 0600); err != nil {
+		log.Println("failed to save personas state", err)
 	}
 }
 
@@ -126,14 +141,14 @@ func inScheduleWindow(w TimeWindow, now time.Time) bool {
 	return w.Days[prev] == 1 && cur < end
 }
 
-func personaBlockedNow(p Persona, now time.Time, used int) bool {
+func personaBlockedNow(p Persona, now time.Time, used int, pauseUntil, grantUntil int64) bool {
 	if p.Disabled {
 		return false
 	}
-	if p.GrantUntil > now.Unix() {
+	if grantUntil > now.Unix() {
 		return false
 	}
-	if p.PauseUntil > now.Unix() {
+	if pauseUntil > now.Unix() {
 		return true
 	}
 	if p.DailyLimitMinutes > 0 && used >= p.DailyLimitMinutes {
@@ -224,9 +239,19 @@ func parentalTick() {
 	ParentalMtx.Lock()
 	loadParentalConfig()
 
-	if gUsageState.Date != dayKey {
-		gUsageState.Date = dayKey
-		gUsageState.UsedMinutes = map[string]int{}
+	if gPersonasState.Date != dayKey {
+		gPersonasState.Date = dayKey
+		gPersonasState.UsedMinutes = map[string]int{}
+		for tag, until := range gPersonasState.PauseUntil {
+			if until <= now.Unix() {
+				delete(gPersonasState.PauseUntil, tag)
+			}
+		}
+		for tag, until := range gPersonasState.GrantUntil {
+			if until <= now.Unix() {
+				delete(gPersonasState.GrantUntil, tag)
+			}
+		}
 	}
 
 	for _, p := range gParentalConfig {
@@ -235,7 +260,7 @@ func parentalTick() {
 		}
 		for _, dev := range devices {
 			if deviceHasTag(dev, p.Tag) && activeIPs[dev.RecentIP] {
-				gUsageState.UsedMinutes[p.Tag]++
+				gPersonasState.UsedMinutes[p.Tag]++
 				break
 			}
 		}
@@ -243,8 +268,9 @@ func parentalTick() {
 
 	nextBlocked := map[string]bool{}
 	for _, p := range gParentalConfig {
-		used := gUsageState.UsedMinutes[p.Tag]
-		blocked := personaBlockedNow(p, now, used)
+		used := gPersonasState.UsedMinutes[p.Tag]
+		blocked := personaBlockedNow(p, now, used,
+			gPersonasState.PauseUntil[p.Tag], gPersonasState.GrantUntil[p.Tag])
 		nextBlocked[p.Tag] = blocked
 		blockedByTag[p.Tag] = blocked
 
@@ -269,7 +295,7 @@ func parentalTick() {
 	}
 	gBlockedIPs = newBlockedIPs
 
-	saveUsageState()
+	savePersonasState()
 	ParentalMtx.Unlock()
 
 	for _, dev := range devices {
@@ -304,7 +330,7 @@ func parentalTick() {
 func parentalControlLoop() {
 	ParentalMtx.Lock()
 	loadParentalConfig()
-	loadUsageState()
+	loadPersonasState()
 	ParentalMtx.Unlock()
 
 	go func() {
@@ -369,7 +395,12 @@ func modifyParentalPersonas(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodDelete {
 		if idx >= 0 {
+			tag := gParentalConfig[idx].Tag
 			gParentalConfig = append(gParentalConfig[:idx], gParentalConfig[idx+1:]...)
+			delete(gPersonasState.UsedMinutes, tag)
+			delete(gPersonasState.PauseUntil, tag)
+			delete(gPersonasState.GrantUntil, tag)
+			savePersonasState()
 		}
 	} else if idx >= 0 {
 		gParentalConfig[idx] = persona
@@ -399,18 +430,29 @@ func getParentalUsage(w http.ResponseWriter, r *http.Request) {
 	}
 	out := map[string]UsageInfo{}
 	for _, p := range gParentalConfig {
-		used := gUsageState.UsedMinutes[p.Tag]
+		used := gPersonasState.UsedMinutes[p.Tag]
+		pause := gPersonasState.PauseUntil[p.Tag]
+		grant := gPersonasState.GrantUntil[p.Tag]
 		out[p.Tag] = UsageInfo{
 			Used:       used,
 			Limit:      p.DailyLimitMinutes,
-			Blocked:    personaBlockedNow(p, now, used),
-			PauseUntil: p.PauseUntil,
-			GrantUntil: p.GrantUntil,
+			Blocked:    personaBlockedNow(p, now, used, pause, grant),
+			PauseUntil: pause,
+			GrantUntil: grant,
 		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(out)
+}
+
+func resolvePersonaTag(nameOrTag string) string {
+	for _, p := range gParentalConfig {
+		if p.Tag == nameOrTag || p.Name == nameOrTag {
+			return p.Tag
+		}
+	}
+	return ""
 }
 
 func setParentalPause(w http.ResponseWriter, r *http.Request) {
@@ -427,27 +469,22 @@ func setParentalPause(w http.ResponseWriter, r *http.Request) {
 	defer ParentalMtx.Unlock()
 	loadParentalConfig()
 
-	found := false
-	for i, p := range gParentalConfig {
-		if p.Tag == req.Tag || p.Name == req.Tag {
-			if req.Minutes <= 0 {
-				gParentalConfig[i].PauseUntil = 0
-			} else {
-				gParentalConfig[i].PauseUntil = time.Now().Add(time.Duration(req.Minutes) * time.Minute).Unix()
-			}
-			found = true
-			break
-		}
-	}
-	if !found {
+	tag := resolvePersonaTag(req.Tag)
+	if tag == "" {
 		http.Error(w, "persona not found", 404)
 		return
 	}
 
-	saveParentalConfig()
+	ensureStateMaps()
+	if req.Minutes <= 0 {
+		delete(gPersonasState.PauseUntil, tag)
+	} else {
+		gPersonasState.PauseUntil[tag] = time.Now().Add(time.Duration(req.Minutes) * time.Minute).Unix()
+	}
+	savePersonasState()
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(gParentalConfig)
+	json.NewEncoder(w).Encode(gPersonasState)
 }
 
 func setParentalExtend(w http.ResponseWriter, r *http.Request) {
@@ -464,26 +501,21 @@ func setParentalExtend(w http.ResponseWriter, r *http.Request) {
 	defer ParentalMtx.Unlock()
 	loadParentalConfig()
 
-	found := false
-	for i, p := range gParentalConfig {
-		if p.Tag == req.Tag || p.Name == req.Tag {
-			if req.Minutes <= 0 {
-				gParentalConfig[i].GrantUntil = 0
-			} else {
-				gParentalConfig[i].GrantUntil = time.Now().Add(time.Duration(req.Minutes) * time.Minute).Unix()
-			}
-			gParentalConfig[i].PauseUntil = 0
-			found = true
-			break
-		}
-	}
-	if !found {
+	tag := resolvePersonaTag(req.Tag)
+	if tag == "" {
 		http.Error(w, "persona not found", 404)
 		return
 	}
 
-	saveParentalConfig()
+	ensureStateMaps()
+	if req.Minutes <= 0 {
+		delete(gPersonasState.GrantUntil, tag)
+	} else {
+		gPersonasState.GrantUntil[tag] = time.Now().Add(time.Duration(req.Minutes) * time.Minute).Unix()
+	}
+	delete(gPersonasState.PauseUntil, tag)
+	savePersonasState()
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(gParentalConfig)
+	json.NewEncoder(w).Encode(gPersonasState)
 }
