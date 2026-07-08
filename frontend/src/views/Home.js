@@ -43,7 +43,7 @@ import {
 } from 'components/Dashboard/DNSMetricsWidgets'
 import { ServicesEnabled } from 'components/Dashboard/ServicesWidgets'
 import IntroWidget from 'components/Dashboard/Intro'
-import RecentClassifications from 'components/Dashboard/ClassificationWidgets'
+import RecentClassifications, { DeviceStats } from 'components/Dashboard/ClassificationWidgets'
 import TopologyWidget from 'components/Dashboard/TopologyWidget'
 
 const Home = (props) => {
@@ -379,6 +379,7 @@ const Home = (props) => {
         </VStack>
 
         <VStack flex={3} space="md">
+          <DeviceStats />
           <ServicesEnabled
             features={services}
             isFeaturesInitialized={context.isFeaturesInitialized}

@@ -31,6 +31,7 @@ import {
 } from '@gluestack-ui/themed'
 
 import {
+  ActivityIcon,
   BanIcon,
   CableIcon,
   CheckIcon,
@@ -828,6 +829,7 @@ const radioRows = (radio) => {
 const EDITABLE_POLICIES = ['wan', 'dns', 'dns:family', 'lan', 'lan_upstream', 'noapi']
 
 const FILTER_SECTIONS = [
+  { key: 'status', title: 'Status', icon: ActivityIcon },
   { key: 'groups', title: 'Groups', icon: UsersIcon },
   { key: 'tags', title: 'Tags', icon: TagIcon },
   { key: 'policies', title: 'Policies', icon: ShieldCheckIcon },
@@ -949,6 +951,7 @@ const Topology = () => {
   const [connectChoice, setConnectChoice] = useState('')
   const [classifications, setClassifications] = useState({})
   const [deviceFilter, setDeviceFilter] = useState({
+    status: [],
     groups: [],
     tags: [],
     policies: [],
@@ -1008,11 +1011,13 @@ const Topology = () => {
   const nodes = topology?.Nodes || []
   const edges = topology?.Edges || []
 
-  const filterActive =
+  const attrFilterActive =
     deviceFilter.groups.length > 0 ||
     deviceFilter.tags.length > 0 ||
     deviceFilter.policies.length > 0 ||
     deviceFilter.classifications.length > 0
+
+  const filterActive = attrFilterActive || deviceFilter.status.length > 0
 
   const classOf = (node) => classifications[node.MAC?.toLowerCase()]
 
@@ -1030,6 +1035,7 @@ const Topology = () => {
         if (classOf(node)) classes.add(classOf(node))
       })
     return {
+      status: ['online', 'offline'],
       groups: [...groups].sort(),
       tags: [...tags].sort(),
       policies: [...policies].sort(),
@@ -1038,12 +1044,19 @@ const Topology = () => {
   }, [nodes, classifications])
 
   const filteredNodes = useMemo(() => {
-    const deviceMatch = (node) =>
-      !filterActive ||
+    const statusMatch = (node) =>
+      !deviceFilter.status.length ||
+      (deviceFilter.status.includes('online') && node.Online) ||
+      (deviceFilter.status.includes('offline') && !node.Online)
+
+    const attrMatch = (node) =>
+      !attrFilterActive ||
       node.Groups?.some((group) => deviceFilter.groups.includes(group)) ||
       node.Tags?.some((tag) => deviceFilter.tags.includes(tag)) ||
       node.Policies?.some((policy) => deviceFilter.policies.includes(policy)) ||
       deviceFilter.classifications.includes(classOf(node))
+
+    const deviceMatch = (node) => attrMatch(node) && statusMatch(node)
 
     const visibleDevices = nodes.filter(
       (node) => node.Kind == 'device' && deviceMatch(node)
@@ -1061,7 +1074,7 @@ const Topology = () => {
       }
       return true
     })
-  }, [nodes, deviceFilter, filterActive, classifications, connectFrom])
+  }, [nodes, deviceFilter, attrFilterActive, classifications, connectFrom])
 
   const toggleFilter = (section, name) => {
     setDeviceFilter((current) => ({
@@ -1671,31 +1684,40 @@ const Topology = () => {
                 <path d="M 0 1.5 L 8.5 5 L 0 8.5 z" fill={palette.endpoint} />
               </marker>
             </defs>
-            {blocks.map((block) => (
-              <g key={block.id} opacity={mode == 'policy' ? 0.3 : 1}>
-                <rect
-                  x={block.x}
-                  y={block.y}
-                  width={block.width}
-                  height={block.height}
-                  rx={16}
-                  fill={palette.iconBg}
-                  fillOpacity={0.25}
-                  stroke={palette.iconBorder}
-                  strokeDasharray="4 6"
-                />
-                <text
-                  x={block.x + 12}
-                  y={block.y + 16}
-                  fontSize={10}
-                  fontFamily="system-ui, sans-serif"
-                  fill={palette.sublabel}
-                  style={{ userSelect: 'none' }}
-                >
-                  {block.members.length} devices · {byID[block.parent]?.Name || ''}
-                </text>
-              </g>
-            ))}
+            {blocks.map((block) => {
+              const quarantine = block.kind == 'quarantine'
+              return (
+                <g key={block.id} opacity={mode == 'policy' ? 0.3 : 1}>
+                  <rect
+                    x={block.x}
+                    y={block.y}
+                    width={block.width}
+                    height={block.height}
+                    rx={16}
+                    fill={quarantine ? palette.isolated : palette.iconBg}
+                    fillOpacity={quarantine ? 0.05 : 0.25}
+                    stroke={quarantine ? palette.isolated : palette.iconBorder}
+                    strokeOpacity={quarantine ? 0.5 : 1}
+                    strokeDasharray="4 6"
+                  />
+                  <text
+                    x={block.x + 12}
+                    y={block.y + 16}
+                    fontSize={10}
+                    fontFamily="system-ui, sans-serif"
+                    fill={quarantine ? palette.isolated : palette.sublabel}
+                    style={{ userSelect: 'none' }}
+                  >
+                    {block.members.length}{' '}
+                    {quarantine
+                      ? 'quarantined'
+                      : block.kind == 'isolated'
+                        ? 'isolated — no policies'
+                        : 'devices · ' + (byID[block.parent]?.Name || '')}
+                  </text>
+                </g>
+              )
+            })}
 
             {physicalLinks.map((link) => {
               const dash = link.straight ? null : edgeDash(link.node)
@@ -1867,7 +1889,8 @@ const Topology = () => {
             <ButtonIcon as={FunnelIcon} />
             {filterActive ? (
               <ButtonText ml="$1">
-                {deviceFilter.groups.length +
+                {deviceFilter.status.length +
+                  deviceFilter.groups.length +
                   deviceFilter.tags.length +
                   deviceFilter.policies.length +
                   deviceFilter.classifications.length}
@@ -1958,6 +1981,7 @@ const Topology = () => {
             onToggle={toggleFilter}
             onClear={() => {
               setDeviceFilter({
+                status: [],
                 groups: [],
                 tags: [],
                 policies: [],

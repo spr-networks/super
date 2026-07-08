@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useState } from 'react'
 
 import { Platform } from 'react-native'
 
@@ -31,6 +31,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 //import ActionSheet from 'components/ActionSheet'
 import { XIcon, TagIcon, UsersIcon } from 'lucide-react-native'
+
+const gatherStationsByFlag = (stations, flag, invert) => {
+  let authorized = []
+  for (let station in stations) {
+    let includes = stations[station].flags.includes(flag)
+    if (invert != true && includes) {
+      authorized.push(station)
+    } else if (invert && !includes) {
+      authorized.push(station)
+    }
+  }
+  return authorized
+}
 
 //TODO support multi on/off select
 export const TagSelect = ({ sections, value, onChange, ...props }) => {
@@ -107,7 +120,7 @@ const Devices = (props) => {
   const [filter, setFilter] = useState({}) // filter groups,tags
   const [unknownMacs, setUnknownMacs] = useState([])
 
-  const warnUnknown = (context, devices, associated) => {
+  const warnUnknown = useCallback((context, devices, associated) => {
     let macs = devices.map(dev => dev.MAC)
     let unknown_macs  = []
     for (let mac of associated) {
@@ -124,22 +137,9 @@ const Devices = (props) => {
       return newArray
     })
 
-  }
+  }, [])
 
-  const gatherStationsByFlag = (stations, flag, invert) => {
-    let authorized = []
-    for (let station in stations) {
-      let includes = stations[station].flags.includes(flag)
-      if (invert != true && includes) {
-        authorized.push(station)
-      } else if (invert && !includes) {
-        authorized.push(station)
-      }
-    }
-    return authorized
-  }
-
-  const sortDevices = (a, b) => {
+  const sortDevices = useCallback((a, b) => {
     const parseIP = (ip) => {
       return ip.split('.').map(Number)
       //b.RecentIP.replace(/[^0-9]+/g, '')
@@ -173,9 +173,11 @@ const Devices = (props) => {
 
       return 0
     }
-  }
+  }, [sortBy])
 
-  const refreshDevices = (forceFetch = false) => {
+  // enrichment phases merge by identity: rows that did not change keep their
+  // object so the memoized Device rows skip re-rendering
+  const refreshDevices = useCallback((forceFetch = false) => {
     //NOTE use appContext for devices to avoid fetching x2
     //appContext.getDevices(forceFetch)
     deviceAPI
@@ -221,13 +223,17 @@ const Devices = (props) => {
           deviceAPI
             .ouis(macs)
             .then((ouis) => {
-              let devs = devices.map((d) => {
-                let oui = ouis.find((o) => o.MAC == d.MAC)
-                d.oui = oui ? oui.Vendor : ''
-                return d
-              })
+              let ouiMap = {}
+              for (let oui of ouis) {
+                ouiMap[oui.MAC] = oui.Vendor
+              }
 
-              setList(devs.sort(sortDevices))
+              setList((prev) =>
+                prev.map((d) => {
+                  let oui = ouiMap[d.MAC] || ''
+                  return d.oui === oui ? d : { ...d, oui }
+                })
+              )
             })
             .catch((err) => {})
         }
@@ -240,12 +246,12 @@ const Devices = (props) => {
               byMAC[entry.MAC?.toLowerCase()] = entry
             }
 
-            let devs = devices.map((d) => {
-              d.classification = byMAC[d.MAC?.toLowerCase()]
-              return d
-            })
-
-            setList(devs.sort(sortDevices))
+            setList((prev) =>
+              prev.map((d) => {
+                let classification = byMAC[d.MAC?.toLowerCase()]
+                return classification ? { ...d, classification } : d
+              })
+            )
           })
           .catch((err) => {})
 
@@ -261,20 +267,29 @@ const Devices = (props) => {
                     let associatedNotConnected = gatherStationsByFlag(stations, "[AUTHORIZED]", true)
                     warnUnknown(context, devices, associatedNotConnected)
 
-                    let devs = devices.map((dev) => {
-                      if (dev.isConnected !== true) {
-                        dev.isConnected = connectedMACs.includes(dev.MAC)
-                        if (dev.isConnected) {
-                          dev.LastIface = iface //tag the last iface
+                    setList((prev) => {
+                      let devs = prev.map((dev) => {
+                        if (dev.isConnected === true) {
+                          return dev
                         }
-                        dev.isAssociatedOnly = associatedNotConnected.includes(dev.MAC)
-                      }
-
-
-                      return dev
+                        let isConnected = connectedMACs.includes(dev.MAC)
+                        let isAssociatedOnly =
+                          associatedNotConnected.includes(dev.MAC)
+                        if (
+                          dev.isConnected === isConnected &&
+                          dev.isAssociatedOnly === isAssociatedOnly
+                        ) {
+                          return dev
+                        }
+                        return {
+                          ...dev,
+                          isConnected,
+                          isAssociatedOnly,
+                          ...(isConnected ? { LastIface: iface } : {})
+                        }
+                      })
+                      return sortBy == 'online' ? devs.sort(sortDevices) : devs
                     })
-
-                    setList(devs.sort(sortDevices))
                   })
                   .catch((err) => {
                     context.error('WIFI API Failure', err)
@@ -297,16 +312,23 @@ const Devices = (props) => {
                             let associatedNotConnected = gatherStationsByFlag(stations, "[AUTHORIZED]", true)
                             warnUnknown(context, devices, associatedNotConnected)
 
-                            setList(
-                              devices.map((dev) => {
-                                if (dev.isConnected !== true) {
-                                  dev.isConnected = connectedMACs.includes(
-                                    dev.MAC
-                                  )
-                                  dev.isAssociatedOnly = associatedNotConnected.includes(dev.MAC)
+                            setList((prev) =>
+                              prev.map((dev) => {
+                                if (dev.isConnected === true) {
+                                  return dev
                                 }
-
-                                return dev
+                                let isConnected = connectedMACs.includes(
+                                  dev.MAC
+                                )
+                                let isAssociatedOnly =
+                                  associatedNotConnected.includes(dev.MAC)
+                                if (
+                                  dev.isConnected === isConnected &&
+                                  dev.isAssociatedOnly === isAssociatedOnly
+                                ) {
+                                  return dev
+                                }
+                                return { ...dev, isConnected, isAssociatedOnly }
                               })
                             )
                           })
@@ -329,7 +351,7 @@ const Devices = (props) => {
       .catch((err) => {
         context.error('API Failure', err)
       })
-  }
+  }, [sortDevices, sortBy, appContext.isWifiDisabled, warnUnknown])
 
   const handleRedirect = () => {
     if (appContext.isWifiDisabled) {
@@ -350,8 +372,8 @@ const Devices = (props) => {
   }, [sortBy])
 
   useEffect(() => {
-    setList(
-      list.map((d) => {
+    setList((prev) =>
+      prev.map((d) => {
         //filter.group, filter.tag
         let match = false
 
@@ -371,21 +393,23 @@ const Devices = (props) => {
           })
         }
 
-        d.hidden = match ? false : true
-
-        return d
+        let hidden = !match
+        return d.hidden === hidden ? d : { ...d, hidden }
       })
     )
   }, [filter])
 
-  const deleteListItem = (id) => {
-    deviceAPI
-      .deleteDevice(id)
-      .then(refreshDevices)
-      .catch((error) =>
-        context.error('[API] deleteDevice error: ' + error.message)
-      )
-  }
+  const deleteListItem = useCallback(
+    (id) => {
+      deviceAPI
+        .deleteDevice(id)
+        .then(refreshDevices)
+        .catch((error) =>
+          context.error('[API] deleteDevice error: ' + error.message)
+        )
+    },
+    [refreshDevices]
+  )
 
   return (
     <View h="$full">

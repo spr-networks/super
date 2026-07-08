@@ -280,6 +280,84 @@ export const ClassificationTag = ({ name, size }) => {
   )
 }
 
+const fingerprintEntries = (fingerprint) => {
+  let entries = []
+  if (fingerprint.Hostname) {
+    entries.push({ label: 'hostname', value: fingerprint.Hostname })
+  }
+  if (fingerprint.OUI) {
+    entries.push({ label: 'oui', value: fingerprint.OUI })
+  }
+  if (fingerprint.OUIVendor) {
+    entries.push({ label: 'mac vendor', value: fingerprint.OUIVendor })
+  }
+  if (fingerprint.VendorClass) {
+    entries.push({ label: 'dhcp vendor class', value: fingerprint.VendorClass })
+  }
+  if (fingerprint.ParamReqList) {
+    entries.push({ label: 'dhcp params', value: fingerprint.ParamReqList })
+  }
+  for (let service of fingerprint.Services || []) {
+    entries.push({ label: 'mdns service', value: service })
+  }
+  for (let key of Object.keys(fingerprint.TXT || {})) {
+    entries.push({ label: 'mdns txt', value: `${key}=${fingerprint.TXT[key]}` })
+  }
+  for (let key of Object.keys(fingerprint.SSDPHeaders || {})) {
+    entries.push({ label: 'ssdp', value: `${key}: ${fingerprint.SSDPHeaders[key]}` })
+  }
+  for (let domain of fingerprint.Domains || []) {
+    entries.push({ label: 'dns', value: domain })
+  }
+  return entries
+}
+
+const FingerprintDisclosure = ({ fingerprint }) => {
+  const [open, setOpen] = useState(false)
+
+  if (!fingerprint) {
+    return null
+  }
+
+  let entries = fingerprintEntries(fingerprint)
+  if (!entries.length) {
+    return null
+  }
+
+  return (
+    <VStack space="xs">
+      <Pressable onPress={() => setOpen(!open)}>
+        <HStack space="xs" alignItems="center">
+          <Icon
+            as={open ? ChevronDownIcon : ChevronRightIcon}
+            color="$muted500"
+            size={16}
+          />
+          <Text size="sm" color="$muted500">
+            Fingerprint · {entries.length}{' '}
+            {entries.length == 1 ? 'attribute' : 'attributes'}
+          </Text>
+        </HStack>
+      </Pressable>
+
+      {open ? (
+        <VStack space="xs" pl="$6">
+          {entries.map((entry, index) => (
+            <HStack key={`${entry.label}:${index}`} space="sm">
+              <Text size="sm" color="$muted500" w={140}>
+                {entry.label}
+              </Text>
+              <Text size="sm" flex={1} isTruncated>
+                {entry.value}
+              </Text>
+            </HStack>
+          ))}
+        </VStack>
+      ) : null}
+    </VStack>
+  )
+}
+
 // quiet badge for device list rows: shows an unapplied suggestion or unknown state
 export const ClassificationBadge = ({ classification }) => {
   if (!classification) {
@@ -308,6 +386,7 @@ export const ClassificationBadge = ({ classification }) => {
 
 export const ClassificationPanel = ({
   classification,
+  fingerprint,
   deviceGroups,
   devicePolicies,
   onApply,
@@ -418,8 +497,11 @@ export const ClassificationPanel = ({
           </HStack>
         ) : null}
 
-        <HStack alignItems="center" justifyContent="space-between">
-          <EvidenceDisclosure evidence={classification.Evidence} />
+        <HStack alignItems="flex-start" justifyContent="space-between">
+          <VStack space="xs" flex={1}>
+            <EvidenceDisclosure evidence={classification.Evidence} />
+            <FingerprintDisclosure fingerprint={fingerprint} />
+          </VStack>
           <HStack space="md" alignItems="center">
             {!unknown && onCreateRule ? (
               <Button

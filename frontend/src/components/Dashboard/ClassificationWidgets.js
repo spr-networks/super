@@ -18,9 +18,95 @@ import {
   ClassificationBadge,
   displayGuess
 } from 'components/Devices/Classification'
+import StatsWidget from 'components/Dashboard/StatsWidget'
+import { LaptopIcon } from 'lucide-react-native'
 import { strToDate } from 'utils'
 
 const recentWindowMs = 7 * 24 * 3600 * 1000
+
+const isUnclassified = (device, byMAC) => {
+  let classification = byMAC[device.MAC?.toLowerCase()]
+  return !classification?.Category || classification.Category == 'unknown'
+}
+
+const DeviceStats = (props) => {
+  const navigate = useNavigate()
+  const [newCount, setNewCount] = useState(0)
+  const [unclassifiedCount, setUnclassifiedCount] = useState(0)
+
+  useEffect(() => {
+    Promise.all([deviceAPI.list(), classifyAPI.list().catch(() => [])])
+      .then(([devices, classifications]) => {
+        if (!Array.isArray(devices)) {
+          devices = Object.values(devices)
+        }
+        devices = devices.filter((d) => d.MAC && d.MAC != 'pending')
+
+        let byMAC = {}
+        for (let entry of classifications) {
+          byMAC[entry.MAC?.toLowerCase()] = entry
+        }
+
+        setNewCount(
+          devices.filter((d) => {
+            let first = strToDate(d.DHCPFirstTime)
+            return first && Date.now() - first.getTime() < recentWindowMs
+          }).length
+        )
+        setUnclassifiedCount(
+          devices.filter((d) => isUnclassified(d, byMAC)).length
+        )
+      })
+      .catch(() => {})
+  }, [])
+
+  return (
+    <Pressable onPress={() => navigate('/admin/devices')}>
+      <StatsWidget icon={LaptopIcon} iconColor="$blue400" {...props}>
+        <HStack space="2xl" alignItems="center">
+          <VStack space="xs">
+            <Text
+              textAlign="right"
+              size="sm"
+              fontWeight={300}
+              color="$muted800"
+              sx={{ _dark: { color: '$muted400' } }}
+            >
+              New this week
+            </Text>
+            <Text
+              textAlign="right"
+              size="xl"
+              color="$muted800"
+              sx={{ _dark: { color: '$muted400' } }}
+            >
+              {newCount}
+            </Text>
+          </VStack>
+          <VStack space="xs">
+            <Text
+              textAlign="right"
+              size="sm"
+              fontWeight={300}
+              color="$muted800"
+              sx={{ _dark: { color: '$muted400' } }}
+            >
+              Unclassified
+            </Text>
+            <Text
+              textAlign="right"
+              size="xl"
+              color="$muted800"
+              sx={{ _dark: { color: '$muted400' } }}
+            >
+              {unclassifiedCount}
+            </Text>
+          </VStack>
+        </HStack>
+      </StatsWidget>
+    </Pressable>
+  )
+}
 
 const RecentClassifications = (props) => {
   const navigate = useNavigate()
@@ -108,5 +194,5 @@ const RecentClassifications = (props) => {
   )
 }
 
-export { RecentClassifications }
+export { RecentClassifications, DeviceStats }
 export default RecentClassifications

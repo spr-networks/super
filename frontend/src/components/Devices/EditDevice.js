@@ -86,6 +86,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   const [color, setColor] = useState(device.Style?.Color || 'blueGray')
   const [icon, setIcon] = useState(device.Style?.Icon || 'Laptop')
   const [classification, setClassification] = useState(device.classification)
+  const [fingerprint, setFingerprint] = useState(null)
   const [expiration, setExpiration] = useState(
     device.DeviceExpiration ? device.DeviceExpiration : 0
   )
@@ -148,6 +149,11 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     if (!device.MAC) {
       return
     }
+
+    classifyAPI
+      .signals(device.MAC)
+      .then((signals) => setFingerprint({ OUI: deviceOUI() || undefined, ...signals }))
+      .catch(() => {})
 
     classifyAPI
       .getClassification(device.MAC)
@@ -770,6 +776,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
 
       <ClassificationPanel
         classification={classification}
+        fingerprint={fingerprint}
         deviceGroups={groups}
         devicePolicies={policies}
         onApply={applyClassification}

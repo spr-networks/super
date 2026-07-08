@@ -108,10 +108,29 @@ export const computeLayout = (nodes, edges, collapsedIDs = []) => {
   const uplinks = (children['router'] || []).filter(
     (id) => byID[id]?.Kind == 'uplink' && !(children[id] || []).length
   )
-  const treeChildren = {
-    ...children,
-    router: (children['router'] || []).filter((id) => !uplinks.includes(id))
-  }
+
+  //quarantined and no-access devices leave the tree, each into their own block
+  const quarantined = nodes
+    .filter((node) => node.Kind == 'device' && isIsolated(node))
+    .map((node) => node.ID)
+  const noAccess = nodes
+    .filter(
+      (node) =>
+        node.Kind == 'device' &&
+        !isIsolated(node) &&
+        !node.Policies?.length &&
+        !node.Groups?.length
+    )
+    .map((node) => node.ID)
+  const detachedSet = new Set([...quarantined, ...noAccess])
+
+  const treeChildren = {}
+  Object.entries(children).forEach(([id, kids]) => {
+    treeChildren[id] = kids.filter((kid) => !detachedSet.has(kid))
+  })
+  treeChildren['router'] = (treeChildren['router'] || []).filter(
+    (id) => !uplinks.includes(id)
+  )
 
   const rows = {}
   const depths = {}
@@ -137,8 +156,12 @@ export const computeLayout = (nodes, edges, collapsedIDs = []) => {
       last = row
     }
 
-    const leafKids = kids.filter((kid) => !(treeChildren[kid] || []).length)
-    const branchKids = kids.filter((kid) => (treeChildren[kid] || []).length)
+    //only devices wrap into grid blocks; childless interfaces keep their own row
+    const leafKids = kids.filter(
+      (kid) =>
+        !(treeChildren[kid] || []).length && byID[kid]?.Kind == 'device'
+    )
+    const branchKids = kids.filter((kid) => !leafKids.includes(kid))
 
     branchKids.forEach((kid) => {
       visible.add(kid)
@@ -176,6 +199,22 @@ export const computeLayout = (nodes, edges, collapsedIDs = []) => {
     depths[id] = 0
     rows[id] = rows['router'] + index - (uplinks.length - 1) / 2
   })
+
+  const detachedBlock = (ids, kind) => {
+    if (!ids.length) return
+    const blockStart = nextRow + 0.5
+    ids.forEach((id, index) => {
+      visible.add(id)
+      depths[id] = 2 + Math.floor(index / MAX_COLUMN_ROWS)
+      rows[id] = blockStart + (index % MAX_COLUMN_ROWS)
+      blockOf[id] = 'block:' + kind
+    })
+    nextRow = blockStart + Math.min(ids.length, MAX_COLUMN_ROWS)
+    blocks.push({ id: 'block:' + kind, parent: null, kind, members: ids })
+  }
+
+  detachedBlock(noAccess, 'isolated')
+  detachedBlock(quarantined, 'quarantine')
 
   let treeDepth = 1
   visible.forEach((id) => {

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 
 import {
@@ -77,7 +77,7 @@ const DevicesBulkEdit = (props) => {
   const [policyVal, setPolicyVal] = useState('')
   const [filter, setFilter] = useState({}) // {Group: g} or {Tag: t}
 
-  const refresh = () => {
+  const refresh = useCallback(() => {
     deviceAPI
       .list()
       .then((devices) => {
@@ -91,7 +91,7 @@ const DevicesBulkEdit = (props) => {
         setList(devices.filter((d) => deviceId(d)))
       })
       .catch((err) => context.error('API Failure', err))
-  }
+  }, [])
 
   useEffect(() => {
     refresh()
@@ -135,7 +135,7 @@ const DevicesBulkEdit = (props) => {
     }
   ]
 
-  const toggle = (d) => {
+  const toggle = useCallback((d) => {
     const id = deviceId(d)
     setSelected((s) => {
       const next = { ...s }
@@ -146,7 +146,7 @@ const DevicesBulkEdit = (props) => {
       }
       return next
     })
-  }
+  }, [])
 
   // select every filtered device with no name assigned (shown as "N/A")
   const selectUnnamed = () => {
@@ -475,7 +475,7 @@ const DevicesBulkEdit = (props) => {
             showMenu={false}
             notifyChange={refresh}
             isSelected={isSelected(item)}
-            onSelect={() => toggle(item)}
+            onSelect={toggle}
           />
         )}
       />

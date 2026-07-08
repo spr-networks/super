@@ -327,7 +327,7 @@ const Device = React.memo(({ device, notifyChange, showMenu, isSelected, onSelec
 
   return (
     <Pressable
-      onPress={() => (onSelect ? onSelect() : navigate(deviceURL(device)))}
+      onPress={() => (onSelect ? onSelect(device) : navigate(deviceURL(device)))}
       disabled={!onSelect && device.MAC == 'pending'}
     >
       <HStack
