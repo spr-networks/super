@@ -84,6 +84,8 @@ let mockTopoNodes = [
     Policies: ['wan', 'lan'],
     Tags: ['trusted'],
     Signal: { RSSI: -54, TxRate: 540, RxRate: 360, Caps: ['HT', 'VHT', 'HE'] },
+    DHCPFirstTime: new Date(Date.now() - 45 * 24 * 3600e3).toISOString(),
+    DHCPLastTime: new Date(Date.now() - 2 * 3600e3).toISOString(),
     Online: true,
     Style: { Icon: 'Laptop', Color: '#14925f' }
   },
@@ -99,6 +101,8 @@ let mockTopoNodes = [
     Groups: [],
     Policies: [],
     Tags: ['backup'],
+    DHCPFirstTime: new Date(Date.now() - 300 * 24 * 3600e3).toISOString(),
+    DHCPLastTime: new Date(Date.now() - 26 * 3600e3).toISOString(),
     Online: true,
     Style: { Icon: 'Printer', Color: '#2563eb' }
   },
@@ -252,6 +256,7 @@ if (topoScale > 0) {
   for (let i = 0; i < topoScale; i++) {
     const mac = `aa:bb:cc:dd:${pad(Math.floor(i / 100))}:${pad(i % 100)}`
     const wifi = i % 2 == 0
+    const online = i % 5 != 4
     const id = 'dev:' + mac
     mockTopoNodes.push({
       ID: id,
@@ -259,23 +264,26 @@ if (topoScale > 0) {
       Name: 'device-' + i,
       MAC: mac,
       IP: '192.168.5.' + (i + 2),
-      ConnType: wifi ? 'wifi' : 'wired',
+      ConnType: online ? (wifi ? 'wifi' : 'wired') : 'offline',
       Iface: wifi ? 'wlan1' : 'eth1',
       Groups: ['lanparty'],
       Policies: ['wan', 'lan'],
-      Signal: wifi
-        ? { RSSI: -50 - (i % 40), TxRate: 300, RxRate: 200, Caps: ['HT', 'VHT'] }
-        : undefined,
-      Online: true,
+      Signal:
+        online && wifi
+          ? { RSSI: -50 - (i % 40), TxRate: 300, RxRate: 200, Caps: ['HT', 'VHT'] }
+          : undefined,
+      Online: online,
       Style: { Icon: 'Laptop', Color: '#2563eb' }
     })
-    mockTopoL1Edges.push({
-      From: id,
-      To: wifi ? 'iface:wlan1' : 'iface:eth1',
-      Layer: 'l1',
-      Kind: wifi ? 'wifi' : 'wired',
-      Metric: wifi ? -55 : 0
-    })
+    if (online) {
+      mockTopoL1Edges.push({
+        From: id,
+        To: wifi ? 'iface:wlan1' : 'iface:eth1',
+        Layer: 'l1',
+        Kind: wifi ? 'wifi' : 'wired',
+        Metric: wifi ? -55 : 0
+      })
+    }
   }
 }
 

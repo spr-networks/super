@@ -264,7 +264,6 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         setPolicies(nextPolicies)
         setTags(nextTags)
         setIcon(style.Icon)
-        setColor(style.Color)
         context.success('Classification applied')
         notifyChange()
       })
@@ -295,7 +294,6 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         )
         setTags(nextTags)
         setIcon(style.Icon)
-        setColor(style.Color)
 
         deviceAPI
           .update(device.MAC, { DeviceTags: nextTags })

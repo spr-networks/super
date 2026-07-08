@@ -122,7 +122,16 @@ export const computeLayout = (nodes, edges, collapsedIDs = []) => {
         !node.Groups?.length
     )
     .map((node) => node.ID)
-  const detachedSet = new Set([...quarantined, ...noAccess])
+  const offline = nodes
+    .filter(
+      (node) =>
+        node.Kind == 'device' &&
+        !node.Online &&
+        !isIsolated(node) &&
+        (node.Policies?.length || node.Groups?.length)
+    )
+    .map((node) => node.ID)
+  const detachedSet = new Set([...quarantined, ...noAccess, ...offline])
 
   const treeChildren = {}
   Object.entries(children).forEach(([id, kids]) => {
@@ -139,7 +148,7 @@ export const computeLayout = (nodes, edges, collapsedIDs = []) => {
   const blockOf = {}
   let nextRow = 0
 
-  const MAX_COLUMN_ROWS = 10
+  const MAX_COLUMN_ROWS = 6
 
   const walk = (id, depth) => {
     depths[id] = depth
@@ -213,6 +222,7 @@ export const computeLayout = (nodes, edges, collapsedIDs = []) => {
     blocks.push({ id: 'block:' + kind, parent: null, kind, members: ids })
   }
 
+  detachedBlock(offline, 'offline')
   detachedBlock(noAccess, 'isolated')
   detachedBlock(quarantined, 'quarantine')
 

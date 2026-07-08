@@ -54,6 +54,7 @@ import {
 
 import { AlertContext } from 'AppContext'
 import { classifyAPI, deviceAPI, topologyAPI } from 'api'
+import { prettyDate } from 'utils'
 import IconItem from 'components/IconItem'
 import { GroupItem, PolicyItem, TagItem } from 'components/TagItem'
 import {
@@ -381,6 +382,31 @@ const FIELD_LABELS = {
   ConnType: 'Connection'
 }
 
+const PeerList = ({ label, peers, onSelectPeer }) => {
+  const [expanded, setExpanded] = useState(false)
+  return (
+    <VStack space="xs">
+      <Pressable onPress={() => peers.length && setExpanded(!expanded)}>
+        <Text size="sm">
+          {label}: {peers.length} device{peers.length == 1 ? '' : 's'}
+          {peers.length ? (expanded ? ' ▾' : ' ▸') : ''}
+        </Text>
+      </Pressable>
+      {expanded ? (
+        <HStack space="xs" flexWrap="wrap">
+          {peers.map((peer) => (
+            <Pressable key={peer.ID} onPress={() => onSelectPeer(peer.ID)} mb="$1">
+              <Badge action="muted" variant="outline">
+                <BadgeText>{peer.Name}</BadgeText>
+              </Badge>
+            </Pressable>
+          ))}
+        </HStack>
+      ) : null}
+    </VStack>
+  )
+}
+
 const DetailPanel = ({
   node,
   peers,
@@ -390,7 +416,8 @@ const DetailPanel = ({
   onEdit,
   onClose,
   onUpdateDevice,
-  onConnect
+  onConnect,
+  onSelectPeer
 }) => {
   const fields = ['IP', 'TinyNet', 'VLANTag', 'MAC', 'SSID', 'Iface', 'ConnType'].filter(
     (field) => node[field]
@@ -467,6 +494,23 @@ const DetailPanel = ({
             </HStack>
           ) : null}
 
+          {node.DHCPFirstTime ? (
+            <HStack justifyContent="space-between" space="md">
+              <Text size="xs" color="$muted500">
+                First DHCP
+              </Text>
+              <Text size="xs">{prettyDate(node.DHCPFirstTime)}</Text>
+            </HStack>
+          ) : null}
+          {node.DHCPLastTime ? (
+            <HStack justifyContent="space-between" space="md">
+              <Text size="xs" color="$muted500">
+                Last DHCP
+              </Text>
+              <Text size="xs">{prettyDate(node.DHCPLastTime)}</Text>
+            </HStack>
+          ) : null}
+
           {node.Radio
             ? radioRows(node.Radio).map((row) => (
                 <HStack key={row.label} justifyContent="space-between" space="md">
@@ -539,19 +583,16 @@ const DetailPanel = ({
                 <Text size="sm">None — device is isolated</Text>
               ) : (
                 <>
-                  <Text size="sm">
-                    Can connect to: {peers.canReach.length} device
-                    {peers.canReach.length == 1 ? '' : 's'}
-                    {peers.endpoints.length
-                      ? `, ${peers.endpoints.length} endpoint${
-                          peers.endpoints.length == 1 ? '' : 's'
-                        }`
-                      : ''}
-                  </Text>
-                  <Text size="sm">
-                    Reachable from: {peers.reachableFrom.length} device
-                    {peers.reachableFrom.length == 1 ? '' : 's'}
-                  </Text>
+                  <PeerList
+                    label="Can connect to"
+                    peers={peers.canReach}
+                    onSelectPeer={onSelectPeer}
+                  />
+                  <PeerList
+                    label="Reachable from"
+                    peers={peers.reachableFrom}
+                    onSelectPeer={onSelectPeer}
+                  />
                   {peers.endpoints.map((endpoint) => (
                     <HStack key={endpoint.ID} space="xs" alignItems="center">
                       <Icon as={TargetIcon} color="$amber500" size={14} />
@@ -963,6 +1004,7 @@ const Topology = () => {
   const pinchRef = useRef(null)
   const movedRef = useRef(false)
   const fittedRef = useRef(false)
+  const [fitted, setFitted] = useState(false)
   const requestSeqRef = useRef(0)
   const pollErrorRef = useRef(false)
 
@@ -1132,10 +1174,10 @@ const Topology = () => {
       node.Groups?.some((group) => selected.Groups?.includes(group))
     const canReach = others
       .filter((node) => sharesGroup(node) || selected.Policies?.includes('lan'))
-      .map((node) => node.ID)
+      .map((node) => ({ ID: node.ID, Name: displayName(node) }))
     const reachableFrom = others
       .filter((node) => sharesGroup(node) || node.Policies?.includes('lan'))
-      .map((node) => node.ID)
+      .map((node) => ({ ID: node.ID, Name: displayName(node) }))
     const endpoints = nodes
       .filter(
         (node) =>
@@ -1156,8 +1198,8 @@ const Topology = () => {
       peerSummary
         ? [
             ...new Set([
-              ...(peerSummary.canReach || []),
-              ...(peerSummary.reachableFrom || []),
+              ...(peerSummary.canReach || []).map((p) => p.ID),
+              ...(peerSummary.reachableFrom || []).map((p) => p.ID),
               ...(peerSummary.endpoints || []).map((e) => e.ID),
               ...(peerSummary.endpointClients || []).map((c) => c.ID)
             ])
@@ -1174,27 +1216,54 @@ const Topology = () => {
       requestAnimationFrame(fitView)
       return
     }
-    const minScale = compact ? 0.6 : 0.25
+
+    //fit the online part of the network; offline piles shouldn't zoom everyone out
+    let minX = Infinity
+    let maxX = -Infinity
+    let minY = Infinity
+    let maxY = -Infinity
+    layout.visible.forEach((id) => {
+      const node = layout.byID[id]
+      const position = layout.positions[id]
+      if (!position || !node) return
+      if (node.Kind == 'device' && !node.Online) return
+      minX = Math.min(minX, position.x)
+      maxX = Math.max(maxX, position.x)
+      minY = Math.min(minY, position.y)
+      maxY = Math.max(maxY, position.y)
+    })
+    if (minX == Infinity) {
+      minX = 0
+      minY = 0
+      maxX = layout.width
+      maxY = layout.height
+    }
+    minX -= 100
+    maxX += 100
+    minY -= 70
+    maxY += 80
+    const contentW = maxX - minX
+    const contentH = maxY - minY
+
+    const minScale = compact ? 0.6 : 0.4
     const k = Math.min(
       1,
       Math.max(
         minScale,
-        Math.min(
-          (rect.width - 40) / layout.width,
-          (rect.height - 40) / layout.height
-        )
+        Math.min((rect.width - 40) / contentW, (rect.height - 40) / contentH)
       )
     )
-    let x = (rect.width - layout.width * k) / 2
-    let y = Math.max((rect.height - layout.height * k) / 2, 20)
+    let x = (rect.width - contentW * k) / 2 - minX * k
+    let y = Math.max((rect.height - contentH * k) / 2, 20) - minY * k
     const router = layout.positions['router']
-    if (router && layout.width * k > rect.width) {
+    if (router && contentW * k > rect.width) {
       x = rect.width * 0.15 - router.x * k
     }
-    if (router && layout.height * k > rect.height) {
+    if (router && contentH * k > rect.height) {
       y = rect.height / 2 - router.y * k
     }
     setView({ x, y, k })
+    setFitted(true)
   }
 
   useEffect(() => {
@@ -1649,7 +1718,8 @@ const Topology = () => {
             transformOrigin: '0 0',
             transform: `translate(${view.x}px, ${view.y}px) scale(${view.k})`,
             width: layout.width,
-            height: layout.height
+            height: layout.height,
+            opacity: fitted ? 1 : 0
           }}
         >
           <svg
@@ -1713,7 +1783,9 @@ const Topology = () => {
                       ? 'quarantined'
                       : block.kind == 'isolated'
                         ? 'isolated — no policies'
-                        : 'devices · ' + (byID[block.parent]?.Name || '')}
+                        : block.kind == 'offline'
+                          ? 'offline'
+                          : 'devices · ' + (byID[block.parent]?.Name || '')}
                   </text>
                 </g>
               )
@@ -2136,6 +2208,7 @@ const Topology = () => {
             setSelectedID(null)
             setMode('policy')
           }}
+          onSelectPeer={(id) => setSelectedID(id)}
         />
       ) : null}
     </Box>

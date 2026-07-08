@@ -44,6 +44,9 @@ type TopoNode struct {
 	Online   bool
 	Isolated bool `json:",omitempty"`
 	Style    DeviceStyle
+
+	DHCPFirstTime string `json:",omitempty"`
+	DHCPLastTime  string `json:",omitempty"`
 }
 
 type TopoEdge struct {
@@ -387,6 +390,9 @@ func buildTopology(devices map[string]DeviceEntry, interfaces []InterfaceConfig,
 			Tags:     dev.DeviceTags,
 			Isolated: isTopologyIsolated(dev),
 			Style:    dev.Style,
+
+			DHCPFirstTime: dev.DHCPFirstTime,
+			DHCPLastTime:  dev.DHCPLastTime,
 		}
 
 		mac := strings.ToLower(dev.MAC)

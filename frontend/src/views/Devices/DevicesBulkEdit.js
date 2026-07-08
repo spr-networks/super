@@ -252,7 +252,7 @@ const DevicesBulkEdit = (props) => {
       Groups: nextGroups,
       Policies: nextPolicies,
       DeviceTags: nextTags,
-      Style: style
+      Style: { Icon: style.Icon, Color: device.Style?.Color || 'blueGray' }
     })
 
     setClassifyResults((current) =>
@@ -266,7 +266,7 @@ const DevicesBulkEdit = (props) => {
                 Groups: nextGroups,
                 Policies: nextPolicies,
                 DeviceTags: nextTags,
-                Style: style
+                Style: { Icon: style.Icon, Color: device.Style?.Color || 'blueGray' }
               }
             }
           : item

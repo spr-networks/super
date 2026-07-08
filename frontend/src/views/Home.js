@@ -379,13 +379,13 @@ const Home = (props) => {
         </VStack>
 
         <VStack flex={3} space="md">
-          <DeviceStats />
           <ServicesEnabled
             features={services}
             isFeaturesInitialized={context.isFeaturesInitialized}
             isMeshNode={context.isMeshNode && context.isFeaturesInitialized}
             serviceStatus={criticalStatus}
           />
+          <DeviceStats />
           {show.dns ? (
             <VStack space="md">
               {/*<DNSMetrics />

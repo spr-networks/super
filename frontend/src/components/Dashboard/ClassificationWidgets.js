@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import {
   Box,
+  CloseIcon,
   HStack,
   Icon,
   Pressable,
@@ -60,57 +62,63 @@ const DeviceStats = (props) => {
       .catch(() => {})
   }, [])
 
-  return (
-    <Pressable onPress={() => navigate('/admin/devices')}>
-      <StatsWidget icon={LaptopIcon} iconColor="$blue400" {...props}>
-        <HStack space="2xl" alignItems="center">
-          <VStack space="xs">
-            <Text
-              textAlign="right"
-              size="sm"
-              fontWeight={300}
-              color="$muted800"
-              sx={{ _dark: { color: '$muted400' } }}
-            >
-              New this week
-            </Text>
-            <Text
-              textAlign="right"
-              size="xl"
-              color="$muted800"
-              sx={{ _dark: { color: '$muted400' } }}
-            >
-              {newCount}
-            </Text>
-          </VStack>
-          <VStack space="xs">
-            <Text
-              textAlign="right"
-              size="sm"
-              fontWeight={300}
-              color="$muted800"
-              sx={{ _dark: { color: '$muted400' } }}
-            >
-              Unclassified
-            </Text>
-            <Text
-              textAlign="right"
-              size="xl"
-              color="$muted800"
-              sx={{ _dark: { color: '$muted400' } }}
-            >
-              {unclassifiedCount}
-            </Text>
-          </VStack>
-        </HStack>
-      </StatsWidget>
+  const showDevices = (filter) =>
+    navigate('/admin/devices', { state: { tab: 'Devices', filter } })
+
+  const stat = (label, count, filter) => (
+    <Pressable onPress={() => showDevices(filter)}>
+      <VStack space="xs">
+        <Text
+          textAlign="right"
+          size="sm"
+          fontWeight={300}
+          color="$muted800"
+          sx={{ _dark: { color: '$muted400' } }}
+        >
+          {label}
+        </Text>
+        <Text
+          textAlign="right"
+          size="xl"
+          color="$muted800"
+          sx={{ _dark: { color: '$muted400' } }}
+        >
+          {count}
+        </Text>
+      </VStack>
     </Pressable>
+  )
+
+  return (
+    <StatsWidget icon={LaptopIcon} iconColor="$blue400" {...props}>
+      <HStack space="2xl" alignItems="center">
+        {stat('New this week', newCount, { New: true })}
+        {stat('Unclassified', unclassifiedCount, { Unclassified: true })}
+      </HStack>
+    </StatsWidget>
   )
 }
 
 const RecentClassifications = (props) => {
   const navigate = useNavigate()
   const [items, setItems] = useState([])
+  const [dismissed, setDismissed] = useState(null)
+
+  useEffect(() => {
+    AsyncStorage.getItem('classify-dismissed')
+      .then((res) => setDismissed(JSON.parse(res) || []))
+      .catch(() => setDismissed([]))
+  }, [])
+
+  const dismissAll = () => {
+    let macs = items.map(({ device }) => device.MAC)
+    //cap growth, old entries fall outside the 7 day window anyway
+    let next = [...new Set((dismissed || []).concat(macs))].slice(-100)
+    AsyncStorage.setItem('classify-dismissed', JSON.stringify(next)).catch(
+      (err) => {}
+    )
+    setDismissed(next)
+  }
 
   useEffect(() => {
     Promise.all([deviceAPI.list(), classifyAPI.list()])
@@ -146,7 +154,11 @@ const RecentClassifications = (props) => {
 
   const colorMode = useColorMode()
 
-  if (!items.length) {
+  const visible = dismissed
+    ? items.filter(({ device }) => !dismissed.includes(device.MAC))
+    : []
+
+  if (!visible.length) {
     return null
   }
 
@@ -158,16 +170,21 @@ const RecentClassifications = (props) => {
       {...props}
     >
       <VStack space="md">
-        <Text
-          size="md"
-          fontWeight={300}
-          color="$muted800"
-          sx={{ _dark: { color: '$muted400' } }}
-        >
-          New devices identified
-        </Text>
+        <HStack alignItems="center" justifyContent="space-between">
+          <Text
+            size="md"
+            fontWeight={300}
+            color="$muted800"
+            sx={{ _dark: { color: '$muted400' } }}
+          >
+            New devices identified
+          </Text>
+          <Pressable onPress={dismissAll} p="$1">
+            <Icon as={CloseIcon} color="$muted500" />
+          </Pressable>
+        </HStack>
 
-        {items.map(({ device, classification }) => (
+        {visible.map(({ device, classification }) => (
           <Pressable
             key={device.MAC}
             onPress={() => navigate(`/admin/devices/${device.MAC}`)}

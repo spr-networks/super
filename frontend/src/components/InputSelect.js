@@ -29,17 +29,19 @@ import IconItem from './IconItem'
 
 const prefixValue = (value) => {
   if (value && typeof value == 'object') {
-    let prefix = 'group',
-      v = 'empty'
-
     if (value.Tag) {
-      prefix = 'tag'
-      v = value.Tag
-    } else {
-      v = value.Group
+      return `tag:${value.Tag}`
     }
-
-    value = `${prefix}:${v}`
+    if (value.Group) {
+      return `group:${value.Group}`
+    }
+    if (value.New) {
+      return 'filter:new'
+    }
+    if (value.Unclassified) {
+      return 'filter:unclassified'
+    }
+    return 'group:empty'
   }
 
   return value
@@ -49,6 +51,12 @@ const prefixToKeyValue = (newValue) => {
   //TODO handle multiple
   //translate tag:t1 to {Tag:"t1"}, group:blah to {Group:"blah"}
   if (typeof newValue == 'string') {
+    if (newValue == 'filter:new') {
+      return { New: true }
+    }
+    if (newValue == 'filter:unclassified') {
+      return { Unclassified: true }
+    }
     if (newValue.match(/^(group|tag|policy):/)) {
       let [prefix, v] = newValue.split(':')
       let key = ucFirst(prefix)

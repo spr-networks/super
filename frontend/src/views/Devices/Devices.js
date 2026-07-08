@@ -20,7 +20,7 @@ import { SelectMenu } from 'components/InputSelect'
 
 import { deviceAPI, wifiAPI, meshAPI, classifyAPI } from 'api'
 import APIWifi from 'api/Wifi'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { AlertContext, AppContext } from 'AppContext'
 
 import { ListHeader } from 'components/List'
@@ -30,7 +30,7 @@ import { strToDate } from 'utils'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 //import ActionSheet from 'components/ActionSheet'
-import { XIcon, TagIcon, UsersIcon } from 'lucide-react-native'
+import { FilterIcon, XIcon, TagIcon, UsersIcon } from 'lucide-react-native'
 
 const gatherStationsByFlag = (stations, flag, invert) => {
   let authorized = []
@@ -64,6 +64,14 @@ export const TagSelect = ({ sections, value, onChange, ...props }) => {
         label: v,
         value: { Tag: v },
         icon: TagIcon
+      }))
+      options = [...options, ...opts]
+    } else {
+      //preset filters with explicit values
+      let opts = s.data.map((v) => ({
+        label: v.label,
+        value: v.value,
+        icon: FilterIcon
       }))
       options = [...options, ...opts]
     }
@@ -108,16 +116,27 @@ export const TagSelect = ({ sections, value, onChange, ...props }) => {
   )*/
 }
 
+const recentWindowMs = 7 * 24 * 3600 * 1000
+
+const isNewDevice = (d) => {
+  let first = strToDate(d.DHCPFirstTime)
+  return first && Date.now() - first.getTime() < recentWindowMs
+}
+
+const isUnclassifiedDevice = (d) =>
+  !d.classification?.Category || d.classification.Category == 'unknown'
+
 const Devices = (props) => {
   const context = useContext(AlertContext)
   const appContext = useContext(AppContext)
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [list, setList] = useState([])
   const [tags, setTags] = useState([])
   const [groups, setGroups] = useState([])
   const [sortBy, setSortBy] = useState('date')
-  const [filter, setFilter] = useState({}) // filter groups,tags
+  const [filter, setFilter] = useState(location.state?.filter || {}) // groups, tags, presets
   const [unknownMacs, setUnknownMacs] = useState([])
 
   const warnUnknown = useCallback((context, devices, associated) => {
@@ -430,6 +449,13 @@ const Devices = (props) => {
           <TagSelect
             sections={[
               {
+                title: 'Filters',
+                data: [
+                  { label: 'New this week', value: { New: true } },
+                  { label: 'Unclassified', value: { Unclassified: true } }
+                ]
+              },
+              {
                 title: 'Groups',
                 data: groups
               },
@@ -438,10 +464,15 @@ const Devices = (props) => {
                 data: tags
               }
             ]}
-            value={filter.Tag || filter.Group}
+            value={
+              filter.Tag ||
+              filter.Group ||
+              (filter.New ? 'New this week' : null) ||
+              (filter.Unclassified ? 'Unclassified' : null)
+            }
             onChange={(v) => {
-              // v is either {Tag: t} or {Group: g}
-              setFilter(v)
+              // v is {Tag}, {Group}, a preset like {New: true}, or null
+              setFilter(v || {})
             }}
           />
 
@@ -488,7 +519,10 @@ const Devices = (props) => {
       </ListHeader>
 
       <DeviceList
-        list={list.filter((d) => d.hidden !== true)}
+        list={list
+          .filter((d) => d.hidden !== true)
+          .filter((d) => (filter.New ? isNewDevice(d) : true))
+          .filter((d) => (filter.Unclassified ? isUnclassifiedDevice(d) : true))}
         notifyChange={refreshDevices}
         deleteListItem={deleteListItem}
       />

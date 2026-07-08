@@ -368,18 +368,10 @@ export const ClassificationBadge = ({ classification }) => {
     return null
   }
 
-  let style = categoryStyle[classification.Category] || categoryStyle.unknown
-  let confidence = confidenceStyle[classification.Confidence] || confidenceStyle.Unknown
-
   return (
     <Badge action="muted" variant="outline" size="sm" py="$1" px="$2" rounded="$lg">
-      <Box w="$1.5" h="$1.5" rounded="$full" bg={confidence.color} mr="$1.5" />
       <BadgeText color="$muted500">{classification.Category}</BadgeText>
-      <BadgeIcon
-        color={`$${style.Color}500`}
-        as={deviceIcons[style.Icon] || HelpCircleIcon}
-        ml="$1"
-      />
+      <BadgeIcon color="$muted500" as={FingerprintIcon} ml="$1" />
     </Badge>
   )
 }

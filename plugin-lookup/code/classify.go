@@ -18,10 +18,13 @@ import (
 )
 
 var ServerEventSock = "/state/api/eventbus.sock"
-var StorePath = "/state/plugins/plugin-lookup/classifications.json"
+
+// user data lives under /configs so it survives migrations, /state is runtime only
+var ConfigDir = "/configs/plugins/plugin-lookup"
+var StorePath = ConfigDir + "/classifications.json"
 var FingerprintDBPath = "../data/fingerprints.json"
-var CustomFingerprintsPath = "/state/plugins/plugin-lookup/custom_fingerprints.json"
-var BuiltinOverridesPath = "/state/plugins/plugin-lookup/builtin_fingerprints.json"
+var CustomFingerprintsPath = ConfigDir + "/custom_fingerprints.json"
+var BuiltinOverridesPath = ConfigDir + "/builtin_fingerprints.json"
 var DevicesPublicPath = "/state/public/devices-public.json"
 
 const maxDomainsPerDevice = 32
@@ -778,6 +781,8 @@ func startClassifier() (*Classifier, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	os.MkdirAll(ConfigDir, 0700)
 
 	classifier := newClassifier(db)
 	busListener(classifier)
