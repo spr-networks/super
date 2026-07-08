@@ -35,7 +35,7 @@ ARG USE_TMPFS=true
 COPY code/ /code/
 RUN --mount=type=tmpfs,target=/tmpfs \
     [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
-    go build -trimpath -ldflags="-s -w" multicastproxy.go
+    go build -trimpath -ldflags="-s -w" multicastproxy.go zeroconf.go
 
 FROM ${CONTAINER_TEMPLATE_REF}
 ENV DEBIAN_FRONTEND=noninteractive
