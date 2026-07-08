@@ -34,10 +34,7 @@ const DeviceView = () => {
           deviceAPI
             .oui(dev.MAC)
             .then((oui) => {
-              let dev = device
-              dev.oui = oui?.Vendor
-
-              setDevice({ ...dev })
+              setDevice((prev) => ({ ...prev, oui: oui?.Vendor }))
             })
             .catch((err) => {})
         }

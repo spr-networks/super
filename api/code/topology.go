@@ -1,0 +1,546 @@
+package main
+
+import (
+	"encoding/json"
+	"net"
+	"net/http"
+	"slices"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+)
+
+type StationSignal struct {
+	RSSI   int
+	TxRate int
+	RxRate int
+}
+
+type TopoNode struct {
+	ID       string
+	Kind     string // router | uplink | ap_radio | port | vpn | device | leaf_router | endpoint
+	Name     string
+	MAC      string         `json:",omitempty"`
+	IP       string         `json:",omitempty"`
+	TinyNet  string         `json:",omitempty"`
+	VLANTag  string         `json:",omitempty"`
+	ConnType string         `json:",omitempty"` // wifi | wired | wireguard | offline
+	Iface    string         `json:",omitempty"`
+	SSID     string         `json:",omitempty"`
+	Groups   []string       `json:",omitempty"`
+	Policies []string       `json:",omitempty"`
+	Tags     []string       `json:",omitempty"`
+	Signal   *StationSignal `json:",omitempty"`
+	Online   bool
+	Isolated bool `json:",omitempty"`
+	Style    DeviceStyle
+}
+
+type TopoEdge struct {
+	From   string
+	To     string
+	Layer  string  // l1 | policy
+	Kind   string  // wifi | wired | wg | uplink | group:<name> | policy:<name> | endpoint:<name>
+	Metric float64 `json:",omitempty"`
+	Bidir  bool    `json:",omitempty"` // policy edges: From can initiate to To; Bidir means both ways
+}
+
+type Topology struct {
+	GeneratedAt time.Time
+	Nodes       []TopoNode
+	Edges       []TopoEdge
+}
+
+type wifiStation struct {
+	Iface   string
+	Station map[string]string
+}
+
+func deviceNodeID(dev DeviceEntry) string {
+	if dev.MAC != "" {
+		return "dev:" + strings.ToLower(dev.MAC)
+	}
+	if dev.WGPubKey != "" {
+		return "dev:" + dev.WGPubKey
+	}
+	return ""
+}
+
+func tinyNetFromIP(IP string) string {
+	_, subnet, err := net.ParseCIDR(IP + "/30")
+	if err != nil {
+		return ""
+	}
+	return subnet.String()
+}
+
+func stationInt(station map[string]string, key string) int {
+	fields := strings.Fields(station[key])
+	if len(fields) == 0 {
+		return 0
+	}
+	value, _ := strconv.Atoi(fields[0])
+	return value
+}
+
+func getTopologyWifiStations(interfaces []InterfaceConfig) map[string]wifiStation {
+	stations := map[string]wifiStation{}
+
+	collect := func(iface string) {
+		wifi_peers, err := RunHostapdAllStations(iface)
+		if err == nil {
+			for mac, station := range wifi_peers {
+				stations[strings.ToLower(mac)] = wifiStation{iface, station}
+			}
+		}
+	}
+
+	for _, entry := range interfaces {
+		if entry.Enabled == true && entry.Type == "AP" {
+			collect(entry.Name)
+			for i := range len(entry.ExtraBSS) {
+				collect(entry.Name + ExtraBSSPrefix + strconv.Itoa(i))
+			}
+		}
+	}
+
+	return stations
+}
+
+func getAPSSIDs(interfaces []InterfaceConfig) map[string]string {
+	ssids := map[string]string{}
+	for _, entry := range interfaces {
+		if entry.Enabled == true && entry.Type == "AP" {
+			status, err := RunHostapdStatus(entry.Name)
+			if err == nil {
+				ssids[entry.Name] = status["ssid[0]"]
+			}
+		}
+	}
+	return ssids
+}
+
+func isTopologyIsolated(dev DeviceEntry) bool {
+	return dev.DeviceDisabled ||
+		slices.Contains(dev.Policies, "quarantine") ||
+		slices.Contains(dev.Policies, "disabled")
+}
+
+func devicePolicyEdges(devices map[string]DeviceEntry, uplinkID string) []TopoEdge {
+	edges := []TopoEdge{}
+	members := map[string][]string{}
+	lanInitiators := []string{}
+	lanSet := map[string]bool{}
+	allIDs := []string{}
+
+	for _, dev := range devices {
+		id := deviceNodeID(dev)
+		if id == "" || isTopologyIsolated(dev) {
+			continue
+		}
+
+		allIDs = append(allIDs, id)
+		for _, group := range dev.Groups {
+			members["group:"+group] = append(members["group:"+group], id)
+		}
+		if slices.Contains(dev.Policies, "lan") {
+			lanInitiators = append(lanInitiators, id)
+			lanSet[id] = true
+		}
+		if slices.Contains(dev.Policies, "wan") && uplinkID != "" {
+			edges = append(edges, TopoEdge{From: id, To: uplinkID, Layer: "policy", Kind: "policy:wan"})
+		}
+	}
+
+	//O(n^2) guard: the frontend derives peers from Groups/Policies for larger groups
+	maxCliqueMembers := 48
+
+	//groups grant connectivity both ways between members
+	for kind, ids := range members {
+		if len(ids) > maxCliqueMembers {
+			continue
+		}
+		sort.Strings(ids)
+		for i := 0; i < len(ids); i++ {
+			for j := i + 1; j < len(ids); j++ {
+				edges = append(edges, TopoEdge{From: ids[i], To: ids[j], Layer: "policy", Kind: kind, Bidir: true})
+			}
+		}
+	}
+
+	//lan lets a device initiate to every device, not the other way around
+	if len(allIDs) <= maxCliqueMembers {
+		sort.Strings(lanInitiators)
+		sort.Strings(allIDs)
+		for _, from := range lanInitiators {
+			for _, to := range allIDs {
+				if to == from {
+					continue
+				}
+				if lanSet[to] {
+					if from < to {
+						edges = append(edges, TopoEdge{From: from, To: to, Layer: "policy", Kind: "policy:lan", Bidir: true})
+					}
+				} else {
+					edges = append(edges, TopoEdge{From: from, To: to, Layer: "policy", Kind: "policy:lan"})
+				}
+			}
+		}
+	}
+
+	return edges
+}
+
+func endpointPolicyTopology(devices map[string]DeviceEntry, endpoints []Endpoint) ([]TopoNode, []TopoEdge) {
+	nodes := []TopoNode{}
+	edges := []TopoEdge{}
+
+	for _, endpoint := range endpoints {
+		if endpoint.Disabled || len(endpoint.Tags) == 0 {
+			continue
+		}
+
+		dest := endpoint.IP
+		if endpoint.Domain != "" {
+			dest = endpoint.Domain
+		}
+		if endpoint.Port != "" {
+			dest += ":" + endpoint.Port
+		}
+
+		id := "endpoint:" + endpoint.RuleName
+		nodes = append(nodes, TopoNode{ID: id, Kind: "endpoint", Name: endpoint.RuleName, IP: dest, Tags: endpoint.Tags, Online: true})
+
+		for _, dev := range devices {
+			devID := deviceNodeID(dev)
+			if devID == "" || isTopologyIsolated(dev) {
+				continue
+			}
+			for _, tag := range endpoint.Tags {
+				if slices.Contains(dev.DeviceTags, tag) {
+					edges = append(edges, TopoEdge{From: devID, To: id, Layer: "policy", Kind: "endpoint:" + endpoint.RuleName})
+					break
+				}
+			}
+		}
+	}
+
+	return nodes, edges
+}
+
+func buildTopology(devices map[string]DeviceEntry, interfaces []InterfaceConfig,
+	stations map[string]wifiStation, arp map[string]ArpEntry, activeWG map[string]bool,
+	endpoints []Endpoint, ssids map[string]string) Topology {
+
+	nodes := []TopoNode{{ID: "router", Kind: "router", Name: "SPR", Online: true}}
+	edges := []TopoEdge{}
+	uplinkID := ""
+
+	isWifiIface := func(name string) bool {
+		for _, entry := range interfaces {
+			if entry.Type == "AP" && (name == entry.Name || strings.HasPrefix(name, entry.Name+".")) {
+				return true
+			}
+		}
+		return false
+	}
+
+	for _, entry := range interfaces {
+		if entry.Enabled != true {
+			continue
+		}
+
+		id := "iface:" + entry.Name
+		if entry.Type == "Uplink" {
+			nodes = append(nodes, TopoNode{ID: id, Kind: "uplink", Name: entry.Name, Iface: entry.Name, Online: true})
+			edges = append(edges, TopoEdge{From: "router", To: id, Layer: "l1", Kind: "uplink"})
+			if uplinkID == "" {
+				uplinkID = id
+			}
+		} else if entry.Type == "AP" {
+			nodes = append(nodes, TopoNode{ID: id, Kind: "ap_radio", Name: entry.Name, Iface: entry.Name, SSID: ssids[entry.Name], Online: true})
+			edges = append(edges, TopoEdge{From: "router", To: id, Layer: "l1", Kind: "wifi"})
+		} else if entry.Type == "Downlink" {
+			nodes = append(nodes, TopoNode{ID: id, Kind: "port", Name: entry.Name, Iface: entry.Name, Online: true})
+			edges = append(edges, TopoEdge{From: "router", To: id, Layer: "l1", Kind: "wired"})
+		}
+	}
+
+	wiredPortID := func(iface string) string {
+		base := strings.Split(iface, ".")[0]
+		for _, entry := range interfaces {
+			if entry.Enabled == true && entry.Type == "Downlink" && entry.Name == base {
+				return "iface:" + base
+			}
+		}
+		return "router"
+	}
+
+	hasWG := false
+	for _, dev := range devices {
+		if dev.WGPubKey != "" {
+			hasWG = true
+			break
+		}
+	}
+	if hasWG {
+		nodes = append(nodes, TopoNode{ID: "iface:wg0", Kind: "vpn", Name: "wg0", Iface: "wg0", Online: true})
+		edges = append(edges, TopoEdge{From: "router", To: "iface:wg0", Layer: "l1", Kind: "wg"})
+	}
+
+	for _, dev := range devices {
+		id := deviceNodeID(dev)
+		if id == "" {
+			continue
+		}
+
+		node := TopoNode{
+			ID:       id,
+			Kind:     "device",
+			Name:     dev.Name,
+			MAC:      dev.MAC,
+			IP:       dev.RecentIP,
+			TinyNet:  tinyNetFromIP(dev.RecentIP),
+			VLANTag:  dev.VLANTag,
+			Iface:    dev.DHCPLastInterface,
+			Groups:   dev.Groups,
+			Policies: dev.Policies,
+			Tags:     dev.DeviceTags,
+			Isolated: isTopologyIsolated(dev),
+			Style:    dev.Style,
+		}
+
+		mac := strings.ToLower(dev.MAC)
+		station, hasStation := stations[mac]
+		arpEntry, hasArp := arp[mac]
+
+		if hasStation {
+			node.ConnType = "wifi"
+			node.Iface = station.Iface
+			node.Online = true
+			node.Signal = &StationSignal{
+				RSSI:   stationInt(station.Station, "signal"),
+				TxRate: stationInt(station.Station, "tx_rate_info"),
+				RxRate: stationInt(station.Station, "rx_rate_info"),
+			}
+			radio := "iface:" + strings.Split(station.Iface, ".")[0]
+			edges = append(edges, TopoEdge{From: id, To: radio, Layer: "l1", Kind: "wifi", Metric: float64(node.Signal.RSSI)})
+		} else if dev.WGPubKey != "" && activeWG[dev.RecentIP] {
+			node.ConnType = "wireguard"
+			node.Iface = "wg0"
+			node.Online = true
+			edges = append(edges, TopoEdge{From: id, To: "iface:wg0", Layer: "l1", Kind: "wg"})
+		} else if hasArp && arpEntry.Flags != "0x0" && !isWifiIface(arpEntry.Device) {
+			node.ConnType = "wired"
+			node.Iface = arpEntry.Device
+			node.Online = true
+			edges = append(edges, TopoEdge{From: id, To: wiredPortID(arpEntry.Device), Layer: "l1", Kind: "wired"})
+		} else {
+			node.ConnType = "offline"
+		}
+
+		nodes = append(nodes, node)
+	}
+
+	edges = append(edges, devicePolicyEdges(devices, uplinkID)...)
+
+	endpointNodes, endpointEdges := endpointPolicyTopology(devices, endpoints)
+	nodes = append(nodes, endpointNodes...)
+	edges = append(edges, endpointEdges...)
+
+	topology := Topology{time.Now(), nodes, edges}
+	sortTopology(&topology)
+	return topology
+}
+
+func sortTopology(topology *Topology) {
+	sort.Slice(topology.Nodes, func(i, j int) bool {
+		return topology.Nodes[i].ID < topology.Nodes[j].ID
+	})
+	sort.Slice(topology.Edges, func(i, j int) bool {
+		a, b := topology.Edges[i], topology.Edges[j]
+		if a.Layer != b.Layer {
+			return a.Layer < b.Layer
+		}
+		if a.Kind != b.Kind {
+			return a.Kind < b.Kind
+		}
+		if a.From != b.From {
+			return a.From < b.From
+		}
+		return a.To < b.To
+	})
+}
+
+type MeshLeafTopology struct {
+	LeafIP   string
+	Online   bool
+	Topology json.RawMessage
+}
+
+func getMeshLeafTopologies() []MeshLeafTopology {
+	c := http.Client{Timeout: 15 * time.Second}
+	c.Transport = &http.Transport{
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.Dial("unix", MESH_SOCKET_PATH)
+		},
+	}
+	defer c.CloseIdleConnections()
+
+	resp, err := c.Get("http://mesh/leafTopologies")
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil
+	}
+
+	leaves := []MeshLeafTopology{}
+	if json.NewDecoder(resp.Body).Decode(&leaves) != nil {
+		return nil
+	}
+	return leaves
+}
+
+func removeTopoNode(topology *Topology, id string) {
+	nodes := topology.Nodes[:0]
+	for _, node := range topology.Nodes {
+		if node.ID != id {
+			nodes = append(nodes, node)
+		}
+	}
+	topology.Nodes = nodes
+
+	edges := topology.Edges[:0]
+	for _, edge := range topology.Edges {
+		if edge.From != id && edge.To != id {
+			edges = append(edges, edge)
+		}
+	}
+	topology.Edges = edges
+}
+
+func mergeLeafTopology(topology *Topology, leafIP string, leafTopo Topology, online bool, arp map[string]ArpEntry) {
+	leafID := "spr:" + leafIP
+
+	attachTo := "router"
+	for _, entry := range arp {
+		if entry.IP == leafIP && entry.Flags != "0x0" {
+			base := "iface:" + strings.Split(entry.Device, ".")[0]
+			for _, node := range topology.Nodes {
+				if node.ID == base && (node.Kind == "port" || node.Kind == "uplink") {
+					attachTo = base
+				}
+			}
+		}
+	}
+
+	//the leaf also has a DHCP lease from us; drop its device node in favor of leafID
+	for _, node := range topology.Nodes {
+		if node.Kind == "device" && node.IP == leafIP {
+			removeTopoNode(topology, node.ID)
+			break
+		}
+	}
+
+	topology.Nodes = append(topology.Nodes, TopoNode{ID: leafID, Kind: "leaf_router", Name: "SPR Leaf", IP: leafIP, Online: online})
+	topology.Edges = append(topology.Edges, TopoEdge{From: attachTo, To: leafID, Layer: "l1", Kind: "wired"})
+
+	if !online {
+		return
+	}
+
+	leafNodes := map[string]TopoNode{}
+	for _, node := range leafTopo.Nodes {
+		leafNodes[node.ID] = node
+		if node.Kind == "ap_radio" {
+			id := leafID + ":" + node.ID
+			topology.Nodes = append(topology.Nodes, TopoNode{ID: id, Kind: "ap_radio", Name: node.Name, Iface: node.Iface, SSID: node.SSID, Online: node.Online})
+			topology.Edges = append(topology.Edges, TopoEdge{From: leafID, To: id, Layer: "l1", Kind: "wifi"})
+		}
+	}
+
+	nodeIndex := map[string]int{}
+	for i, node := range topology.Nodes {
+		nodeIndex[node.ID] = i
+	}
+
+	for _, edge := range leafTopo.Edges {
+		if edge.Layer != "l1" || edge.Kind != "wifi" || !strings.HasPrefix(edge.From, "dev:") {
+			continue
+		}
+
+		leafDev, exists := leafNodes[edge.From]
+		if !exists {
+			continue
+		}
+
+		radio := leafID + ":iface:" + strings.Split(leafDev.Iface, ".")[0]
+		if i, exists := nodeIndex[edge.From]; exists {
+			node := &topology.Nodes[i]
+			node.ConnType = "wifi"
+			node.Iface = leafDev.Iface
+			node.Online = true
+			node.Signal = leafDev.Signal
+			edges := topology.Edges[:0]
+			for _, e := range topology.Edges {
+				if !(e.Layer == "l1" && e.From == edge.From) {
+					edges = append(edges, e)
+				}
+			}
+			topology.Edges = edges
+		} else {
+			topology.Nodes = append(topology.Nodes, leafDev)
+			nodeIndex[edge.From] = len(topology.Nodes) - 1
+		}
+		topology.Edges = append(topology.Edges, TopoEdge{From: edge.From, To: radio, Layer: "l1", Kind: "wifi", Metric: edge.Metric})
+	}
+}
+
+func mergeMeshTopology(topology *Topology, arp map[string]ArpEntry) {
+	if isLeafRouter() {
+		return
+	}
+	for _, leaf := range getMeshLeafTopologies() {
+		leafTopo := Topology{}
+		online := leaf.Online && json.Unmarshal(leaf.Topology, &leafTopo) == nil
+		mergeLeafTopology(topology, leaf.LeafIP, leafTopo, online, arp)
+	}
+	sortTopology(topology)
+}
+
+func showTopology(w http.ResponseWriter, r *http.Request) {
+	Devicesmtx.Lock()
+	devices := convertDevicesPublic(getDevicesJson())
+	Devicesmtx.Unlock()
+	delete(devices, "pending")
+
+	Interfacesmtx.Lock()
+	interfaces := loadInterfacesConfigLocked()
+	Interfacesmtx.Unlock()
+
+	arp := map[string]ArpEntry{}
+	if entries, err := GetArpEntries(); err == nil {
+		for _, entry := range entries {
+			arp[strings.ToLower(entry.MAC)] = entry
+		}
+	}
+
+	activeWG := map[string]bool{}
+	activeIPs, _ := getWireguardActivePeers()
+	for _, ip := range activeIPs {
+		activeWG[ip] = true
+	}
+
+	FWmtx.Lock()
+	endpoints := append([]Endpoint{}, gFirewallConfig.Endpoints...)
+	FWmtx.Unlock()
+
+	topology := buildTopology(devices, interfaces, getTopologyWifiStations(interfaces), arp, activeWG, endpoints, getAPSSIDs(interfaces))
+	mergeMeshTopology(&topology, arp)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(topology)
+}

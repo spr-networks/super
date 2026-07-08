@@ -116,12 +116,6 @@ var gPluginTemplates = []PluginConfig{
 		UnixPath: "/state/plugins/db/socket",
 		Enabled:  true,
 	},
-	{
-		Name:     "plugin-classify",
-		URI:      "classify",
-		UnixPath: "/state/plugins/plugin-classify/socket",
-		Enabled:  true,
-	},
 	//these have no API for now
 	{
 		Name:            "PPP",

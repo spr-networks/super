@@ -35,7 +35,7 @@ COPY code/ /code/
 ARG USE_TMPFS=true
 RUN --mount=type=tmpfs,target=/tmpfs \
     [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
-    go build -trimpath -ldflags "-s -w" -o /lookup_plugin /code/lookup_plugin.go
+    go build -trimpath -ldflags "-s -w" -o /lookup_plugin .
 
 FROM ${CONTAINER_TEMPLATE_REF}
 ENV DEBIAN_FRONTEND=noninteractive

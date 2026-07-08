@@ -44,7 +44,7 @@ const TagItem = React.memo(({ name, size, ...props }) => {
       rounded="$lg"
     >
       <BadgeText color={fg}>{name}</BadgeText>
-      <BadgeIcon color={fg} as={name.startsWith('person:') ? UserIcon : TagIcon} ml="$1" />
+      <BadgeIcon color={fg} as={name.match(/^persona?:/) ? UserIcon : TagIcon} ml="$1" />
     </Badge>
   )
 })

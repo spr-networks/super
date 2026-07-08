@@ -68,6 +68,7 @@ fi
 
 # make sure state directories and files exist
 mkdir -p state/api/
+mkdir -p state/superd/
 mkdir -p state/dhcp/
 mkdir -p state/dns/
 mkdir -p state/wifi/

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from 'react'
+import React, { Fragment, useContext, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import {
@@ -333,9 +333,8 @@ const Alerts = (props) => {
       {topics.map(
         (bucket) =>
           bucketCounts[prettyBucket(bucket)] != 0 && (
-            <>
+            <Fragment key={bucket}>
               <Pressable
-                key={bucket}
                 onPress={() =>
                   setSelectedBucket(selectedBucket === bucket ? null : bucket)
                 }
@@ -387,7 +386,7 @@ const Alerts = (props) => {
                   />
                 </ScrollView>
               )}
-            </>
+            </Fragment>
           )
       )}
 

@@ -23,15 +23,30 @@ import {
   ModalFooter
 } from '@gluestack-ui/themed'
 
-import { deviceAPI } from 'api'
+import { classifyAPI, deviceAPI } from 'api'
 import { AlertContext } from 'AppContext'
 import { ListHeader } from 'components/List'
 import { Select } from 'components/Select'
 import { Device } from 'components/Devices/Device'
-import { TrashIcon } from 'lucide-react-native'
+import IconItem from 'components/IconItem'
+import { categoryStyle } from 'components/Devices/Classification'
+import { TagsIcon, TrashIcon } from 'lucide-react-native'
 
 const deviceId = (d) => d.MAC || d.WGPubKey
 const hasName = (d) => !!(d.Name && d.Name.length)
+const classificationTag = (category) => `classification:${category || 'unknown'}`
+const canApplyClassification = (classification) =>
+  classification?.Category && classification.Category != 'unknown'
+
+const mergeUnique = (...arrays) => [
+  ...new Set(
+    arrays
+      .flat()
+      .filter((value) => typeof value === 'string')
+      .map((value) => value.trim())
+      .filter((value) => value.length)
+  )
+].sort()
 
 // matches BulkSettablePolicyStrings in api/code -- guestonly/api/disabled are
 // system/guest managed and intentionally not settable here.
@@ -51,7 +66,10 @@ const DevicesBulkEdit = (props) => {
   const [list, setList] = useState([])
   const [selected, setSelected] = useState({}) // deviceId -> true
   const [showConfirm, setShowConfirm] = useState(false)
+  const [showClassify, setShowClassify] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [classifying, setClassifying] = useState(false)
+  const [classifyResults, setClassifyResults] = useState([])
 
   const [groupVal, setGroupVal] = useState('')
   const [tagVal, setTagVal] = useState('')
@@ -125,6 +143,118 @@ const DevicesBulkEdit = (props) => {
     refresh()
   }
 
+  const classifySelected = async () => {
+    if (selectedCount === 0) {
+      return
+    }
+
+    setClassifying(true)
+    setShowClassify(true)
+    setClassifyResults([])
+
+    let devices = selectedDevices.filter((device) => device.MAC)
+    let ouiMap = {}
+    try {
+      let ouis = await deviceAPI.ouis(devices.map((device) => device.MAC))
+      for (let oui of ouis) {
+        ouiMap[oui.MAC] = oui.Vendor
+      }
+    } catch (err) {}
+
+    let results = await Promise.all(
+      devices.map(async (device) => {
+        try {
+          let classification = await classifyAPI.classify({
+            MAC: device.MAC,
+            Hostname: device.Name,
+            OUIVendor: ouiMap[device.MAC] || ''
+          })
+          return { device, classification, applied: false }
+        } catch (err) {
+          return { device, error: err?.message || err, applied: false }
+        }
+      })
+    )
+
+    setClassifyResults(results)
+    setClassifying(false)
+  }
+
+  const applyClassification = async (result) => {
+    let { device, classification } = result
+    if (!device?.MAC || !canApplyClassification(classification)) {
+      return false
+    }
+
+    let category = classification.Category
+    let style = categoryStyle[category] || categoryStyle.unknown
+    let nextGroups = mergeUnique(
+      device.Groups || [],
+      classification.SuggestedGroups || []
+    )
+    let nextPolicies = mergeUnique(
+      device.Policies || [],
+      classification.SuggestedPolicies || []
+    )
+    let nextTags = mergeUnique(device.DeviceTags || [], classificationTag(category))
+
+    await deviceAPI.update(device.MAC, {
+      Groups: nextGroups,
+      Policies: nextPolicies,
+      DeviceTags: nextTags,
+      Style: style
+    })
+
+    setClassifyResults((current) =>
+      current.map((item) =>
+        item.device?.MAC == device.MAC
+          ? {
+              ...item,
+              applied: true,
+              device: {
+                ...item.device,
+                Groups: nextGroups,
+                Policies: nextPolicies,
+                DeviceTags: nextTags,
+                Style: style
+              }
+            }
+          : item
+      )
+    )
+    return true
+  }
+
+  const acceptOne = async (result) => {
+    try {
+      let applied = await applyClassification(result)
+      if (applied) {
+        context.success(`Applied ${classificationTag(result.classification.Category)}`)
+        refresh()
+      }
+    } catch (err) {
+      context.error('[API] apply classification error: ' + (err?.message || err))
+    }
+  }
+
+  const acceptAll = async () => {
+    let count = 0
+    for (let result of classifyResults) {
+      if (result.applied || !canApplyClassification(result.classification)) {
+        continue
+      }
+      try {
+        if (await applyClassification(result)) {
+          count += 1
+        }
+      } catch (err) {
+        context.error('[API] apply classification error: ' + (err?.message || err))
+      }
+    }
+    context.success(`Applied classifications to ${count} device${count === 1 ? '' : 's'}`)
+    refresh()
+  }
+
   // field: 'Groups' | 'Tags' | 'Policies'
   const applyAssign = async (field, value) => {
     const v = (value || '').trim()
@@ -184,6 +314,17 @@ const DevicesBulkEdit = (props) => {
           >
             <ButtonIcon as={TrashIcon} mr="$1" />
             <ButtonText>Delete Selected ({selectedCount})</ButtonText>
+          </Button>
+
+          <Button
+            size="xs"
+            action="primary"
+            variant="outline"
+            onPress={classifySelected}
+            isDisabled={selectedCount === 0}
+          >
+            <ButtonIcon as={TagsIcon} mr="$1" />
+            <ButtonText>Auto classify ({selectedCount})</ButtonText>
           </Button>
         </HStack>
       </ListHeader>
@@ -313,6 +454,104 @@ const DevicesBulkEdit = (props) => {
             <Button action="negative" onPress={doDelete} isDisabled={deleting}>
               <ButtonIcon as={TrashIcon} mr="$1" />
               <ButtonText>{deleting ? 'Deleting…' : 'Delete'}</ButtonText>
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal
+        isOpen={showClassify}
+        onClose={() => setShowClassify(false)}
+        useRNModal={Platform.OS == 'web'}
+      >
+        <ModalBackdrop />
+        <ModalContent>
+          <ModalHeader>
+            <Heading size="sm">Review classifications</Heading>
+            <ModalCloseButton>
+              <Icon as={CloseIcon} />
+            </ModalCloseButton>
+          </ModalHeader>
+          <ModalBody>
+            {classifying ? (
+              <Text size="sm" color="$muted500">
+                Classifying selected devices...
+              </Text>
+            ) : null}
+
+            {classifyResults.map((result) => {
+              let classification = result.classification
+              let category = classification?.Category || 'unknown'
+              let style = categoryStyle[category] || categoryStyle.unknown
+              let disabled =
+                result.applied || !canApplyClassification(classification)
+
+              return (
+                <HStack
+                  key={deviceId(result.device)}
+                  space="md"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  py="$2"
+                  borderBottomWidth={1}
+                  borderColor="$borderColorLight"
+                  sx={{ _dark: { borderColor: '$borderColorDark' } }}
+                >
+                  <HStack space="sm" alignItems="center" flex={1}>
+                    <IconItem
+                      name={style.Icon}
+                      color={`$${style.Color}500`}
+                      size={20}
+                    />
+                    <View>
+                      <Text bold>{result.device?.Name || result.device?.MAC}</Text>
+                      {result.error ? (
+                        <Text size="sm" color="$red500">
+                          {result.error}
+                        </Text>
+                      ) : (
+                        <Text size="sm" color="$muted500">
+                          {category} ({classification?.Confidence || 'Unknown'})
+                        </Text>
+                      )}
+                    </View>
+                  </HStack>
+                  <Button
+                    size="xs"
+                    action="secondary"
+                    variant={result.applied ? 'solid' : 'outline'}
+                    isDisabled={disabled}
+                    onPress={() => acceptOne(result)}
+                  >
+                    <ButtonText>{result.applied ? 'Applied' : 'Accept'}</ButtonText>
+                  </Button>
+                </HStack>
+              )
+            })}
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              action="secondary"
+              variant="outline"
+              mr="$3"
+              onPress={() => setShowClassify(false)}
+            >
+              <ButtonText>Close</ButtonText>
+            </Button>
+            <Button
+              action="primary"
+              onPress={acceptAll}
+              isDisabled={
+                classifying ||
+                !classifyResults.some(
+                  (result) =>
+                    !result.applied &&
+                    canApplyClassification(result.classification)
+                )
+              }
+            >
+              <ButtonIcon as={TagsIcon} mr="$1" />
+              <ButtonText>Accept all</ButtonText>
             </Button>
           </ModalFooter>
         </ModalContent>

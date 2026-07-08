@@ -18,7 +18,7 @@ import {
 
 import { SelectMenu } from 'components/InputSelect'
 
-import { deviceAPI, wifiAPI, meshAPI } from 'api'
+import { deviceAPI, wifiAPI, meshAPI, classifyAPI } from 'api'
 import APIWifi from 'api/Wifi'
 import { useNavigate } from 'react-router-dom'
 import { AlertContext, AppContext } from 'AppContext'
@@ -27,6 +27,7 @@ import { ListHeader } from 'components/List'
 import DeviceList from 'components/Devices/DeviceList'
 import { Select } from 'components/Select'
 import { strToDate } from 'utils'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 //import ActionSheet from 'components/ActionSheet'
 import { XIcon, TagIcon, UsersIcon } from 'lucide-react-native'
@@ -188,6 +189,11 @@ const Devices = (props) => {
           devices = Object.values(devices)
         }
 
+        //used to resolve device names in notifications
+        AsyncStorage.setItem('devices', JSON.stringify(devices)).catch(
+          (err) => {}
+        )
+
         let macs = devices.filter((d) => d.MAC.includes(':')).map((d) => d.MAC)
 
         setList(devices.sort(sortDevices))
@@ -225,6 +231,23 @@ const Devices = (props) => {
             })
             .catch((err) => {})
         }
+
+        classifyAPI
+          .list()
+          .then((classifications) => {
+            let byMAC = {}
+            for (let entry of classifications) {
+              byMAC[entry.MAC?.toLowerCase()] = entry
+            }
+
+            let devs = devices.map((d) => {
+              d.classification = byMAC[d.MAC?.toLowerCase()]
+              return d
+            })
+
+            setList(devs.sort(sortDevices))
+          })
+          .catch((err) => {})
 
         // TODO check wg status for virt
         if (!appContext.isWifiDisabled) {

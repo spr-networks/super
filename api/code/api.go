@@ -3208,6 +3208,9 @@ func main() {
 	external_router_authenticated.HandleFunc("/traffic_history", getTrafficHistory).Methods("GET")
 	external_router_authenticated.HandleFunc("/iptraffic", getIPTraffic).Methods("GET")
 
+	//network topology
+	external_router_authenticated.HandleFunc("/topology", showTopology).Methods("GET")
+
 	//ARP
 	external_router_authenticated.HandleFunc("/arp", showARP).Methods("GET")
 

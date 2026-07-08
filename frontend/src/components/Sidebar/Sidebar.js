@@ -300,7 +300,7 @@ export const CollapsibleSidebarItem = (props) => {
             {/*icon && typeof icon !== 'string' ? (
               <Icon icon={icon} />
             ) : null*/}
-            <Box flexShrink="1">
+            <Box flexShrink={1}>
               <Text
                 size="sm"
                 textTransform="uppercase"

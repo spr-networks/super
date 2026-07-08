@@ -80,6 +80,27 @@ const parseLogMessage = async (context, msg) => {
         body = `Failed to install ${data.GitURL} ${msgType}`
         break
     }
+  } else if (msgType == 'classify:result') {
+    //unknowns get a quiet badge in the device list, not a notification
+    if (
+      !data ||
+      typeof data !== 'object' ||
+      !data.Category ||
+      data.Category == 'unknown' ||
+      data.Confidence == 'Low' ||
+      data.Confidence == 'Unknown'
+    ) {
+      return null
+    }
+
+    let name = context.getDevice(data.MAC)?.Name || data.MAC || 'Device'
+    let guess = [data.Vendor, data.Category]
+      .filter((part) => part && part != 'unknown')
+      .join(' ')
+
+    title = 'New device identified'
+    type = 'info'
+    body = `${name} looks like a ${guess} (${data.Confidence} confidence)`
   } else if (msgType.startsWith('nft')) {
     // data.Action ==  allowed || blocked
     type = 'confirm'
@@ -171,9 +192,13 @@ const WebSocketComponent = ({ confirm, notify, ...props }) => {
     const wsCurrent = ws.current
 
     AsyncStorage.getItem('user').then((login) => {
-      let userData = JSON.parse(login)
+      let userData = JSON.parse(login || '{}')
 
       wsCurrent.addEventListener('open', (event) => {
+        if (!userData?.username || !userData?.password) {
+          return
+        }
+
         AsyncStorage.getItem('jwt-otp').then((string) => {
           let jwt = JSON.parse(string)
           if (jwt) {
