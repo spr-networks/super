@@ -777,12 +777,11 @@ func anyAlertRuleMatches(topic string) bool {
 }
 
 func processEventAlerts(notifyChan chan<- Alert, storeChan chan<- Alert, topic string, event interface{}) {
-	//make sure event settings dont change out from under us
+	AlertSettingsmtx.RLock()
+	rules := append([]AlertSetting(nil), gAlertsConfig...)
+	AlertSettingsmtx.RUnlock()
 
-	AlertSettingsmtx.Lock()
-	defer AlertSettingsmtx.Unlock()
-
-	for _, rule := range gAlertsConfig {
+	for _, rule := range rules {
 		if rule.Disabled {
 			continue
 		}
@@ -824,6 +823,10 @@ func processEventAlerts(notifyChan chan<- Alert, storeChan chan<- Alert, topic s
 	}
 }
 
+func dispatchEventAlerts(notifyChan chan<- Alert, storeChan chan<- Alert, topic string, event interface{}) {
+	go processEventAlerts(notifyChan, storeChan, topic, event)
+}
+
 func AlertsRunEventListener() {
 	var wg sync.WaitGroup
 	AlertSettingsmtx.Lock()
@@ -857,7 +860,7 @@ func AlertsRunEventListener() {
 	busEvent := func(topic string, raw []byte) {
 		//decide from the topic alone whether anything consumes this event,
 		//so unconsumed bus traffic costs no json decoding at all
-		wantUI := strings.HasPrefix(topic, "wifi:auth") || strings.HasPrefix(topic, "plugin:")
+		wantUI := strings.HasPrefix(topic, "wifi:auth") || strings.HasPrefix(topic, "plugin:") || strings.HasPrefix(topic, "classify:result")
 		wantWS := WSHasWildcardListener()
 		wantAlert := anyAlertRuleMatches(topic)
 
@@ -888,7 +891,7 @@ func AlertsRunEventListener() {
 		}
 
 		if wantAlert {
-			processEventAlerts(notifyChan, storeChan, topic, data)
+			dispatchEventAlerts(notifyChan, storeChan, topic, data)
 		}
 	}
 
