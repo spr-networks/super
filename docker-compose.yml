@@ -59,6 +59,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${PWD}/state/api/:/state/api/
+      - ${PWD}/state/superd/:/state/superd/
       - ${PWD}/configs/base/:/configs/base/
       - ${PWD}/:/super/
   dhcp:
@@ -161,6 +162,7 @@ services:
     logging: *default-logging
     volumes:
       - ${PWD}/configs/base/:/configs/base/:ro
+      - ${PWD}/state/api/:/state/api/
       - ${PWD}/state/public/:/state/public/:ro
       - ${PWD}/state/plugins/mesh/:/state/plugins/mesh/:ro
   wireguard:
@@ -259,6 +261,9 @@ services:
       - "base"
       - "dns"
     volumes:
+      - ${PWD}/configs/plugins/plugin-lookup/:/configs/plugins/plugin-lookup/
+      - ${PWD}/state/api/:/state/api/
+      - ${PWD}/state/public/:/state/public/:ro
       - ${PWD}/state/plugins/plugin-lookup/:/state/plugins/plugin-lookup/
   packet_logs:
     container_name: superpacket_logs

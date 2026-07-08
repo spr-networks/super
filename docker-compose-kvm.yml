@@ -42,6 +42,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${PWD}/state/api/:/state/api/
+      - ${PWD}/state/superd/:/state/superd/
       - ${PWD}/configs/base/:/configs/base/
       - ${PWD}/:/super/
   dhcp:

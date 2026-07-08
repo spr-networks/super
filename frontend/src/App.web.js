@@ -14,7 +14,13 @@ import { routesAuth, routesAdmin } from 'routes'
 import { GluestackUIProvider } from '@gluestack-ui/themed'
 import { Theme } from '@gluestack-style/react'
 import { config } from 'gluestack-ui.config'
-import { themes, DEFAULT_THEME, buildCustomTheme, customThemeCss } from 'Themes'
+import {
+  themes,
+  DEFAULT_THEME,
+  buildCustomTheme,
+  customThemeCss,
+  mergeCustomThemes
+} from 'Themes'
 
 export default function App() {
   const [colorMode, setColorMode] = React.useState('light')
@@ -77,8 +83,13 @@ export default function App() {
     ? activeCustom.colorMode
     : themes[theme]?.colorMode || colorMode
 
+  const runtimeConfig = React.useMemo(
+    () => mergeCustomThemes(config, customThemeRecords),
+    [customThemeRecords]
+  )
+
   return (
-    <GluestackUIProvider config={config} colorMode={effectiveColorMode}>
+    <GluestackUIProvider config={runtimeConfig} colorMode={effectiveColorMode}>
       <Theme name={theme} style={{ flex: 1 }}>
         <Router>
           <Routes>

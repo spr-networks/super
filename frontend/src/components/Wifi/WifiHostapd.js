@@ -720,30 +720,38 @@ const WifiHostapd = (props) => {
                           >
                             <InputField
                               type="text"
-                              value={config[label]}
-                              onChangeText={(value) =>
-                                handleChange(label, value)
-                              }
-                              onSubmitEditing={handleSubmit}
-                              onMouseLeave={handleSubmit}
-                            />
-                          </Input>
-                        )
-                      }}
-                    >
-                      <TooltipContent>
-                        <TooltipText>{tooltips[label]}</TooltipText>
-                      </TooltipContent>
-                    </TooltipOrig>
-                  ) : (
-                    <Input size="md" flex={2} variant="underlined">
-                      <InputField
-                        type="text"
-                        value={config[label]}
-                        onChangeText={(value) => handleChange(label, value)}
+                        value={
+                          config[label] != null
+                            ? String(config[label])
+                            : ''
+                        }
+                        onChangeText={(value) =>
+                          handleChange(label, value)
+                        }
                         onSubmitEditing={handleSubmit}
                         onMouseLeave={handleSubmit}
                       />
+                    </Input>
+                  )
+                }}
+              >
+                <TooltipContent>
+                  <TooltipText>{tooltips[label]}</TooltipText>
+                </TooltipContent>
+              </TooltipOrig>
+            ) : (
+              <Input size="md" flex={2} variant="underlined">
+                <InputField
+                  type="text"
+                  value={
+                    config[label] != null
+                      ? String(config[label])
+                      : ''
+                  }
+                  onChangeText={(value) => handleChange(label, value)}
+                  onSubmitEditing={handleSubmit}
+                  onMouseLeave={handleSubmit}
+                />
                     </Input>
                   )
                 ) : (

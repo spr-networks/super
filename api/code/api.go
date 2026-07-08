@@ -3208,6 +3208,9 @@ func main() {
 	external_router_authenticated.HandleFunc("/traffic_history", getTrafficHistory).Methods("GET")
 	external_router_authenticated.HandleFunc("/iptraffic", getIPTraffic).Methods("GET")
 
+	//network topology
+	external_router_authenticated.HandleFunc("/topology", showTopology).Methods("GET")
+
 	//ARP
 	external_router_authenticated.HandleFunc("/arp", showARP).Methods("GET")
 
@@ -3249,6 +3252,14 @@ func main() {
 	external_router_authenticated.HandleFunc("/device", handleUpdateDevice).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/devices", syncDevices).Methods("PUT")
 	external_router_authenticated.HandleFunc("/devices", handleDeleteDevices).Methods("DELETE")
+
+	//parental controls: persona time limits + block schedules
+	external_router_authenticated.HandleFunc("/parentalControls/personas", getParentalPersonas).Methods("GET")
+	external_router_authenticated.HandleFunc("/parentalControls/personas", modifyParentalPersonas).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/parentalControls/usage", getParentalUsage).Methods("GET")
+	external_router_authenticated.HandleFunc("/parentalControls/pause", setParentalPause).Methods("PUT")
+	external_router_authenticated.HandleFunc("/parentalControls/extend", setParentalExtend).Methods("PUT")
+	external_router_authenticated.HandleFunc("/parentalControls/reset", setParentalReset).Methods("PUT")
 	external_router_authenticated.HandleFunc("/devices/bulk", handleBulkUpdateDevices).Methods("PUT")
 
 	external_router_authenticated.HandleFunc("/pendingPSK", pendingPSK).Methods("GET")
@@ -3392,6 +3403,9 @@ func main() {
 	WSRunNotify()
 	// collect traffic accounting statistics
 	trafficTimer()
+
+	// parental controls: enforce persona time limits + block schedules
+	parentalControlLoop()
 
 	// alerts, connect to eventbus
 	go AlertsRunEventListener()

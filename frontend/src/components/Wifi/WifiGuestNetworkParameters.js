@@ -89,38 +89,34 @@ const WifiChannelParameters = ({
   const [groupValues, setGroupValues] = useState(['wpa2', 'wpa3', 'guestpass'])
 
   useEffect(() => {
-    setExtraSSID(config.ssid + '-guest')
+    let extra =
+      curInterface && curInterface.ExtraBSS && curInterface.ExtraBSS.length == 1
+        ? curInterface.ExtraBSS[0]
+        : null
 
+    if (extra) {
+      setExtraSSID(extra.Ssid)
+      setGuestPassword(extra.GuestPassword || '')
 
-    if (curInterface) {
-      if (curInterface.ExtraBSS && curInterface.ExtraBSS.length == 1) {
-        let extra = curInterface.ExtraBSS[0]
-        //load ssid
-        setExtraSSID(extra.Ssid)
-
-        if (extra.Wpa == '0') {
-          setGroupValues(["wpa_open"])
-        } else if (extra.Wpa == '1') {
-          setGroupValues(["wpa1"])
+      let values = ['guest_enabled']
+      if (extra.Wpa == '0') {
+        values.push('wpa_open')
+      } else if (extra.Wpa == '1') {
+        values.push('wpa1')
+      } else {
+        values.push('wpa2')
+        if (extra.WpaKeyMgmt && extra.WpaKeyMgmt.includes('SAE')) {
+          values.push('wpa3')
         }
-
-        if (!groupValues.includes('guest_enabled')) {
-          setGroupValues(groupValues.concat('guest_enabled'))
-        }
-
-        setGuestPassword(extra.GuestPassword)
-        if (extra.GuestPassword === '') {
-          setGroupValues(groupValues.filter(x => x != "guestpass"))
-        }
-
-
-        if (extra.WpaKeyMgmt.includes("SAE") && !groupValues.includes("wpa3")) {
-          setGroupValues(groupValues.concat('wpa3'))
-        }
-
-
-        //load auth info & guest pass
       }
+      if (extra.Wpa != '0' && extra.GuestPassword) {
+        values.push('guestpass')
+      }
+      setGroupValues(values)
+    } else {
+      setExtraSSID(config.ssid + '-guest')
+      setGuestPassword('')
+      setGroupValues(['wpa2', 'wpa3', 'guestpass'])
     }
 
     //set bw and channels

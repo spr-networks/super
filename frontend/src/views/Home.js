@@ -43,6 +43,8 @@ import {
 } from 'components/Dashboard/DNSMetricsWidgets'
 import { ServicesEnabled } from 'components/Dashboard/ServicesWidgets'
 import IntroWidget from 'components/Dashboard/Intro'
+import RecentClassifications, { DeviceStats } from 'components/Dashboard/ClassificationWidgets'
+import TopologyWidget from 'components/Dashboard/TopologyWidget'
 
 const Home = (props) => {
   const context = useContext(AppContext)
@@ -346,6 +348,7 @@ const Home = (props) => {
       >
         <VStack space="md" sx={{ '@md': { flex: 7 } }}>
           {show.intro ? <IntroWidget /> : null}
+          <RecentClassifications />
           {show.vpnInfo ? (
             <>
               <WireguardPeers flex={1} />
@@ -382,6 +385,7 @@ const Home = (props) => {
             isMeshNode={context.isMeshNode && context.isFeaturesInitialized}
             serviceStatus={criticalStatus}
           />
+          <DeviceStats />
           {show.dns ? (
             <VStack space="md">
               {/*<DNSMetrics />
@@ -391,6 +395,7 @@ const Home = (props) => {
             </VStack>
           ) : null}
           {show.vpnSide ? <WireguardPeersActive /> : null}
+          <TopologyWidget />
           <Interfaces />
         </VStack>
       </Box>

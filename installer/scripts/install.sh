@@ -6,6 +6,11 @@ systemctl disable systemd-resolved
 systemctl disable systemd-networkd-wait-online.service
 systemctl mask systemd-networkd-wait-online.service
 
+for svc in wpa_supplicant avahi-daemon avahi-daemon.socket ModemManager bluetooth udisks2; do
+  systemctl disable --now "$svc" 2>/dev/null || true
+  systemctl mask "$svc" 2>/dev/null || true
+done
+
 rm -f /etc/resolv.conf
 echo nameserver 1.1.1.1 > /etc/resolv.conf
 

@@ -9,13 +9,18 @@ import {
   Cable,
   Network,
   Router,
+  Server,
   Smartphone,
   Tv,
   Video,
+  Watch,
   Wifi,
   Tablet,
   Globe,
-  Globe2
+  Globe2,
+  Printer,
+  Gamepad2,
+  Speaker
 } from 'lucide-react-native'
 import { Platform } from 'react-native'
 
@@ -27,7 +32,12 @@ let deviceIcons = {
   Router: Router,
   Tablet: Tablet,
   Tv: Tv,
+  Printer: Printer,
+  Gamepad: Gamepad2,
+  Server: Server,
+  Speaker: Speaker,
   Video: Video,
+  Watch: Watch,
   Wifi: Wifi,
   Wire: Cable
 }

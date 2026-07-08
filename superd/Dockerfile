@@ -46,7 +46,7 @@ ARG DOCKER_CE_VERSION=5:29.6.1-1~ubuntu.24.04~noble
 ARG DOCKER_CE_CLI_VERSION=5:29.6.1-1~ubuntu.24.04~noble
 ARG CONTAINERD_VERSION=2.2.5-1~ubuntu.24.04~noble
 ARG DOCKER_BUILDX_PLUGIN_VERSION=0.35.0-1~ubuntu.24.04~noble
-ARG DOCKER_COMPOSE_PLUGIN_VERSION=5.3.0-1~ubuntu.24.04~noble
+ARG DOCKER_COMPOSE_PLUGIN_VERSION=5.3.1-1~ubuntu.24.04~noble
 
 RUN set -eux; \
     printf 'Types: deb\nURIs: https://snapshot.ubuntu.com/ubuntu/%s\nSuites: noble noble-updates noble-security\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' "${UBUNTU_SNAPSHOT}" > /etc/apt/sources.list.d/ubuntu.sources; \

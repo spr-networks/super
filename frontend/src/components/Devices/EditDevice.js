@@ -1,9 +1,10 @@
 import React, { useContext, useEffect, useState } from 'react'
+import { Platform, Linking } from 'react-native'
 import PropTypes from 'prop-types'
 import { useNavigate } from 'react-router-dom'
 import { AlertContext, AppContext } from 'AppContext'
 import { deviceAPI } from 'api/Device'
-import { meshAPI } from 'api'
+import { meshAPI, classifyAPI } from 'api'
 
 import ModalConfirm from 'components/ModalConfirm'
 
@@ -48,6 +49,22 @@ import ColorPicker from 'components/ColorPicker'
 import IconPicker from 'components/IconPicker'
 
 import { GroupMenu, PolicyMenu, TagMenu } from 'components/TagMenu'
+import {
+  ClassificationPanel,
+  ClassificationTag,
+  isClassificationTag,
+  categoryStyle
+} from 'components/Devices/Classification'
+
+const mergeUnique = (...arrays) => [
+  ...new Set(
+    arrays
+      .flat()
+      .filter((value) => typeof value === 'string')
+      .map((value) => value.trim())
+      .filter((value) => value.length)
+  )
+].sort()
 
 const EditDevice = ({ device, notifyChange, ...props }) => {
   const context = useContext(AlertContext)
@@ -68,6 +85,8 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   const [tags, setTags] = useState(device.DeviceTags.sort())
   const [color, setColor] = useState(device.Style?.Color || 'blueGray')
   const [icon, setIcon] = useState(device.Style?.Icon || 'Laptop')
+  const [classification, setClassification] = useState(device.classification)
+  const [fingerprint, setFingerprint] = useState(null)
   const [expiration, setExpiration] = useState(
     device.DeviceExpiration ? device.DeviceExpiration : 0
   )
@@ -125,6 +144,31 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
       }
     }
   }, [])
+
+  useEffect(() => {
+    if (!device.MAC) {
+      return
+    }
+
+    classifyAPI
+      .signals(device.MAC)
+      .then((signals) => setFingerprint({ OUI: deviceOUI() || undefined, ...signals }))
+      .catch(() => {})
+
+    classifyAPI
+      .getClassification(device.MAC)
+      .then(setClassification)
+      .catch(() => {
+        classifyAPI
+          .classify({
+            MAC: device.MAC,
+            Hostname: device.Name,
+            OUIVendor: device.oui || ''
+          })
+          .then(setClassification)
+          .catch((err) => {})
+      })
+  }, [device.MAC, device.Name, device.oui])
 
   useEffect(() => {
     if (!icon || !color) {
@@ -190,6 +234,246 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
       .catch((error) =>
         context.error('[API] updateDevice error: ' + error.message)
       )
+  }
+
+  const applyClassification = () => {
+    if (!classification || !device.MAC) {
+      return
+    }
+
+    let category = classification.Category || 'unknown'
+    let style = categoryStyle[category] || categoryStyle.unknown
+    let nextGroups = mergeUnique(groups, classification.SuggestedGroups || [])
+    let nextPolicies = mergeUnique(
+      policies,
+      classification.SuggestedPolicies || []
+    )
+    let nextTags = mergeUnique(
+      tags.filter((tag) => !tag.startsWith('classification:')),
+      [`classification:${category}`]
+    )
+
+    deviceAPI
+      .update(device.MAC, {
+        Groups: nextGroups,
+        Policies: nextPolicies,
+        DeviceTags: nextTags
+      })
+      .then(() => {
+        setGroups(nextGroups)
+        setPolicies(nextPolicies)
+        setTags(nextTags)
+        setIcon(style.Icon)
+        context.success('Classification applied')
+        notifyChange()
+      })
+      .catch((error) =>
+        context.error('[API] apply classification error: ' + error.message)
+      )
+  }
+
+  const correctClassification = (category) => {
+    if (!device.MAC || !category) {
+      return
+    }
+
+    classifyAPI
+      .correct(device.MAC, {
+        Vendor: classification?.Vendor || '',
+        Model: classification?.Model || '',
+        Category: category,
+        Evidence: ['user correction']
+      })
+      .then((result) => {
+        setClassification(result)
+
+        let style = categoryStyle[category] || categoryStyle.unknown
+        let nextTags = mergeUnique(
+          tags.filter((tag) => !tag.startsWith('classification:')),
+          [`classification:${category}`]
+        )
+        setTags(nextTags)
+        setIcon(style.Icon)
+
+        deviceAPI
+          .update(device.MAC, { DeviceTags: nextTags })
+          .then(() => notifyChange(false))
+          .catch((err) => {})
+
+        context.success('Classification saved')
+      })
+      .catch((error) =>
+        context.error('[API] classification correction error: ' + error.message)
+      )
+  }
+
+  // pin the vendor without changing the type, e.g. a Framework laptop
+  // whose MAC registry entry still says ASUSTeK
+  const correctBrand = (vendor) => {
+    if (!device.MAC || !vendor) {
+      return
+    }
+
+    classifyAPI
+      .correct(device.MAC, {
+        Vendor: vendor,
+        Model: classification?.Model || '',
+        Category: classification?.Category || 'unknown',
+        Evidence: ['user correction']
+      })
+      .then((result) => {
+        setClassification(result)
+        context.success('Brand saved')
+      })
+      .catch((error) =>
+        context.error('[API] classification correction error: ' + error.message)
+      )
+  }
+
+  const resetClassification = () => {
+    if (!device.MAC) {
+      return
+    }
+
+    classifyAPI
+      .clearCorrection(device.MAC)
+      .then(() => classifyAPI.getClassification(device.MAC))
+      .then((result) => {
+        setClassification(result)
+
+        let nextTags = tags.filter((tag) => !tag.startsWith('classification:'))
+        if (nextTags.length != tags.length) {
+          setTags(nextTags)
+          deviceAPI
+            .update(device.MAC, { DeviceTags: nextTags })
+            .then(() => notifyChange(false))
+            .catch((err) => {})
+        }
+
+        context.success('Classification reset to automatic')
+      })
+      .catch((error) =>
+        context.error('[API] classification reset error: ' + error.message)
+      )
+  }
+
+  const isRandomMAC = (mac) => {
+    let octet = parseInt(mac?.slice(0, 2), 16)
+    return !isNaN(octet) && (octet & 0x02) != 0 && (octet & 0x01) == 0
+  }
+
+  const deviceOUI = () =>
+    device.MAC && !isRandomMAC(device.MAC) ? device.MAC.slice(0, 8) : ''
+
+  const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+  const createRuleFromDevice = async () => {
+    if (!device.MAC || !classification) {
+      return
+    }
+
+    let signals = {}
+    try {
+      signals = await classifyAPI.signals(device.MAC)
+    } catch (err) {}
+
+    let draftRule = {
+      Vendor: classification.Vendor || '',
+      Category: classification.Category || '',
+      Weight: 3
+    }
+
+    if (signals.Hostname) {
+      draftRule.SignalType = 'hostname'
+      draftRule.Pattern =
+        '^' + escapeRegex(signals.Hostname.replace(/[-_]?\d+$/, ''))
+    } else if (signals.Services?.length) {
+      draftRule.SignalType = 'mdns_service'
+      draftRule.Pattern = escapeRegex(signals.Services[0])
+    } else if (signals.OUIVendor) {
+      draftRule.SignalType = 'mac_vendor'
+      draftRule.Pattern = escapeRegex(signals.OUIVendor)
+    } else if (deviceOUI()) {
+      draftRule.SignalType = 'oui'
+      draftRule.Pattern = '^' + escapeRegex(deviceOUI())
+    } else {
+      context.error('Not enough signals to build a rule from this device')
+      return
+    }
+
+    navigate('/admin/devices', {
+      state: {
+        tab: 'Classification',
+        draftRule,
+        fingerprint: { OUI: deviceOUI() || undefined, ...signals },
+        deviceName: device.Name || device.MAC
+      }
+    })
+  }
+
+  const shareClassification = async () => {
+    if (!device.MAC || !classification) {
+      return
+    }
+
+    let signals = {}
+    try {
+      signals = await classifyAPI.signals(device.MAC)
+    } catch (err) {}
+
+    //strip anything that could identify the device or network
+    delete signals.MAC
+    delete signals.RandomMAC
+    let txt = {}
+    for (let key of Object.keys(signals.TXT || {})) {
+      if (!key.match(/id|mac|serial|token|key|uuid|addr|auth|secret|sig|pass|cert|tag/i)) {
+        txt[key] = signals.TXT[key]
+      }
+    }
+    signals.TXT = txt
+
+    const guess = [
+      classification.Vendor,
+      classification.Model,
+      classification.Category
+    ]
+      .filter((part) => part && part != 'unknown')
+      .join(' ')
+
+    const title = `Shared SPR fingerprint: ${guess || 'device'}`
+    const body = [
+      `Device fingerprint for "${guess}".`,
+      '',
+      '```json',
+      JSON.stringify(
+        {
+          Vendor: classification.Vendor,
+          Category: classification.Category,
+          Model: classification.Model,
+          Signals: { OUI: deviceOUI() || undefined, ...signals }
+        },
+        null,
+        2
+      ),
+      '```',
+      '',
+      '#492'
+    ].join('\n')
+
+    const url =
+      'https://github.com/spr-networks/super/issues/new' +
+      '?title=' +
+      encodeURIComponent(title) +
+      '&body=' +
+      encodeURIComponent(body)
+
+    if (Platform.OS == 'web' && typeof window != 'undefined') {
+      window.open(url, '_blank')
+    } else {
+      Linking.openURL(url).catch(() =>
+        context.error('Could not open browser')
+      )
+    }
   }
 
   const handleName = (name) => {
@@ -392,6 +676,10 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
       handlePolicies(policies.concat(value))
     } else if (modalType.match(/Tag/i)) {
       handleTags(tags.concat(value))
+    } else if (modalType.match(/Category/i)) {
+      correctClassification(value.trim().toLowerCase())
+    } else if (modalType.match(/Brand/i)) {
+      correctBrand(value.trim())
     }
   }
 
@@ -483,6 +771,26 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
           </FormControlHelper>
         ) : null}
       </FormControl>
+
+      <ClassificationPanel
+        classification={classification}
+        fingerprint={fingerprint}
+        deviceGroups={groups}
+        devicePolicies={policies}
+        onApply={applyClassification}
+        onCorrection={correctClassification}
+        onReset={resetClassification}
+        onCustom={() => {
+          setModalType('Category')
+          setShowModal(true)
+        }}
+        onBrand={() => {
+          setModalType('Brand')
+          setShowModal(true)
+        }}
+        onShare={shareClassification}
+        onCreateRule={createRuleFromDevice}
+      />
 
       <FormControl display={isSimpleMode ? 'none' : 'flex'}>
         <Tooltip
@@ -718,9 +1026,13 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
               alignItems="center"
               display={tags?.length ? 'flex' : 'none'}
             >
-              {tags.map((tag) => (
-                <TagItem key={tag} name={tag} size="sm" />
-              ))}
+              {tags.map((tag) =>
+                isClassificationTag(tag) ? (
+                  <ClassificationTag key={tag} name={tag} size="sm" />
+                ) : (
+                  <TagItem key={tag} name={tag} size="sm" />
+                )
+              )}
             </HStack>
             <TagMenu
               items={[...new Set(defaultTags.concat(tags))]}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"sync"
 	"testing"
+	"time"
 )
 
 func mockAlertSettings() []AlertSetting {
@@ -55,6 +56,113 @@ func TestAnyAlertRuleMatches(t *testing.T) {
 	}
 	if anyAlertRuleMatches("dns:serve:wan") {
 		t.Error("no rule should match")
+	}
+}
+
+func TestDispatchEventAlertsDoesNotBlockOnAlertChannels(t *testing.T) {
+	AlertSettingsmtx.Lock()
+	saved := gAlertsConfig
+	gAlertsConfig = []AlertSetting{
+		{
+			TopicPrefix: "deadlock:",
+			Actions: []ActionConfig{
+				{SendNotification: true, StoreAlert: true},
+			},
+		},
+	}
+	AlertSettingsmtx.Unlock()
+	defer func() {
+		AlertSettingsmtx.Lock()
+		gAlertsConfig = saved
+		AlertSettingsmtx.Unlock()
+	}()
+
+	notifyChan := make(chan Alert)
+	storeChan := make(chan Alert)
+	done := make(chan struct{})
+	go func() {
+		dispatchEventAlerts(notifyChan, storeChan, "deadlock:topic", map[string]interface{}{"ok": true})
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("dispatchEventAlerts blocked on alert delivery")
+	}
+
+	select {
+	case <-notifyChan:
+	case <-time.After(time.Second):
+		t.Fatal("processEventAlerts did not reach notification send")
+	}
+
+	select {
+	case <-storeChan:
+	case <-time.After(time.Second):
+		t.Fatal("processEventAlerts did not reach store send")
+	}
+}
+
+func TestProcessEventAlertsDoesNotHoldSettingsLockWhileSending(t *testing.T) {
+	AlertSettingsmtx.Lock()
+	saved := gAlertsConfig
+	gAlertsConfig = []AlertSetting{
+		{
+			TopicPrefix: "deadlock:",
+			Actions: []ActionConfig{
+				{SendNotification: true, StoreAlert: true},
+			},
+		},
+	}
+	AlertSettingsmtx.Unlock()
+	defer func() {
+		AlertSettingsmtx.Lock()
+		gAlertsConfig = saved
+		AlertSettingsmtx.Unlock()
+	}()
+
+	notifyChan := make(chan Alert)
+	storeChan := make(chan Alert)
+	done := make(chan struct{})
+	go func() {
+		processEventAlerts(notifyChan, storeChan, "deadlock:topic", map[string]interface{}{"ok": true})
+		close(done)
+	}()
+
+	select {
+	case <-notifyChan:
+	case <-time.After(time.Second):
+		t.Fatal("processEventAlerts did not reach notification send")
+	}
+
+	locked := make(chan struct{})
+	go func() {
+		AlertSettingsmtx.Lock()
+		AlertSettingsmtx.Unlock()
+		close(locked)
+	}()
+
+	select {
+	case <-locked:
+	case <-time.After(200 * time.Millisecond):
+		select {
+		case <-storeChan:
+		case <-time.After(time.Second):
+		}
+		t.Fatal("AlertSettingsmtx was held while processEventAlerts blocked on storeChan")
+	}
+
+	select {
+	case <-storeChan:
+	case <-time.After(time.Second):
+		t.Fatal("processEventAlerts did not reach store send")
+	}
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("processEventAlerts did not return after channels drained")
 	}
 }
 

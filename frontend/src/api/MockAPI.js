@@ -12,6 +12,456 @@ let opts = {}
 const r = (n) => parseInt(Math.random() * n)
 const rpick = (l) => l[parseInt(r(l.length))]
 
+let mockCustomFingerprints = []
+let mockDbBuckets = {}
+let mockPersonas = [
+  {
+    Name: 'gamer',
+    Tag: 'persona:gamer',
+    Description: 'Game consoles and gaming PCs',
+    DailyLimitMinutes: 240,
+    Schedules: [
+      { Days: [1, 1, 1, 1, 1, 1, 1], Start: '00:00', End: '06:00' }
+    ],
+    Disabled: false
+  },
+  {
+    Name: 'kids',
+    Tag: 'persona:kids',
+    Description: "Kids' phones and tablets",
+    DailyLimitMinutes: 120,
+    Schedules: [
+      { Days: [0, 1, 1, 1, 1, 1, 0], Start: '21:00', End: '07:00' }
+    ],
+    Disabled: false
+  }
+]
+let mockPersonasState = {
+  UsedMinutes: { 'persona:gamer': 57, 'persona:kids': 120 },
+  PauseUntil: {},
+  GrantUntil: {}
+}
+const mockDefaultFingerprints = [
+    { SignalType: 'hostname', Pattern: '^(ring|ring-|ringdoorbell|ringchime)', Vendor: 'Ring', Category: 'camera', Weight: 5, Decisive: true },
+    { SignalType: 'mdns_service', Pattern: '_ipp\\._tcp|_ipps\\._tcp|_printer\\._tcp', Category: 'printer', Weight: 5, Decisive: true },
+    { SignalType: 'mdns_service', Pattern: '_googlecast\\._tcp|_airplay\\._tcp', Category: 'tv', Weight: 4, Decisive: true },
+    { SignalType: 'mac_vendor', Pattern: 'Espressif|Tuya|Shelly', Category: 'iot-sensor', Weight: 2 },
+    { SignalType: 'oui', Pattern: '^b8:27:eb', Vendor: 'Raspberry Pi', Category: 'iot-sensor', Weight: 3 },
+    { SignalType: 'ssdp', Pattern: 'MediaRenderer|Roku|SmartTV', Category: 'tv', Weight: 4, Decisive: true }
+]
+let mockBuiltinFingerprints = {
+  Overridden: false,
+  Rules: mockDefaultFingerprints
+}
+
+let mockTopoNodes = [
+  { ID: 'router', Kind: 'router', Name: 'SPR', Online: true },
+  { ID: 'iface:eth0', Kind: 'uplink', Name: 'eth0', Iface: 'eth0', Online: true },
+  {
+    ID: 'iface:wlan1',
+    Kind: 'ap_radio',
+    Name: 'wlan1',
+    Iface: 'wlan1',
+    SSID: 'TestLab',
+    Radio: { Channel: 36, Freq: 5180, Modes: ['n', 'ac', 'ax'], Stations: 3 },
+    Online: true
+  },
+  { ID: 'iface:wg0', Kind: 'vpn', Name: 'wg0', Iface: 'wg0', Online: true },
+  { ID: 'iface:eth1', Kind: 'port', Name: 'eth1', Iface: 'eth1', Online: true },
+  {
+    ID: 'spr:192.168.2.50',
+    Kind: 'leaf_router',
+    Name: 'SPR Leaf',
+    IP: '192.168.2.50',
+    Online: true
+  },
+  {
+    ID: 'spr:192.168.2.50:iface:wlan0',
+    Kind: 'ap_radio',
+    Name: 'wlan0',
+    Iface: 'wlan0',
+    SSID: 'TestLab',
+    Radio: { Channel: 1, Freq: 2412, Modes: ['n', 'ax'], Stations: 1 },
+    Online: true
+  },
+  {
+    ID: 'endpoint:cloud-backup',
+    Kind: 'endpoint',
+    Name: 'cloud-backup',
+    IP: '34.120.10.5:443',
+    Tags: ['backup'],
+    Online: true
+  },
+  {
+    ID: 'dev:11:11:11:11:11:11',
+    Kind: 'device',
+    Name: 'Laptop',
+    MAC: '11:11:11:11:11:11',
+    IP: '192.168.2.101',
+    TinyNet: '192.168.2.100/30',
+    VLANTag: '4096',
+    ConnType: 'wifi',
+    Iface: 'wlan1',
+    Groups: ['work'],
+    Policies: ['wan', 'lan'],
+    Tags: ['trusted'],
+    Signal: { RSSI: -54, TxRate: 540, RxRate: 360, Caps: ['HT', 'VHT', 'HE'] },
+    DHCPFirstTime: new Date(Date.now() - 45 * 24 * 3600e3).toISOString(),
+    DHCPLastTime: new Date(Date.now() - 2 * 3600e3).toISOString(),
+    Online: true,
+    Style: { Icon: 'Laptop', Color: '#14925f' }
+  },
+  {
+    ID: 'dev:22:22:22:22:22:22',
+    Kind: 'device',
+    Name: 'Printer',
+    MAC: '22:22:22:22:22:22',
+    IP: '192.168.2.105',
+    TinyNet: '192.168.2.104/30',
+    ConnType: 'wired',
+    Iface: 'eth1',
+    Groups: [],
+    Policies: [],
+    Tags: ['backup'],
+    DHCPFirstTime: new Date(Date.now() - 300 * 24 * 3600e3).toISOString(),
+    DHCPLastTime: new Date(Date.now() - 26 * 3600e3).toISOString(),
+    Online: true,
+    Style: { Icon: 'Printer', Color: '#2563eb' }
+  },
+  {
+    ID: 'dev:33:33:33:33:33:33',
+    Kind: 'device',
+    Name: 'Camera',
+    MAC: '33:33:33:33:33:33',
+    IP: '192.168.2.109',
+    TinyNet: '192.168.2.108/30',
+    ConnType: 'offline',
+    Groups: ['iot'],
+    Policies: ['quarantine'],
+    Tags: ['porch'],
+    Online: false,
+    Isolated: true,
+    Style: { Icon: 'Video', Color: '#dc2626' }
+  },
+  {
+    ID: 'dev:55:55:55:55:55:55',
+    Kind: 'device',
+    Name: 'Phone',
+    MAC: '55:55:55:55:55:55',
+    IP: '10.8.0.2',
+    TinyNet: '10.8.0.0/30',
+    ConnType: 'wireguard',
+    Iface: 'wg0',
+    Groups: ['work'],
+    Policies: ['wan'],
+    Tags: ['mobile'],
+    Online: true,
+    Style: { Icon: 'Mobile', Color: '#7c3aed' }
+  },
+  {
+    ID: 'dev:66:66:66:66:66:66',
+    Kind: 'device',
+    Name: 'game-desktop',
+    MAC: '66:66:66:66:66:66',
+    IP: '192.168.2.117',
+    TinyNet: '192.168.2.116/30',
+    ConnType: 'wired',
+    Iface: 'eth1',
+    Groups: ['gaming'],
+    Policies: ['wan'],
+    Online: true,
+    Style: { Icon: 'Desktop', Color: '#16a34a' }
+  },
+  {
+    ID: 'dev:77:77:77:77:77:77',
+    Kind: 'device',
+    Name: 'xbox',
+    MAC: '77:77:77:77:77:77',
+    IP: '192.168.2.121',
+    TinyNet: '192.168.2.120/30',
+    ConnType: 'wifi',
+    Iface: 'wlan1',
+    Groups: ['gaming'],
+    Policies: ['wan'],
+    Signal: { RSSI: -62, TxRate: 390, RxRate: 300, Caps: ['HT', 'VHT'] },
+    Online: true,
+    Style: { Icon: 'Gamepad', Color: '#107c10' }
+  },
+  {
+    ID: 'dev:88:88:88:88:88:88',
+    Kind: 'device',
+    Name: 'playstation',
+    MAC: '88:88:88:88:88:88',
+    IP: '192.168.2.125',
+    TinyNet: '192.168.2.124/30',
+    ConnType: 'wifi',
+    Iface: 'wlan1',
+    Groups: ['gaming'],
+    Policies: ['wan'],
+    Signal: { RSSI: -71, TxRate: 180, RxRate: 120, Caps: ['HT', 'VHT'] },
+    Online: true,
+    Style: { Icon: 'Gamepad', Color: '#0070d1' }
+  },
+  {
+    ID: 'dev:44:44:44:44:44:44',
+    Kind: 'device',
+    Name: 'Tablet',
+    MAC: '44:44:44:44:44:44',
+    IP: '192.168.2.113',
+    TinyNet: '192.168.2.112/30',
+    ConnType: 'wifi',
+    Iface: 'wlan0.4098',
+    Groups: ['work'],
+    Policies: ['wan'],
+    Signal: { RSSI: -66, TxRate: 240, RxRate: 180, Caps: ['HT', 'HE'] },
+    Online: true,
+    Style: { Icon: 'Tablet', Color: '#0891b2' }
+  }
+]
+
+const mockTopoL1Edges = [
+  { From: 'router', To: 'iface:eth0', Layer: 'l1', Kind: 'uplink' },
+  { From: 'router', To: 'iface:wlan1', Layer: 'l1', Kind: 'wifi' },
+  { From: 'router', To: 'iface:wg0', Layer: 'l1', Kind: 'wg' },
+  { From: 'router', To: 'iface:eth1', Layer: 'l1', Kind: 'wired' },
+  {
+    From: 'dev:11:11:11:11:11:11',
+    To: 'iface:wlan1',
+    Layer: 'l1',
+    Kind: 'wifi',
+    Metric: -54
+  },
+  { From: 'dev:22:22:22:22:22:22', To: 'iface:eth1', Layer: 'l1', Kind: 'wired' },
+  { From: 'dev:55:55:55:55:55:55', To: 'iface:wg0', Layer: 'l1', Kind: 'wg' },
+  { From: 'iface:eth1', To: 'spr:192.168.2.50', Layer: 'l1', Kind: 'wired' },
+  {
+    From: 'spr:192.168.2.50',
+    To: 'spr:192.168.2.50:iface:wlan0',
+    Layer: 'l1',
+    Kind: 'wifi'
+  },
+  {
+    From: 'dev:44:44:44:44:44:44',
+    To: 'spr:192.168.2.50:iface:wlan0',
+    Layer: 'l1',
+    Kind: 'wifi',
+    Metric: -66
+  },
+  { From: 'dev:66:66:66:66:66:66', To: 'iface:eth1', Layer: 'l1', Kind: 'wired' },
+  {
+    From: 'dev:77:77:77:77:77:77',
+    To: 'iface:wlan1',
+    Layer: 'l1',
+    Kind: 'wifi',
+    Metric: -62
+  },
+  {
+    From: 'dev:88:88:88:88:88:88',
+    To: 'iface:wlan1',
+    Layer: 'l1',
+    Kind: 'wifi',
+    Metric: -71
+  }
+]
+
+//set localStorage 'mock-topo-scale' to N to demo the layout with N extra devices
+const topoScale = (() => {
+  try {
+    return parseInt(globalThis.localStorage?.getItem('mock-topo-scale')) || 0
+  } catch (e) {
+    return 0
+  }
+})()
+
+if (topoScale > 0) {
+  const pad = (n) => String(n).padStart(2, '0')
+  for (let i = 0; i < topoScale; i++) {
+    const mac = `aa:bb:cc:dd:${pad(Math.floor(i / 100))}:${pad(i % 100)}`
+    const wifi = i % 2 == 0
+    const online = i % 5 != 4
+    const id = 'dev:' + mac
+    mockTopoNodes.push({
+      ID: id,
+      Kind: 'device',
+      Name: 'device-' + i,
+      MAC: mac,
+      IP: '192.168.5.' + (i + 2),
+      ConnType: online ? (wifi ? 'wifi' : 'wired') : 'offline',
+      Iface: wifi ? 'wlan1' : 'eth1',
+      Groups: ['lanparty'],
+      Policies: ['wan', 'lan'],
+      Signal:
+        online && wifi
+          ? { RSSI: -50 - (i % 40), TxRate: 300, RxRate: 200, Caps: ['HT', 'VHT'] }
+          : undefined,
+      Online: online,
+      Style: { Icon: 'Laptop', Color: '#2563eb' }
+    })
+    if (online) {
+      mockTopoL1Edges.push({
+        From: id,
+        To: wifi ? 'iface:wlan1' : 'iface:eth1',
+        Layer: 'l1',
+        Kind: wifi ? 'wifi' : 'wired',
+        Metric: wifi ? -55 : 0
+      })
+    }
+  }
+}
+
+const mockTopoPolicyEdges = () => {
+  const isolated = (node) =>
+    node.Isolated ||
+    node.Policies?.includes('quarantine') ||
+    node.Policies?.includes('disabled')
+  const devices = mockTopoNodes.filter(
+    (node) => node.Kind == 'device' && !isolated(node)
+  )
+  const endpoints = mockTopoNodes.filter((node) => node.Kind == 'endpoint')
+  const edges = []
+
+  let groups = {}
+  for (let device of devices) {
+    for (let group of device.Groups || []) {
+      groups[group] = [...(groups[group] || []), device.ID]
+    }
+    if (device.Policies?.includes('wan')) {
+      edges.push({
+        From: device.ID,
+        To: 'iface:eth0',
+        Layer: 'policy',
+        Kind: 'policy:wan'
+      })
+    }
+  }
+
+  for (let [group, ids] of Object.entries(groups)) {
+    ids.sort()
+    for (let i = 0; i < ids.length; i++) {
+      for (let j = i + 1; j < ids.length; j++) {
+        edges.push({
+          From: ids[i],
+          To: ids[j],
+          Layer: 'policy',
+          Kind: 'group:' + group,
+          Bidir: true
+        })
+      }
+    }
+  }
+
+  const lanDevices = devices.filter((device) => device.Policies?.includes('lan'))
+  for (let from of lanDevices) {
+    for (let to of devices) {
+      if (to.ID == from.ID) continue
+      if (to.Policies?.includes('lan')) {
+        if (from.ID < to.ID) {
+          edges.push({
+            From: from.ID,
+            To: to.ID,
+            Layer: 'policy',
+            Kind: 'policy:lan',
+            Bidir: true
+          })
+        }
+      } else {
+        edges.push({
+          From: from.ID,
+          To: to.ID,
+          Layer: 'policy',
+          Kind: 'policy:lan'
+        })
+      }
+    }
+  }
+
+  for (let endpoint of endpoints) {
+    for (let device of devices) {
+      if (device.Tags?.some((tag) => endpoint.Tags?.includes(tag))) {
+        edges.push({
+          From: device.ID,
+          To: endpoint.ID,
+          Layer: 'policy',
+          Kind: 'endpoint:' + endpoint.Name
+        })
+      }
+    }
+  }
+
+  return edges
+}
+
+const syncMockTopoDevice = (attrs) => {
+  const id = attrs.MAC || attrs.WGPubKey
+  if (!id) return
+  const node = mockTopoNodes.find(
+    (node) => node.Kind == 'device' && node.MAC == id
+  )
+  if (!node) return
+  if (attrs.Groups) node.Groups = attrs.Groups
+  if (attrs.Policies) node.Policies = attrs.Policies
+  if (attrs.DeviceTags) node.Tags = attrs.DeviceTags
+  if (attrs.Name) node.Name = attrs.Name
+}
+
+const mockClassify = (signals = {}) => {
+  let hostname = signals.Hostname || signals.Name || ''
+  let category = 'unknown'
+  let vendor = signals.OUIVendor || ''
+  let confidence = 'Unknown'
+  let evidence = []
+
+  if (hostname.match(/tv|roku|chromecast/i)) {
+    category = 'tv'
+  } else if (hostname.match(/phone|iphone|android/i)) {
+    category = 'phone'
+  } else if (hostname.match(/printer|officejet|laserjet|brother|epson/i)) {
+    category = 'printer'
+  } else if (hostname.match(/camera|ring|reolink|doorbell/i)) {
+    category = 'camera'
+  } else if (hostname.match(/xbox|playstation|nintendo|switch/i)) {
+    category = 'game-console'
+  } else if (hostname.match(/tablet|ipad/i)) {
+    category = 'tablet'
+  } else if (hostname.match(/rpi|esp32|sensor/i)) {
+    category = 'iot-sensor'
+  } else if (hostname.match(/desktop|tower|\bpc\b/i)) {
+    category = 'desktop'
+  } else if (hostname.match(/laptop|macbook|thinkpad/i)) {
+    category = 'laptop'
+  }
+
+  if (category != 'unknown') {
+    confidence = 'High'
+    evidence.push(`hostname "${hostname}" indicates ${category}`)
+  }
+  if (vendor) {
+    evidence.push(`OUI vendor is "${vendor}"`)
+  }
+
+  let suggestions = {
+    camera: { Groups: ['IoT'], Policies: ['wan', 'dns'] },
+    'iot-sensor': { Groups: ['IoT'], Policies: ['wan', 'dns'] },
+    printer: { Groups: ['Printers'], Policies: ['dns'] },
+    tv: { Groups: ['Media'], Policies: ['wan', 'dns'] }
+  }
+
+  return {
+    MAC: signals.MAC,
+    Vendor: vendor,
+    Category: category,
+    Model: '',
+    Confidence: confidence,
+    Evidence: evidence,
+    SuggestedGroups: suggestions[category]?.Groups || [],
+    SuggestedPolicies: suggestions[category]?.Policies || [],
+    DBVersion: 'mock',
+    UserCorrection: false,
+    Pinned: false,
+    LastUpdated: new Date().toISOString()
+  }
+}
+
 // TODO alot of this can be parsed from OpenAPI definitions
 export default function MockAPI(props = null) {
   if (props) {
@@ -52,6 +502,7 @@ export default function MockAPI(props = null) {
         WGPubKey: 'pubkey',
         VLANTag: 'vlantag',
         RecentIP: '192.168.2.101',
+        DHCPFirstTime: new Date(Date.now() - 2 * 3600e3).toISOString(),
         PSKEntry: {
           Type: 'None',
           Psk: null
@@ -71,6 +522,7 @@ export default function MockAPI(props = null) {
         WGPubKey: 'pubkey',
         VLANTag: 'vlantag',
         RecentIP: '192.168.2.102',
+        DHCPFirstTime: new Date(Date.now() - 26 * 3600e3).toISOString(),
         PSKEntry: {
           Type: 'wpa2',
           Psk: 'password'
@@ -109,13 +561,19 @@ export default function MockAPI(props = null) {
           WGPubKey: 'pubkey',
           //VLANTag: 'vlantag',
           RecentIP: `192.168.2.10${i}`,
+          DHCPFirstTime: new Date(Date.now() - i * 3600e3).toISOString(),
           PSKEntry: {
             Type: rpick(['wpa2', 'sae']),
             Psk: `password${i}`
           },
           Policies: ['wan', 'dns'],
           Groups: [rpick(['first_group', 'second_group'])],
-          DeviceTags: ['private'],
+          DeviceTags: [
+            'private',
+            `classification:${Icon == 'Tv' ? 'tv' : Icon == 'Mobile' ? 'phone' : 'laptop'}`,
+            ...(['desktop', 'tv'].includes(Name) ? ['persona:gamer'] : []),
+            ...(['iphone', 'android'].includes(Name) ? ['persona:kids'] : [])
+          ],
           Style: {
             Icon,
             Color
@@ -455,6 +913,8 @@ export default function MockAPI(props = null) {
         let dev = schema.devices.findBy({ MAC })
         let attrs = JSON.parse(request.requestBody)
 
+        syncMockTopoDevice({ ...attrs, MAC: attrs.MAC || id })
+
         if (copy) {
           let _dev = { ...attrs, PSKEntry: dev.PSKEntry, DeviceTags: [] }
 
@@ -511,6 +971,48 @@ export default function MockAPI(props = null) {
         let id = ups.get('identity')
 
         return schema.devices.findBy({ MAC: id }).destroy()
+      })
+
+      this.del('/devices', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let identities = JSON.parse(request.requestBody || '[]')
+        let count = 0
+        for (let id of identities) {
+          let dev = schema.devices.findBy({ MAC: id })
+          if (dev) {
+            dev.destroy()
+            count += 1
+          }
+        }
+        return { updated: identities, count }
+      })
+
+      this.put('/devices/bulk', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody || '{}')
+        let count = 0
+        for (let id of attrs.Identities || []) {
+          let dev = schema.devices.findBy({ MAC: id })
+          if (!dev) continue
+
+          dev.update({
+            Groups: [...new Set([...(dev.Groups || []), ...(attrs.Groups || [])])],
+            DeviceTags: [
+              ...new Set([...(dev.DeviceTags || []), ...(attrs.Tags || [])])
+            ],
+            Policies: [
+              ...new Set([...(dev.Policies || []), ...(attrs.Policies || [])])
+            ]
+          })
+          count += 1
+        }
+        return { updated: attrs.Identities || [], count }
       })
 
       this.get('/interfacesConfiguration', (schema, request) => {
@@ -575,6 +1077,14 @@ export default function MockAPI(props = null) {
             Device: 'wlan1.4097'
           }
         ]
+      })
+
+      this.get('/topology', (schema, request) => {
+        return {
+          GeneratedAt: new Date().toISOString(),
+          Nodes: mockTopoNodes,
+          Edges: [...mockTopoL1Edges, ...mockTopoPolicyEdges()]
+        }
       })
 
       this.get('/info/dockernetworks', (schema, request) => {
@@ -2145,6 +2655,168 @@ export default function MockAPI(props = null) {
         return schema.plugins.all().models
       })
 
+      this.get('/plugins/lookup/classifications', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let classifications = schema.devices
+          .all()
+          .models.filter((device) => device.MAC)
+          .map((device) => mockClassify({ MAC: device.MAC, Hostname: device.Name }))
+
+        // topology fixture devices win MAC collisions with the seeded devices
+        let topologyClassifications = [
+          { MAC: '11:11:11:11:11:11', Hostname: 'Laptop' },
+          { MAC: '22:22:22:22:22:22', Hostname: 'Printer' },
+          { MAC: '33:33:33:33:33:33', Hostname: 'Camera' },
+          { MAC: '44:44:44:44:44:44', Hostname: 'Tablet' },
+          { MAC: '55:55:55:55:55:55', Hostname: 'Phone' },
+          { MAC: '66:66:66:66:66:66', Hostname: 'game-desktop' },
+          { MAC: '77:77:77:77:77:77', Hostname: 'xbox' },
+          { MAC: '88:88:88:88:88:88', Hostname: 'playstation' }
+        ].map(mockClassify)
+
+        let seen = topologyClassifications.map((entry) => entry.MAC)
+        return [
+          ...topologyClassifications,
+          ...classifications.filter((entry) => !seen.includes(entry.MAC))
+        ]
+      })
+
+      this.get('/plugins/lookup/classification/:mac', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let MAC = decodeURIComponent(request.params.mac)
+        let device = schema.devices.findBy({ MAC })
+        if (!device) {
+          return new Response(404, {}, { error: 'not found' })
+        }
+        return mockClassify({ MAC, Hostname: device.Name })
+      })
+
+      this.put('/plugins/lookup/classify', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        return mockClassify(JSON.parse(request.requestBody || '{}'))
+      })
+
+      this.put('/plugins/lookup/classification/:mac/correction', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody || '{}')
+        return {
+          ...mockClassify({ MAC: decodeURIComponent(request.params.mac), Hostname: attrs.Category }),
+          ...attrs,
+          MAC: decodeURIComponent(request.params.mac),
+          Confidence: 'High',
+          UserCorrection: true,
+          Pinned: true,
+          Evidence: attrs.Evidence || ['user correction']
+        }
+      })
+
+      this.delete('/plugins/lookup/classification/:mac/correction', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let MAC = decodeURIComponent(request.params.mac)
+        let device = schema.devices.findBy({ MAC })
+        return mockClassify({ MAC, Hostname: device?.Name })
+      })
+
+      this.get('/plugins/lookup/classification/:mac/signals', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let MAC = decodeURIComponent(request.params.mac)
+        let device = schema.devices.findBy({ MAC })
+        if (!device) {
+          return new Response(404, {}, { error: 'not found' })
+        }
+        let name = device.Name || ''
+        let extras = {}
+        if (name.match(/tv|roku/i)) {
+          extras = {
+            Domains: ['scribe.logs.roku.com'],
+            Services: ['_googlecast._tcp.']
+          }
+        } else if (name.match(/iphone|android|phone/i)) {
+          extras = {
+            VendorClass: name.match(/iphone/i) ? '' : 'android-dhcp-14',
+            ParamReqList: name.match(/iphone/i)
+              ? '1,121,3,6,15,119,252'
+              : '1,3,6,15,26,28,51,58,59,43'
+          }
+        } else if (name.match(/rpi/i)) {
+          extras = { Domains: ['api.balena-cloud.com'], VendorClass: 'udhcp 1.36' }
+        }
+
+        return {
+          Hostname: name,
+          OUIVendor: '',
+          Services: [],
+          TXT: {},
+          SSDPHeaders: {},
+          Domains: [],
+          VendorClass: '',
+          ParamReqList: '',
+          ...extras
+        }
+      })
+
+      this.get('/plugins/lookup/fingerprints/custom', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        return mockCustomFingerprints
+      })
+
+      this.put('/plugins/lookup/fingerprints/custom', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        mockCustomFingerprints = JSON.parse(request.requestBody || '[]')
+        return mockCustomFingerprints
+      })
+
+      this.get('/plugins/lookup/fingerprints/builtin', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        return mockBuiltinFingerprints
+      })
+
+      this.put('/plugins/lookup/fingerprints/builtin', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        mockBuiltinFingerprints = {
+          Overridden: true,
+          Rules: JSON.parse(request.requestBody || '[]')
+        }
+        return mockBuiltinFingerprints
+      })
+
+      this.delete('/plugins/lookup/fingerprints/builtin', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        mockBuiltinFingerprints = {
+          Overridden: false,
+          Rules: mockDefaultFingerprints
+        }
+        return mockBuiltinFingerprints
+      })
+
       this.get('/plusToken', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
@@ -2847,6 +3519,26 @@ export default function MockAPI(props = null) {
         }
       })
 
+      this.get('/plugins/db/bucket/:bucket/:key', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        let value = mockDbBuckets[`${request.params.bucket}/${request.params.key}`]
+        if (value === undefined) {
+          return new Response(404, {}, { error: 'not found' })
+        }
+        return value
+      })
+
+      this.put('/plugins/db/bucket/:bucket/:key', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        let value = JSON.parse(request.requestBody || 'null')
+        mockDbBuckets[`${request.params.bucket}/${request.params.key}`] = value
+        return value
+      })
+
       this.get('/plugins/db/items/:bucket', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
@@ -3285,6 +3977,107 @@ export default function MockAPI(props = null) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
         return []
+      })
+
+      this.get('/parentalControls/personas', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        return mockPersonas
+      })
+
+      this.put('/parentalControls/personas', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        let persona = JSON.parse(request.requestBody)
+        if (!persona.Tag) {
+          persona.Tag = `persona:${persona.Name}`
+        }
+        let idx = mockPersonas.findIndex((p) => p.Name == persona.Name)
+        if (idx >= 0) {
+          mockPersonas[idx] = persona
+        } else {
+          mockPersonas.push(persona)
+        }
+        return mockPersonas
+      })
+
+      this.del('/parentalControls/personas', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        let persona = JSON.parse(request.requestBody)
+        mockPersonas = mockPersonas.filter((p) => p.Name != persona.Name)
+        return mockPersonas
+      })
+
+      this.get('/parentalControls/usage', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        let now = parseInt(Date.now() / 1000)
+        let out = {}
+        for (let p of mockPersonas) {
+          let used = mockPersonasState.UsedMinutes[p.Tag] || 0
+          let pause = mockPersonasState.PauseUntil[p.Tag] || 0
+          let grant = mockPersonasState.GrantUntil[p.Tag] || 0
+          let blocked = false
+          if (!p.Disabled && grant <= now) {
+            blocked =
+              pause > now ||
+              (p.DailyLimitMinutes > 0 && used >= p.DailyLimitMinutes)
+          }
+          out[p.Tag] = {
+            Used: used,
+            Limit: p.DailyLimitMinutes,
+            Blocked: blocked,
+            PauseUntil: pause,
+            GrantUntil: grant
+          }
+        }
+        return out
+      })
+
+      this.put('/parentalControls/pause', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        let req = JSON.parse(request.requestBody)
+        let persona = mockPersonas.find(
+          (p) => p.Tag == req.Tag || p.Name == req.Tag
+        )
+        if (!persona) {
+          return new Response(404, {}, { error: 'persona not found' })
+        }
+        if (req.Minutes <= 0) {
+          delete mockPersonasState.PauseUntil[persona.Tag]
+        } else {
+          mockPersonasState.PauseUntil[persona.Tag] =
+            parseInt(Date.now() / 1000) + req.Minutes * 60
+        }
+        return mockPersonasState
+      })
+
+      this.put('/parentalControls/extend', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        let req = JSON.parse(request.requestBody)
+        let persona = mockPersonas.find(
+          (p) => p.Tag == req.Tag || p.Name == req.Tag
+        )
+        if (!persona) {
+          return new Response(404, {}, { error: 'persona not found' })
+        }
+        if (req.Minutes <= 0) {
+          delete mockPersonasState.GrantUntil[persona.Tag]
+        } else {
+          mockPersonasState.GrantUntil[persona.Tag] =
+            parseInt(Date.now() / 1000) + req.Minutes * 60
+        }
+        delete mockPersonasState.PauseUntil[persona.Tag]
+        return mockPersonasState
       })
     }
   })

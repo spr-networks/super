@@ -563,7 +563,7 @@ const LogListItemHeader = ({
   )
 }
 
-const LogListItem = ({
+const LogListItem = React.memo(({
   item,
   isHidden,
   selected,
@@ -625,7 +625,9 @@ const LogListItem = ({
       </HStack>
     </ListItem>
   )
-}
+})
+
+LogListItem.displayName = 'LogListItem'
 
 export default LogListItem
 

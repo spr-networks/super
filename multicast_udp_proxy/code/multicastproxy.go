@@ -276,6 +276,9 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool,
 			continue
 		}
 
+		//passive decode for device classification
+		queueZeroconf(peer.(*net.UDPAddr).IP.String(), saddr.Port, buffer[0:n])
+
 		//replay message out over idx
 		writeit := func(idx int) {
 			var woob *ipv4.ControlMessage
@@ -384,7 +387,7 @@ func mdnsPublishIface(settings MulticastSettings, wanif string) {
 
 	fmt.Println("wanif=", wanif, "iface=", iface)
 	if !strings.Contains(iface.Flags.String(), "up") {
-		fmt.Println("err: iface=%v is not up", iface.Name)
+		fmt.Printf("err: iface=%v is not up\n", iface.Name)
 		return
 	}
 
@@ -508,6 +511,9 @@ func main() {
 
 	// in addition to being a proxy this code will advertise a name for spr over mdns
 	go mdnsPublish(settings)
+
+	// decode relayed mdns/ssdp and publish zeroconf:device events
+	go zeroconfPublisher()
 
 	relayableInterface := func(ifaceName string) bool {
 

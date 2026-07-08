@@ -1,0 +1,347 @@
+{
+  "Version": "2026.07.0",
+  "CategorySuggestions": {
+    "camera": {
+      "Groups": [
+        "IoT"
+      ],
+      "Policies": [
+        "wan",
+        "dns"
+      ]
+    },
+    "console": {
+      "Groups": [
+        "Game"
+      ],
+      "Policies": [
+        "wan",
+        "dns"
+      ]
+    },
+    "iot-sensor": {
+      "Groups": [
+        "IoT"
+      ],
+      "Policies": [
+        "wan",
+        "dns"
+      ]
+    },
+    "printer": {
+      "Groups": [
+        "Printers"
+      ],
+      "Policies": [
+        "dns"
+      ]
+    },
+    "speaker": {
+      "Groups": [
+        "Media"
+      ],
+      "Policies": [
+        "wan",
+        "dns"
+      ]
+    },
+    "tv": {
+      "Groups": [
+        "Media"
+      ],
+      "Policies": [
+        "wan",
+        "dns"
+      ]
+    }
+  },
+  "Rules": [
+    {
+      "SignalType": "hostname",
+      "Pattern": "^(ring|ring-|ringdoorbell|ringchime)",
+      "Vendor": "Ring",
+      "Category": "camera",
+      "Weight": 5,
+      "Decisive": true
+    },
+    {
+      "SignalType": "hostname",
+      "Pattern": "(reolink|hikvision|axis|arlo|wyze|eufy|amcrest|dahua|ipcam|camera|doorbell)",
+      "Category": "camera",
+      "Weight": 4,
+      "Decisive": true
+    },
+    {
+      "SignalType": "hostname",
+      "Pattern": "(echo|alexa|sonos|homepod|bose|soundbar)",
+      "Category": "speaker",
+      "Weight": 3
+    },
+    {
+      "SignalType": "hostname",
+      "Pattern": "(roku|appletv|chromecast|firetv|bravia|samsungtv|lgwebostv|vizio)",
+      "Category": "tv",
+      "Weight": 3
+    },
+    {
+      "SignalType": "hostname",
+      "Pattern": "(printer|officejet|laserjet|brother|canon|epson|xerox)",
+      "Category": "printer",
+      "Weight": 4,
+      "Decisive": true
+    },
+    {
+      "SignalType": "hostname",
+      "Pattern": "(xbox|playstation|ps5|ps4|nintendo)",
+      "Category": "console",
+      "Weight": 4,
+      "Decisive": true
+    },
+    {
+      "SignalType": "hostname",
+      "Pattern": "(esp_|esp-|espressif|tuya|tasmota|shelly|athom|kasa|tplink|hs[0-9]{3})",
+      "Category": "iot-sensor",
+      "Weight": 3
+    },
+    {
+      "SignalType": "mac_vendor",
+      "Pattern": "(Hikvision|Dahua|Axis Communications|Reolink|Wyze|Arlo|Ring)",
+      "Category": "camera",
+      "Weight": 3
+    },
+    {
+      "SignalType": "mac_vendor",
+      "Pattern": "(Espressif|Tuya|Shelly|TP-Link|Liteon)",
+      "Category": "iot-sensor",
+      "Weight": 2
+    },
+    {
+      "SignalType": "mac_vendor",
+      "Pattern": "(Brother|Canon|Epson|HP|Hewlett|Xerox|Lexmark)",
+      "Category": "printer",
+      "Weight": 2
+    },
+    {
+      "SignalType": "mdns_service",
+      "Pattern": "_ipp\\._tcp|_ipps\\._tcp|_printer\\._tcp|_pdl-datastream\\._tcp",
+      "Category": "printer",
+      "Weight": 5,
+      "Decisive": true
+    },
+    {
+      "SignalType": "mdns_service",
+      "Pattern": "_axis-video\\._tcp|_rtsp\\._tcp",
+      "Category": "camera",
+      "Weight": 5,
+      "Decisive": true
+    },
+    {
+      "SignalType": "mdns_service",
+      "Pattern": "_googlecast\\._tcp|_airplay\\._tcp|_raop\\._tcp",
+      "Category": "tv",
+      "Weight": 4,
+      "Decisive": true
+    },
+    {
+      "SignalType": "mdns_service",
+      "Pattern": "_hap\\._tcp",
+      "Category": "iot-sensor",
+      "Weight": 3
+    },
+    {
+      "SignalType": "ssdp",
+      "Pattern": "MediaRenderer|Dial|Roku|Chromecast|SmartTV",
+      "Category": "tv",
+      "Weight": 4,
+      "Decisive": true
+    },
+    {
+      "SignalType": "ssdp",
+      "Pattern": "printer|PrintBasic",
+      "Category": "printer",
+      "Weight": 4
+    },
+    {
+      "SignalType": "hostname",
+      "Pattern": "iphone|ipad",
+      "Vendor": "Apple",
+      "Category": "phone",
+      "Weight": 3
+    },
+    {
+      "SignalType": "hostname",
+      "Pattern": "macbook|imac|mac-?mini|mac-?pro",
+      "Vendor": "Apple",
+      "Category": "laptop",
+      "Weight": 3
+    },
+    {
+      "SignalType": "hostname",
+      "Pattern": "android|pixel-|galaxy",
+      "Category": "phone",
+      "Weight": 2
+    },
+    {
+      "SignalType": "mdns_service",
+      "Pattern": "_apple-mobdev2\\._tcp",
+      "Vendor": "Apple",
+      "Category": "phone",
+      "Weight": 3
+    },
+    {
+      "SignalType": "mdns_txt",
+      "Pattern": "^model=iPhone",
+      "Vendor": "Apple",
+      "Category": "phone",
+      "Weight": 4,
+      "Decisive": true
+    },
+    {
+      "SignalType": "mdns_txt",
+      "Pattern": "^model=iPad",
+      "Vendor": "Apple",
+      "Category": "tablet",
+      "Weight": 4,
+      "Decisive": true
+    },
+    {
+      "SignalType": "mdns_txt",
+      "Pattern": "^model=Mac",
+      "Vendor": "Apple",
+      "Category": "laptop",
+      "Weight": 4,
+      "Decisive": true
+    },
+    {
+      "SignalType": "hostname",
+      "Pattern": "unifi|mikrotik|openwrt|edgerouter|routerboard",
+      "Category": "router",
+      "Weight": 3
+    },
+    {
+      "SignalType": "hostname",
+      "Pattern": "synology|truenas|unraid|proxmox|esxi",
+      "Category": "server",
+      "Weight": 3
+    },
+    {
+      "SignalType": "mdns_service",
+      "Pattern": "_smb\\._tcp|_nfs\\._tcp|_afpovertcp\\._tcp",
+      "Category": "server",
+      "Weight": 2
+    },
+    {
+      "SignalType": "hostname",
+      "Pattern": "apple-?watch|galaxy-?watch|-watch$|^watch-",
+      "Category": "wearable",
+      "Weight": 2
+    },
+    {
+      "SignalType": "dns",
+      "Pattern": "\\.ring\\.com$",
+      "Vendor": "Ring",
+      "Category": "camera",
+      "Weight": 2
+    },
+    {
+      "SignalType": "dns",
+      "Pattern": "\\.wyze(cam)?\\.com$",
+      "Vendor": "Wyze",
+      "Category": "camera",
+      "Weight": 2
+    },
+    {
+      "SignalType": "dns",
+      "Pattern": "\\.tuya(eu|us|cn)?\\.com$",
+      "Vendor": "Tuya",
+      "Category": "iot-sensor",
+      "Weight": 2
+    },
+    {
+      "SignalType": "dns",
+      "Pattern": "samsungcloudsolution\\.com$|samsungotn\\.net$",
+      "Vendor": "Samsung",
+      "Category": "tv",
+      "Weight": 2
+    },
+    {
+      "SignalType": "dns",
+      "Pattern": "\\.roku\\.com$",
+      "Vendor": "Roku",
+      "Category": "tv",
+      "Weight": 2
+    },
+    {
+      "SignalType": "dns",
+      "Pattern": "\\.sonos\\.com$",
+      "Vendor": "Sonos",
+      "Category": "speaker",
+      "Weight": 2
+    },
+    {
+      "SignalType": "dns",
+      "Pattern": "\\.ecobee\\.com$",
+      "Vendor": "ecobee",
+      "Category": "iot-sensor",
+      "Weight": 2
+    },
+    {
+      "SignalType": "dns",
+      "Pattern": "xboxlive\\.com$",
+      "Vendor": "Microsoft",
+      "Category": "console",
+      "Weight": 2
+    },
+    {
+      "SignalType": "dns",
+      "Pattern": "playstation\\.net$",
+      "Vendor": "Sony",
+      "Category": "console",
+      "Weight": 2
+    },
+    {
+      "SignalType": "dns",
+      "Pattern": "\\.nintendo\\.net$",
+      "Vendor": "Nintendo",
+      "Category": "console",
+      "Weight": 2
+    },
+    {
+      "SignalType": "vendor_class",
+      "Pattern": "^android-dhcp",
+      "Category": "phone",
+      "Weight": 2
+    },
+    {
+      "SignalType": "vendor_class",
+      "Pattern": "^MSFT",
+      "Category": "laptop",
+      "Weight": 1
+    },
+    {
+      "SignalType": "vendor_class",
+      "Pattern": "^udhcp",
+      "Category": "iot-sensor",
+      "Weight": 1
+    },
+    {
+      "SignalType": "vendor_class",
+      "Pattern": "Sonos",
+      "Vendor": "Sonos",
+      "Category": "speaker",
+      "Weight": 3
+    },
+    {
+      "SignalType": "dhcp_params",
+      "Pattern": "^1,3,6,15,26,28,51,58,59,43$",
+      "Category": "phone",
+      "Weight": 1
+    },
+    {
+      "SignalType": "dhcp_params",
+      "Pattern": "^1,121,3,6,15,119,252",
+      "Vendor": "Apple",
+      "Weight": 2
+    }
+  ]
+}

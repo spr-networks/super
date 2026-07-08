@@ -44,10 +44,12 @@ type DHCPConfig struct {
 }
 
 type DHCPRequest struct {
-	MAC        string
-	Identifier string
-	Name       string
-	Iface      string
+	MAC          string
+	Identifier   string
+	Name         string
+	Iface        string
+	ParamReqList string //dhcp option 55, comma separated option numbers
+	VendorClass  string //dhcp option 60
 }
 
 // this supports wireguard

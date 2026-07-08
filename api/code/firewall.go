@@ -2316,6 +2316,9 @@ func addLANVerdict(IP string, Iface string) {
 }
 
 func addInternetVerdict(IP string, Iface string) {
+	if personaInternetBlocked(IP) {
+		return
+	}
 	verdict := getMapVerdict("internet_access")
 	err := AddElementToMapComplex("inet", "filter", "internet_access", []string{IP, Iface}, verdict)
 	if err != nil {
@@ -3175,33 +3178,43 @@ func dynamicRouteLoop() {
 	*
 	 */
 
+	pollMeshPeers := func() bool {
+		peers := getMeshPeerInterfaces()
+		for mac, iface_dst := range peers {
+			RecentDHCPIface[mac] = iface_dst
+		}
+		return len(peers) > 0
+	}
+
 	meshPluginEnabled := isMeshPluginEnabled()
 
 	//mesh APs do not need routes, as they use the bridge
+	if meshPluginEnabled && isLeafRouter() {
+		return
+	}
+
+	meshEstablished := false
 	if meshPluginEnabled {
-		if isLeafRouter() {
-			return
-		}
-		//on first start, the mesh nodes might already have clients connected,
-		//that had DHCP'd earlier. They would not get disconnected and know to DHCP
-		// again if the API goes down
-
-		//for this scenario, we can inform the API immediately by polling their state.
-		//during continuous operation the mesh nodes should not need to be polled
-		//since clients will DHCP if they reconnect.
-		meshPeerInterfaces := getMeshPeerInterfaces()
-
-		//update recent dhcp with this info
-		for mac, iface_dst := range meshPeerInterfaces {
-			RecentDHCPIface[mac] = iface_dst
-		}
+		meshEstablished = pollMeshPeers()
 	}
 
 	ticker := time.NewTicker(1 * time.Second)
+	meshPollTicks := 0
 
 	for {
 		select {
 		case <-ticker.C:
+
+			if !meshEstablished {
+				meshPluginEnabled = isMeshPluginEnabled()
+				meshPollTicks++
+				if meshPluginEnabled && meshPollTicks >= 60 {
+					meshPollTicks = 0
+					if pollMeshPeers() {
+						meshEstablished = true
+					}
+				}
+			}
 
 			Groupsmtx.Lock()
 			groups := getGroupsJson()

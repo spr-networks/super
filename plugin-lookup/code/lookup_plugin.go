@@ -171,12 +171,21 @@ func main() {
 		return
 	}
 
+	classifier, err := startClassifier()
+	if err != nil {
+		fmt.Println("classifier init error:", err)
+	}
+
 	unix_plugin_router := mux.NewRouter().StrictSlash(true)
 
 	unix_plugin_router.HandleFunc("/asn/{ip}", pluginGetASN).Methods("GET")
 	unix_plugin_router.HandleFunc("/asns/{ip}", pluginGetASNs).Methods("GET")
 	unix_plugin_router.HandleFunc("/oui/{mac}", pluginGetOUI).Methods("GET")
 	unix_plugin_router.HandleFunc("/ouis/{mac}", pluginGetOUIs).Methods("GET")
+
+	if classifier != nil {
+		classifier.registerRoutes(unix_plugin_router)
+	}
 
 	os.Remove(UNIX_PLUGIN_LISTENER)
 	unixPluginListener, err := net.Listen("unix", UNIX_PLUGIN_LISTENER)

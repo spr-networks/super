@@ -1,7 +1,3 @@
-// In-memory log of the alerts/notifications that have popped this session.
-// No DB or API involved — Admin's alert dispatch appends here, the
-// Notifications view subscribes. Ring buffer capped at MAX_ENTRIES.
-
 const MAX_ENTRIES = 50
 
 let entries = []
@@ -17,7 +13,6 @@ export const logNotification = (type, title, body) => {
     text = String(body)
   }
 
-  // coalesce repeats (e.g. a polling error) into one entry with a counter
   let last = entries[0]
   if (
     last &&

@@ -155,10 +155,10 @@ func updateConfigPluginDefaults(config *APIConfig) bool {
 	}
 
 	//handle migrations
-	for _, entry := range config.Plugins {
+	for i, entry := range config.Plugins {
 		if entry.Name == "dyndns" {
 			if entry.ComposeFilePath == "" {
-				entry.ComposeFilePath = "dyndns/docker-compose.yml"
+				config.Plugins[i].ComposeFilePath = "dyndns/docker-compose.yml"
 				update = true
 			}
 		}

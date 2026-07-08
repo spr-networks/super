@@ -365,9 +365,9 @@ func getTrafficHistory(w http.ResponseWriter, r *http.Request) {
 
 	history := gTrafficHistory
 	if minutesStr := r.URL.Query().Get("minutes"); minutesStr != "" {
-		if n, err := strconv.Atoi(minutesStr); err == nil && n >= 0 {
+		if n, err := strconv.Atoi(minutesStr); err == nil && n > 0 {
 			if n < len(history) {
-				history = history[len(history)-n:]
+				history = history[:n]
 			}
 		}
 	}

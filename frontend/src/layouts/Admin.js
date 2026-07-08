@@ -506,6 +506,7 @@ const AdminLayout = ({
 
   //View settings: colorMode, simpleMode. TODO: move more to App
   const [viewSettings, setViewSettings] = useState(null)
+  const skipNextSettingsSave = React.useRef(false)
 
   const loadSettings = () => {
     AsyncStorage.getItem('settings')
@@ -522,10 +523,26 @@ const AdminLayout = ({
       })
   }
 
-  const saveSettings = () => {
-    AsyncStorage.setItem('settings', JSON.stringify(viewSettings))
+  const settingsForSave = (settings = {}, preserveTheme = false) => ({
+    ...(settings || {}),
+    theme: preserveTheme ? settings?.theme || theme : theme,
+    colorMode: preserveTheme ? settings?.colorMode || colorMode : colorMode
+  })
+
+  const saveSettings = (settings = viewSettings, preserveTheme = false) => {
+    AsyncStorage.setItem(
+      'settings',
+      JSON.stringify(settingsForSave(settings, preserveTheme))
+    )
       .then((res) => {})
       .catch((err) => {})
+  }
+
+  const persistSettings = (settings) => {
+    let next = settingsForSave(settings, true)
+    skipNextSettingsSave.current = true
+    setViewSettings(next)
+    saveSettings(next, true)
   }
 
   useEffect(() => {
@@ -534,17 +551,19 @@ const AdminLayout = ({
       return
     }
 
-    setViewSettings({ ...viewSettings, isSimpleMode, colorMode })
+    setViewSettings(settingsForSave({ ...viewSettings, isSimpleMode }))
   }, [isSimpleMode])
 
   useEffect(() => {
     if (viewSettings) {
+      if (skipNextSettingsSave.current) {
+        skipNextSettingsSave.current = false
+        return
+      }
       saveSettings()
     }
   }, [viewSettings])
 
-  // SafeAreaViews take a raw color, not a $token, so resolve the active
-  // theme's surface colors here (falls back to the default literals).
   const themeColors = customThemes[theme]?.colors || themes[theme]?.colors || {}
   const pick = (light, dark, litLight, litDark) =>
     colorMode === 'light'
@@ -570,11 +589,13 @@ const AdminLayout = ({
   )
 
   const setThemeHook = (name, mode) => {
-    let next = { ...viewSettings, theme: name }
-    if (mode) {
-      next.colorMode = mode
+    let next = {
+      ...(viewSettings || {}),
+      isSimpleMode,
+      theme: name,
+      colorMode: mode || colorMode
     }
-    setViewSettings(next)
+    persistSettings(next)
     setTheme(name)
     if (mode && setColorMode) {
       setColorMode(mode)
@@ -589,26 +610,28 @@ const AdminLayout = ({
 
   const saveCustomTheme = (name, spec) => {
     let id = customIdForName(name)
+    let baseSettings = viewSettings || {}
     let next = {
-      ...(viewSettings.customThemes || {}),
+      ...(baseSettings.customThemes || {}),
       [id]: { id, name, spec }
     }
-    setViewSettings({ ...viewSettings, customThemes: next, theme: id })
+    persistSettings({ ...baseSettings, customThemes: next, theme: id })
     setCustomThemes(next)
     setTheme(id)
     syncThemesToAPI(next)
   }
 
   const deleteCustomTheme = (id) => {
-    let next = { ...(viewSettings.customThemes || {}) }
+    let baseSettings = viewSettings || {}
+    let next = { ...(baseSettings.customThemes || {}) }
     delete next[id]
     let wasActive = theme === id
-    let patch = { ...viewSettings, customThemes: next }
+    let patch = { ...baseSettings, customThemes: next }
     if (wasActive) {
       patch.theme = 'default'
       patch.colorMode = 'light'
     }
-    setViewSettings(patch)
+    persistSettings(patch)
     setCustomThemes(next)
     if (wasActive) {
       setTheme('default', 'light')
@@ -626,7 +649,9 @@ const AdminLayout = ({
         list.forEach((t) => {
           if (t?.id) next[t.id] = t
         })
-        setCustomThemes(next)
+        setCustomThemes((prev) =>
+          JSON.stringify(prev) === JSON.stringify(next) ? prev : next
+        )
       })
       .catch(() => {})
   }, [])
@@ -719,35 +744,33 @@ const AdminLayout = ({
           }}
           flex={1}
         >
-          {/*desktop*/}
+          {/*desktop - web only; iOS always uses the mobile navbar below*/}
+          {Platform.OS === 'web' && (
+            <Box
+              display="none"
+              sx={{
+                '@md': { display: 'flex', position: 'static' }
+              }}
+              zIndex={99}
+              style={{ backdropFilter: 'blur(10px)' }}
+            >
+              <AdminNavbar
+                version={version}
+                isMobile={false}
+                isOpenSidebar={isOpenSidebar}
+                setIsOpenSidebar={setIsOpenSidebar}
+                setColorMode={setColorMode}
+                theme={theme}
+                setTheme={setThemeHook}
+                customThemes={customThemes}
+              />
+            </Box>
+          )}
+          {/*mobile - always rendered; web hides it at @md widths*/}
           <Box
-            display="none"
-            sx={{
-              '@md': { display: 'flex', position: 'static' }
-            }}
-            zIndex={99}
-            style={{ backdropFilter: 'blur(10px)' }}
-          >
-            <AdminNavbar
-              version={version}
-              isMobile={false}
-              isOpenSidebar={isOpenSidebar}
-              setIsOpenSidebar={setIsOpenSidebar}
-              setColorMode={setColorMode}
-              theme={theme}
-              setTheme={setThemeHook}
-              customThemes={customThemes}
-            />
-          </Box>
-          {/*mobile*/}
-          <Box
-            sx={{
-              '@base': {
-                display: 'flex',
-                position: Platform.OS == 'web' ? 'sticky' : 'static'
-              },
-              '@md': { display: 'none' }
-            }}
+            display="flex"
+            position={Platform.OS == 'web' ? 'sticky' : 'static'}
+            sx={Platform.OS == 'web' ? { '@md': { display: 'none' } } : {}}
             top={0}
             zIndex={99}
           >
@@ -768,37 +791,37 @@ const AdminLayout = ({
             top={Platform.OS == 'web' ? 16 : 0}
             flex={1}
           >
-            {/*desktop*/}
-            <Box
-              display="none"
-              sx={{
-                '@md': {
-                  display: 'flex',
-                  height: Dimensions.get('window').height - 64
-                }
-              }}
-              width={isOpenSidebar ? 80 : 260}
-            >
-              <Sidebar
-                isMobile={false}
-                isMini={isOpenSidebar}
-                isOpenSidebar={isOpenSidebar}
-                setIsOpenSidebar={setIsOpenSidebar}
-                isSimpleMode={isSimpleMode}
-                setIsSimpleMode={setIsSimpleMode}
-                theme={theme}
-                setTheme={setThemeHook}
-                routes={routes}
-              />
-            </Box>
+            {/*desktop sidebar - web only at >= md widths; iOS uses mobile sidebar*/}
+            {Platform.OS === 'web' && (
+              <Box
+                display="none"
+                sx={{
+                  '@md': {
+                    display: 'flex',
+                    height: Dimensions.get('window').height - 64
+                  }
+                }}
+                width={isOpenSidebar ? 80 : 260}
+              >
+                <Sidebar
+                  isMobile={false}
+                  isMini={isOpenSidebar}
+                  isOpenSidebar={isOpenSidebar}
+                  setIsOpenSidebar={setIsOpenSidebar}
+                  isSimpleMode={isSimpleMode}
+                  setIsSimpleMode={setIsSimpleMode}
+                  theme={theme}
+                  setTheme={setThemeHook}
+                  routes={routes}
+                />
+              </Box>
+            )}
             {/*mobile*/}
             {isOpenSidebar ? (
               <Box
                 w="100%"
                 zIndex={99}
-                sx={{
-                  '@md': { display: 'none' }
-                }}
+                sx={Platform.OS == 'web' ? { '@md': { display: 'none' } } : {}}
               >
                 <SafeAreaView
                   style={{

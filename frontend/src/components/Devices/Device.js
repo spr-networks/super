@@ -30,6 +30,11 @@ import {
 } from '@gluestack-ui/themed'
 
 import { TagItem, GroupItem, PolicyItem } from 'components/TagItem'
+import {
+  ClassificationBadge,
+  ClassificationTag,
+  isClassificationTag
+} from 'components/Devices/Classification'
 import IconItem, { deviceIcons, groupIcons } from 'components/IconItem'
 import { PencilIcon, PowerOffIcon, WaypointsIcon, WifiIcon } from 'lucide-react-native'
 
@@ -322,7 +327,7 @@ const Device = React.memo(({ device, notifyChange, showMenu, isSelected, onSelec
 
   return (
     <Pressable
-      onPress={() => (onSelect ? onSelect() : navigate(deviceURL(device)))}
+      onPress={() => (onSelect ? onSelect(device) : navigate(deviceURL(device)))}
       disabled={!onSelect && device.MAC == 'pending'}
     >
       <HStack
@@ -461,6 +466,13 @@ const Device = React.memo(({ device, notifyChange, showMenu, isSelected, onSelec
             alignItems="flex-start"
             sx={{ '@md': { flex: 1, alignSelf: 'center' } }}
           >
+            {device.classification &&
+            !device.DeviceTags?.includes(
+              `classification:${device.classification.Category}`
+            ) ? (
+              <ClassificationBadge classification={device.classification} />
+            ) : null}
+
             {device.Policies?.sort().map((policy) => (
               <PolicyItem key={policy} name={policy} />
             ))}
@@ -469,9 +481,13 @@ const Device = React.memo(({ device, notifyChange, showMenu, isSelected, onSelec
               <GroupItem key={group} name={group} />
             ))}
 
-            {device.DeviceTags?.sort().map((tag) => (
-              <TagItem key={tag} name={tag} />
-            ))}
+            {device.DeviceTags?.sort().map((tag) =>
+              isClassificationTag(tag) ? (
+                <ClassificationTag key={tag} name={tag} />
+              ) : (
+                <TagItem key={tag} name={tag} />
+              )
+            )}
           </HStack>
         </VStack>
         {showMenu ? moreMenu : null}

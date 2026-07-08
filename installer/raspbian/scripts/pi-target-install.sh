@@ -116,6 +116,11 @@ systemctl mask NetworkManager NetworkManager-wait-online.service NetworkManager-
 systemctl disable systemd-networkd.service systemd-networkd.socket systemd-networkd-wait-online.service 2>/dev/null || true
 systemctl mask systemd-networkd.service systemd-networkd.socket systemd-networkd-wait-online.service 2>/dev/null || true
 
+for svc in wpa_supplicant avahi-daemon avahi-daemon.socket ModemManager bluetooth udisks2; do
+  systemctl disable --now "$svc" 2>/dev/null || true
+  systemctl mask "$svc" 2>/dev/null || true
+done
+
 # Enable systemd-timesyncd for NTP. Network-readiness handled by systemd.
 apt -y install --no-download --no-install-recommends systemd-timesyncd 2>/dev/null || true
 systemctl enable systemd-timesyncd 2>/dev/null || true

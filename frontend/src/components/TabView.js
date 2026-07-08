@@ -12,8 +12,8 @@ import {
   useColorMode
 } from '@gluestack-ui/themed'
 
-const TabViewComponent = ({ tabs, ...props }) => {
-  const [index, setIndex] = useState(0)
+const TabViewComponent = ({ tabs, initialIndex, ...props }) => {
+  const [index, setIndex] = useState(initialIndex > 0 ? initialIndex : 0)
 
   // Map tab data to a consistent format
   const parsedTabs = Array.isArray(tabs)

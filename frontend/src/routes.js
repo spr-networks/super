@@ -14,6 +14,7 @@ import SignalStrength from 'views/Traffic/SignalStrength'
 import Traffic from 'views/Traffic/Traffic'
 import TrafficTimeSeries from 'views/Traffic/TrafficTimeSeries'
 import TrafficList from 'views/Traffic/TrafficList'
+import Topology from 'views/Topology/Topology'
 import WirelessConfiguration from 'views/WirelessConfiguration'
 import Groups from 'views/Groups/Groups'
 import Tags from 'views/Tags'
@@ -54,6 +55,7 @@ import {
   BarChartHorizontalIcon,
   BellIcon,
   CableIcon,
+  MapPinnedIcon,
   CogIcon,
   ContainerIcon,
   EarthLockIcon,
@@ -133,6 +135,13 @@ const routes = [
     name: 'Network',
     state: 'netCollapse',
     views: [
+      {
+        path: 'topology',
+        name: 'Overview',
+        icon: MapPinnedIcon,
+        component: Topology,
+        layout: 'admin'
+      },
       {
         path: 'wireless',
         name: 'Wifi',

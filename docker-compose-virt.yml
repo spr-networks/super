@@ -44,6 +44,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${PWD}/configs/base/:/configs/base/
       - ${PWD}/state/api/:/state/api/
+      - ${PWD}/state/superd/:/state/superd/
       - ${PWD}/:/super/
   dhcp:
     container_name: superdhcp
