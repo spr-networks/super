@@ -231,7 +231,7 @@ const RuleRow = ({ rule, onChange, onRemove, onShare }) => (
       <Input size="sm">
         <InputField
           value={rule.Vendor}
-          placeholder="Reolink"
+          placeholder=""
           onChangeText={(value) => onChange('Vendor', value)}
         />
       </Input>
