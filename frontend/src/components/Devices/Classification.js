@@ -140,7 +140,7 @@ const CorrectionMenu = ({
 }) => {
   let category = classification?.Category
 
-  let label = 'Tell SPR what this is'
+  let label = 'Classify Device'
   if (!isUnknown(classification)) {
     label = classification.UserCorrection ? 'Change type' : `Not a ${category}?`
   }

@@ -3,7 +3,7 @@
  * timestamp
  * pagination
  */
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import { dbAPI } from 'api'
 
@@ -336,6 +336,13 @@ const LogList = (props) => {
     return `${year}-${month}-${day}T${hours}:${minutes}`
   }
 
+  const renderItem = useCallback(
+    ({ item }) => <LogListItem item={item} selected={item.selected} />,
+    []
+  )
+
+  const keyExtractor = useCallback((item) => `${item.time}-${item.bucket}`, [])
+
   return (
     <View h="$full" sx={{ '@md': { height: '92vh' } }}>
       <VStack space="md" p="$4">
@@ -505,26 +512,25 @@ const LogList = (props) => {
           onBarClick={() => {}}
         />
       ) : (
-        <ScrollView>
-          <AlertChart fieldCounts={fieldCounts} onBarClick={handleBarClick} />
-          {total > perPage ? (
-            <Pagination
-              page={page}
-              pages={total}
-              perPage={perPage}
-              onChange={(p) => updatePage(p, page)}
-            />
-          ) : null}
-          <FlatList
-            flex={2}
-            data={logs}
-            estimatedItemSize={100}
-            renderItem={({ item }) => (
-              <LogListItem item={item} selected={item.selected} />
-            )}
-            keyExtractor={(item, index) => item.time + index}
-          />
-        </ScrollView>
+        <FlatList
+          flex={2}
+          data={logs}
+          ListHeaderComponent={
+            <>
+              <AlertChart fieldCounts={fieldCounts} onBarClick={handleBarClick} />
+              {total > perPage ? (
+                <Pagination
+                  page={page}
+                  pages={total}
+                  perPage={perPage}
+                  onChange={(p) => updatePage(p, page)}
+                />
+              ) : null}
+            </>
+          }
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+        />
       )}
     </View>
   )
