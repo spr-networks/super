@@ -9,6 +9,7 @@
 - Parental controls for time limits
 ** Fixes **
 - Improve mesh refresh for api restarts
+- Fix UI glitch with guest networks showing as enabled when not set
 - Cache attestation results
 
 ## v1.1.7
