@@ -23,6 +23,9 @@ export class APIParentalControls extends API {
   extend(tag, minutes) {
     return this.put('extend', { Tag: tag, Minutes: minutes })
   }
+  reset(tag) {
+    return this.put('reset', { Tag: tag })
+  }
 }
 
 export const parentalAPI = new APIParentalControls()

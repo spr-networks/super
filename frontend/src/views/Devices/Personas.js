@@ -16,6 +16,10 @@ import {
   Button,
   ButtonIcon,
   ButtonText,
+  Checkbox,
+  CheckboxIcon,
+  CheckboxIndicator,
+  CheckboxLabel,
   CloseIcon,
   FlatList,
   FormControl,
@@ -38,7 +42,7 @@ import {
   VStack
 } from '@gluestack-ui/themed'
 
-import { EditIcon, UserIcon } from 'lucide-react-native'
+import { EditIcon, RotateCcwIcon, UserIcon } from 'lucide-react-native'
 
 import ModalForm from 'components/ModalForm'
 import ClientSelect from 'components/ClientSelect'
@@ -116,6 +120,7 @@ const AddPersona = ({ item, limit, devices, onSave }) => {
   const [selected, setSelected] = useState([])
   const [dailyLimit, setDailyLimit] = useState('')
   const [schedules, setSchedules] = useState([])
+  const [dnsFamily, setDnsFamily] = useState(false)
 
   useEffect(() => {
     setLabel(item?.Label || '')
@@ -131,6 +136,7 @@ const AddPersona = ({ item, limit, devices, onSave }) => {
     )
     setDailyLimit(limit?.DailyLimitMinutes ? `${limit.DailyLimitMinutes}` : '')
     setSchedules(limit?.Schedules || [])
+    setDnsFamily(limit?.DNSFamily || false)
   }, [item, limit, devices])
 
   return (
@@ -216,6 +222,24 @@ const AddPersona = ({ item, limit, devices, onSave }) => {
       </FormControl>
 
       <FormControl>
+        <Checkbox
+          value="dns:family"
+          isChecked={dnsFamily}
+          onChange={setDnsFamily}
+        >
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>Family DNS filter</CheckboxLabel>
+        </Checkbox>
+        <FormControlHelper>
+          <FormControlHelperText>
+            Applies the dns:family policy to this persona's devices
+          </FormControlHelperText>
+        </FormControlHelper>
+      </FormControl>
+
+      <FormControl>
         <FormControlLabel>
           <FormControlLabelText>Devices</FormControlLabelText>
         </FormControlLabel>
@@ -273,7 +297,11 @@ const AddPersona = ({ item, limit, devices, onSave }) => {
           onSave(
             { Label: normalizeLabel(label), Description: description.trim() },
             selected,
-            { DailyLimitMinutes: isNaN(n) ? 0 : n, Schedules: schedules }
+            {
+              DailyLimitMinutes: isNaN(n) ? 0 : n,
+              Schedules: schedules,
+              DNSFamily: dnsFamily
+            }
           )
         }}
       >
@@ -366,6 +394,33 @@ const Personas = () => {
     }
   }
 
+  const syncDevicePolicies = async (original, selected, dnsFamily) => {
+    for (let device of selectableDevices(devices)) {
+      let id = deviceId(device)
+      let tags = device.DeviceTags || []
+      let wasMember = original
+        ? tags.includes(personaTag(original.Label))
+        : false
+      let isMember = selected.includes(id)
+      if (!wasMember && !isMember) {
+        continue
+      }
+
+      let policies = device.Policies || []
+      let has = policies.includes('dns:family')
+      let want = dnsFamily && isMember
+      if (has == want) {
+        continue
+      }
+
+      let next = policies.filter((p) => p != 'dns:family')
+      if (want) {
+        next.push('dns:family')
+      }
+      await deviceAPI.updatePolicies(id, next)
+    }
+  }
+
   const handleSave = (original) => async (persona, selected, limitData) => {
     if (!persona.Label) {
       context.error('Persona needs a name')
@@ -387,9 +442,11 @@ const Personas = () => {
         Tag: personaTag(persona.Label),
         Description: persona.Description,
         DailyLimitMinutes: limitData.DailyLimitMinutes,
-        Schedules: limitData.Schedules
+        Schedules: limitData.Schedules,
+        DNSFamily: limitData.DNSFamily
       })
       await syncDeviceTags(original, persona, selected)
+      await syncDevicePolicies(original, selected, limitData.DNSFamily)
     } catch (err) {
       context.error('Failed to save persona: ' + err.message)
     }
@@ -438,6 +495,12 @@ const Personas = () => {
       .then(refreshUsage)
       .catch(() => {})
 
+  const resetPersona = (persona) =>
+    parentalAPI
+      .reset(personaTag(persona.Label))
+      .then(refreshUsage)
+      .catch(() => {})
+
   const hasControls = (persona) =>
     (usage[personaTag(persona.Label)]?.Limit || 0) > 0 ||
     limits[personaTag(persona.Label)]?.Schedules?.length > 0
@@ -455,6 +518,8 @@ const Personas = () => {
         if (key == 'edit') {
           setEditing(persona)
           editRef.current()
+        } else if (key == 'reset') {
+          resetPersona(persona)
         } else if (key == 'delete') {
           setDeleting(persona)
         }
@@ -463,6 +528,10 @@ const Personas = () => {
       <MenuItem key="edit" textValue="edit">
         <Icon as={EditIcon} color="$muted500" mr="$2" />
         <MenuItemLabel size="sm">Edit...</MenuItemLabel>
+      </MenuItem>
+      <MenuItem key="reset" textValue="reset">
+        <Icon as={RotateCcwIcon} color="$muted500" mr="$2" />
+        <MenuItemLabel size="sm">Reset usage</MenuItemLabel>
       </MenuItem>
       <MenuItem key="delete" textValue="delete">
         <TrashIcon color="$red700" mr="$2" />
@@ -482,6 +551,9 @@ const Personas = () => {
     let lim = limits[personaTag(persona.Label)]
     if (lim?.Schedules?.length) {
       parts.push(`${lim.Schedules.length} schedule(s)`)
+    }
+    if (lim?.DNSFamily) {
+      parts.push('family dns')
     }
     return parts.join(' · ')
   }

@@ -33,6 +33,7 @@ let mockPersonas = [
     Schedules: [
       { Days: [0, 1, 1, 1, 1, 1, 0], Start: '21:00', End: '07:00' }
     ],
+    DNSFamily: true,
     Disabled: false
   }
 ]
@@ -4077,6 +4078,23 @@ export default function MockAPI(props = null) {
             parseInt(Date.now() / 1000) + req.Minutes * 60
         }
         delete mockPersonasState.PauseUntil[persona.Tag]
+        return mockPersonasState
+      })
+
+      this.put('/parentalControls/reset', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        let req = JSON.parse(request.requestBody)
+        let persona = mockPersonas.find(
+          (p) => p.Tag == req.Tag || p.Name == req.Tag
+        )
+        if (!persona) {
+          return new Response(404, {}, { error: 'persona not found' })
+        }
+        delete mockPersonasState.UsedMinutes[persona.Tag]
+        delete mockPersonasState.PauseUntil[persona.Tag]
+        delete mockPersonasState.GrantUntil[persona.Tag]
         return mockPersonasState
       })
     }
