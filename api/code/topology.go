@@ -588,13 +588,15 @@ func mergeLeafTopology(topology *Topology, leafIP string, leafTopo Topology, onl
 	}
 }
 
-func mergeMeshTopology(topology *Topology, arp map[string]ArpEntry) {
+func mergeMeshTopology(topology *Topology, arp map[string]ArpEntry, activeIPs map[string]bool) {
 	if isLeafRouter() {
 		return
 	}
 	for _, leaf := range getMeshLeafTopologies() {
 		leafTopo := Topology{}
-		online := leaf.Online && json.Unmarshal(leaf.Topology, &leafTopo) == nil
+		apiOK := leaf.Online && json.Unmarshal(leaf.Topology, &leafTopo) == nil
+		//an unreachable or not-yet-upgraded leaf API is not the same as offline
+		online := apiOK || activeIPs[leaf.LeafIP]
 		mergeLeafTopology(topology, leaf.LeafIP, leafTopo, online, arp)
 	}
 	sortTopology(topology)
@@ -627,8 +629,9 @@ func showTopology(w http.ResponseWriter, r *http.Request) {
 	endpoints := append([]Endpoint{}, gFirewallConfig.Endpoints...)
 	FWmtx.Unlock()
 
-	topology := buildTopology(devices, interfaces, getTopologyWifiStations(interfaces), arp, activeWG, endpoints, getAPStatus(interfaces), getRecentlyActiveIPs(5))
-	mergeMeshTopology(&topology, arp)
+	recentIPs := getRecentlyActiveIPs(5)
+	topology := buildTopology(devices, interfaces, getTopologyWifiStations(interfaces), arp, activeWG, endpoints, getAPStatus(interfaces), recentIPs)
+	mergeMeshTopology(&topology, arp, recentIPs)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(topology)
