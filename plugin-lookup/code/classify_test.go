@@ -1,8 +1,11 @@
 package main
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func testClassifier(t *testing.T) *Classifier {
@@ -11,14 +14,21 @@ func testClassifier(t *testing.T) *Classifier {
 	oldStorePath := StorePath
 	oldCustomPath := CustomFingerprintsPath
 	oldBuiltinPath := BuiltinOverridesPath
+	oldPublicPath := DevicesPublicPath
 	dir := t.TempDir()
 	StorePath = filepath.Join(dir, "classifications.json")
 	CustomFingerprintsPath = filepath.Join(dir, "custom_fingerprints.json")
 	BuiltinOverridesPath = filepath.Join(dir, "builtin_fingerprints.json")
+	DevicesPublicPath = filepath.Join(dir, "devices-public.json")
+	ipMACCache = map[string]string{}
+	ipMACLoaded = time.Time{}
 	t.Cleanup(func() {
 		StorePath = oldStorePath
 		CustomFingerprintsPath = oldCustomPath
 		BuiltinOverridesPath = oldBuiltinPath
+		DevicesPublicPath = oldPublicPath
+		ipMACCache = map[string]string{}
+		ipMACLoaded = time.Time{}
 	})
 
 	return newClassifier(testDB(t))
@@ -129,6 +139,76 @@ func TestCorrectionPinsAgainstRescoring(t *testing.T) {
 	}
 	if result.Category != "printer" || !result.Pinned {
 		t.Fatalf("correction did not pin device: %#v", result)
+	}
+}
+
+func TestDHCPFingerprintSignals(t *testing.T) {
+	classifier := testClassifier(t)
+	mac := "00:11:22:33:44:55"
+
+	classifier.handleDHCP(DHCPRequest{
+		MAC:          mac,
+		Name:         "unhelpful-name",
+		VendorClass:  "android-dhcp-14",
+		ParamReqList: "1,3,6,15,26,28,51,58,59,43",
+	})
+
+	result := classifier.classifications[mac]
+	if result.Category != "phone" {
+		t.Fatalf("vendor class rule not applied: %#v", result)
+	}
+
+	signals := classifier.signals[mac]
+	if signals.VendorClass != "android-dhcp-14" || signals.ParamReqList == "" {
+		t.Fatalf("dhcp options not stored: %#v", signals)
+	}
+}
+
+func TestDNSQuerySignals(t *testing.T) {
+	classifier := testClassifier(t)
+	mac := "00:11:22:33:44:55"
+
+	devices := fmt.Sprintf(
+		`{"%s": {"MAC": "%s", "RecentIP": "192.168.2.16"}}`, mac, mac)
+	if err := os.WriteFile(DevicesPublicPath, []byte(devices), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	classifier.handleDNS(DNSEvent{
+		Q:      []struct{ Name string }{{Name: "fw.ring.com."}},
+		Remote: "192.168.2.16:40000",
+	})
+
+	signals := classifier.signals[mac]
+	if len(signals.Domains) != 1 || signals.Domains[0] != "fw.ring.com" {
+		t.Fatalf("dns query not recorded: %#v", signals)
+	}
+
+	result := classifier.classifications[mac]
+	if result.Category != "camera" || result.Vendor != "Ring" {
+		t.Fatalf("dns rule not applied: %#v", result)
+	}
+}
+
+func TestDomainSignals(t *testing.T) {
+	classifier := testClassifier(t)
+	mac := "00:11:22:33:44:55"
+
+	classifier.addDomain(mac, normalizeDomain("Something.Ring.com."))
+	classifier.addDomain(mac, normalizeDomain("something.ring.com"))
+	classifier.addDomain(mac, normalizeDomain("localhost"))
+	classifier.addDomain(mac, normalizeDomain("printer.local"))
+
+	signals := classifier.signals[mac]
+	if len(signals.Domains) != 1 || signals.Domains[0] != "something.ring.com" {
+		t.Fatalf("domains not deduped/normalized: %#v", signals.Domains)
+	}
+
+	for i := 0; i < maxDomainsPerDevice+10; i++ {
+		classifier.addDomain(mac, normalizeDomain(fmt.Sprintf("host%d.example.com", i)))
+	}
+	if len(classifier.signals[mac].Domains) > maxDomainsPerDevice {
+		t.Fatalf("domain cap not enforced: %d", len(classifier.signals[mac].Domains))
 	}
 }
 

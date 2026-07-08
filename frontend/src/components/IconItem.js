@@ -9,9 +9,11 @@ import {
   Cable,
   Network,
   Router,
+  Server,
   Smartphone,
   Tv,
   Video,
+  Watch,
   Wifi,
   Tablet,
   Globe,
@@ -32,8 +34,10 @@ let deviceIcons = {
   Tv: Tv,
   Printer: Printer,
   Gamepad: Gamepad2,
+  Server: Server,
   Speaker: Speaker,
   Video: Video,
+  Watch: Watch,
   Wifi: Wifi,
   Wire: Cable
 }

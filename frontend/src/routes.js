@@ -55,7 +55,7 @@ import {
   BarChartHorizontalIcon,
   BellIcon,
   CableIcon,
-  ChartNetworkIcon,
+  MapPinnedIcon,
   CogIcon,
   ContainerIcon,
   EarthLockIcon,
@@ -138,7 +138,7 @@ const routes = [
       {
         path: 'topology',
         name: 'Overview',
-        icon: ChartNetworkIcon,
+        icon: MapPinnedIcon,
         component: Topology,
         layout: 'admin'
       },

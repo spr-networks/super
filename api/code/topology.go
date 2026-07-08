@@ -15,6 +15,14 @@ type StationSignal struct {
 	RSSI   int
 	TxRate int
 	RxRate int
+	Caps   []string `json:",omitempty"` // HT | VHT | HE | EHT
+}
+
+type RadioInfo struct {
+	Channel  int
+	Freq     int
+	Modes    []string `json:",omitempty"` // 802.11 n | ac | ax | be
+	Stations int
 }
 
 type TopoNode struct {
@@ -28,6 +36,7 @@ type TopoNode struct {
 	ConnType string         `json:",omitempty"` // wifi | wired | wireguard | offline
 	Iface    string         `json:",omitempty"`
 	SSID     string         `json:",omitempty"`
+	Radio    *RadioInfo     `json:",omitempty"`
 	Groups   []string       `json:",omitempty"`
 	Policies []string       `json:",omitempty"`
 	Tags     []string       `json:",omitempty"`
@@ -108,17 +117,83 @@ func getTopologyWifiStations(interfaces []InterfaceConfig) map[string]wifiStatio
 	return stations
 }
 
-func getAPSSIDs(interfaces []InterfaceConfig) map[string]string {
-	ssids := map[string]string{}
+func getAPStatus(interfaces []InterfaceConfig) map[string]map[string]string {
+	apStatus := map[string]map[string]string{}
 	for _, entry := range interfaces {
 		if entry.Enabled == true && entry.Type == "AP" {
 			status, err := RunHostapdStatus(entry.Name)
 			if err == nil {
-				ssids[entry.Name] = status["ssid[0]"]
+				apStatus[entry.Name] = status
 			}
 		}
 	}
-	return ssids
+	return apStatus
+}
+
+func radioInfoFromStatus(status map[string]string) *RadioInfo {
+	if status == nil {
+		return nil
+	}
+
+	atoi := func(key string) int {
+		value, _ := strconv.Atoi(status[key])
+		return value
+	}
+
+	modes := []string{}
+	for _, mode := range []string{"n", "ac", "ax", "be"} {
+		if status["ieee80211"+mode] == "1" {
+			modes = append(modes, mode)
+		}
+	}
+
+	return &RadioInfo{
+		Channel:  atoi("channel"),
+		Freq:     atoi("freq"),
+		Modes:    modes,
+		Stations: atoi("num_sta[0]"),
+	}
+}
+
+func stationCaps(station map[string]string) []string {
+	caps := []string{}
+	for _, cap := range []string{"HT", "VHT", "HE", "EHT"} {
+		if strings.Contains(station["flags"], "["+cap+"]") {
+			caps = append(caps, cap)
+		}
+	}
+	return caps
+}
+
+// presence via nft accounting: an IP whose counters moved within the window is active.
+// ARP can't tell us this — SPR seeds permanent entries, so they never reflect liveness.
+func getRecentlyActiveIPs(minutes int) map[string]bool {
+	active := map[string]bool{}
+	history := gTrafficHistory
+	if len(history) == 0 {
+		return active
+	}
+	if minutes >= len(history) {
+		minutes = len(history) - 1
+	}
+
+	latest := history[0]
+	if minutes < 1 {
+		for ip := range latest {
+			active[ip] = true
+		}
+		return active
+	}
+
+	baseline := history[minutes]
+	for ip, count := range latest {
+		prev, exists := baseline[ip]
+		if !exists || count.LanIn != prev.LanIn || count.LanOut != prev.LanOut ||
+			count.WanIn != prev.WanIn || count.WanOut != prev.WanOut {
+			active[ip] = true
+		}
+	}
+	return active
 }
 
 func isTopologyIsolated(dev DeviceEntry) bool {
@@ -231,7 +306,8 @@ func endpointPolicyTopology(devices map[string]DeviceEntry, endpoints []Endpoint
 
 func buildTopology(devices map[string]DeviceEntry, interfaces []InterfaceConfig,
 	stations map[string]wifiStation, arp map[string]ArpEntry, activeWG map[string]bool,
-	endpoints []Endpoint, ssids map[string]string) Topology {
+	endpoints []Endpoint, apStatus map[string]map[string]string,
+	activeIPs map[string]bool) Topology {
 
 	nodes := []TopoNode{{ID: "router", Kind: "router", Name: "SPR", Online: true}}
 	edges := []TopoEdge{}
@@ -259,7 +335,9 @@ func buildTopology(devices map[string]DeviceEntry, interfaces []InterfaceConfig,
 				uplinkID = id
 			}
 		} else if entry.Type == "AP" {
-			nodes = append(nodes, TopoNode{ID: id, Kind: "ap_radio", Name: entry.Name, Iface: entry.Name, SSID: ssids[entry.Name], Online: true})
+			status := apStatus[entry.Name]
+			nodes = append(nodes, TopoNode{ID: id, Kind: "ap_radio", Name: entry.Name, Iface: entry.Name,
+				SSID: status["ssid[0]"], Radio: radioInfoFromStatus(status), Online: true})
 			edges = append(edges, TopoEdge{From: "router", To: id, Layer: "l1", Kind: "wifi"})
 		} else if entry.Type == "Downlink" {
 			nodes = append(nodes, TopoNode{ID: id, Kind: "port", Name: entry.Name, Iface: entry.Name, Online: true})
@@ -323,6 +401,7 @@ func buildTopology(devices map[string]DeviceEntry, interfaces []InterfaceConfig,
 				RSSI:   stationInt(station.Station, "signal"),
 				TxRate: stationInt(station.Station, "tx_rate_info"),
 				RxRate: stationInt(station.Station, "rx_rate_info"),
+				Caps:   stationCaps(station.Station),
 			}
 			radio := "iface:" + strings.Split(station.Iface, ".")[0]
 			edges = append(edges, TopoEdge{From: id, To: radio, Layer: "l1", Kind: "wifi", Metric: float64(node.Signal.RSSI)})
@@ -331,7 +410,10 @@ func buildTopology(devices map[string]DeviceEntry, interfaces []InterfaceConfig,
 			node.Iface = "wg0"
 			node.Online = true
 			edges = append(edges, TopoEdge{From: id, To: "iface:wg0", Layer: "l1", Kind: "wg"})
-		} else if hasArp && arpEntry.Flags != "0x0" && !isWifiIface(arpEntry.Device) {
+		} else if hasArp && !isWifiIface(arpEntry.Device) &&
+			(arpEntry.Flags == "0x2" || activeIPs[dev.RecentIP]) {
+			//SPR seeds permanent (0x6) ARP entries, so presence needs a learned entry
+			//or recent traffic; the seeded entry still tells us the port
 			node.ConnType = "wired"
 			node.Iface = arpEntry.Device
 			node.Online = true
@@ -457,7 +539,8 @@ func mergeLeafTopology(topology *Topology, leafIP string, leafTopo Topology, onl
 		leafNodes[node.ID] = node
 		if node.Kind == "ap_radio" {
 			id := leafID + ":" + node.ID
-			topology.Nodes = append(topology.Nodes, TopoNode{ID: id, Kind: "ap_radio", Name: node.Name, Iface: node.Iface, SSID: node.SSID, Online: node.Online})
+			topology.Nodes = append(topology.Nodes, TopoNode{ID: id, Kind: "ap_radio", Name: node.Name, Iface: node.Iface,
+				SSID: node.SSID, Radio: node.Radio, Online: node.Online})
 			topology.Edges = append(topology.Edges, TopoEdge{From: leafID, To: id, Layer: "l1", Kind: "wifi"})
 		}
 	}
@@ -538,7 +621,7 @@ func showTopology(w http.ResponseWriter, r *http.Request) {
 	endpoints := append([]Endpoint{}, gFirewallConfig.Endpoints...)
 	FWmtx.Unlock()
 
-	topology := buildTopology(devices, interfaces, getTopologyWifiStations(interfaces), arp, activeWG, endpoints, getAPSSIDs(interfaces))
+	topology := buildTopology(devices, interfaces, getTopologyWifiStations(interfaces), arp, activeWG, endpoints, getAPStatus(interfaces), getRecentlyActiveIPs(5))
 	mergeMeshTopology(&topology, arp)
 
 	w.Header().Set("Content-Type", "application/json")

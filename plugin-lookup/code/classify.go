@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -21,6 +22,9 @@ var StorePath = "/state/plugins/plugin-lookup/classifications.json"
 var FingerprintDBPath = "../data/fingerprints.json"
 var CustomFingerprintsPath = "/state/plugins/plugin-lookup/custom_fingerprints.json"
 var BuiltinOverridesPath = "/state/plugins/plugin-lookup/builtin_fingerprints.json"
+var DevicesPublicPath = "/state/public/devices-public.json"
+
+const maxDomainsPerDevice = 32
 
 type persistedStore struct {
 	Signals         map[string]DeviceSignals  `json:"signals"`
@@ -28,14 +32,21 @@ type persistedStore struct {
 }
 
 type DHCPRequest struct {
-	MAC        string
-	Identifier string
-	Name       string
-	Iface      string
+	MAC          string
+	Identifier   string
+	Name         string
+	Iface        string
+	ParamReqList string //dhcp option 55
+	VendorClass  string //dhcp option 60
 }
 
 type PSKAuthSuccess struct {
 	MAC string
+}
+
+type DNSEvent struct {
+	Q      []struct{ Name string }
+	Remote string
 }
 
 type ZeroconfDevice struct {
@@ -296,6 +307,12 @@ func (c *Classifier) handleDHCP(req DHCPRequest) {
 		if req.Name != "" {
 			signals.Hostname = req.Name
 		}
+		if req.VendorClass != "" {
+			signals.VendorClass = req.VendorClass
+		}
+		if req.ParamReqList != "" {
+			signals.ParamReqList = req.ParamReqList
+		}
 		if ouiVendor != "" {
 			signals.OUIVendor = ouiVendor
 		}
@@ -319,6 +336,54 @@ func (c *Classifier) handleWifiAuth(auth PSKAuthSuccess) {
 			signals.OUIVendor = ouiVendor
 		}
 	})
+}
+
+// dns:serve: fires for every query on the network, so stay cheap:
+// only devices with room for a new unique domain reach updateSignals
+func (c *Classifier) addDomain(mac string, domain string) {
+	mac = normalizeMAC(mac)
+	if mac == "" || domain == "" {
+		return
+	}
+
+	c.mu.Lock()
+	signals := c.signals[mac]
+	known := len(signals.Domains) >= maxDomainsPerDevice
+	if !known {
+		for _, existing := range signals.Domains {
+			if existing == domain {
+				known = true
+				break
+			}
+		}
+	}
+	c.mu.Unlock()
+
+	if known {
+		return
+	}
+
+	c.updateSignals(mac, func(signals *DeviceSignals) {
+		signals.Domains = append(signals.Domains, domain)
+	})
+}
+
+func (c *Classifier) handleDNS(event DNSEvent) {
+	if len(event.Q) == 0 {
+		return
+	}
+
+	domain := normalizeDomain(event.Q[0].Name)
+	if domain == "" {
+		return
+	}
+
+	ip := event.Remote
+	if host, _, err := net.SplitHostPort(ip); err == nil {
+		ip = host
+	}
+
+	c.addDomain(macFromIP(ip), domain)
 }
 
 func (c *Classifier) handleZeroconf(event ZeroconfDevice) {
@@ -465,6 +530,49 @@ func (c *Classifier) deleteCorrection(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, result)
 }
 
+var ipMACMtx sync.Mutex
+var ipMACCache = map[string]string{}
+var ipMACLoaded time.Time
+
+func macFromIP(ip string) string {
+	ipMACMtx.Lock()
+	defer ipMACMtx.Unlock()
+
+	if time.Since(ipMACLoaded) > 30*time.Second {
+		data, err := os.ReadFile(DevicesPublicPath)
+		if err != nil {
+			return ""
+		}
+
+		devices := map[string]struct {
+			MAC      string
+			RecentIP string
+		}{}
+		if err := json.Unmarshal(data, &devices); err != nil {
+			return ""
+		}
+
+		ipMACCache = map[string]string{}
+		for _, device := range devices {
+			if device.RecentIP != "" && device.MAC != "" {
+				ipMACCache[device.RecentIP] = device.MAC
+			}
+		}
+		ipMACLoaded = time.Now()
+	}
+
+	return ipMACCache[ip]
+}
+
+func normalizeDomain(domain string) string {
+	domain = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(domain), "."))
+	if domain == "" || !strings.Contains(domain, ".") ||
+		strings.HasSuffix(domain, ".arpa") || strings.HasSuffix(domain, ".local") {
+		return ""
+	}
+	return domain
+}
+
 func lookupOUI(mac string) string {
 	if mOUI == nil {
 		return ""
@@ -474,7 +582,7 @@ func lookupOUI(mac string) string {
 	if err != nil {
 		return ""
 	}
-	return vendor
+	return strings.TrimSpace(vendor)
 }
 
 func writeJSON(w http.ResponseWriter, value interface{}) {
@@ -510,9 +618,18 @@ func busListener(classifier *Classifier) {
 		classifier.handleWifiAuth(auth)
 	}
 
+	handleDNS := func(topic string, value string) {
+		event := DNSEvent{}
+		if err := json.Unmarshal([]byte(value), &event); err != nil {
+			return
+		}
+		classifier.handleDNS(event)
+	}
+
 	go retryEventBus("dhcp:request", handleDHCP)
 	go retryEventBus("zeroconf:device", handleZeroconf)
 	go retryEventBus("wifi:auth:success", handleWifiAuth)
+	go retryEventBus("dns:serve:", handleDNS)
 }
 
 func retryEventBus(topic string, handler func(string, string)) {

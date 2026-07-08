@@ -26,6 +26,7 @@ import {
 import { classifyAPI, deviceAPI } from 'api'
 import { AlertContext } from 'AppContext'
 import { ListHeader } from 'components/List'
+import { TagSelect } from 'views/Devices/Devices'
 import { Select } from 'components/Select'
 import { Device } from 'components/Devices/Device'
 import IconItem from 'components/IconItem'
@@ -74,6 +75,7 @@ const DevicesBulkEdit = (props) => {
   const [groupVal, setGroupVal] = useState('')
   const [tagVal, setTagVal] = useState('')
   const [policyVal, setPolicyVal] = useState('')
+  const [filter, setFilter] = useState({}) // {Group: g} or {Tag: t}
 
   const refresh = () => {
     deviceAPI
@@ -97,6 +99,42 @@ const DevicesBulkEdit = (props) => {
 
   const isSelected = (d) => selected[deviceId(d)] === true
 
+  const matchesFilter = (d) => {
+    if (!filter?.Tag && !filter?.Group) {
+      return true
+    }
+    if (
+      filter.Tag &&
+      d.DeviceTags?.some((tag) =>
+        tag.toLowerCase().startsWith(filter.Tag.toLowerCase())
+      )
+    ) {
+      return true
+    }
+    if (
+      filter.Group &&
+      d.Groups?.some((group) =>
+        group.toLowerCase().startsWith(filter.Group.toLowerCase())
+      )
+    ) {
+      return true
+    }
+    return false
+  }
+
+  const filteredList = list.filter(matchesFilter)
+
+  const filterSections = [
+    {
+      title: 'Groups',
+      data: [...new Set(list.map((d) => d.Groups || []).flat())]
+    },
+    {
+      title: 'Tags',
+      data: [...new Set(list.map((d) => d.DeviceTags || []).flat())]
+    }
+  ]
+
   const toggle = (d) => {
     const id = deviceId(d)
     setSelected((s) => {
@@ -110,22 +148,34 @@ const DevicesBulkEdit = (props) => {
     })
   }
 
-  // pre-select every device with no name assigned (shown as "N/A")
+  // select every filtered device with no name assigned (shown as "N/A")
   const selectUnnamed = () => {
-    let next = {}
-    for (let d of list) {
-      if (!hasName(d)) {
+    setSelected((s) => {
+      let next = { ...s }
+      for (let d of filteredList) {
+        if (!hasName(d)) {
+          next[deviceId(d)] = true
+        }
+      }
+      return next
+    })
+  }
+
+  const selectAll = () => {
+    setSelected((s) => {
+      let next = { ...s }
+      for (let d of filteredList) {
         next[deviceId(d)] = true
       }
-    }
-    setSelected(next)
+      return next
+    })
   }
 
   const clearSelection = () => setSelected({})
 
   const selectedDevices = list.filter(isSelected)
   const selectedCount = selectedDevices.length
-  const unnamedCount = list.filter((d) => !hasName(d)).length
+  const unnamedCount = filteredList.filter((d) => !hasName(d)).length
 
   const doDelete = async () => {
     setDeleting(true)
@@ -285,6 +335,22 @@ const DevicesBulkEdit = (props) => {
         info="Select devices, then delete them or assign a group, tag, or policy to all of them at once."
       >
         <HStack space="sm" alignItems="center" flexWrap="wrap">
+          <TagSelect
+            sections={filterSections}
+            value={filter?.Tag || filter?.Group}
+            onChange={(v) => setFilter(v || {})}
+          />
+
+          <Button
+            size="xs"
+            action="secondary"
+            variant="outline"
+            onPress={selectAll}
+            isDisabled={filteredList.length === 0}
+          >
+            <ButtonText>Select all ({filteredList.length})</ButtonText>
+          </Button>
+
           <Button
             size="xs"
             action="secondary"
@@ -401,7 +467,7 @@ const DevicesBulkEdit = (props) => {
       ) : null}
 
       <FlatList
-        data={list}
+        data={filteredList}
         keyExtractor={(item) => deviceId(item)}
         renderItem={({ item }) => (
           <Device
@@ -414,9 +480,9 @@ const DevicesBulkEdit = (props) => {
         )}
       />
 
-      {!list.length ? (
+      {!filteredList.length ? (
         <Text color="$muted500" p="$4">
-          There are no devices configured yet
+          {list.length ? 'No devices match the filter' : 'There are no devices configured yet'}
         </Text>
       ) : null}
 

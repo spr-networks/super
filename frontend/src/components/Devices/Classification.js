@@ -42,7 +42,12 @@ const categoryOptions = [
   'console',
   'iot-sensor',
   'phone',
-  'laptop'
+  'tablet',
+  'laptop',
+  'wearable',
+  'router',
+  'switch',
+  'server'
 ]
 
 export const categoryStyle = {
@@ -52,8 +57,13 @@ export const categoryStyle = {
   laptop: { Icon: 'Laptop', Color: 'blueGray' },
   phone: { Icon: 'Mobile', Color: 'cyan' },
   printer: { Icon: 'Printer', Color: 'teal' },
+  router: { Icon: 'Router', Color: 'blueGray' },
+  server: { Icon: 'Server', Color: 'green' },
   speaker: { Icon: 'Speaker', Color: 'fuchsia' },
+  switch: { Icon: 'Ethernet', Color: 'teal' },
+  tablet: { Icon: 'Tablet', Color: 'cyan' },
   tv: { Icon: 'Tv', Color: 'violet' },
+  wearable: { Icon: 'Watch', Color: 'pink' },
   unknown: { Icon: 'Laptop', Color: 'blueGray' }
 }
 
@@ -69,7 +79,10 @@ const isUnknown = (classification) =>
 
 export const displayGuess = (classification) => {
   if (isUnknown(classification)) {
-    return 'Unidentified device'
+    //an unknown category with a known vendor is still worth naming
+    return classification?.Vendor
+      ? `${classification.Vendor} device`
+      : 'Unidentified device'
   }
 
   let parts = [classification.Vendor, classification.Category].filter(
@@ -118,7 +131,13 @@ const CategoryCoin = ({ category, size }) => {
   )
 }
 
-const CorrectionMenu = ({ classification, onCorrection, onReset, onCustom }) => {
+const CorrectionMenu = ({
+  classification,
+  onCorrection,
+  onReset,
+  onCustom,
+  onBrand
+}) => {
   let category = classification?.Category
 
   let label = 'Tell SPR what this is'
@@ -144,6 +163,8 @@ const CorrectionMenu = ({ classification, onCorrection, onReset, onCustom }) => 
           onReset()
         } else if (key == '__custom') {
           onCustom()
+        } else if (key == '__brand') {
+          onBrand()
         } else {
           onCorrection(key)
         }
@@ -169,6 +190,14 @@ const CorrectionMenu = ({ classification, onCorrection, onReset, onCustom }) => 
           <Icon as={PlusIcon} color="$muted500" size={16} />
           <MenuItemLabel size="sm" ml="$2">
             Custom type...
+          </MenuItemLabel>
+        </MenuItem>
+      ) : null}
+      {onBrand ? (
+        <MenuItem key="__brand" textValue="set brand">
+          <Icon as={PlusIcon} color="$muted500" size={16} />
+          <MenuItemLabel size="sm" ml="$2">
+            Set brand...
           </MenuItemLabel>
         </MenuItem>
       ) : null}
@@ -258,17 +287,7 @@ export const ClassificationBadge = ({ classification }) => {
   }
 
   if (isUnknown(classification)) {
-    //only badge unknowns that have signals worth investigating
-    if (!classification.Evidence?.length) {
-      return null
-    }
-
-    return (
-      <Badge action="muted" variant="outline" size="sm" py="$1" px="$2" rounded="$lg">
-        <BadgeText color="$muted500">Unidentified</BadgeText>
-        <BadgeIcon color="$muted500" as={HelpCircleIcon} ml="$1" />
-      </Badge>
-    )
+    return null
   }
 
   let style = categoryStyle[classification.Category] || categoryStyle.unknown
@@ -295,7 +314,9 @@ export const ClassificationPanel = ({
   onCorrection,
   onReset,
   onCustom,
-  onShare
+  onBrand,
+  onShare,
+  onCreateRule
 }) => {
   if (!classification) {
     return null
@@ -352,6 +373,7 @@ export const ClassificationPanel = ({
             onCorrection={onCorrection}
             onReset={onReset}
             onCustom={onCustom}
+            onBrand={onBrand}
           />
         </HStack>
 
@@ -398,17 +420,30 @@ export const ClassificationPanel = ({
 
         <HStack alignItems="center" justifyContent="space-between">
           <EvidenceDisclosure evidence={classification.Evidence} />
-          {!unknown && onShare ? (
-            <Button
-              size="xs"
-              action="secondary"
-              variant="link"
-              onPress={onShare}
-            >
-              <ButtonIcon as={Share2Icon} mr="$1" />
-              <ButtonText>Share fingerprint</ButtonText>
-            </Button>
-          ) : null}
+          <HStack space="md" alignItems="center">
+            {!unknown && onCreateRule ? (
+              <Button
+                size="xs"
+                action="secondary"
+                variant="link"
+                onPress={onCreateRule}
+              >
+                <ButtonIcon as={FingerprintIcon} mr="$1" />
+                <ButtonText>Create rule</ButtonText>
+              </Button>
+            ) : null}
+            {!unknown && onShare ? (
+              <Button
+                size="xs"
+                action="secondary"
+                variant="link"
+                onPress={onShare}
+              >
+                <ButtonIcon as={Share2Icon} mr="$1" />
+                <ButtonText>Share fingerprint</ButtonText>
+              </Button>
+            ) : null}
+          </HStack>
         </HStack>
       </VStack>
     </Box>

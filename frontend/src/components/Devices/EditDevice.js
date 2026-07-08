@@ -303,6 +303,29 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
       )
   }
 
+  // pin the vendor without changing the type, e.g. a Framework laptop
+  // whose MAC registry entry still says ASUSTeK
+  const correctBrand = (vendor) => {
+    if (!device.MAC || !vendor) {
+      return
+    }
+
+    classifyAPI
+      .correct(device.MAC, {
+        Vendor: vendor,
+        Model: classification?.Model || '',
+        Category: classification?.Category || 'unknown',
+        Evidence: ['user correction']
+      })
+      .then((result) => {
+        setClassification(result)
+        context.success('Brand saved')
+      })
+      .catch((error) =>
+        context.error('[API] classification correction error: ' + error.message)
+      )
+  }
+
   const resetClassification = () => {
     if (!device.MAC) {
       return
@@ -330,6 +353,60 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
       )
   }
 
+  const isRandomMAC = (mac) => {
+    let octet = parseInt(mac?.slice(0, 2), 16)
+    return !isNaN(octet) && (octet & 0x02) != 0 && (octet & 0x01) == 0
+  }
+
+  const deviceOUI = () =>
+    device.MAC && !isRandomMAC(device.MAC) ? device.MAC.slice(0, 8) : ''
+
+  const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+  const createRuleFromDevice = async () => {
+    if (!device.MAC || !classification) {
+      return
+    }
+
+    let signals = {}
+    try {
+      signals = await classifyAPI.signals(device.MAC)
+    } catch (err) {}
+
+    let draftRule = {
+      Vendor: classification.Vendor || '',
+      Category: classification.Category || '',
+      Weight: 3
+    }
+
+    if (signals.Hostname) {
+      draftRule.SignalType = 'hostname'
+      draftRule.Pattern =
+        '^' + escapeRegex(signals.Hostname.replace(/[-_]?\d+$/, ''))
+    } else if (signals.Services?.length) {
+      draftRule.SignalType = 'mdns_service'
+      draftRule.Pattern = escapeRegex(signals.Services[0])
+    } else if (signals.OUIVendor) {
+      draftRule.SignalType = 'mac_vendor'
+      draftRule.Pattern = escapeRegex(signals.OUIVendor)
+    } else if (deviceOUI()) {
+      draftRule.SignalType = 'oui'
+      draftRule.Pattern = '^' + escapeRegex(deviceOUI())
+    } else {
+      context.error('Not enough signals to build a rule from this device')
+      return
+    }
+
+    navigate('/admin/devices', {
+      state: {
+        tab: 'Classification',
+        draftRule,
+        fingerprint: { OUI: deviceOUI() || undefined, ...signals },
+        deviceName: device.Name || device.MAC
+      }
+    })
+  }
+
   const shareClassification = async () => {
     if (!device.MAC || !classification) {
       return
@@ -345,7 +422,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     delete signals.RandomMAC
     let txt = {}
     for (let key of Object.keys(signals.TXT || {})) {
-      if (!key.match(/id|mac|serial|token|key|uuid|addr/i)) {
+      if (!key.match(/id|mac|serial|token|key|uuid|addr|auth|secret|sig|pass|cert|tag/i)) {
         txt[key] = signals.TXT[key]
       }
     }
@@ -369,7 +446,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
           Vendor: classification.Vendor,
           Category: classification.Category,
           Model: classification.Model,
-          Signals: signals
+          Signals: { OUI: deviceOUI() || undefined, ...signals }
         },
         null,
         2
@@ -597,6 +674,8 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
       handleTags(tags.concat(value))
     } else if (modalType.match(/Category/i)) {
       correctClassification(value.trim().toLowerCase())
+    } else if (modalType.match(/Brand/i)) {
+      correctBrand(value.trim())
     }
   }
 
@@ -700,7 +779,12 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
           setModalType('Category')
           setShowModal(true)
         }}
+        onBrand={() => {
+          setModalType('Brand')
+          setShowModal(true)
+        }}
         onShare={shareClassification}
+        onCreateRule={createRuleFromDevice}
       />
 
       <FormControl display={isSimpleMode ? 'none' : 'flex'}>

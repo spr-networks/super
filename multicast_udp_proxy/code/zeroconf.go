@@ -35,6 +35,28 @@ type zeroconfPacket struct {
 
 var zeroconfChan = make(chan zeroconfPacket, 128)
 
+// only descriptive metadata is collected, everything else (auth material,
+// device ids, friendly names) is dropped at the source
+var allowedTXTKeys = map[string]bool{
+	"model":        true, //generic + airplay
+	"md":           true, //homekit, googlecast: model name
+	"am":           true, //airplay: model
+	"ty":           true, //ipp: make and model
+	"product":      true, //ipp
+	"usb_mdl":      true, //ipp: usb model
+	"usb_mfg":      true, //ipp: usb manufacturer
+	"mfg":          true,
+	"manufacturer": true,
+	"ci":           true, //homekit: accessory category
+	"pv":           true, //homekit: protocol version
+	"pdl":          true, //ipp: page description languages
+	"ve":           true, //googlecast: version
+	"ver":          true,
+	"srcvers":      true, //airplay: source version
+	"platform":     true,
+	"protovers":    true,
+}
+
 func queueZeroconf(srcIP string, port int, data []byte) {
 	packet := zeroconfPacket{srcIP, port, make([]byte, len(data))}
 	copy(packet.data, data)
@@ -77,7 +99,7 @@ func decodeMDNS(data []byte, zdev *ZeroconfDevice) {
 		case *dnsmessage.TXTResource:
 			for _, txt := range body.TXT {
 				key, value, found := strings.Cut(txt, "=")
-				if found && key != "" {
+				if found && allowedTXTKeys[strings.ToLower(key)] {
 					zdev.TXT[key] = value
 				}
 			}

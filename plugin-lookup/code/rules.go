@@ -10,7 +10,7 @@ import (
 )
 
 type Rule struct {
-	SignalType string //oui (mac prefix), mac_vendor, hostname, mdns_service, mdns_txt, ssdp
+	SignalType string //oui (mac prefix), mac_vendor, hostname, mdns_service, mdns_txt, ssdp, dns, vendor_class, dhcp_params
 	Pattern    string
 	Vendor     string
 	Category   string
@@ -33,13 +33,16 @@ type FingerprintDB struct {
 }
 
 type DeviceSignals struct {
-	MAC         string
-	RandomMAC   bool
-	OUIVendor   string
-	Hostname    string
-	Services    []string
-	TXT         map[string]string
-	SSDPHeaders map[string]string
+	MAC          string
+	RandomMAC    bool
+	OUIVendor    string
+	Hostname     string
+	VendorClass  string //dhcp option 60
+	ParamReqList string //dhcp option 55, comma separated option numbers
+	Services     []string
+	TXT          map[string]string
+	SSDPHeaders  map[string]string
+	Domains      []string //dns queries, deduped, capped
 }
 
 type Classification struct {
@@ -84,7 +87,7 @@ func compileRulePattern(pattern string) (*regexp.Regexp, error) {
 	return regexp.Compile("(?i)" + pattern)
 }
 
-var validSignalTypes = []string{"oui", "mac_vendor", "hostname", "mdns_service", "mdns_txt", "ssdp"}
+var validSignalTypes = []string{"oui", "mac_vendor", "hostname", "mdns_service", "mdns_txt", "ssdp", "dns", "vendor_class", "dhcp_params"}
 
 // validate and compile user-supplied rules in place
 func compileRules(rules []Rule) error {
@@ -133,6 +136,12 @@ func signalValues(signals *DeviceSignals) map[string][]string {
 	if signals.Hostname != "" {
 		values["hostname"] = []string{signals.Hostname}
 	}
+	if signals.VendorClass != "" {
+		values["vendor_class"] = []string{signals.VendorClass}
+	}
+	if signals.ParamReqList != "" {
+		values["dhcp_params"] = []string{signals.ParamReqList}
+	}
 	values["mdns_service"] = signals.Services
 	for key, value := range signals.TXT {
 		values["mdns_txt"] = append(values["mdns_txt"], key+"="+value)
@@ -140,6 +149,7 @@ func signalValues(signals *DeviceSignals) map[string][]string {
 	for key, value := range signals.SSDPHeaders {
 		values["ssdp"] = append(values["ssdp"], key+": "+value)
 	}
+	values["dns"] = signals.Domains
 
 	return values
 }

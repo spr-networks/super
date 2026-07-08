@@ -33,7 +33,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { XIcon, TagIcon, UsersIcon } from 'lucide-react-native'
 
 //TODO support multi on/off select
-const TagSelect = ({ sections, value, onChange, ...props }) => {
+export const TagSelect = ({ sections, value, onChange, ...props }) => {
   const [isOpen, setIsOpen] = useState(false)
 
   let menuProps = {}

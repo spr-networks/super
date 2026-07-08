@@ -1,6 +1,15 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.1.8
+** Features **
+- Add topology map and mesh/API support for it
+- Add device classification flows
+- Add more filters for bulk editing
+** Fixes **
+- Improve mesh refresh for api restarts
+- Cache attestation results
+
 ## v1.1.7
 ** Features **
 - Add new ui themes

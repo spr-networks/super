@@ -116,7 +116,11 @@ export const computeLayout = (nodes, edges, collapsedIDs = []) => {
   const rows = {}
   const depths = {}
   const visible = new Set(['router', ...uplinks])
+  const blocks = []
+  const blockOf = {}
   let nextRow = 0
+
+  const MAX_COLUMN_ROWS = 10
 
   const walk = (id, depth) => {
     depths[id] = depth
@@ -125,14 +129,43 @@ export const computeLayout = (nodes, edges, collapsedIDs = []) => {
       rows[id] = nextRow++
       return rows[id]
     }
+
     let first = null
     let last = null
-    kids.forEach((kid) => {
-      visible.add(kid)
-      const row = walk(kid, depth + 1)
+    const visit = (row) => {
       if (first == null) first = row
       last = row
+    }
+
+    const leafKids = kids.filter((kid) => !(treeChildren[kid] || []).length)
+    const branchKids = kids.filter((kid) => (treeChildren[kid] || []).length)
+
+    branchKids.forEach((kid) => {
+      visible.add(kid)
+      visit(walk(kid, depth + 1))
     })
+
+    if (leafKids.length > MAX_COLUMN_ROWS) {
+      //wrap a large fan of leaves into a grid block with one connector
+      const blockStart = nextRow
+      const blockID = 'block:' + id
+      leafKids.forEach((kid, index) => {
+        visible.add(kid)
+        depths[kid] = depth + 1 + Math.floor(index / MAX_COLUMN_ROWS)
+        rows[kid] = blockStart + (index % MAX_COLUMN_ROWS)
+        blockOf[kid] = blockID
+      })
+      blocks.push({ id: blockID, parent: id, members: leafKids })
+      nextRow = blockStart + Math.min(leafKids.length, MAX_COLUMN_ROWS)
+      visit(blockStart)
+      visit(nextRow - 1)
+    } else {
+      leafKids.forEach((kid) => {
+        visible.add(kid)
+        visit(walk(kid, depth + 1))
+      })
+    }
+
     rows[id] = (first + last) / 2
     return rows[id]
   }
@@ -173,6 +206,24 @@ export const computeLayout = (nodes, edges, collapsedIDs = []) => {
     maxRow = Math.max(maxRow, rows[id] - minRow)
   })
 
+  blocks.forEach((block) => {
+    let minX = Infinity
+    let maxX = -Infinity
+    let minY = Infinity
+    let maxY = -Infinity
+    block.members.forEach((member) => {
+      const position = positions[member]
+      minX = Math.min(minX, position.x)
+      maxX = Math.max(maxX, position.x)
+      minY = Math.min(minY, position.y)
+      maxY = Math.max(maxY, position.y)
+    })
+    block.x = minX - 80
+    block.y = minY - 42
+    block.width = maxX - minX + 160
+    block.height = maxY - minY + 96
+  })
+
   const junctions = []
   visible.forEach((id) => {
     if (byID[id]?.Kind == 'device') return
@@ -205,6 +256,8 @@ export const computeLayout = (nodes, edges, collapsedIDs = []) => {
     childrenOf: treeChildren,
     byID,
     uplinks,
+    blocks,
+    blockOf,
     width: MARGIN_X * 2 + (maxDepth + 0.6) * COL_WIDTH,
     height: MARGIN_Y * 2 + (maxRow + 0.5) * ROW_HEIGHT
   }

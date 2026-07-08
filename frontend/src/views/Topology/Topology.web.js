@@ -224,7 +224,10 @@ const TopologyNode = React.memo(({ node, position, palette, selected, dimmed, on
         mt="$1.5"
         fontWeight="$semibold"
         numberOfLines={1}
-        style={{ color: isolated ? palette.isolated : palette.label }}
+        color={
+          isolated ? '$red500' : selected ? '$primary500' : '$textLight900'
+        }
+        sx={isolated || selected ? {} : { _dark: { color: '$textDark100' } }}
       >
         {nodeTitle(node)}
       </Text>
@@ -232,18 +235,12 @@ const TopologyNode = React.memo(({ node, position, palette, selected, dimmed, on
         mt={3}
         w={26}
         h={1}
-        style={{
-          backgroundColor: isolated ? palette.isolated : palette.label,
-          opacity: 0.45
-        }}
+        opacity={0.4}
+        bg={isolated ? '$red500' : '$muted400'}
+        sx={isolated ? {} : { _dark: { bg: '$muted600' } }}
       />
       {nodeSubtitle(node) ? (
-        <Text
-          size="2xs"
-          mt="$0.5"
-          numberOfLines={1}
-          style={{ color: palette.sublabel }}
-        >
+        <Text size="2xs" mt="$0.5" numberOfLines={1} color="$muted500">
           {nodeSubtitle(node)}
         </Text>
       ) : null}
@@ -262,17 +259,22 @@ const Stat = ({ label, value }) => (
   </VStack>
 )
 
-const EditablePills = ({ title, values, known, allowAdd = true, onChange }) => {
+const EditablePills = ({ title, values, addOptions, allowAdd = true, onChange }) => {
   const [adding, setAdding] = useState(false)
   const [text, setText] = useState('')
-  const all = [...new Set([...(known || []), ...(values || [])])].sort()
+  //show only assigned values; toggled-off ones stay gray for this view
+  const [removed, setRemoved] = useState([])
+  const all = [...new Set([...(values || []), ...removed])].sort()
 
-  const toggle = (name) =>
-    onChange(
-      values?.includes(name)
-        ? values.filter((entry) => entry != name)
-        : [...(values || []), name]
-    )
+  const toggle = (name) => {
+    if (values?.includes(name)) {
+      setRemoved((current) => [...new Set([...current, name])])
+      onChange(values.filter((entry) => entry != name))
+    } else {
+      setRemoved((current) => current.filter((entry) => entry != name))
+      onChange([...(values || []), name])
+    }
+  }
 
   const add = () => {
     const name = text.trim()
@@ -303,16 +305,35 @@ const EditablePills = ({ title, values, known, allowAdd = true, onChange }) => {
           )
         })}
         {!allowAdd ? null : adding ? (
-          <Input size="sm" w={130} mb="$1">
-            <InputField
-              autoFocus
-              value={text}
-              placeholder={`new ${title.toLowerCase().replace(/s$/, '')}`}
-              onChangeText={setText}
-              onSubmitEditing={add}
-              onBlur={add}
-            />
-          </Input>
+          addOptions ? (
+            addOptions
+              .filter((name) => !all.includes(name))
+              .map((name) => (
+                <Pressable
+                  key={'add:' + name}
+                  onPress={() => {
+                    onChange([...(values || []), name])
+                    setAdding(false)
+                  }}
+                  mb="$1"
+                >
+                  <Badge action="muted" variant="outline">
+                    <BadgeText>{name}</BadgeText>
+                  </Badge>
+                </Pressable>
+              ))
+          ) : (
+            <Input size="sm" w={130} mb="$1">
+              <InputField
+                autoFocus
+                value={text}
+                placeholder={`new ${title.toLowerCase().replace(/s$/, '')}`}
+                onChangeText={setText}
+                onSubmitEditing={add}
+                onBlur={add}
+              />
+            </Input>
+          )
         ) : (
           <Pressable onPress={() => setAdding(true)} mb="$1">
             <Badge action="muted" variant="outline">
@@ -354,6 +375,7 @@ const FIELD_LABELS = {
   TinyNet: 'Subnet /30',
   VLANTag: 'VLAN',
   MAC: 'MAC',
+  SSID: 'SSID',
   Iface: 'Interface',
   ConnType: 'Connection'
 }
@@ -369,7 +391,7 @@ const DetailPanel = ({
   onUpdateDevice,
   onConnect
 }) => {
-  const fields = ['IP', 'TinyNet', 'VLANTag', 'MAC', 'Iface', 'ConnType'].filter(
+  const fields = ['IP', 'TinyNet', 'VLANTag', 'MAC', 'SSID', 'Iface', 'ConnType'].filter(
     (field) => node[field]
   )
   const identity = node.MAC || node.ID?.replace(/^dev:/, '')
@@ -444,6 +466,19 @@ const DetailPanel = ({
             </HStack>
           ) : null}
 
+          {node.Radio
+            ? radioRows(node.Radio).map((row) => (
+                <HStack key={row.label} justifyContent="space-between" space="md">
+                  <Text size="xs" color="$muted500">
+                    {row.label}
+                  </Text>
+                  <Text size="xs" maxWidth={170} textAlign="right">
+                    {row.value}
+                  </Text>
+                </HStack>
+              ))
+            : null}
+
           {node.Signal ? (
             <HStack space="md">
               <Stat label="RSSI" value={`${node.Signal.RSSI} dBm`} />
@@ -455,22 +490,22 @@ const DetailPanel = ({
           {editable ? (
             <>
               <EditablePills
+                key={node.ID + ':policies'}
                 title="Policies"
                 values={node.Policies}
-                known={EDITABLE_POLICIES}
-                allowAdd={false}
+                addOptions={EDITABLE_POLICIES}
                 onChange={(next) => onUpdateDevice(identity, { Policies: next })}
               />
               <EditablePills
+                key={node.ID + ':groups'}
                 title="Groups"
                 values={node.Groups}
-                known={options?.groups}
                 onChange={(next) => onUpdateDevice(identity, { Groups: next })}
               />
               <EditablePills
+                key={node.ID + ':tags'}
                 title="Tags"
                 values={node.Tags}
-                known={options?.tags}
                 onChange={(next) => onUpdateDevice(identity, { DeviceTags: next })}
               />
             </>
@@ -636,9 +671,22 @@ const linkPanelInfo = (link, byID) => {
     type = 'WiFi'
     if (radio.SSID) rows.push({ label: 'SSID', value: radio.SSID })
     rows.push({ label: 'AP', value: radio.Name })
+    if (radio.Radio?.Freq) {
+      rows.push({
+        label: 'Band',
+        value: `${bandFromFreq(radio.Radio.Freq)} · ch ${radio.Radio.Channel}`
+      })
+    }
+    if (device.Signal?.Caps?.length) {
+      rows.push({
+        label: 'Capabilities',
+        value: `${stationGeneration(device.Signal.Caps)} (${device.Signal.Caps.join(', ')})`
+      })
+    }
   } else if (radio) {
     type = 'WiFi radio'
     if (radio.SSID) rows.push({ label: 'SSID', value: radio.SSID })
+    rows.push(...radioRows(radio.Radio))
   } else if (device?.ConnType == 'wireguard' || [a, b].some((n) => n.Kind == 'vpn')) {
     type = 'WireGuard'
   } else if ([a, b].some((n) => n.Kind == 'uplink')) {
@@ -736,6 +784,45 @@ const LinkPanel = ({ link, byID, compact, onClose }) => {
       </VStack>
     </Box>
   )
+}
+
+const bandFromFreq = (freq) => {
+  if (!freq) return ''
+  if (freq >= 5925) return '6 GHz'
+  if (freq >= 5150) return '5 GHz'
+  return '2.4 GHz'
+}
+
+const WIFI_GEN = { be: 'Wi-Fi 7', ax: 'Wi-Fi 6', ac: 'Wi-Fi 5', n: 'Wi-Fi 4' }
+const CAP_GEN = { EHT: 'Wi-Fi 7', HE: 'Wi-Fi 6', VHT: 'Wi-Fi 5', HT: 'Wi-Fi 4' }
+
+const wifiGeneration = (modes) => {
+  for (const mode of ['be', 'ax', 'ac', 'n']) {
+    if (modes?.includes(mode)) return WIFI_GEN[mode]
+  }
+  return ''
+}
+
+const stationGeneration = (caps) => {
+  for (const cap of ['EHT', 'HE', 'VHT', 'HT']) {
+    if (caps?.includes(cap)) return CAP_GEN[cap]
+  }
+  return ''
+}
+
+const radioRows = (radio) => {
+  if (!radio) return []
+  const rows = []
+  if (radio.Freq) rows.push({ label: 'Band', value: bandFromFreq(radio.Freq) })
+  if (radio.Channel) rows.push({ label: 'Channel', value: `${radio.Channel}` })
+  if (radio.Modes?.length) {
+    rows.push({
+      label: 'Standard',
+      value: `${wifiGeneration(radio.Modes)} (802.11${radio.Modes.join('/')})`
+    })
+  }
+  rows.push({ label: 'Clients', value: `${radio.Stations || 0}` })
+  return rows
 }
 
 const EDITABLE_POLICIES = ['wan', 'dns', 'dns:family', 'lan', 'lan_upstream', 'noapi']
@@ -838,7 +925,7 @@ const LegendRow = ({ palette, dash, color, label, ring, arrow }) => (
         ) : null}
       </svg>
     )}
-    <Text size="2xs" style={{ color: palette.sublabel }}>
+    <Text size="2xs" color="$muted500">
       {label}
     </Text>
   </HStack>
@@ -1310,7 +1397,8 @@ const Topology = () => {
     )
   }
 
-  const { positions, visible, junctions, parentOf, byID, uplinks } = layout
+  const { positions, visible, junctions, parentOf, byID, uplinks, blocks, blockOf } =
+    layout
 
   const physicalLinks = useMemo(() => {
     const junctionByParent = Object.fromEntries(
@@ -1322,6 +1410,9 @@ const Topology = () => {
       if (id == 'router' || uplinks.includes(id)) return
       const parent = parentOf[id]
       if (!parent || !positions[parent] || !positions[id]) return
+
+      //block members share one connector; only the selection gets its own edge
+      if (blockOf[id] && id != selectedID) return
 
       const node = byID[id]
       const junction = junctionByParent[parent]
@@ -1346,6 +1437,24 @@ const Topology = () => {
           (id == selectedID ||
             (parentChain(selectedID, parentOf).includes(id) &&
               mode == 'physical'))
+      })
+    })
+
+    blocks.forEach((block) => {
+      const parent = block.parent
+      if (!positions[parent]) return
+      const junction = junctionByParent[parent]
+      const from = junction || {
+        x: positions[parent].x + NODE_ANCHOR,
+        y: positions[parent].y
+      }
+      links.push({
+        id: `${parent}>${block.id}`,
+        layer: 'l1',
+        block: true,
+        node: byID[block.members[0]],
+        path: linkPath(from.x, from.y, block.x - 4, block.y + block.height / 2),
+        onPath: false
       })
     })
 
@@ -1380,20 +1489,30 @@ const Topology = () => {
     })
 
     return links
-  }, [visible, positions, junctions, parentOf, byID, uplinks, selectedID, mode])
+  }, [visible, positions, junctions, parentOf, byID, uplinks, blocks, blockOf, selectedID, mode])
+
+  const POLICY_EDGE_RENDER_CAP = 150
 
   const policyLinks = useMemo(() => {
     if (mode != 'policy') return []
     const litIDs = selectedID ? new Set([selectedID, ...allowedPeers]) : null
-    return edges
-      .filter(
-        (edge) =>
-          edge.Layer == 'policy' &&
-          positions[edge.From] &&
-          positions[edge.To] &&
-          visible.has(edge.From) &&
-          visible.has(edge.To)
-      )
+    let policyEdges = edges.filter(
+      (edge) =>
+        edge.Layer == 'policy' &&
+        positions[edge.From] &&
+        positions[edge.To] &&
+        visible.has(edge.From) &&
+        visible.has(edge.To)
+    )
+    //too dense to read as a hairball: only draw edges touching the selection
+    if (policyEdges.length > POLICY_EDGE_RENDER_CAP) {
+      policyEdges = selectedID
+        ? policyEdges.filter(
+            (edge) => edge.From == selectedID || edge.To == selectedID
+          )
+        : []
+    }
+    return policyEdges
       .map((edge, index) => {
         const from = positions[edge.From]
         const to = positions[edge.To]
@@ -1552,6 +1671,32 @@ const Topology = () => {
                 <path d="M 0 1.5 L 8.5 5 L 0 8.5 z" fill={palette.endpoint} />
               </marker>
             </defs>
+            {blocks.map((block) => (
+              <g key={block.id} opacity={mode == 'policy' ? 0.3 : 1}>
+                <rect
+                  x={block.x}
+                  y={block.y}
+                  width={block.width}
+                  height={block.height}
+                  rx={16}
+                  fill={palette.iconBg}
+                  fillOpacity={0.25}
+                  stroke={palette.iconBorder}
+                  strokeDasharray="4 6"
+                />
+                <text
+                  x={block.x + 12}
+                  y={block.y + 16}
+                  fontSize={10}
+                  fontFamily="system-ui, sans-serif"
+                  fill={palette.sublabel}
+                  style={{ userSelect: 'none' }}
+                >
+                  {block.members.length} devices · {byID[block.parent]?.Name || ''}
+                </text>
+              </g>
+            ))}
+
             {physicalLinks.map((link) => {
               const dash = link.straight ? null : edgeDash(link.node)
               const live =
@@ -1621,7 +1766,7 @@ const Topology = () => {
             })}
 
             {[...physicalLinks, ...policyLinks]
-              .filter((link) => !link.straight)
+              .filter((link) => !link.straight && !link.block)
               .map((link) => (
                 <path
                   key={`hit:${link.id}`}
@@ -1822,6 +1967,29 @@ const Topology = () => {
             }}
           />
         </div>
+      ) : null}
+
+      {mode == 'policy' &&
+      !selectedID &&
+      policyLinks.length == 0 &&
+      edges.some((edge) => edge.Layer == 'policy') ? (
+        <HStack
+          position="absolute"
+          bottom={16}
+          left="50%"
+          style={{ transform: 'translateX(-50%)' }}
+          borderRadius={8}
+          borderWidth={1}
+          borderColor="$muted200"
+          sx={{ _dark: { borderColor: '$muted800', bg: '$backgroundCardDark' } }}
+          bg="$backgroundCardLight"
+          px="$3"
+          py="$1.5"
+        >
+          <Text size="xs" color="$muted500">
+            Too many rules to draw at once — select a device to see its access
+          </Text>
+        </HStack>
       ) : null}
 
       {connectFrom && !connectTarget ? (

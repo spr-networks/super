@@ -248,6 +248,7 @@ services:
       - "dns"
     volumes:
       - ${PWD}/state/api/:/state/api/
+      - ${PWD}/state/public/:/state/public/:ro
       - ${PWD}/state/plugins/plugin-lookup/:/state/plugins/plugin-lookup/
   packet_logs:
     container_name: superpacket_logs

@@ -1,4 +1,6 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
+import { Platform, Linking } from 'react-native'
+import { useLocation } from 'react-router-dom'
 import { AlertContext } from 'AppContext'
 import { classifyAPI } from 'api'
 
@@ -7,17 +9,17 @@ import {
   Button,
   ButtonIcon,
   ButtonText,
-  CloseIcon,
   HStack,
   Icon,
   Input,
   InputField,
   ScrollView,
   Text,
+  TrashIcon,
   VStack
 } from '@gluestack-ui/themed'
 
-import { FingerprintIcon } from 'lucide-react-native'
+import { FingerprintIcon, Share2Icon } from 'lucide-react-native'
 
 import { ListHeader } from 'components/List'
 import { Select } from 'components/Select'
@@ -28,7 +30,10 @@ const attributes = [
   { value: 'mac_vendor', label: 'MAC Vendor', placeholder: 'Espressif' },
   { value: 'mdns_service', label: 'mDNS Service', placeholder: '_ipp\\._tcp' },
   { value: 'mdns_txt', label: 'mDNS TXT', placeholder: '^md=Chromecast' },
-  { value: 'ssdp', label: 'SSDP Header', placeholder: 'Roku' }
+  { value: 'ssdp', label: 'SSDP Header', placeholder: 'Roku' },
+  { value: 'dns', label: 'DNS Query', placeholder: '\\.ring\\.com$' },
+  { value: 'vendor_class', label: 'DHCP Vendor Class', placeholder: '^android-dhcp' },
+  { value: 'dhcp_params', label: 'DHCP Params (opt 55)', placeholder: '^1,121,3,6' }
 ]
 
 const patternPlaceholder = (signalType) =>
@@ -40,6 +45,82 @@ const emptyRule = {
   Vendor: '',
   Category: '',
   Weight: 2
+}
+
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+// signals from a device fingerprint as candidate (attribute, pattern) pairs
+const fingerprintCandidates = (fingerprint) => {
+  let candidates = []
+
+  if (fingerprint.Hostname) {
+    candidates.push({
+      attribute: 'hostname',
+      display: fingerprint.Hostname,
+      pattern: '^' + escapeRegex(fingerprint.Hostname.replace(/[-_]?\d+$/, ''))
+    })
+  }
+  if (fingerprint.OUI) {
+    candidates.push({
+      attribute: 'oui',
+      display: fingerprint.OUI,
+      pattern: '^' + escapeRegex(fingerprint.OUI)
+    })
+  }
+  if (fingerprint.OUIVendor) {
+    candidates.push({
+      attribute: 'mac_vendor',
+      display: fingerprint.OUIVendor,
+      pattern: escapeRegex(fingerprint.OUIVendor)
+    })
+  }
+  for (let service of fingerprint.Services || []) {
+    candidates.push({
+      attribute: 'mdns_service',
+      display: service,
+      pattern: escapeRegex(service)
+    })
+  }
+  for (let key of Object.keys(fingerprint.TXT || {})) {
+    if (key.match(/auth|token|secret|nonce|seed|key/i)) {
+      continue
+    }
+    candidates.push({
+      attribute: 'mdns_txt',
+      display: `${key}=${fingerprint.TXT[key]}`,
+      pattern: '^' + escapeRegex(`${key}=${fingerprint.TXT[key]}`)
+    })
+  }
+  for (let key of Object.keys(fingerprint.SSDPHeaders || {})) {
+    candidates.push({
+      attribute: 'ssdp',
+      display: `${key}: ${fingerprint.SSDPHeaders[key]}`,
+      pattern: escapeRegex(fingerprint.SSDPHeaders[key])
+    })
+  }
+  for (let domain of fingerprint.Domains || []) {
+    candidates.push({
+      attribute: 'dns',
+      display: domain,
+      pattern: escapeRegex(domain) + '$'
+    })
+  }
+  if (fingerprint.VendorClass) {
+    candidates.push({
+      attribute: 'vendor_class',
+      display: fingerprint.VendorClass,
+      pattern: '^' + escapeRegex(fingerprint.VendorClass)
+    })
+  }
+  if (fingerprint.ParamReqList) {
+    candidates.push({
+      attribute: 'dhcp_params',
+      display: fingerprint.ParamReqList,
+      pattern: '^' + escapeRegex(fingerprint.ParamReqList) + '$'
+    })
+  }
+
+  return candidates
 }
 
 const normalizeRules = (rules) =>
@@ -60,7 +141,44 @@ const RuleField = ({ label, flex, children }) => (
   </VStack>
 )
 
-const RuleRow = ({ rule, onChange, onRemove }) => (
+const shareRule = (rule) => {
+  const target = [rule.Vendor, rule.Category].filter((p) => p).join(' ')
+  const title = `Shared SPR fingerprint rule: ${target || rule.Pattern}`
+  const body = [
+    `Classification rule for "${target}".`,
+    '',
+    '```json',
+    JSON.stringify(
+      {
+        SignalType: rule.SignalType,
+        Pattern: rule.Pattern,
+        Vendor: rule.Vendor,
+        Category: rule.Category,
+        Weight: parseInt(rule.Weight) || 1
+      },
+      null,
+      2
+    ),
+    '```',
+    '',
+    '#492'
+  ].join('\n')
+
+  const url =
+    'https://github.com/spr-networks/super/issues/new' +
+    '?title=' +
+    encodeURIComponent(title) +
+    '&body=' +
+    encodeURIComponent(body)
+
+  if (Platform.OS == 'web' && typeof window != 'undefined') {
+    window.open(url, '_blank')
+  } else {
+    Linking.openURL(url).catch(() => {})
+  }
+}
+
+const RuleRow = ({ rule, onChange, onRemove, onShare }) => (
   <HStack
     space="md"
     alignItems="flex-end"
@@ -129,24 +247,48 @@ const RuleRow = ({ rule, onChange, onRemove }) => (
       </Input>
     </RuleField>
 
+    {onShare ? (
+      <Button size="sm" action="secondary" variant="link" onPress={onShare}>
+        <ButtonIcon as={Share2Icon} />
+      </Button>
+    ) : null}
+
     <Button size="sm" action="negative" variant="link" onPress={onRemove}>
-      <ButtonIcon as={CloseIcon} />
+      <ButtonIcon as={TrashIcon} />
     </Button>
   </HStack>
 )
 
 const Classification = () => {
   const context = useContext(AlertContext)
+  const location = useLocation()
   const [customRules, setCustomRules] = useState([])
   const [builtinRules, setBuiltinRules] = useState([])
   const [overridden, setOverridden] = useState(false)
   const [editedCustom, setEditedCustom] = useState(false)
   const [editedBuiltin, setEditedBuiltin] = useState(false)
+  const [fingerprint, setFingerprint] = useState(null)
+  const [fingerprintName, setFingerprintName] = useState('')
+  const [draftIndex, setDraftIndex] = useState(null)
+  const consumedDraft = useRef(false)
 
   useEffect(() => {
     classifyAPI
       .customFingerprints()
-      .then(setCustomRules)
+      .then((rules) => {
+        // a draft rule handed over from a device page stays unsaved until
+        // the user hits Save
+        if (location.state?.draftRule && !consumedDraft.current) {
+          consumedDraft.current = true
+          setDraftIndex(rules.length)
+          setFingerprint(location.state.fingerprint || null)
+          setFingerprintName(location.state.deviceName || '')
+          setEditedCustom(true)
+          setCustomRules(rules.concat({ ...emptyRule, ...location.state.draftRule }))
+          return
+        }
+        setCustomRules(rules)
+      })
       .catch(() => {})
 
     classifyAPI
@@ -209,6 +351,60 @@ const Classification = () => {
     setEditedCustom(true)
   }
 
+  const deleteCustomRule = async (index) => {
+    let next = customRules.filter((_, i) => i != index)
+
+    if (draftIndex != null && index == draftIndex) {
+      //the draft was never saved, drop it locally
+      setCustomRules(next)
+      setDraftIndex(null)
+      return
+    }
+
+    let nextDraftIndex =
+      draftIndex != null && index < draftIndex ? draftIndex - 1 : draftIndex
+    //never persist an unsaved draft as a side effect of deleting
+    let toPersist =
+      nextDraftIndex != null ? next.filter((_, i) => i != nextDraftIndex) : next
+
+    try {
+      await classifyAPI.setCustomFingerprints(normalizeRules(toPersist))
+      setCustomRules(next)
+      setDraftIndex(nextDraftIndex)
+      setEditedCustom(nextDraftIndex != null)
+      context.success('Rule deleted')
+    } catch (err) {
+      showError(err)
+    }
+  }
+
+  const deleteBuiltinRule = async (index) => {
+    let next = builtinRules.filter((_, i) => i != index)
+    try {
+      let saved = await classifyAPI.setBuiltinFingerprints(normalizeRules(next))
+      setBuiltinRules(saved.Rules || [])
+      setOverridden(true)
+      setEditedBuiltin(false)
+      context.success('Rule deleted')
+    } catch (err) {
+      showError(err)
+    }
+  }
+
+  const useCandidate = (candidate) => {
+    if (draftIndex == null || draftIndex >= customRules.length) {
+      return
+    }
+    setCustomRules(
+      customRules.map((rule, i) =>
+        i == draftIndex
+          ? { ...rule, SignalType: candidate.attribute, Pattern: candidate.pattern }
+          : rule
+      )
+    )
+    setEditedCustom(true)
+  }
+
   return (
     <ScrollView h="$full">
       <ListHeader
@@ -246,6 +442,50 @@ const Classification = () => {
           Your Rules
         </Text>
 
+        {fingerprint ? (
+          <VStack
+            space="xs"
+            p="$3"
+            rounded="$lg"
+            borderWidth={1}
+            borderColor="$coolGray200"
+            bg="$backgroundLight50"
+            sx={{
+              _dark: { bg: '$backgroundDark800', borderColor: '$muted700' }
+            }}
+          >
+            <Text bold size="sm">
+              Fingerprint from {fingerprintName}
+            </Text>
+            <Text size="xs" color="$muted500">
+              Pick which signal the rule below should match, then adjust the
+              pattern and save
+            </Text>
+            {fingerprintCandidates(fingerprint).map((candidate, index) => (
+              <HStack
+                key={`${candidate.attribute}:${index}`}
+                space="md"
+                alignItems="center"
+              >
+                <Text size="xs" color="$muted500" w={100}>
+                  {candidate.attribute}
+                </Text>
+                <Text size="xs" flex={1} isTruncated>
+                  {candidate.display}
+                </Text>
+                <Button
+                  size="xs"
+                  action="secondary"
+                  variant="outline"
+                  onPress={() => useCandidate(candidate)}
+                >
+                  <ButtonText>Use</ButtonText>
+                </Button>
+              </HStack>
+            ))}
+          </VStack>
+        ) : null}
+
         {!customRules.length ? (
           <VStack space="md" alignItems="center" py="$4">
             <Icon as={FingerprintIcon} color="$muted400" size={32} />
@@ -263,6 +503,7 @@ const Classification = () => {
           <RuleRow
             key={index}
             rule={rule}
+            onShare={() => shareRule(rule)}
             onChange={(field, value) => {
               setCustomRules(
                 customRules.map((r, i) =>
@@ -271,10 +512,7 @@ const Classification = () => {
               )
               setEditedCustom(true)
             }}
-            onRemove={() => {
-              setCustomRules(customRules.filter((_, i) => i != index))
-              setEditedCustom(true)
-            }}
+            onRemove={() => deleteCustomRule(index)}
           />
         ))}
 
@@ -306,10 +544,7 @@ const Classification = () => {
               )
               setEditedBuiltin(true)
             }}
-            onRemove={() => {
-              setBuiltinRules(builtinRules.filter((_, i) => i != index))
-              setEditedBuiltin(true)
-            }}
+            onRemove={() => deleteBuiltinRule(index)}
           />
         ))}
       </VStack>

@@ -41,6 +41,7 @@ let mockTopoNodes = [
     Name: 'wlan1',
     Iface: 'wlan1',
     SSID: 'TestLab',
+    Radio: { Channel: 36, Freq: 5180, Modes: ['n', 'ac', 'ax'], Stations: 3 },
     Online: true
   },
   { ID: 'iface:wg0', Kind: 'vpn', Name: 'wg0', Iface: 'wg0', Online: true },
@@ -58,6 +59,7 @@ let mockTopoNodes = [
     Name: 'wlan0',
     Iface: 'wlan0',
     SSID: 'TestLab',
+    Radio: { Channel: 1, Freq: 2412, Modes: ['n', 'ax'], Stations: 1 },
     Online: true
   },
   {
@@ -81,7 +83,7 @@ let mockTopoNodes = [
     Groups: ['work'],
     Policies: ['wan', 'lan'],
     Tags: ['trusted'],
-    Signal: { RSSI: -54, TxRate: 540, RxRate: 360 },
+    Signal: { RSSI: -54, TxRate: 540, RxRate: 360, Caps: ['HT', 'VHT', 'HE'] },
     Online: true,
     Style: { Icon: 'Laptop', Color: '#14925f' }
   },
@@ -155,7 +157,7 @@ let mockTopoNodes = [
     Iface: 'wlan1',
     Groups: ['gaming'],
     Policies: ['wan'],
-    Signal: { RSSI: -62, TxRate: 390, RxRate: 300 },
+    Signal: { RSSI: -62, TxRate: 390, RxRate: 300, Caps: ['HT', 'VHT'] },
     Online: true,
     Style: { Icon: 'Gamepad', Color: '#107c10' }
   },
@@ -170,7 +172,7 @@ let mockTopoNodes = [
     Iface: 'wlan1',
     Groups: ['gaming'],
     Policies: ['wan'],
-    Signal: { RSSI: -71, TxRate: 180, RxRate: 120 },
+    Signal: { RSSI: -71, TxRate: 180, RxRate: 120, Caps: ['HT', 'VHT'] },
     Online: true,
     Style: { Icon: 'Gamepad', Color: '#0070d1' }
   },
@@ -185,7 +187,7 @@ let mockTopoNodes = [
     Iface: 'wlan0.4098',
     Groups: ['work'],
     Policies: ['wan'],
-    Signal: { RSSI: -66, TxRate: 240, RxRate: 180 },
+    Signal: { RSSI: -66, TxRate: 240, RxRate: 180, Caps: ['HT', 'HE'] },
     Online: true,
     Style: { Icon: 'Tablet', Color: '#0891b2' }
   }
@@ -235,6 +237,47 @@ const mockTopoL1Edges = [
     Metric: -71
   }
 ]
+
+//set localStorage 'mock-topo-scale' to N to demo the layout with N extra devices
+const topoScale = (() => {
+  try {
+    return parseInt(globalThis.localStorage?.getItem('mock-topo-scale')) || 0
+  } catch (e) {
+    return 0
+  }
+})()
+
+if (topoScale > 0) {
+  const pad = (n) => String(n).padStart(2, '0')
+  for (let i = 0; i < topoScale; i++) {
+    const mac = `aa:bb:cc:dd:${pad(Math.floor(i / 100))}:${pad(i % 100)}`
+    const wifi = i % 2 == 0
+    const id = 'dev:' + mac
+    mockTopoNodes.push({
+      ID: id,
+      Kind: 'device',
+      Name: 'device-' + i,
+      MAC: mac,
+      IP: '192.168.5.' + (i + 2),
+      ConnType: wifi ? 'wifi' : 'wired',
+      Iface: wifi ? 'wlan1' : 'eth1',
+      Groups: ['lanparty'],
+      Policies: ['wan', 'lan'],
+      Signal: wifi
+        ? { RSSI: -50 - (i % 40), TxRate: 300, RxRate: 200, Caps: ['HT', 'VHT'] }
+        : undefined,
+      Online: true,
+      Style: { Icon: 'Laptop', Color: '#2563eb' }
+    })
+    mockTopoL1Edges.push({
+      From: id,
+      To: wifi ? 'iface:wlan1' : 'iface:eth1',
+      Layer: 'l1',
+      Kind: wifi ? 'wifi' : 'wired',
+      Metric: wifi ? -55 : 0
+    })
+  }
+}
 
 const mockTopoPolicyEdges = () => {
   const isolated = (node) =>
@@ -2669,12 +2712,34 @@ export default function MockAPI(props = null) {
         if (!device) {
           return new Response(404, {}, { error: 'not found' })
         }
+        let name = device.Name || ''
+        let extras = {}
+        if (name.match(/tv|roku/i)) {
+          extras = {
+            Domains: ['scribe.logs.roku.com'],
+            Services: ['_googlecast._tcp.']
+          }
+        } else if (name.match(/iphone|android|phone/i)) {
+          extras = {
+            VendorClass: name.match(/iphone/i) ? '' : 'android-dhcp-14',
+            ParamReqList: name.match(/iphone/i)
+              ? '1,121,3,6,15,119,252'
+              : '1,3,6,15,26,28,51,58,59,43'
+          }
+        } else if (name.match(/rpi/i)) {
+          extras = { Domains: ['api.balena-cloud.com'], VendorClass: 'udhcp 1.36' }
+        }
+
         return {
-          Hostname: device.Name,
+          Hostname: name,
           OUIVendor: '',
           Services: [],
           TXT: {},
-          SSDPHeaders: {}
+          SSDPHeaders: {},
+          Domains: [],
+          VendorClass: '',
+          ParamReqList: '',
+          ...extras
         }
       })
 

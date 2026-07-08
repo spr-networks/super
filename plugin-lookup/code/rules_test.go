@@ -13,6 +13,9 @@ func testDB(t *testing.T) *FingerprintDB {
 		Rules: []Rule{
 			{SignalType: "hostname", Pattern: `^Ring`, Vendor: "Ring", Category: "camera", Weight: 3, Decisive: true},
 			{SignalType: "mdns_service", Pattern: `_ipp\._tcp`, Category: "printer", Weight: 3, Decisive: true},
+			{SignalType: "vendor_class", Pattern: `^android-dhcp`, Category: "phone", Weight: 2},
+			{SignalType: "dhcp_params", Pattern: `^1,121,3,6`, Vendor: "Apple", Weight: 2},
+			{SignalType: "dns", Pattern: `\.ring\.com$`, Vendor: "Ring", Category: "camera", Weight: 2},
 		},
 	}
 	for i := range db.Rules {
