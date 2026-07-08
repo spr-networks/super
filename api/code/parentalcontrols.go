@@ -31,6 +31,7 @@ type Persona struct {
 	Description       string
 	DailyLimitMinutes int
 	Schedules         []TimeWindow
+	DNSFamily         bool
 	Disabled          bool
 }
 
@@ -514,6 +515,35 @@ func setParentalExtend(w http.ResponseWriter, r *http.Request) {
 		gPersonasState.GrantUntil[tag] = time.Now().Add(time.Duration(req.Minutes) * time.Minute).Unix()
 	}
 	delete(gPersonasState.PauseUntil, tag)
+	savePersonasState()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(gPersonasState)
+}
+
+func setParentalReset(w http.ResponseWriter, r *http.Request) {
+	req := struct {
+		Tag string
+	}{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	ParentalMtx.Lock()
+	defer ParentalMtx.Unlock()
+	loadParentalConfig()
+
+	tag := resolvePersonaTag(req.Tag)
+	if tag == "" {
+		http.Error(w, "persona not found", 404)
+		return
+	}
+
+	ensureStateMaps()
+	delete(gPersonasState.UsedMinutes, tag)
+	delete(gPersonasState.PauseUntil, tag)
+	delete(gPersonasState.GrantUntil, tag)
 	savePersonasState()
 
 	w.Header().Set("Content-Type", "application/json")

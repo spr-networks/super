@@ -3259,6 +3259,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/parentalControls/usage", getParentalUsage).Methods("GET")
 	external_router_authenticated.HandleFunc("/parentalControls/pause", setParentalPause).Methods("PUT")
 	external_router_authenticated.HandleFunc("/parentalControls/extend", setParentalExtend).Methods("PUT")
+	external_router_authenticated.HandleFunc("/parentalControls/reset", setParentalReset).Methods("PUT")
 	external_router_authenticated.HandleFunc("/devices/bulk", handleBulkUpdateDevices).Methods("PUT")
 
 	external_router_authenticated.HandleFunc("/pendingPSK", pendingPSK).Methods("GET")
