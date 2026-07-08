@@ -13,11 +13,33 @@ const r = (n) => parseInt(Math.random() * n)
 const rpick = (l) => l[parseInt(r(l.length))]
 
 let mockCustomFingerprints = []
-let mockDbBuckets = {
-  'personas/list': [
-    { Label: 'gamer', Description: 'Game consoles and gaming PCs' },
-    { Label: 'kids', Description: "Kids' phones and tablets" }
-  ]
+let mockDbBuckets = {}
+let mockPersonas = [
+  {
+    Name: 'gamer',
+    Tag: 'persona:gamer',
+    Description: 'Game consoles and gaming PCs',
+    DailyLimitMinutes: 240,
+    Schedules: [
+      { Days: [1, 1, 1, 1, 1, 1, 1], Start: '00:00', End: '06:00' }
+    ],
+    Disabled: false
+  },
+  {
+    Name: 'kids',
+    Tag: 'persona:kids',
+    Description: "Kids' phones and tablets",
+    DailyLimitMinutes: 120,
+    Schedules: [
+      { Days: [0, 1, 1, 1, 1, 1, 0], Start: '21:00', End: '07:00' }
+    ],
+    Disabled: false
+  }
+]
+let mockPersonasState = {
+  UsedMinutes: { 'persona:gamer': 57, 'persona:kids': 120 },
+  PauseUntil: {},
+  GrantUntil: {}
 }
 const mockDefaultFingerprints = [
     { SignalType: 'hostname', Pattern: '^(ring|ring-|ringdoorbell|ringchime)', Vendor: 'Ring', Category: 'camera', Weight: 5, Decisive: true },
@@ -3955,6 +3977,107 @@ export default function MockAPI(props = null) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
         return []
+      })
+
+      this.get('/parentalControls/personas', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        return mockPersonas
+      })
+
+      this.put('/parentalControls/personas', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        let persona = JSON.parse(request.requestBody)
+        if (!persona.Tag) {
+          persona.Tag = `persona:${persona.Name}`
+        }
+        let idx = mockPersonas.findIndex((p) => p.Name == persona.Name)
+        if (idx >= 0) {
+          mockPersonas[idx] = persona
+        } else {
+          mockPersonas.push(persona)
+        }
+        return mockPersonas
+      })
+
+      this.del('/parentalControls/personas', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        let persona = JSON.parse(request.requestBody)
+        mockPersonas = mockPersonas.filter((p) => p.Name != persona.Name)
+        return mockPersonas
+      })
+
+      this.get('/parentalControls/usage', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        let now = parseInt(Date.now() / 1000)
+        let out = {}
+        for (let p of mockPersonas) {
+          let used = mockPersonasState.UsedMinutes[p.Tag] || 0
+          let pause = mockPersonasState.PauseUntil[p.Tag] || 0
+          let grant = mockPersonasState.GrantUntil[p.Tag] || 0
+          let blocked = false
+          if (!p.Disabled && grant <= now) {
+            blocked =
+              pause > now ||
+              (p.DailyLimitMinutes > 0 && used >= p.DailyLimitMinutes)
+          }
+          out[p.Tag] = {
+            Used: used,
+            Limit: p.DailyLimitMinutes,
+            Blocked: blocked,
+            PauseUntil: pause,
+            GrantUntil: grant
+          }
+        }
+        return out
+      })
+
+      this.put('/parentalControls/pause', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        let req = JSON.parse(request.requestBody)
+        let persona = mockPersonas.find(
+          (p) => p.Tag == req.Tag || p.Name == req.Tag
+        )
+        if (!persona) {
+          return new Response(404, {}, { error: 'persona not found' })
+        }
+        if (req.Minutes <= 0) {
+          delete mockPersonasState.PauseUntil[persona.Tag]
+        } else {
+          mockPersonasState.PauseUntil[persona.Tag] =
+            parseInt(Date.now() / 1000) + req.Minutes * 60
+        }
+        return mockPersonasState
+      })
+
+      this.put('/parentalControls/extend', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        let req = JSON.parse(request.requestBody)
+        let persona = mockPersonas.find(
+          (p) => p.Tag == req.Tag || p.Name == req.Tag
+        )
+        if (!persona) {
+          return new Response(404, {}, { error: 'persona not found' })
+        }
+        if (req.Minutes <= 0) {
+          delete mockPersonasState.GrantUntil[persona.Tag]
+        } else {
+          mockPersonasState.GrantUntil[persona.Tag] =
+            parseInt(Date.now() / 1000) + req.Minutes * 60
+        }
+        delete mockPersonasState.PauseUntil[persona.Tag]
+        return mockPersonasState
       })
     }
   })

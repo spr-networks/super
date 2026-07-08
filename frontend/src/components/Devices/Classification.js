@@ -31,7 +31,7 @@ import {
   Share2Icon
 } from 'lucide-react-native'
 
-import IconItem, { deviceIcons } from 'components/IconItem'
+import IconItem from 'components/IconItem'
 import { GroupItem, PolicyItem } from 'components/TagItem'
 
 const categoryOptions = [
