@@ -33,7 +33,7 @@ echo "SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}"
 
 # Strip group/world write so COPY layer modes don't depend on the umask of
 # whoever ran git checkout.
-[ -d .git ] && find . -path ./.git -prune -o -exec chmod go-w {} +
+[ -d .git ] && find . \( -path ./.git -o -name node_modules \) -prune -o ! -type l -exec chmod go-w {} +
 
 # remove prebuilt images
 FOUND_PREBUILT_IMAGE=false
