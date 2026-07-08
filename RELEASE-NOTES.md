@@ -6,6 +6,7 @@
 - Add topology map and mesh/API support for it
 - Add device classification flows
 - Add more filters for bulk editing
+- Parental controls for time limits
 ** Fixes **
 - Improve mesh refresh for api restarts
 - Cache attestation results

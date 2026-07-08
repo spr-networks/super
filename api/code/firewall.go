@@ -2316,6 +2316,9 @@ func addLANVerdict(IP string, Iface string) {
 }
 
 func addInternetVerdict(IP string, Iface string) {
+	if personaInternetBlocked(IP) {
+		return
+	}
 	verdict := getMapVerdict("internet_access")
 	err := AddElementToMapComplex("inet", "filter", "internet_access", []string{IP, Iface}, verdict)
 	if err != nil {

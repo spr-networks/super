@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { AlertContext } from 'AppContext'
-import { deviceAPI, dbAPI } from 'api'
+import { deviceAPI, dbAPI, parentalAPI } from 'api'
 
 import {
   AlertDialog,
@@ -9,6 +9,7 @@ import {
   AlertDialogContent,
   AlertDialogFooter,
   AlertDialogHeader,
+  AddIcon,
   Badge,
   BadgeIcon,
   BadgeText,
@@ -52,10 +53,69 @@ const deviceId = (device) => device.MAC || device.WGPubKey
 const selectableDevices = (devices) =>
   devices.filter((device) => deviceId(device) && device.MAC != 'pending')
 
-const AddPersona = ({ item, devices, onSave }) => {
+const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+
+const emptyWindow = () => ({ Days: [0, 0, 0, 0, 0, 0, 0], Start: '00:00', End: '06:00' })
+
+const ScheduleEditor = ({ schedule, onChange, onRemove }) => {
+  const toggleDay = (i) => {
+    let days = [...schedule.Days]
+    days[i] = days[i] ? 0 : 1
+    onChange({ ...schedule, Days: days })
+  }
+
+  return (
+    <VStack
+      space="sm"
+      p="$2"
+      borderWidth="$1"
+      borderColor="$borderColorCardBorder"
+      rounded="$md"
+    >
+      <HStack space="xs" flexWrap="wrap">
+        {DAY_LABELS.map((d, i) => (
+          <Button
+            key={i}
+            size="xs"
+            variant={schedule.Days[i] ? 'solid' : 'outline'}
+            action={schedule.Days[i] ? 'primary' : 'secondary'}
+            onPress={() => toggleDay(i)}
+          >
+            <ButtonText>{d}</ButtonText>
+          </Button>
+        ))}
+      </HStack>
+      <HStack space="sm" alignItems="center">
+        <Text size="sm">Block</Text>
+        <Input w="$20" size="sm">
+          <InputField
+            value={schedule.Start}
+            onChangeText={(v) => onChange({ ...schedule, Start: v })}
+            placeholder="00:00"
+          />
+        </Input>
+        <Text size="sm">to</Text>
+        <Input w="$20" size="sm">
+          <InputField
+            value={schedule.End}
+            onChangeText={(v) => onChange({ ...schedule, End: v })}
+            placeholder="06:00"
+          />
+        </Input>
+        <Button size="xs" variant="link" action="negative" onPress={onRemove}>
+          <ButtonIcon as={CloseIcon} />
+        </Button>
+      </HStack>
+    </VStack>
+  )
+}
+
+const AddPersona = ({ item, limit, devices, onSave }) => {
   const [label, setLabel] = useState(item?.Label || '')
   const [description, setDescription] = useState(item?.Description || '')
   const [selected, setSelected] = useState([])
+  const [dailyLimit, setDailyLimit] = useState('')
+  const [schedules, setSchedules] = useState([])
 
   useEffect(() => {
     setLabel(item?.Label || '')
@@ -69,7 +129,9 @@ const AddPersona = ({ item, devices, onSave }) => {
             .map(deviceId)
         : []
     )
-  }, [item, devices])
+    setDailyLimit(limit?.DailyLimitMinutes ? `${limit.DailyLimitMinutes}` : '')
+    setSchedules(limit?.Schedules || [])
+  }, [item, limit, devices])
 
   return (
     <VStack space="lg">
@@ -103,6 +165,54 @@ const AddPersona = ({ item, devices, onSave }) => {
             onChangeText={setDescription}
           />
         </Input>
+      </FormControl>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Daily internet limit (minutes)</FormControlLabelText>
+        </FormControlLabel>
+        <Input size="md" variant="underlined" w="$40">
+          <InputField
+            value={dailyLimit}
+            placeholder="0 = no limit"
+            keyboardType="numeric"
+            onChangeText={setDailyLimit}
+          />
+        </Input>
+        <FormControlHelper>
+          <FormControlHelperText>
+            Shared across all of this persona's devices, resets at 6am
+          </FormControlHelperText>
+        </FormControlHelper>
+      </FormControl>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>Block schedules</FormControlLabelText>
+        </FormControlLabel>
+        <VStack space="sm">
+          {schedules.map((s, i) => (
+            <ScheduleEditor
+              key={i}
+              schedule={s}
+              onChange={(ns) => {
+                let next = [...schedules]
+                next[i] = ns
+                setSchedules(next)
+              }}
+              onRemove={() => setSchedules(schedules.filter((_, idx) => idx !== i))}
+            />
+          ))}
+          <Button
+            size="xs"
+            variant="outline"
+            alignSelf="flex-start"
+            onPress={() => setSchedules([...schedules, emptyWindow()])}
+          >
+            <ButtonIcon as={AddIcon} mr="$1" />
+            <ButtonText>Add schedule</ButtonText>
+          </Button>
+        </VStack>
       </FormControl>
 
       <FormControl>
@@ -158,12 +268,14 @@ const AddPersona = ({ item, devices, onSave }) => {
 
       <Button
         action="primary"
-        onPress={() =>
+        onPress={() => {
+          let n = parseInt(dailyLimit, 10)
           onSave(
             { Label: normalizeLabel(label), Description: description.trim() },
-            selected
+            selected,
+            { DailyLimitMinutes: isNaN(n) ? 0 : n, Schedules: schedules }
           )
-        }
+        }}
       >
         <ButtonText>Save</ButtonText>
       </Button>
@@ -175,11 +287,20 @@ const Personas = () => {
   const context = useContext(AlertContext)
   const [personas, setPersonas] = useState([])
   const [devices, setDevices] = useState([])
+  const [limits, setLimits] = useState({}) // tag -> { DailyLimitMinutes, Schedules }
+  const [usage, setUsage] = useState({}) // tag -> { Used, Limit, Blocked, GrantUntil }
   const [editing, setEditing] = useState(null)
   const [deleting, setDeleting] = useState(null)
 
   const addRef = useRef(null)
   const editRef = useRef(null)
+
+  const refreshUsage = () => {
+    parentalAPI
+      .usage()
+      .then((u) => setUsage(u || {}))
+      .catch(() => {})
+  }
 
   const refresh = () => {
     dbAPI
@@ -193,10 +314,25 @@ const Personas = () => {
         setDevices(Array.isArray(result) ? result : Object.values(result))
       })
       .catch(() => {})
+
+    parentalAPI
+      .personas()
+      .then((list) => {
+        let m = {}
+        ;(list || []).forEach((p) => {
+          m[p.Tag] = p
+        })
+        setLimits(m)
+      })
+      .catch(() => {})
+
+    refreshUsage()
   }
 
   useEffect(() => {
     refresh()
+    const id = setInterval(refreshUsage, 30 * 1000)
+    return () => clearInterval(id)
   }, [])
 
   const members = (persona) =>
@@ -232,7 +368,21 @@ const Personas = () => {
     }
   }
 
-  const handleSave = (original) => async (persona, selected) => {
+  // persist the time-limit + schedules for a persona, keyed by its tag; the
+  // backend enforcement engine reads these joined to device persona tags
+  const saveLimits = async (original, persona, limitData) => {
+    if (original && original.Label != persona.Label) {
+      await parentalAPI.deletePersona({ Name: original.Label }).catch(() => {})
+    }
+    await parentalAPI.savePersona({
+      Name: persona.Label,
+      Tag: personaTag(persona.Label),
+      DailyLimitMinutes: limitData.DailyLimitMinutes,
+      Schedules: limitData.Schedules
+    })
+  }
+
+  const handleSave = (original) => async (persona, selected, limitData) => {
     if (!persona.Label) {
       context.error('Persona needs a name')
       return
@@ -247,6 +397,7 @@ const Personas = () => {
     try {
       await savePersonaList(others.concat(persona))
       await syncDeviceTags(original, persona, selected)
+      await saveLimits(original, persona, limitData)
     } catch (err) {
       context.error('Failed to save persona: ' + err.message)
     }
@@ -276,12 +427,29 @@ const Personas = () => {
         }
       }
       await savePersonaList(personas.filter((p) => p.Label != persona.Label))
+      await parentalAPI.deletePersona({ Name: persona.Label }).catch(() => {})
     } catch (err) {
       context.error('Failed to delete persona: ' + err.message)
     }
 
     refresh()
   }
+
+  const pausePersona = (persona) =>
+    parentalAPI
+      .pause(personaTag(persona.Label), 60)
+      .then(refreshUsage)
+      .catch(() => {})
+
+  const extendPersona = (persona) =>
+    parentalAPI
+      .extend(personaTag(persona.Label), 30)
+      .then(refreshUsage)
+      .catch(() => {})
+
+  const hasControls = (persona) =>
+    (usage[personaTag(persona.Label)]?.Limit || 0) > 0 ||
+    limits[personaTag(persona.Label)]?.Schedules?.length > 0
 
   const moreMenu = (persona) => (
     <Menu
@@ -314,64 +482,130 @@ const Personas = () => {
     </Menu>
   )
 
+  const usageLine = (persona) => {
+    let u = usage[personaTag(persona.Label)] || {}
+    let parts = []
+    if ((u.Limit || 0) > 0) {
+      parts.push(`${u.Used || 0}m of ${u.Limit}m today`)
+    }
+    let lim = limits[personaTag(persona.Label)]
+    if (lim?.Schedules?.length) {
+      parts.push(`${lim.Schedules.length} schedule(s)`)
+    }
+    return parts.join(' · ')
+  }
+
+  const statusBadge = (persona) => {
+    let u = usage[personaTag(persona.Label)]
+    if (!u) return null
+    if (u.Blocked) {
+      return (
+        <Badge action="error" variant="solid" size="sm">
+          <BadgeText>Timed out</BadgeText>
+        </Badge>
+      )
+    }
+    if (u.GrantUntil && u.GrantUntil * 1000 > Date.now()) {
+      return (
+        <Badge action="info" variant="solid" size="sm">
+          <BadgeText>Extended</BadgeText>
+        </Badge>
+      )
+    }
+    if (hasControls(persona)) {
+      return (
+        <Badge action="success" variant="outline" size="sm">
+          <BadgeText>Active</BadgeText>
+        </Badge>
+      )
+    }
+    return null
+  }
+
   return (
     <VStack>
       <ModalForm title="Edit Persona" modalRef={editRef}>
-        <AddPersona item={editing} devices={devices} onSave={handleSave(editing)} />
+        <AddPersona
+          item={editing}
+          limit={editing ? limits[personaTag(editing.Label)] : null}
+          devices={devices}
+          onSave={handleSave(editing)}
+        />
       </ModalForm>
 
       <ListHeader
         title="Personas"
-        description="Group devices under a person to target them together, for example in firewall rules"
+        description="Group devices under a person to target them together, set daily internet time limits and block schedules"
       >
         <ModalForm title="Add Persona" triggerText="Add Persona" modalRef={addRef}>
-          <AddPersona item={null} devices={devices} onSave={handleSave(null)} />
+          <AddPersona item={null} limit={null} devices={devices} onSave={handleSave(null)} />
         </ModalForm>
       </ListHeader>
 
       <FlatList
         data={personas}
-        renderItem={({ item }) => (
-          <ListItem>
-            <Icon as={UserIcon} color="$muted500" size={16} />
+        renderItem={({ item }) => {
+          let u = usage[personaTag(item.Label)] || {}
+          return (
+            <ListItem>
+              <Icon as={UserIcon} color="$muted500" size={16} />
 
-            <VStack flex={1}>
-              <Text bold>{item.Label}</Text>
-              <Text size="sm" color="$muted500" isTruncated>
-                {item.Description || ' '}
+              <VStack flex={1}>
+                <HStack space="sm" alignItems="center">
+                  <Text bold>{item.Label}</Text>
+                  {statusBadge(item)}
+                </HStack>
+                <Text size="sm" color="$muted500" isTruncated>
+                  {usageLine(item) || item.Description || ' '}
+                </Text>
+              </VStack>
+
+              <HStack
+                flex={2}
+                space="sm"
+                flexWrap="wrap"
+                display="none"
+                sx={{ '@md': { display: 'flex' } }}
+              >
+                {members(item).map((device) => (
+                  <Badge
+                    key={deviceId(device)}
+                    action={u.Blocked ? 'error' : 'muted'}
+                    variant="outline"
+                    size="sm"
+                    py="$1"
+                    px="$2"
+                    rounded="$lg"
+                  >
+                    <BadgeText>{device.Name || deviceId(device)}</BadgeText>
+                  </Badge>
+                ))}
+              </HStack>
+
+              <Text size="sm" color="$muted500" sx={{ '@md': { display: 'none' } }}>
+                {members(item).length}{' '}
+                {members(item).length == 1 ? 'device' : 'devices'}
               </Text>
-            </VStack>
 
-            <HStack
-              flex={2}
-              space="sm"
-              flexWrap="wrap"
-              display="none"
-              sx={{ '@md': { display: 'flex' } }}
-            >
-              {members(item).map((device) => (
-                <Badge
-                  key={deviceId(device)}
-                  action="muted"
+              {u.Blocked ? (
+                <Button size="xs" action="primary" onPress={() => extendPersona(item)}>
+                  <ButtonText>Extend 30m</ButtonText>
+                </Button>
+              ) : hasControls(item) ? (
+                <Button
+                  size="xs"
                   variant="outline"
-                  size="sm"
-                  py="$1"
-                  px="$2"
-                  rounded="$lg"
+                  action="secondary"
+                  onPress={() => pausePersona(item)}
                 >
-                  <BadgeText>{device.Name || deviceId(device)}</BadgeText>
-                </Badge>
-              ))}
-            </HStack>
+                  <ButtonText>Pause 1h</ButtonText>
+                </Button>
+              ) : null}
 
-            <Text size="sm" color="$muted500" sx={{ '@md': { display: 'none' } }}>
-              {members(item).length}{' '}
-              {members(item).length == 1 ? 'device' : 'devices'}
-            </Text>
-
-            {moreMenu(item)}
-          </ListItem>
-        )}
+              {moreMenu(item)}
+            </ListItem>
+          )
+        }}
         keyExtractor={(item) => item.Label}
       />
 
