@@ -51,6 +51,8 @@ type PluginConfig struct {
 	ComposeFilePath     string
 	HasUI               bool
 	SandboxedUI         bool
+	HasTopology         bool
+	Icon                string
 	InstallTokenPath    string
 	ScopedPaths         []string
 	NetworkCapabilities NetworkCapabilities
@@ -66,6 +68,8 @@ func (p PluginConfig) MatchesData(q PluginConfig) bool {
 		p.ComposeFilePath == q.ComposeFilePath &&
 		p.HasUI == q.HasUI &&
 		p.SandboxedUI == q.SandboxedUI &&
+		p.HasTopology == q.HasTopology &&
+		p.Icon == q.Icon &&
 		p.InstallTokenPath == q.InstallTokenPath &&
 		slices.Compare(p.ScopedPaths, q.ScopedPaths) == 0 &&
 		p.NetworkCapabilities.Interface == q.NetworkCapabilities.Interface &&
@@ -74,8 +78,8 @@ func (p PluginConfig) MatchesData(q PluginConfig) bool {
 }
 
 var gPlusExtensionDefaults = []PluginConfig{
-	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", false, false, "", []string{}, NetworkCapabilities{}},
-	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", false, false, "", []string{}, NetworkCapabilities{}},
+	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", false, false, false, "", "", []string{}, NetworkCapabilities{}},
+	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", false, false, false, "", "", []string{}, NetworkCapabilities{}},
 }
 
 var gPluginTemplates = []PluginConfig{

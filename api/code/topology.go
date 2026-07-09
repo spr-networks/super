@@ -531,7 +531,7 @@ func getPluginTopologies() []PluginTopology {
 	Configmtx.Lock()
 	plugins := []PluginConfig{}
 	for _, entry := range config.Plugins {
-		if entry.Enabled && entry.UnixPath != "" && entry.URI != "" {
+		if entry.Enabled && entry.HasTopology && entry.UnixPath != "" && entry.URI != "" {
 			plugins = append(plugins, entry)
 		}
 	}
