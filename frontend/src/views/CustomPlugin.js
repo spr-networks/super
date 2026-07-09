@@ -87,6 +87,7 @@ const PluginFrame = ({ name, ...props }) => {
   }
 
   useEffect(() => {
+    setSrcDoc(null)
     api
       .get('/plugins')
       .then((plugins) => {
@@ -215,16 +216,9 @@ const CustomPluginForm = () => {
 }
 
 const CustomPluginView = ({ ...props }) => {
-  const [name, setName] = useState(null)
   const params = useParams()
-
-  useEffect(() => {
-    let { name } = params
-    //default=:name
-    if (name !== ':name') {
-      setName(name)
-    }
-  }, [])
+  //default=:name
+  const name = params.name !== ':name' ? params.name : null
 
   let page = null
   if (name == null) {
