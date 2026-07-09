@@ -3,6 +3,13 @@
 
 ## v1.1.8
 ** Features **
+- Topology on react native, for iOS & android
+- Allow plugins to extend topology
+** Fixes **
+- Hostapd security update
+
+## v1.1.8
+** Features **
 - Add topology map and mesh/API support for it
 - Add device classification flows
 - Add more filters for bulk editing
