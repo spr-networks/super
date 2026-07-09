@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -27,7 +28,7 @@ type RadioInfo struct {
 
 type TopoNode struct {
 	ID       string
-	Kind     string // router | uplink | ap_radio | port | vpn | device | leaf_router | endpoint
+	Kind     string // router | uplink | ap_radio | port | vpn | device | leaf_router | endpoint | extension
 	Name     string
 	MAC      string         `json:",omitempty"`
 	IP       string         `json:",omitempty"`
@@ -492,6 +493,164 @@ func getMeshLeafTopologies() []MeshLeafTopology {
 	return leaves
 }
 
+type PluginTopology struct {
+	Name     string
+	URI      string
+	Topology Topology
+}
+
+func queryPluginTopology(unixPath string) (Topology, bool) {
+	c := http.Client{Timeout: 2 * time.Second}
+	c.Transport = &http.Transport{
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.Dial("unix", unixPath)
+		},
+	}
+	defer c.CloseIdleConnections()
+
+	resp, err := c.Get("http://plugin/topology")
+	if err != nil {
+		return Topology{}, false
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return Topology{}, false
+	}
+
+	topo := Topology{}
+	if json.NewDecoder(resp.Body).Decode(&topo) != nil {
+		return Topology{}, false
+	}
+	if len(topo.Nodes) == 0 {
+		return Topology{}, false
+	}
+	return topo, true
+}
+
+func getPluginTopologies() []PluginTopology {
+	Configmtx.Lock()
+	plugins := []PluginConfig{}
+	for _, entry := range config.Plugins {
+		if entry.Enabled && entry.UnixPath != "" && entry.URI != "" {
+			plugins = append(plugins, entry)
+		}
+	}
+	Configmtx.Unlock()
+
+	results := make([]PluginTopology, len(plugins))
+	found := make([]bool, len(plugins))
+	var wg sync.WaitGroup
+	for i, entry := range plugins {
+		wg.Add(1)
+		go func(i int, entry PluginConfig) {
+			defer wg.Done()
+			topo, ok := queryPluginTopology(entry.UnixPath)
+			if ok {
+				results[i] = PluginTopology{Name: entry.Name, URI: entry.URI, Topology: topo}
+				found[i] = true
+			}
+		}(i, entry)
+	}
+	wg.Wait()
+
+	out := []PluginTopology{}
+	for i := range results {
+		if found[i] {
+			out = append(out, results[i])
+		}
+	}
+	return out
+}
+
+var pluginTopoKinds = map[string]bool{
+	"device":   true,
+	"endpoint": true,
+	"vpn":      true,
+	"ap_radio": true,
+	"port":     true,
+}
+
+const maxPluginTopoNodes = 256
+
+func mergePluginTopology(topology *Topology, name string, uri string, pluginTopo Topology) {
+	rootID := "plugin:" + uri
+	prefix := rootID + ":"
+
+	//a node with ID "root" describes the plugin's own link (e.g. ConnType wireguard)
+	rootConnType := ""
+	for _, node := range pluginTopo.Nodes {
+		if node.ID == "root" && node.ConnType != "" {
+			rootConnType = node.ConnType
+			break
+		}
+	}
+	rootEdgeKind := rootConnType
+	if rootEdgeKind == "" {
+		rootEdgeKind = "wired"
+	}
+
+	topology.Nodes = append(topology.Nodes, TopoNode{ID: rootID, Kind: "extension", Name: name, ConnType: rootConnType, Online: true})
+	topology.Edges = append(topology.Edges, TopoEdge{From: "router", To: rootID, Layer: "l1", Kind: rootEdgeKind})
+
+	nodes := pluginTopo.Nodes
+	if len(nodes) > maxPluginTopoNodes {
+		nodes = nodes[:maxPluginTopoNodes]
+	}
+
+	added := map[string]bool{}
+	order := []string{}
+	for _, node := range nodes {
+		if node.ID == "" || node.ID == "root" {
+			continue
+		}
+		node.ID = prefix + node.ID
+		if added[node.ID] {
+			continue
+		}
+		if !pluginTopoKinds[node.Kind] {
+			node.Kind = "device"
+		}
+		topology.Nodes = append(topology.Nodes, node)
+		added[node.ID] = true
+		order = append(order, node.ID)
+	}
+
+	mapID := func(id string) string {
+		if id == "" || id == "root" || id == "router" {
+			return rootID
+		}
+		return prefix + id
+	}
+
+	linked := map[string]bool{}
+	for _, edge := range pluginTopo.Edges {
+		from := mapID(edge.From)
+		to := mapID(edge.To)
+		if from == to {
+			continue
+		}
+		if from != rootID && !added[from] {
+			continue
+		}
+		if to != rootID && !added[to] {
+			continue
+		}
+		kind := edge.Kind
+		if kind == "" {
+			kind = "wired"
+		}
+		topology.Edges = append(topology.Edges, TopoEdge{From: from, To: to, Layer: "l1", Kind: kind, Metric: edge.Metric})
+		linked[from] = true
+		linked[to] = true
+	}
+
+	for _, id := range order {
+		if !linked[id] {
+			topology.Edges = append(topology.Edges, TopoEdge{From: rootID, To: id, Layer: "l1", Kind: "wired"})
+		}
+	}
+}
+
 func removeTopoNode(topology *Topology, id string) {
 	nodes := topology.Nodes[:0]
 	for _, node := range topology.Nodes {
@@ -526,14 +685,21 @@ func mergeLeafTopology(topology *Topology, leafIP string, leafTopo Topology, onl
 	}
 
 	//the leaf also has a DHCP lease from us; drop its device node in favor of leafID
+	leafName := ""
 	for _, node := range topology.Nodes {
 		if node.Kind == "device" && node.IP == leafIP {
+			leafName = node.Name
 			removeTopoNode(topology, node.ID)
 			break
 		}
 	}
 
-	topology.Nodes = append(topology.Nodes, TopoNode{ID: leafID, Kind: "leaf_router", Name: "SPR Leaf", IP: leafIP, Online: online})
+	name := "SPR Leaf"
+	if leafName != "" {
+		name = leafName + " (Mesh Node)"
+	}
+
+	topology.Nodes = append(topology.Nodes, TopoNode{ID: leafID, Kind: "leaf_router", Name: name, IP: leafIP, Online: online})
 	topology.Edges = append(topology.Edges, TopoEdge{From: attachTo, To: leafID, Layer: "l1", Kind: "wired"})
 
 	if !online {
@@ -632,6 +798,10 @@ func showTopology(w http.ResponseWriter, r *http.Request) {
 	recentIPs := getRecentlyActiveIPs(5)
 	topology := buildTopology(devices, interfaces, getTopologyWifiStations(interfaces), arp, activeWG, endpoints, getAPStatus(interfaces), recentIPs)
 	mergeMeshTopology(&topology, arp, recentIPs)
+
+	for _, plugin := range getPluginTopologies() {
+		mergePluginTopology(&topology, plugin.Name, plugin.URI, plugin.Topology)
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(topology)
