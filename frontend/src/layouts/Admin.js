@@ -10,7 +10,8 @@ import {
   AlertContext,
   alertState,
   ModalContext,
-  modalState
+  modalState,
+  pluginMenuState
 } from 'AppContext'
 import AdminNavbar from 'components/Navbars/AdminNavbar'
 import Sidebar from 'components/Sidebar/Sidebar'
@@ -319,14 +320,10 @@ const AdminLayout = ({
   }
 
   const registerPluginRoutes = () => {
-    if (routes.filter((r) => r.name == 'Custom Plugins')?.length) {
-      return
-    }
-
     pluginAPI
       .list()
       .then((plugins) => {
-        let pluginsWithUI = plugins.filter((p) => p.HasUI)
+        let pluginsWithUI = plugins.filter((p) => p.HasUI && p.Enabled)
         let pluginRoutes = pluginsWithUI.map((p) => ({
           layout: 'admin',
           name: p.Name,
@@ -336,18 +333,26 @@ const AdminLayout = ({
           isSandboxed: p.SandboxedUI
         }))
 
-        if (pluginRoutes.length) {
+        //rebuild the group so menu entries track HasUI/Enabled changes
+        setRoutes((currentRoutes) => {
+          let rest = currentRoutes.filter((r) => r.name != 'Custom Plugins')
+          if (!pluginRoutes.length) {
+            return rest
+          }
+
           let routesNav = {
             name: 'Custom Plugins',
             state: 'customPluginsCollape',
             views: pluginRoutes
           }
 
-          setRoutes([...routes, routesNav])
-        }
+          return [...rest, routesNav]
+        })
       })
       .catch((err) => {})
   }
+
+  pluginMenuState.update = registerPluginRoutes
 
   //main init here
   useEffect(() => {

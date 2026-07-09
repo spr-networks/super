@@ -30,6 +30,11 @@ export const modalState = {
   toggleModal: () => {}
 }
 
+//lets plugin views refresh the sidebar menu after plugin changes
+export const pluginMenuState = {
+  update: () => {}
+}
+
 // TODO Toast
 export const AlertContext = createContext(alertState)
 export const ModalContext = createContext(modalState)

@@ -30,7 +30,7 @@ import PluginList from 'components/Plugins/PluginList'
 import { ListHeader } from 'components/List'
 
 import { api, pluginAPI } from 'api'
-import { alertState } from 'AppContext'
+import { alertState, pluginMenuState } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import AddPlugin from 'components/Plugins/AddPlugin'
 
@@ -85,6 +85,7 @@ const Plugins = (props) => {
       .list()
       .then((plugins) => {
         setList(plugins)
+        pluginMenuState.update()
         fetchVersions(plugins)
           .then((withVersion) => {})
           .catch((err) => {})

@@ -69,6 +69,16 @@ const getPluginHTML = async (plugin, theme) => {
   )}; window.SPR_THEME = ${JSON.stringify(theme || {})};</script>`
   html = html.replace('</head>', `${scriptTag}</head>`)
 
+  // srcdoc documents inherit the parent page's base URL, so relative asset
+  // paths in the plugin html (./static/js/...) would resolve against the SPR
+  // frontend instead of the plugin. Pin the base to the api's plugin static
+  // route (/admin/custom_plugin/<URI>/static/... -> plugin socket /static/...)
+  let baseHref = new URL(
+    `/admin/custom_plugin/${encodeURIComponent(plugin.URI)}/`,
+    api_url
+  ).toString()
+  html = html.replace('<head>', `<head><base href="${baseHref}"/>`)
+
   return html
 }
 
