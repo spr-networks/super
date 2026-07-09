@@ -1,18 +1,18 @@
 # syntax=docker/dockerfile:1@sha256:87999aa3d42bdc6bea60565083ee17e86d1f3339802f543c0d03998580f9cb89
 # check=skip=InvalidDefaultArgInFrom
-ARG ALPINE_REF
-ARG UBUNTU_REF
-ARG CONTAINER_TEMPLATE_REF
+ARG ALPINE_REF=alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
+ARG UBUNTU_REF=ubuntu:24.04@sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06ba2cef9ebffbc7092d90
+ARG CONTAINER_TEMPLATE_REF=ghcr.io/spr-networks/container_template@sha256:869ada7b121e9a0c552674042d32e801da3c4d04145638d9e722918c6377e65f
 ARG SOURCE_DATE_EPOCH
 
 FROM ${ALPINE_REF} AS cacerts
 
 FROM ${UBUNTU_REF} AS builder
 ENV DEBIAN_FRONTEND=noninteractive
-ARG UBUNTU_SNAPSHOT
-ARG GO_VERSION
-ARG GO_SHA256_AMD64
-ARG GO_SHA256_ARM64
+ARG UBUNTU_SNAPSHOT=20260701T000000Z
+ARG GO_VERSION=1.25.12
+ARG GO_SHA256_AMD64=234828b7a89e0e303d2556310ee549fbcf253d28de937bac3da13d6294262ac1
+ARG GO_SHA256_ARM64=8b5884aef89600aef5b0b051fb971f11f49bb996521e911f30f02a66884f7bd2
 ARG TARGETARCH
 COPY --from=cacerts /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 RUN set -eux; \
@@ -46,7 +46,7 @@ RUN --mount=type=tmpfs,target=/tmpfs \
 
 FROM ${CONTAINER_TEMPLATE_REF}
 ENV DEBIAN_FRONTEND=noninteractive
-ARG UBUNTU_SNAPSHOT
+ARG UBUNTU_SNAPSHOT=20260701T000000Z
 RUN set -eux; \
     printf 'Types: deb\nURIs: https://snapshot.ubuntu.com/ubuntu/%s\nSuites: noble noble-updates noble-security\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' "${UBUNTU_SNAPSHOT}" > /etc/apt/sources.list.d/ubuntu.sources; \
     printf 'APT::Install-Recommends "false";\nAcquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99reproducible
