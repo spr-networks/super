@@ -6,6 +6,7 @@
 - Topology on react native, for iOS & android
 - Allow plugins to extend topology
 ** Fixes **
+- Fix plugins UI glitches
 - Hostapd security update
 
 ## v1.1.8
