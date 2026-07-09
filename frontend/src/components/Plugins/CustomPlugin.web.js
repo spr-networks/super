@@ -1,88 +1,83 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useRef } from 'react'
 import PropTypes from 'prop-types'
 import { AppContext } from 'AppContext'
-import { useColorMode } from '@gluestack-style/react'
+import { themes } from 'Themes'
 
-//this is to set colorMode and other options
-const buildURL = (src) => {
-  const colorMode = useColorMode()
-
-  //if specified, skip setting
-  try {
-    if (new URLSearchParams(new URL(src).search).length) {
-      return src
-    }
-
-    let url = src
-    return `${url}?colorMode=${colorMode}`
-  } catch (err) {
-    return null
-  }
+const pluginThemePayload = (ctx) => {
+  let theme = ctx?.theme || 'default'
+  let customThemes = ctx?.customThemes || {}
+  let colorMode = ctx?.viewSettings?.colorMode || 'light'
+  let activeCustom = customThemes[theme]
+  let effectiveColorMode = activeCustom
+    ? activeCustom.colorMode
+    : themes[theme]?.colorMode || colorMode
+  let colors = customThemes[theme]?.colors || themes[theme]?.colors || {}
+  return { colorMode: effectiveColorMode, theme, colors }
 }
 
-//NOTE this is for custom plugin dev use
 const CustomPlugin = ({ ...props }) => {
   const context = useContext(AppContext)
-  const [isReady, setIsReady] = useState(false)
+  const ref = useRef(null)
+
+  const payload = pluginThemePayload(context)
+  const themeMessage = { type: 'spr:theme', ...payload }
 
   const isDoc = props.srcDoc ? true : false
-
-  //NOTE can pass both src and srcdoc, src is for dev mode
-  let src = !isDoc && props.src ? buildURL(props.src) : null
+  let src = null
+  if (!isDoc && props.src) {
+    try {
+      src = new URLSearchParams(new URL(props.src).search).toString().length
+        ? props.src
+        : `${props.src}?colorMode=${payload.colorMode}`
+    } catch (err) {
+      src = null
+    }
+  }
   let srcDoc = (isDoc && props.srcDoc) || null
 
-  const postMessage = (message) => {
-    if (typeof message !== 'string') {
-      message = JSON.stringify(message)
-    }
-
-    const doPostMessage = (message) => {
-      let targetOrigin = src ? new URL(src)?.origin : location.origin
-      ref.current.contentWindow.postMessage(message, targetOrigin)
-    }
-
-    //FIXME wait to be ready
-    if (!isReady) {
-      doPostMessage(message)
-    } else {
-      setTimeout(() => {
-        doPostMessage(message)
-      }, 100)
-    }
-  }
-
-  //forward colorMode
-  useEffect(() => {
-    if (!context?.viewSettings) {
+  const postTheme = () => {
+    if (!ref.current?.contentWindow) {
       return
     }
-
-    let { colorMode } = context.viewSettings
-    //postMessage({ colorMode })
-  }, [context?.viewSettings])
-
-  const ref = React.useRef(null)
-
-  //in the future, we will also support a more restricted plugin
-  //without access to login credentials.
-  if (props.isSandboxed === true) {
-    const sandbox = 'allow-scripts'
-    return React.createElement('iframe', {
-      src,
-      srcDoc,
-      ref,
-      style: { borderWidth: 0, height: "100vh" },
-      sandbox
-    })
-  } else {
-    return React.createElement('iframe', {
-      src,
-      srcDoc,
-      ref,
-      style: { borderWidth: 0, height: "100vh" },
-    })
+    ref.current.contentWindow.postMessage(JSON.stringify(themeMessage), '*')
   }
 
+  useEffect(() => {
+    postTheme()
+  }, [payload.colorMode, payload.theme, JSON.stringify(payload.colors)])
+
+  useEffect(() => {
+    const onMessage = (event) => {
+      if (!ref.current || event.source !== ref.current.contentWindow) {
+        return
+      }
+      let data = event.data
+      if (typeof data === 'string') {
+        try {
+          data = JSON.parse(data)
+        } catch (err) {
+          return
+        }
+      }
+      if (data && data.type === 'spr:ready') {
+        postTheme()
+      }
+    }
+    window.addEventListener('message', onMessage, false)
+    return () => window.removeEventListener('message', onMessage, false)
+  }, [payload.colorMode, payload.theme, JSON.stringify(payload.colors)])
+
+  const iframeProps = {
+    src,
+    srcDoc,
+    ref,
+    onLoad: postTheme,
+    style: { borderWidth: 0, height: '100vh' }
+  }
+  if (props.isSandboxed === true) {
+    iframeProps.sandbox = 'allow-scripts'
+  }
+  return React.createElement('iframe', iframeProps)
 }
 
 CustomPlugin.propTypes = {

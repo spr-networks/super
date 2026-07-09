@@ -217,6 +217,37 @@ let mockTopoNodes = [
     Signal: { RSSI: -66, TxRate: 240, RxRate: 180, Caps: ['HT', 'HE'] },
     Online: true,
     Style: { Icon: 'Tablet', Color: '#0891b2' }
+  },
+  {
+    ID: 'plugin:tailscale',
+    Kind: 'extension',
+    Name: 'TAILSCALE',
+    ConnType: 'wireguard',
+    Online: true
+  },
+  {
+    ID: 'plugin:tailscale:ts-laptop',
+    Kind: 'device',
+    Name: 'ts-laptop',
+    IP: '100.64.0.2',
+    ConnType: 'wireguard',
+    Online: true
+  },
+  {
+    ID: 'plugin:tailscale:ts-phone',
+    Kind: 'device',
+    Name: 'ts-phone',
+    IP: '100.64.0.3',
+    ConnType: 'wireguard',
+    Online: true
+  },
+  {
+    ID: 'plugin:tailscale:ts-exit',
+    Kind: 'device',
+    Name: 'exit-node',
+    IP: '100.64.0.9',
+    ConnType: 'wireguard',
+    Online: false
   }
 ]
 
@@ -262,6 +293,25 @@ const mockTopoL1Edges = [
     Layer: 'l1',
     Kind: 'wifi',
     Metric: -71
+  },
+  { From: 'router', To: 'plugin:tailscale', Layer: 'l1', Kind: 'wireguard' },
+  {
+    From: 'plugin:tailscale',
+    To: 'plugin:tailscale:ts-laptop',
+    Layer: 'l1',
+    Kind: 'wireguard'
+  },
+  {
+    From: 'plugin:tailscale',
+    To: 'plugin:tailscale:ts-phone',
+    Layer: 'l1',
+    Kind: 'wireguard'
+  },
+  {
+    From: 'plugin:tailscale',
+    To: 'plugin:tailscale:ts-exit',
+    Layer: 'l1',
+    Kind: 'wireguard'
   }
 ]
 

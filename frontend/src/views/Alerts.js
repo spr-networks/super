@@ -75,13 +75,34 @@ const Alerts = (props) => {
       .catch((err) => context.error(`failed to fetch alerts config`))
   }
 
+  const severityOf = (item, ruleSeverity = {}) => {
+    //older stored events lack NotificationType; fall back to the rule's current one
+    let level = item.NotificationType || ruleSeverity[item.RuleId] || ''
+    if (level == 'error' || level == 'danger') return 'error'
+    if (level == 'warning') return 'warning'
+    return 'info'
+  }
+
+  const countMax = 100
+
   const fetchAlertBuckets = async () => {
+    let ruleSeverity = {}
+    try {
+      const rules = await alertsAPI.list()
+      setConfig(rules)
+      for (const rule of rules || []) {
+        const level = rule.Actions?.[0]?.NotificationType
+        if (rule.RuleId && level) {
+          ruleSeverity[rule.RuleId] = level
+        }
+      }
+    } catch (err) {}
+
     let buckets = await dbAPI.buckets()
     buckets = buckets.filter((b) => b.startsWith(AlertPrefix))
     buckets.sort()
-    setTopics(buckets)
 
-    let withFilter = params
+    let withFilter = { ...params, num: countMax }
     if (searchField && searchField !== '') {
       withFilter['filter'] = prettyToJSONPath(searchField)
     } else {
@@ -89,25 +110,35 @@ const Alerts = (props) => {
     }
 
     const counts = {}
-    //TODO: Promise.allSettled(buckets.map(bucket => {
-    for (let bucket of buckets) {
-      try {
-        const result = await dbAPI.items(bucket, withFilter).then((result) => {
-          if (result) {
-            const filterFuncs = {
-              Resolved: (item) => item.State === 'Resolved',
-              New: (item) => item.State !== 'Resolved'
-            }
-            const filterFunc = filterFuncs[stateFilter] || ((item) => item)
-            const bucketName = prettyBucket(bucket)
-            counts[bucketName] = result.filter(filterFunc).length
-          }
-        })
-      } catch (err) {
-        console.error(err)
-      }
-    }
+    await Promise.allSettled(
+      buckets.map(async (bucket) => {
+        const result = await dbAPI.items(bucket, withFilter)
+        if (!result) return
+        const filterFuncs = {
+          Resolved: (item) => item.State === 'Resolved',
+          New: (item) => item.State !== 'Resolved'
+        }
+        const filterFunc = filterFuncs[stateFilter] || ((item) => item)
+        const items = result.filter(filterFunc)
+        counts[prettyBucket(bucket)] = {
+          total: items.length,
+          error: items.filter((item) => severityOf(item, ruleSeverity) == 'error')
+            .length,
+          warning: items.filter(
+            (item) => severityOf(item, ruleSeverity) == 'warning'
+          ).length
+        }
+      })
+    )
 
+    //most severe buckets first
+    const rank = (bucket) => {
+      const c = counts[prettyBucket(bucket)] || { total: 0, error: 0, warning: 0 }
+      return c.error * 1e6 + c.warning * 1e3 + c.total
+    }
+    buckets.sort((a, b) => rank(b) - rank(a))
+
+    setTopics(buckets)
     setBucketCounts(counts)
   }
 
@@ -175,7 +206,6 @@ const Alerts = (props) => {
   }, [selectedBucket, params, searchField, stateFilter])
 
   useEffect(() => {
-    fetchList()
     fetchAlertBuckets()
   }, [params, searchField, stateFilter])
 
@@ -219,6 +249,29 @@ const Alerts = (props) => {
 
   const stateChoices = ['New', 'Resolved', 'All']
 
+  const dayLabel = (timestamp) => {
+    const date = new Date(timestamp)
+    const today = new Date()
+    const yesterday = new Date(Date.now() - 24 * 3600e3)
+    if (date.toDateString() == today.toDateString()) return 'Today'
+    if (date.toDateString() == yesterday.toDateString()) return 'Yesterday'
+    return date.toLocaleDateString()
+  }
+
+  const withDayDividers = (items) => {
+    const rows = []
+    let lastDay = null
+    for (const item of items) {
+      const day = dayLabel(item.time)
+      if (day != lastDay) {
+        rows.push({ dayDivider: day })
+        lastDay = day
+      }
+      rows.push(item)
+    }
+    return rows
+  }
+
   const options = stateChoices.map((value) => ({
     label: value,
     value
@@ -230,26 +283,32 @@ const Alerts = (props) => {
     fetchAlertBuckets()
   }
 
-  const resolveAll = () => {
-    if (!logs || logs.length == 0) {
+  const resolveAll = async () => {
+    if (!selectedBucket) {
       return
     }
 
-    let logsResolved = logs
-      .filter((l) => l.State != 'Resolved')
-      .map((l) => {
-        return { ...l, State: 'Resolved' }
-      })
-      .slice(0, perPage) // max resolve 20
+    let withFilter = { ...params, num: 500 }
+    withFilter['filter'] = searchField ? prettyToJSONPath(searchField) : ''
 
-    Promise.all(
-      logsResolved.map((event) =>
-        dbAPI.putItem(event.AlertTopic, `timekey:${event.time}`, event)
+    let items = (await dbAPI.items(selectedBucket, withFilter)) || []
+    let unresolved = items.filter((l) => l.State != 'Resolved')
+    if (!unresolved.length) {
+      return
+    }
+
+    await Promise.all(
+      unresolved.map((event) =>
+        dbAPI.putItem(selectedBucket, `timekey:${event.time}`, {
+          ...event,
+          State: 'Resolved'
+        })
       )
-    ).then((res) => {
-      fetchLogs()
-      fetchAlertBuckets()
-    })
+    )
+
+    context.success(`Resolved ${unresolved.length} alerts`)
+    fetchLogs()
+    fetchAlertBuckets()
   }
 
   const handleBarClick = (label, count) => {
@@ -284,18 +343,27 @@ const Alerts = (props) => {
               }}
             />
           }
-          <Select
-            selectedValue={stateFilter}
-            onValueChange={(v) => onChangeStateFilter(v)}
+          <HStack
+            borderRadius={8}
+            borderWidth={1}
+            borderColor="$muted200"
+            sx={{ _dark: { borderColor: '$muted800' } }}
+            p="$0.5"
+            alignSelf="flex-start"
           >
-            {options.map((opt) => (
-              <Select.Item
-                key={opt.value}
-                label={opt.label}
-                value={opt.value}
-              />
+            {stateChoices.map((choice) => (
+              <Button
+                key={choice}
+                size="xs"
+                variant={stateFilter == choice ? 'solid' : 'link'}
+                action={stateFilter == choice ? 'primary' : 'secondary'}
+                onPress={() => onChangeStateFilter(choice)}
+                px="$3"
+              >
+                <ButtonText>{choice}</ButtonText>
+              </Button>
             ))}
-          </Select>
+          </HStack>
 
           <ModalForm
             title="Add Alert"
@@ -332,7 +400,7 @@ const Alerts = (props) => {
 
       {topics.map(
         (bucket) =>
-          bucketCounts[prettyBucket(bucket)] != 0 && (
+          bucketCounts[prettyBucket(bucket)]?.total !== 0 && (
             <Fragment key={bucket}>
               <Pressable
                 onPress={() =>
@@ -342,6 +410,7 @@ const Alerts = (props) => {
                 <HStack
                   p="$4"
                   space="md"
+                  alignItems="center"
                   borderBottomWidth={1}
                   borderColor={
                     colorMode == 'light' ? '$coolGray200' : '$coolGray800'
@@ -350,18 +419,35 @@ const Alerts = (props) => {
                   <Text sx="$md" bold>
                     {prettyBucket(bucket)}
                   </Text>
-                  <Badge
-                    action={bucket == selectedBucket ? 'success' : 'muted'}
-                    borderRadius={'$full'}
-                    variant="outline"
-                    size="md"
-                  >
-                    <BadgeText>
-                      {bucketCounts[prettyBucket(bucket)] == perPage
-                        ? perPage + '+'
-                        : bucketCounts[prettyBucket(bucket)] || 0}
-                    </BadgeText>
-                  </Badge>
+                  {(() => {
+                    const counts = bucketCounts[prettyBucket(bucket)]
+                    if (!counts) return null
+                    const rest = counts.total - counts.error - counts.warning
+                    const chip = (action, value, key) => (
+                      <Badge
+                        key={key}
+                        action={action}
+                        borderRadius={'$full'}
+                        variant={action == 'muted' ? 'outline' : 'solid'}
+                        size="md"
+                      >
+                        <BadgeText>
+                          {value >= countMax ? countMax - 1 + '+' : value}
+                        </BadgeText>
+                      </Badge>
+                    )
+                    return (
+                      <HStack space="xs">
+                        {counts.error > 0 ? chip('error', counts.error, 'e') : null}
+                        {counts.warning > 0
+                          ? chip('warning', counts.warning, 'w')
+                          : null}
+                        {rest > 0 || counts.total == 0
+                          ? chip('muted', rest, 'm')
+                          : null}
+                      </HStack>
+                    )
+                  })()}
                 </HStack>
               </Pressable>
               {selectedBucket === bucket && (
@@ -371,17 +457,31 @@ const Alerts = (props) => {
                     onBarClick={handleBarClick}
                   />
                   <FlatList
-                    data={logs}
+                    data={withDayDividers(logs)}
                     estimatedItemSize={100}
-                    renderItem={({ item }) => (
-                      <VStack>
-                        <AlertListItem
-                          item={item}
-                          notifyChange={onChangeEvent}
-                        />
-                      </VStack>
-                    )}
-                    keyExtractor={(item, index) => item.time + index}
+                    renderItem={({ item }) =>
+                      item.dayDivider ? (
+                        <Text
+                          size="xs"
+                          bold
+                          color="$muted500"
+                          px="$4"
+                          py="$2"
+                        >
+                          {item.dayDivider}
+                        </Text>
+                      ) : (
+                        <VStack>
+                          <AlertListItem
+                            item={item}
+                            notifyChange={onChangeEvent}
+                          />
+                        </VStack>
+                      )
+                    }
+                    keyExtractor={(item, index) =>
+                      (item.dayDivider || item.time) + index
+                    }
                     contentContainerStyle={{ paddingBottom: 48 }}
                   />
                 </ScrollView>
@@ -394,7 +494,7 @@ const Alerts = (props) => {
         renderInPortal={false}
         shadow={2}
         size="sm"
-        onPress={() => navigate(`/admin/alerts/:id`)}
+        onPress={() => navigate(`/admin/alerts/new`)}
         bg="$primary500"
       >
         <FabIcon as={AddIcon} mr="$1" />
