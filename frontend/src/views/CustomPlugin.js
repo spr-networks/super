@@ -22,10 +22,23 @@ import {
   useColorMode
 } from '@gluestack-ui/themed'
 
-import { AlertContext } from 'AppContext'
+import { AlertContext, AppContext } from 'AppContext'
 import { api, API } from 'api'
+import { themes } from 'Themes'
 
-const getPluginHTML = async (plugin) => {
+const pluginThemePayload = (ctx) => {
+  let theme = ctx?.theme || 'default'
+  let customThemes = ctx?.customThemes || {}
+  let colorMode = ctx?.viewSettings?.colorMode || 'light'
+  let activeCustom = customThemes[theme]
+  let effectiveColorMode = activeCustom
+    ? activeCustom.colorMode
+    : themes[theme]?.colorMode || colorMode
+  let colors = customThemes[theme]?.colors || themes[theme]?.colors || {}
+  return { colorMode: effectiveColorMode, theme, colors }
+}
+
+const getPluginHTML = async (plugin, theme) => {
   // fetch html from api using auth
   let Authorization = await api.getAuthHeaders()
   let headers = {
@@ -51,7 +64,9 @@ const getPluginHTML = async (plugin) => {
 
   let scriptTag = `<script>window.SPR_API_URL = ${JSON.stringify(
     api_url
-  )}; window.SPR_PLUGIN = ${JSON.stringify(pluginInfo)};</script>`
+  )}; window.SPR_PLUGIN = ${JSON.stringify(
+    pluginInfo
+  )}; window.SPR_THEME = ${JSON.stringify(theme || {})};</script>`
   html = html.replace('</head>', `${scriptTag}</head>`)
 
   return html
@@ -59,11 +74,12 @@ const getPluginHTML = async (plugin) => {
 
 const PluginFrame = ({ name, ...props }) => {
   const context = useContext(AlertContext)
+  const appContext = useContext(AppContext)
 
   const [srcDoc, setSrcDoc] = useState(null)
   const fetchHTML = async (plugin) => {
     try {
-      let html = await getPluginHTML(plugin)
+      let html = await getPluginHTML(plugin, pluginThemePayload(appContext))
       setSrcDoc(html)
     } catch (err) {
       context.error(`Failed to fetch html:`, err)
