@@ -35,7 +35,7 @@ const AddAlertView = () => {
 
     let { id } = params
 
-    if (id == ':id') {
+    if (id == ':id' || id == 'new') {
       //add new
     } else {
       let index = parseInt(id)
@@ -56,7 +56,7 @@ const AddAlertView = () => {
     const done = () => navigate('/admin/alerts')
     const fail = (err) => context.error('failed to save rule', err)
 
-    if (id == ':id') {
+    if (id == ':id' || id == 'new') {
       alertsAPI.add(item).then(done).catch(fail)
     } else {
       alertsAPI.update(id, item).then(done).catch(fail)

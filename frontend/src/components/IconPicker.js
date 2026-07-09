@@ -174,4 +174,4 @@ const IconPicker = ({ value, color, onChange, ...props }) => {
 
 export default IconPicker
 
-export { IconPicker, IconItem }
+export { IconPicker, IconItem, IconsList }

@@ -1,7 +1,7 @@
 import React, { useContext, useState } from 'react'
 import { Platform } from 'react-native'
 
-import { prettyDate } from 'utils'
+import { prettyDate, timeAgo } from 'utils'
 
 import {
   Button,
@@ -81,9 +81,11 @@ const AlertListItem = ({ item, notifyChange, ...props }) => {
           <ButtonIcon as={showEvent ? EyeOffIcon : EyeIcon} ml="$2" />
         </Button>
       </Tooltip>
-      <Text size="xs" bold>
-        {prettyDate(item.Timestamp || item.time)}
-      </Text>
+      <Tooltip label={prettyDate(item.Timestamp || item.time)}>
+        <Text size="xs" bold>
+          {timeAgo(item.Timestamp || item.time)}
+        </Text>
+      </Tooltip>
     </>
   )
 

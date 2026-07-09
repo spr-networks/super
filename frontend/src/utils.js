@@ -46,6 +46,17 @@ export const prettyDate = (timestamp, locales = null) => {
   return strToDate(timestamp).toLocaleString()
 }
 
+export const timeAgo = (timestamp) => {
+  let date = strToDate(timestamp)
+  if (!date) return ''
+  let seconds = (Date.now() - date.getTime()) / 1e3
+  if (seconds < 60) return 'just now'
+  if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago'
+  if (seconds < 24 * 3600) return Math.floor(seconds / 3600) + 'h ago'
+  if (seconds < 7 * 24 * 3600) return Math.floor(seconds / (24 * 3600)) + 'd ago'
+  return prettyDate(timestamp)
+}
+
 export const prettySize = (sz, round = false) => {
   let szType = 'b'
 

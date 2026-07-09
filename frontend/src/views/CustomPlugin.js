@@ -22,10 +22,23 @@ import {
   useColorMode
 } from '@gluestack-ui/themed'
 
-import { AlertContext } from 'AppContext'
+import { AlertContext, AppContext } from 'AppContext'
 import { api, API } from 'api'
+import { themes } from 'Themes'
 
-const getPluginHTML = async (plugin) => {
+const pluginThemePayload = (ctx) => {
+  let theme = ctx?.theme || 'default'
+  let customThemes = ctx?.customThemes || {}
+  let colorMode = ctx?.viewSettings?.colorMode || 'light'
+  let activeCustom = customThemes[theme]
+  let effectiveColorMode = activeCustom
+    ? activeCustom.colorMode
+    : themes[theme]?.colorMode || colorMode
+  let colors = customThemes[theme]?.colors || themes[theme]?.colors || {}
+  return { colorMode: effectiveColorMode, theme, colors }
+}
+
+const getPluginHTML = async (plugin, theme) => {
   // fetch html from api using auth
   let Authorization = await api.getAuthHeaders()
   let headers = {
@@ -51,19 +64,32 @@ const getPluginHTML = async (plugin) => {
 
   let scriptTag = `<script>window.SPR_API_URL = ${JSON.stringify(
     api_url
-  )}; window.SPR_PLUGIN = ${JSON.stringify(pluginInfo)};</script>`
+  )}; window.SPR_PLUGIN = ${JSON.stringify(
+    pluginInfo
+  )}; window.SPR_THEME = ${JSON.stringify(theme || {})};</script>`
   html = html.replace('</head>', `${scriptTag}</head>`)
+
+  // srcdoc documents inherit the parent page's base URL, so relative asset
+  // paths in the plugin html (./static/js/...) would resolve against the SPR
+  // frontend instead of the plugin. Pin the base to the api's plugin static
+  // route (/admin/custom_plugin/<URI>/static/... -> plugin socket /static/...)
+  let baseHref = new URL(
+    `/admin/custom_plugin/${encodeURIComponent(plugin.URI)}/`,
+    api_url
+  ).toString()
+  html = html.replace('<head>', `<head><base href="${baseHref}"/>`)
 
   return html
 }
 
 const PluginFrame = ({ name, ...props }) => {
   const context = useContext(AlertContext)
+  const appContext = useContext(AppContext)
 
   const [srcDoc, setSrcDoc] = useState(null)
   const fetchHTML = async (plugin) => {
     try {
-      let html = await getPluginHTML(plugin)
+      let html = await getPluginHTML(plugin, pluginThemePayload(appContext))
       setSrcDoc(html)
     } catch (err) {
       context.error(`Failed to fetch html:`, err)
@@ -71,6 +97,7 @@ const PluginFrame = ({ name, ...props }) => {
   }
 
   useEffect(() => {
+    setSrcDoc(null)
     api
       .get('/plugins')
       .then((plugins) => {
@@ -199,16 +226,9 @@ const CustomPluginForm = () => {
 }
 
 const CustomPluginView = ({ ...props }) => {
-  const [name, setName] = useState(null)
   const params = useParams()
-
-  useEffect(() => {
-    let { name } = params
-    //default=:name
-    if (name !== ':name') {
-      setName(name)
-    }
-  }, [])
+  //default=:name
+  const name = params.name !== ':name' ? params.name : null
 
   let page = null
   if (name == null) {
