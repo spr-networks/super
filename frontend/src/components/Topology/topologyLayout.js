@@ -188,7 +188,8 @@ export const computeLayout = (nodes, edges, collapsedIDs = []) => {
     const forceBlock = byID[id]?.Kind == 'extension' && leafKids.length > 0
     if (forceBlock || leafKids.length > MAX_COLUMN_ROWS) {
       //wrap a large fan of leaves into a grid block with one connector
-      const blockStart = nextRow
+      //half-row gaps keep the frame clear of neighbor labels
+      const blockStart = nextRow + 0.5
       const blockID = 'block:' + id
       leafKids.forEach((kid, index) => {
         visible.add(kid)
@@ -197,9 +198,10 @@ export const computeLayout = (nodes, edges, collapsedIDs = []) => {
         blockOf[kid] = blockID
       })
       blocks.push({ id: blockID, parent: id, members: leafKids })
-      nextRow = blockStart + Math.min(leafKids.length, MAX_COLUMN_ROWS)
+      const blockRows = Math.min(leafKids.length, MAX_COLUMN_ROWS)
+      nextRow = blockStart + blockRows + 0.5
       visit(blockStart)
-      visit(nextRow - 1)
+      visit(blockStart + blockRows - 1)
     } else {
       leafKids.forEach((kid) => {
         visible.add(kid)
@@ -277,9 +279,9 @@ export const computeLayout = (nodes, edges, collapsedIDs = []) => {
       maxY = Math.max(maxY, position.y)
     })
     block.x = minX - 80
-    block.y = minY - 42
+    block.y = minY - 46
     block.width = maxX - minX + 160
-    block.height = maxY - minY + 96
+    block.height = maxY - minY + 128
   })
 
   const junctions = []

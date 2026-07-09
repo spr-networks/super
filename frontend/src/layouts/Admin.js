@@ -65,7 +65,7 @@ import DeviceInfo from 'DeviceInfo'
 //NOTE Slice transition for Alerts not available in gluestack-ui
 
 import { routes as allRoutes } from 'routes'
-import { PuzzleIcon } from 'lucide-react-native'
+import { pluginMenuIcon } from 'components/Plugins/PluginIcons'
 
 import { KeyboardAvoidingView } from '@gluestack-ui/themed'
 import OTPValidate from 'components/Auth/OTPValidate'
@@ -331,7 +331,7 @@ const AdminLayout = ({
           layout: 'admin',
           name: p.Name,
           path: `custom_plugin/${encodeURIComponent(p.URI)}/`,
-          icon: PuzzleIcon,
+          icon: pluginMenuIcon(p.Icon),
           Component: CustomPluginView,
           isSandboxed: p.SandboxedUI
         }))
