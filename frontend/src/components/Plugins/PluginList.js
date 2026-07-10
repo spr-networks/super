@@ -7,6 +7,7 @@ import {
   Box,
   Button,
   ButtonIcon,
+  ButtonSpinner,
   ButtonText,
   FlatList,
   HStack,
@@ -23,6 +24,7 @@ import {
 } from '@gluestack-ui/themed'
 import {
   MonitorCheckIcon,
+  DownloadIcon,
   EditIcon,
   RotateCwIcon,
   ShieldCheckIcon,
@@ -161,6 +163,26 @@ const PluginListItem = ({
   const navigate = useNavigate()
   const editModalRef = useRef(null)
   const [attestExpanded, setAttestExpanded] = useState(false)
+  const [updating, setUpdating] = useState(false)
+
+  const handleUpdateContainer = () => {
+    setUpdating(true)
+    api
+      .put(`/plugins/${encodeURIComponent(item.Name)}/update_container`)
+      .then((res) => {
+        setUpdating(false)
+        if (res?.Updated) {
+          alertState.success(`${item.Name} updated to the latest image`)
+          notifyChange()
+        } else {
+          alertState.info(`${item.Name} is already up to date`)
+        }
+      })
+      .catch((err) => {
+        setUpdating(false)
+        alertState.error(`Failed to update ${item.Name}`, err)
+      })
+  }
 
   const attestQuery = attestQueryFor(item)
 
@@ -341,6 +363,24 @@ const PluginListItem = ({
               onPress={() => handleRestart(item)}
             >
               <ButtonIcon as={RotateCwIcon} />
+            </Button>
+          </Tooltip>
+        ) : null}
+
+        {item.Enabled && item.ComposeFilePath ? (
+          <Tooltip label={'Update container'}>
+            <Button
+              variant="solid"
+              action="secondary"
+              size="sm"
+              isDisabled={updating}
+              onPress={handleUpdateContainer}
+            >
+              {updating ? (
+                <ButtonSpinner size="small" />
+              ) : (
+                <ButtonIcon as={DownloadIcon} />
+              )}
             </Button>
           </Tooltip>
         ) : null}

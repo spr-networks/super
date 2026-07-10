@@ -309,8 +309,11 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 					config.Plugins = append(config.Plugins[:idx], config.Plugins[idx+1:]...)
 					found = true
 
-					// plugin was deleted, stop it
-					stopExtension(entry.ComposeFilePath)
+					// plugin was deleted, take its compose project down
+					// (containers + networks); fall back to stop for older superd
+					if !downExtension(entry.ComposeFilePath) {
+						stopExtension(entry.ComposeFilePath)
+					}
 					// Remove network capabilities firewall rules
 					removePluginNetworkCapabilities(entry)
 					// also remove if its a custom plugin
@@ -1070,6 +1073,69 @@ func stopExtension(composeFilePath string) bool {
 	return true
 }
 
+// pull a plugin's images via superd; superd cycles it down+up when a new
+// image arrived. long timeout: pulls can take minutes.
+func updatePluginContainer(w http.ResponseWriter, r *http.Request) {
+	name := trimLower(mux.Vars(r)["name"])
+
+	Configmtx.Lock()
+	compose := ""
+	found := false
+	for _, entry := range config.Plugins {
+		if trimLower(entry.Name) == name && entry.Enabled {
+			compose = entry.ComposeFilePath
+			found = true
+			break
+		}
+	}
+	Configmtx.Unlock()
+
+	if !found || compose == "" {
+		http.Error(w, "Not found", 404)
+		return
+	}
+
+	c := http.Client{Timeout: 15 * time.Minute}
+	c.Transport = &http.Transport{
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.Dial("unix", SuperdSocketPath)
+		},
+	}
+	defer c.CloseIdleConnections()
+
+	params := url.Values{"compose_file": {compose}}
+	req, _ := http.NewRequest(http.MethodPut, "http://localhost/update_container?"+params.Encode(), nil)
+	resp, err := c.Do(req)
+	if err != nil {
+		http.Error(w, "update failed: "+err.Error(), 502)
+		return
+	}
+	defer resp.Body.Close()
+
+	data, _ := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, string(data), resp.StatusCode)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
+}
+
+// take a plugin's compose project down: removes its containers and networks
+func downExtension(composeFilePath string) bool {
+	if composeFilePath == "" {
+		return true
+	}
+
+	_, err := superdRequest("down", url.Values{"compose_file": {composeFilePath}}, nil)
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
 // remove container from docker
 func removeExtension(composeFilePath string) bool {
 	fmt.Println("!! removing plugin=", composeFilePath)
@@ -1121,13 +1187,18 @@ func startExtensionServices() error {
 		ghcrSuperdLogin()
 	}
 
+	//one broken plugin must not block the rest from starting
+	failed := []string{}
+
 	for _, entry := range config.Plugins {
 		if entry.ComposeFilePath != "" && entry.Enabled == true {
 
 			if PlusEnabled() && entry.Plus == true {
 				//only plus extensions update on start for now
 				if !updateExtension(entry.ComposeFilePath) {
-					return errors.New("Could not update Extension at " + entry.ComposeFilePath)
+					fmt.Println("Could not update Extension at " + entry.ComposeFilePath)
+					failed = append(failed, entry.Name)
+					continue
 				}
 
 				//if it is pfw we restart for fw rules to refresh after api
@@ -1135,18 +1206,24 @@ func startExtensionServices() error {
 					if !restartExtension(entry.ComposeFilePath) {
 						//try a start
 						if !startExtension(entry.ComposeFilePath) {
-							return errors.New("Could not start Extension at " + entry.ComposeFilePath)
+							fmt.Println("Could not start Extension at " + entry.ComposeFilePath)
+							failed = append(failed, entry.Name)
+							continue
 						}
 					}
 				} else {
 					if !startExtension(entry.ComposeFilePath) {
-						return errors.New("Could not start Extension at " + entry.ComposeFilePath)
+						fmt.Println("Could not start Extension at " + entry.ComposeFilePath)
+						failed = append(failed, entry.Name)
+						continue
 					}
 				}
 
 			} else {
 				if !startExtension(entry.ComposeFilePath) {
-					return errors.New("Could not start Extension at " + entry.ComposeFilePath)
+					fmt.Println("Could not start Extension at " + entry.ComposeFilePath)
+					failed = append(failed, entry.Name)
+					continue
 				}
 			}
 
@@ -1154,6 +1231,10 @@ func startExtensionServices() error {
 			applyPluginNetworkCapabilitiesRetry(entry)
 
 		}
+	}
+
+	if len(failed) > 0 {
+		return errors.New("failed to start extensions: " + strings.Join(failed, ", "))
 	}
 	return nil
 }

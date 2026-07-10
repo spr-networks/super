@@ -589,9 +589,13 @@ func mergePluginTopology(topology *Topology, name string, uri string, pluginTopo
 	prefix := rootID + ":"
 
 	rootConnType := ""
+	rootIP := ""
 	for _, node := range pluginTopo.Nodes {
-		if node.ID == "root" && node.ConnType != "" {
+		if node.ID == "root" {
 			rootConnType = node.ConnType
+			// carry the plugin's own address (e.g. its tailscale IP) onto the
+			// extension node instead of dropping it with the root node
+			rootIP = node.IP
 			break
 		}
 	}
@@ -600,7 +604,7 @@ func mergePluginTopology(topology *Topology, name string, uri string, pluginTopo
 		rootEdgeKind = "wired"
 	}
 
-	topology.Nodes = append(topology.Nodes, TopoNode{ID: rootID, Kind: "extension", Name: name, ConnType: rootConnType, Online: true})
+	topology.Nodes = append(topology.Nodes, TopoNode{ID: rootID, Kind: "extension", Name: name, IP: rootIP, ConnType: rootConnType, Online: true})
 	topology.Edges = append(topology.Edges, TopoEdge{From: "router", To: rootID, Layer: "l1", Kind: rootEdgeKind})
 
 	nodes := pluginTopo.Nodes

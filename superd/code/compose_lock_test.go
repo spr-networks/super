@@ -5,33 +5,26 @@ import (
 	"time"
 )
 
-func TestLockComposeCommandSerializesSameComposeFile(t *testing.T) {
-	unlock := lockComposeCommand("plugins/user/spr-dnscrypt/docker-compose.yml")
+func TestComposeCommandsSerialize(t *testing.T) {
+	composeCommandMtx.Lock()
 	acquired := make(chan struct{})
 
 	go func() {
-		defer lockComposeCommand("plugins/user/spr-dnscrypt/docker-compose.yml")()
+		composeCommandMtx.Lock()
+		defer composeCommandMtx.Unlock()
 		close(acquired)
 	}()
 
 	select {
 	case <-acquired:
-		t.Fatal("second command acquired the same compose-file lock early")
+		t.Fatal("second compose command acquired the lock early")
 	case <-time.After(25 * time.Millisecond):
 	}
 
-	unlock()
+	composeCommandMtx.Unlock()
 	select {
 	case <-acquired:
 	case <-time.After(time.Second):
-		t.Fatal("second command did not acquire the released compose-file lock")
+		t.Fatal("second compose command did not acquire the released lock")
 	}
-}
-
-func TestLockComposeCommandAllowsDifferentComposeFiles(t *testing.T) {
-	unlock := lockComposeCommand("plugins/user/spr-dnscrypt/docker-compose.yml")
-	defer unlock()
-
-	otherUnlock := lockComposeCommand("plugins/user/spr-tor/docker-compose.yml")
-	otherUnlock()
 }
