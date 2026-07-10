@@ -16,8 +16,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"os/exec"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -25,6 +27,7 @@ import (
 	"github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/verify"
+	yaml "go.yaml.in/yaml/v3"
 
 	sprbus "github.com/spr-networks/sprbus-json"
 )
@@ -51,12 +54,6 @@ var attestPolicies = map[string]attestPolicy{
 	"containers.plus.supernetworks.org/spr-networks/mesh_extension_": {MeshAttestationSANRegex, true},
 }
 
-// The SPR-networks custom plugins each live in their own GitHub repo
-// (spr-networks/spr-<name>) whose CI pushes ghcr.io/spr-networks/spr-<name>
-// with actions/attest-build-provenance. Unlike the static policies above, they
-// share a naming convention rather than a hardcoded workflow identity, so the
-// policy is derived per-image: each image is only ever verified against
-// provenance from its OWN repo's docker-image.yml workflow.
 var pluginImageHosts = map[string]bool{
 	"ghcr.io":                           true,
 	"containers.plus.supernetworks.org": true,
@@ -64,21 +61,9 @@ var pluginImageHosts = map[string]bool{
 
 const pluginImageOrg = "spr-networks"
 
-// pluginRepoNameRegex constrains the repo's last path segment to a strict
-// charset so an arbitrary ref cannot inject regex metacharacters into the
-// derived SAN pattern. The leading spr- prefix marks it as a plugin repo.
 var pluginRepoNameRegex = regexp.MustCompile(`^spr-[a-z0-9._-]+$`)
 
-// pluginAttestPolicy derives the build-provenance policy for an SPR-networks
-// custom plugin image (ghcr.io/spr-networks/spr-* or the plus mirror). It ties
-// the image to its OWN repo's workflow identity: for a repo path
-// spr-networks/spr-tor the SAN regex is
-// ^https://github\.com/spr-networks/spr-tor/\.github/workflows/docker-image\.yml@
-// so a compromised sibling repo (spr-foo) cannot sign a different plugin's
-// image. Returns nil for anything that is not a well-formed plugin ref.
 func pluginAttestPolicy(image string) *attestPolicy {
-	// drop any @sha256:... digest suffix so tag- and digest-pinned refs
-	// resolve to the same repo path
 	if idx := strings.IndexByte(image, '@'); idx != -1 {
 		image = image[:idx]
 	}
@@ -95,8 +80,6 @@ func pluginAttestPolicy(image string) *attestPolicy {
 	org := repo[:idx]
 	name := repo[idx+1:]
 
-	// least privilege: org must be exactly spr-networks and the repo name a
-	// strict spr-<name> slug, else refuse to derive a policy at all
 	if org != pluginImageOrg || !pluginRepoNameRegex.MatchString(name) {
 		return nil
 	}
@@ -464,6 +447,151 @@ func attestStatus(w http.ResponseWriter, r *http.Request) {
 		results = append(results, result)
 	}
 	Attestmtx.Unlock()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
+}
+
+func attestImageRemote(image string) AttestResult {
+	result := AttestResult{Image: image, Time: time.Now().UTC().Format(time.RFC3339)}
+
+	policy := attestationPolicyForImage(image)
+	if policy == nil {
+		if digest, dErr := resolveRemoteDigestAny(image); dErr == nil {
+			result.Digest = digest
+		}
+		result.Error = "no attestation policy for this image"
+		return result
+	}
+
+	digest, err := resolveRemoteDigestAny(image)
+	if err != nil {
+		result.Error = err.Error()
+		return result
+	}
+	result.Digest = digest
+
+	if cached, ok := cachedAttest(digest); ok {
+		cached.Image = image
+		cached.Time = result.Time
+		return cached
+	}
+
+	if policy.registry {
+		host, repo, _ := splitImageRef(image)
+		info, iErr := verifyRegistryAttestationInfo(host, repo, digest, policy.sanRegex)
+		if iErr != nil {
+			result.Error = iErr.Error()
+		} else {
+			result.Verified = true
+			result.Signer = info.Signer
+			result.Issuer = info.Issuer
+			result.RekorURL = info.RekorURL
+			result.LogIndex = info.LogIndex
+			if mi, mErr := fetchManifestInfo(host, repo, digest); mErr == nil {
+				result.Config = mi.Config
+				result.Layers = mi.Layers
+			}
+		}
+	} else {
+		if gErr := verifyGithubAttestation(digest, policy.sanRegex); gErr != nil {
+			result.Error = gErr.Error()
+		} else {
+			result.Verified = true
+		}
+	}
+
+	if result.Verified {
+		cacheAttestResult(digest, result)
+		Attestmtx.Lock()
+		gAttestResults[image] = result
+		Attestmtx.Unlock()
+		sprbus.Publish("superd:attest:ok", map[string]string{"Image": image, "Digest": digest})
+	}
+	return result
+}
+
+var composeVarRe = regexp.MustCompile(`\$\{([A-Za-z_][A-Za-z0-9_]*)(?::?-([^}]*))?\}`)
+
+func expandComposeVars(s string) string {
+	return composeVarRe.ReplaceAllStringFunc(s, func(m string) string {
+		parts := composeVarRe.FindStringSubmatch(m)
+		if v := os.Getenv(parts[1]); v != "" {
+			return v
+		}
+		return parts[2]
+	})
+}
+
+func parseComposeImages(composeFile, service string) ([]string, error) {
+	if composeFile == "" {
+		composeFile = getDefaultCompose()
+	}
+
+	reloadComposeWhitelist()
+	allowed := false
+	for _, entry := range ComposeAllowList {
+		if entry == composeFile {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
+		return nil, fmt.Errorf("compose file path is not whitelisted: %s", composeFile)
+	}
+
+	data, err := os.ReadFile(composeFile)
+	if err != nil {
+		return nil, err
+	}
+
+	doc := struct {
+		Services map[string]struct {
+			Image string `yaml:"image"`
+		} `yaml:"services"`
+	}{}
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		return nil, fmt.Errorf("failed to parse %s: %v", composeFile, err)
+	}
+
+	names := []string{}
+	for name := range doc.Services {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	images := []string{}
+	for _, name := range names {
+		if service != "" && name != service {
+			continue
+		}
+		image := expandComposeVars(doc.Services[name].Image)
+		if image != "" {
+			images = append(images, image)
+		}
+	}
+
+	if service != "" && len(images) == 0 {
+		return nil, fmt.Errorf("no image for service %s in %s", service, composeFile)
+	}
+
+	return images, nil
+}
+
+func pluginAttest(w http.ResponseWriter, r *http.Request) {
+	compose := r.URL.Query().Get("compose_file")
+	service := r.URL.Query().Get("service")
+
+	images, err := parseComposeImages(compose, service)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	results := []AttestResult{}
+	for _, image := range images {
+		results = append(results, attestImageRemote(image))
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(results)

@@ -40,77 +40,105 @@ import EditPlugin from 'components/Plugins/EditPlugin'
 import { pluginAPI, api } from 'api'
 import { alertState } from 'AppContext'
 
-const AttestResultView = ({ result, showImage }) => (
-  <VStack space="sm">
-    {showImage ? (
-      <Text size="xs" bold>
-        {result.Image}
-      </Text>
-    ) : null}
+const NO_POLICY = 'no attestation policy for this image'
 
-    <Badge
-      action={result.Verified ? 'success' : 'error'}
-      variant="outline"
-      size="sm"
-      alignSelf="flex-start"
-    >
-      <Icon
-        as={result.Verified ? ShieldCheckIcon : ShieldXIcon}
-        size="xs"
-        mr="$1"
-        color={result.Verified ? '$success700' : '$error700'}
-      />
-      <BadgeText>
-        {result.Verified ? 'Verified build (cosign)' : 'Unverified'}
-      </BadgeText>
-    </Badge>
+const AttestResultView = ({ result, showImage }) => {
+  const noPolicy = !result.Verified && result.Error === NO_POLICY
 
-    {result.Digest ? (
-      <VStack space="xs">
-        <Text size="xs" color="$muted500">
-          Build hash
+  return (
+    <VStack space="sm">
+      {showImage ? (
+        <Text size="xs" bold>
+          {result.Image}
         </Text>
-        <Text size="xs" color="$muted500">
-          {result.Digest}
-        </Text>
-      </VStack>
-    ) : null}
+      ) : null}
 
-    {result.Signer ? (
-      <VStack space="xs">
-        <Text size="xs" color="$muted500">
-          Signed by
-        </Text>
-        <Text size="xs" color="$muted500">
-          {result.Signer}
-        </Text>
-        {result.Issuer ? (
+      <Badge
+        action={result.Verified ? 'success' : noPolicy ? 'muted' : 'error'}
+        variant="outline"
+        size="sm"
+        alignSelf="flex-start"
+      >
+        <Icon
+          as={result.Verified ? ShieldCheckIcon : ShieldXIcon}
+          size="xs"
+          mr="$1"
+          color={
+            result.Verified
+              ? '$success700'
+              : noPolicy
+                ? '$muted500'
+                : '$error700'
+          }
+        />
+        <BadgeText>
+          {result.Verified
+            ? 'Verified build (cosign)'
+            : noPolicy
+              ? 'Not attested (third-party image)'
+              : 'Unverified'}
+        </BadgeText>
+      </Badge>
+
+      {result.Digest ? (
+        <VStack space="xs">
           <Text size="xs" color="$muted500">
-            {result.Issuer}
+            Build hash
           </Text>
-        ) : null}
-      </VStack>
-    ) : null}
+          <Text size="xs" color="$muted500">
+            {result.Digest}
+          </Text>
+        </VStack>
+      ) : null}
 
-    {!result.Verified && result.Error ? (
-      <Text size="xs" color="$error600">
-        {result.Error}
-      </Text>
-    ) : null}
+      {result.Signer ? (
+        <VStack space="xs">
+          <Text size="xs" color="$muted500">
+            Signed by
+          </Text>
+          <Text size="xs" color="$muted500">
+            {result.Signer}
+          </Text>
+          {result.Issuer ? (
+            <Text size="xs" color="$muted500">
+              {result.Issuer}
+            </Text>
+          ) : null}
+        </VStack>
+      ) : null}
 
-    {result.RekorURL ? (
-      <Link isExternal href={result.RekorURL}>
-        <HStack space="xs" alignItems="center">
-          <LinkText size="sm">
-            Verify in Sigstore
-            {result.LogIndex ? ` (Rekor #${result.LogIndex})` : ''}
-          </LinkText>
-          <Icon as={ExternalLinkIcon} color="$muted500" size="xs" />
-        </HStack>
-      </Link>
-    ) : null}
-  </VStack>
-)
+      {!result.Verified && result.Error && !noPolicy ? (
+        <Text size="xs" color="$error600">
+          {result.Error}
+        </Text>
+      ) : null}
+
+      {result.RekorURL ? (
+        <Link isExternal href={result.RekorURL}>
+          <HStack space="xs" alignItems="center">
+            <LinkText size="sm">
+              Verify in Sigstore
+              {result.LogIndex ? ` (Rekor #${result.LogIndex})` : ''}
+            </LinkText>
+            <Icon as={ExternalLinkIcon} color="$muted500" size="xs" />
+          </HStack>
+        </Link>
+      ) : null}
+    </VStack>
+  )
+}
+
+const attestQueryFor = (item) => {
+  const compose = item.ComposeFilePath || ''
+  const service = compose ? '' : (item.Name || '').toLowerCase()
+  if (!compose && !service) {
+    return null
+  }
+  const params = new URLSearchParams()
+  if (compose) params.set('compose_file', compose)
+  if (service) params.set('service', service)
+  return { key: compose || 'service:' + service, query: params.toString() }
+}
 
 const PluginListItem = ({
   item,
@@ -127,12 +155,12 @@ const PluginListItem = ({
   const editModalRef = useRef(null)
   const [attestExpanded, setAttestExpanded] = useState(false)
 
-  const compose = item.ComposeFilePath
+  const attestQuery = attestQueryFor(item)
 
   const onToggleAttest = () => {
     const next = !attestExpanded
     setAttestExpanded(next)
-    if (next && compose) ensureAttest(compose)
+    if (next && attestQuery) ensureAttest(attestQuery)
   }
 
   const getFieldDisplay = (label, value) => {
@@ -151,10 +179,10 @@ const PluginListItem = ({
   }
 
   const renderAttestBody = () => {
-    if (!compose) {
+    if (!attestQuery) {
       return (
         <Text size="sm" color="$muted500">
-          This plugin has no compose file, so its build cannot be attested.
+          This plugin has no compose file or service to attest.
         </Text>
       )
     }
@@ -179,7 +207,7 @@ const PluginListItem = ({
             variant="outline"
             action="secondary"
             alignSelf="flex-start"
-            onPress={() => refreshAttest(compose)}
+            onPress={() => refreshAttest(attestQuery)}
           >
             <ButtonText>Retry</ButtonText>
           </Button>
@@ -191,15 +219,14 @@ const PluginListItem = ({
       return (
         <VStack space="xs">
           <Text size="sm" color="$muted500">
-            No attestable SPR image for this plugin. It may use a third-party or
-            locally built image.
+            No images found for this plugin.
           </Text>
           <Button
             size="xs"
             variant="outline"
             action="secondary"
             alignSelf="flex-start"
-            onPress={() => refreshAttest(compose)}
+            onPress={() => refreshAttest(attestQuery)}
           >
             <ButtonText>Re-check</ButtonText>
           </Button>
@@ -220,7 +247,7 @@ const PluginListItem = ({
           variant="outline"
           action="secondary"
           alignSelf="flex-start"
-          onPress={() => refreshAttest(compose)}
+          onPress={() => refreshAttest(attestQuery)}
         >
           <ButtonText>Re-check</ButtonText>
         </Button>
@@ -356,28 +383,29 @@ const PluginListItem = ({
 }
 
 const PluginList = ({ list, deleteListItem, notifyChange, ...props }) => {
-  const [attestByCompose, setAttestByCompose] = useState({})
+  const [attestByKey, setAttestByKey] = useState({})
 
-  const setEntry = (compose, patch) =>
-    setAttestByCompose((prev) => ({
+  const setEntry = (key, patch) =>
+    setAttestByKey((prev) => ({
       ...prev,
-      [compose]: { ...(prev[compose] || {}), ...patch }
+      [key]: { ...(prev[key] || {}), ...patch }
     }))
 
-  const loadPluginAttest = (compose) => {
-    if (!compose) return
-    setEntry(compose, { loading: true, error: null })
+  const loadPluginAttest = (attestQuery) => {
+    if (!attestQuery) return
+    const { key, query } = attestQuery
+    setEntry(key, { loading: true, error: null })
     return api
-      .get('/pluginAttest?compose_file=' + encodeURIComponent(compose))
+      .get('/pluginAttest?' + query)
       .then((results) => {
-        setEntry(compose, {
+        setEntry(key, {
           loading: false,
           error: null,
           results: results || []
         })
       })
       .catch((err) => {
-        setEntry(compose, {
+        setEntry(key, {
           loading: false,
           error:
             'Failed to query build attestation: ' + (err?.message || err)
@@ -385,13 +413,13 @@ const PluginList = ({ list, deleteListItem, notifyChange, ...props }) => {
       })
   }
 
-  const ensureAttest = (compose) => {
-    const entry = attestByCompose[compose]
+  const ensureAttest = (attestQuery) => {
+    const entry = attestByKey[attestQuery.key]
     if (entry && (entry.loading || entry.results || entry.error)) return
-    loadPluginAttest(compose)
+    loadPluginAttest(attestQuery)
   }
 
-  const refreshAttest = (compose) => loadPluginAttest(compose)
+  const refreshAttest = (attestQuery) => loadPluginAttest(attestQuery)
 
   const handleChange = (plugin, Enabled) => {
     plugin.Enabled = Enabled
@@ -432,7 +460,7 @@ const PluginList = ({ list, deleteListItem, notifyChange, ...props }) => {
       handleChange={handleChange}
       handleRestart={handleRestart}
       notifyChange={notifyChange}
-      attestEntry={attestByCompose[item.ComposeFilePath]}
+      attestEntry={attestByKey[attestQueryFor(item)?.key]}
       ensureAttest={ensureAttest}
       refreshAttest={refreshAttest}
     />

@@ -801,18 +801,23 @@ func attestStatus(w http.ResponseWriter, r *http.Request) {
 
 func pluginAttest(w http.ResponseWriter, r *http.Request) {
 	compose := r.URL.Query().Get("compose_file")
-	if compose == "" {
-		compose = r.URL.Query().Get("compose")
-	}
-	if compose == "" {
-		http.Error(w, "compose_file is required", 400)
+	service := r.URL.Query().Get("service")
+	if compose == "" && service == "" {
+		http.Error(w, "compose_file or service is required", 400)
 		return
 	}
 
 	c := getSuperdClient()
 	defer c.CloseIdleConnections()
 
-	target := "http://localhost/plugin_attest?compose_file=" + url.QueryEscape(compose)
+	params := url.Values{}
+	if compose != "" {
+		params.Set("compose_file", compose)
+	}
+	if service != "" {
+		params.Set("service", service)
+	}
+	target := "http://localhost/plugin_attest?" + params.Encode()
 	req, err := http.NewRequest(http.MethodGet, target, nil)
 	if err != nil {
 		http.Error(w, "failed to make superd request", 400)

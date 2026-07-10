@@ -1130,6 +1130,7 @@ func main() {
 	unix_plugin_router := mux.NewRouter().StrictSlash(true)
 	unix_plugin_router.HandleFunc("/restart", restart).Methods("PUT")
 	unix_plugin_router.HandleFunc("/attest_status", attestStatus).Methods("GET", "PUT")
+	unix_plugin_router.HandleFunc("/plugin_attest", pluginAttest).Methods("GET")
 	unix_plugin_router.HandleFunc("/start", start).Methods("PUT")
 	unix_plugin_router.HandleFunc("/stop", stop).Methods("PUT")
 	unix_plugin_router.HandleFunc("/update", update).Methods("PUT")

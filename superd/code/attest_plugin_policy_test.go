@@ -1,16 +1,10 @@
 package main
 
-// Pure, table-driven tests for the SPR-networks custom-plugin attestation
-// policy derivation. No network or docker access: these only exercise
-// attestationPolicyForImage / pluginAttestPolicy and the derived SAN regex.
-
 import (
 	"regexp"
 	"testing"
 )
 
-// sanFor builds the workflow-identity URL a docker-image.yml provenance
-// certificate would carry for the given spr-networks repo.
 func sanFor(repo, ref string) string {
 	return "https://github.com/spr-networks/" + repo + "/.github/workflows/docker-image.yml@" + ref
 }
@@ -29,13 +23,11 @@ func TestPluginPolicySprTor(t *testing.T) {
 		t.Fatalf("derived sanRegex does not compile: %v", err)
 	}
 
-	// matches its own repo's provenance identity
 	own := sanFor("spr-tor", "refs/tags/v1.2.3")
 	if !re.MatchString(own) {
 		t.Errorf("sanRegex %q did not match own identity %q", p.sanRegex, own)
 	}
 
-	// least privilege: must NOT match a sibling plugin's identity
 	foreign := sanFor("spr-nebula", "refs/tags/v1.2.3")
 	if re.MatchString(foreign) {
 		t.Errorf("sanRegex %q matched foreign identity %q", p.sanRegex, foreign)
@@ -77,7 +69,6 @@ func TestPluginPolicyDigestAndTagSameRepo(t *testing.T) {
 	}
 }
 
-// The existing static-map prefixes must keep their exact original policies.
 func TestExistingPoliciesUnchanged(t *testing.T) {
 	cases := []struct {
 		image    string
@@ -104,17 +95,15 @@ func TestExistingPoliciesUnchanged(t *testing.T) {
 	}
 }
 
-// Adversarial refs must not yield a policy (or must not yield one whose regex
-// matches a foreign repo).
 func TestPluginPolicyAdversarial(t *testing.T) {
 	nilCases := []string{
-		"ghcr.io/spr-networks/spr-",          // empty plugin name
-		"ghcr.io/evil/spr-tor",               // wrong org
-		"ghcr.io/spr-networks/notaplugin",    // missing spr- prefix
-		"ghcr.io/spr-networks/super_api",     // handled by static map, not here... but pluginAttestPolicy alone should reject non spr- name
-		"ghcr.io/spr-networks/spr-tor/extra", // extra path segment -> org mismatch
-		"docker.io/spr-networks/spr-tor",     // untrusted host
-		"ghcr.io/spr-networks",               // no repo name
+		"ghcr.io/spr-networks/spr-",
+		"ghcr.io/evil/spr-tor",
+		"ghcr.io/spr-networks/notaplugin",
+		"ghcr.io/spr-networks/super_api",
+		"ghcr.io/spr-networks/spr-tor/extra",
+		"docker.io/spr-networks/spr-tor",
+		"ghcr.io/spr-networks",
 	}
 	for _, image := range nilCases {
 		if p := pluginAttestPolicy(image); p != nil {
@@ -122,16 +111,11 @@ func TestPluginPolicyAdversarial(t *testing.T) {
 		}
 	}
 
-	// a name carrying regex metacharacters must be rejected outright (so it can
-	// never be compiled into a pattern that matches a foreign repo)
 	meta := "ghcr.io/spr-networks/spr-a.*b"
 	p := pluginAttestPolicy(meta)
 	if p == nil {
-		// rejected outright - the safe outcome
 		return
 	}
-	// if for some reason a policy was produced, its regex must be escaped and
-	// therefore must NOT match an arbitrary foreign identity
 	re, err := regexp.Compile(p.sanRegex)
 	if err != nil {
 		t.Fatalf("derived sanRegex does not compile: %v", err)
