@@ -164,6 +164,12 @@ class API {
       method = 'GET'
     }
 
+    //instances cache authHeaders; re-sync from the login credentials so a
+    //re-login or router switch does not replay stale credentials until restart
+    if (this.remoteURL == '' && gAuthHeaders) {
+      this.authHeaders = gAuthHeaders
+    }
+
     if (!this.authHeaders) {
       this.authHeaders = await this.getAuthHeaders()
     }
@@ -210,7 +216,17 @@ class API {
         if (response.redirected) {
           const url = new URL(response.url);
           if (url.pathname === '/auth/validate' || url.pathname === '/auth/validate/') {
-            window.location.href = '/auth/validate';
+            if (Platform.OS == 'web') {
+              window.location.href = '/auth/validate';
+            } else {
+              //native has no page navigation; surface as 401 so the OTP
+              //modal handler runs instead of json-parsing the redirect html
+              return Promise.reject({
+                message: 'OTP required',
+                status: 401,
+                response
+              })
+            }
           }
         }
 
@@ -329,6 +345,9 @@ export const saveLogin = (
   protocol = null
 ) => {
   gAuthHeaders = 'Basic ' + Base64.btoa(username + ':' + password)
+
+  //an OTP JWT from a previous login/router is invalid for this one
+  setJWTOTPHeader('')
 
   let authdata = Base64.btoa(username + ':' + password)
 
