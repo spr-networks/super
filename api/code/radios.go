@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -15,6 +16,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type ExtraBSS struct {
@@ -27,6 +29,8 @@ type ExtraBSS struct {
 }
 
 var ExtraBSSPrefix = ".ap"
+
+var WifidControlSocket = TEST_PREFIX + "/state/wifi/wifid-control.sock"
 
 func getHostapdConfigPath(iface string) string {
 	if !isValidIface(iface) {
@@ -540,6 +544,109 @@ func hostapdDeauth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+type bssTransitionAPIRequest struct {
+	MAC             string
+	TargetInterface string
+}
+
+type bssTransitionWifidRequest struct {
+	SourceInterface string
+	MAC             string
+	TargetInterface string
+}
+
+func wifidControlHTTPClient() http.Client {
+	return http.Client{
+		Timeout: 20 * time.Second,
+		Transport: &http.Transport{
+			Dial: func(_, _ string) (net.Conn, error) {
+				return net.DialTimeout("unix", WifidControlSocket, 2*time.Second)
+			},
+		},
+	}
+}
+
+// hostapdBSSTransition exposes only the parameters needed for an advisory
+// 802.11v transition. wifid validates live state and builds the hostapd command.
+func hostapdBSSTransition(w http.ResponseWriter, r *http.Request) {
+	source := mux.Vars(r)["interface"]
+	if !isValidIface(source) {
+		http.Error(w, "Invalid source interface", http.StatusBadRequest)
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
+	request := bssTransitionAPIRequest{}
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&request); err != nil {
+		http.Error(w, "Invalid request: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if !isValidMAC(request.MAC) || !isValidIface(request.TargetInterface) {
+		http.Error(w, "Invalid MAC or target interface", http.StatusBadRequest)
+		return
+	}
+	payload, err := json.Marshal(bssTransitionWifidRequest{
+		SourceInterface: source,
+		MAC:             request.MAC,
+		TargetInterface: request.TargetInterface,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	client := wifidControlHTTPClient()
+	defer client.CloseIdleConnections()
+	proxyRequest, err := http.NewRequest(http.MethodPut, "http://wifid/bss-transition", bytes.NewReader(payload))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	proxyRequest.Header.Set("Content-Type", "application/json")
+	response, err := client.Do(proxyRequest)
+	if err != nil {
+		http.Error(w, "wifid control unavailable: "+err.Error(), http.StatusBadGateway)
+		return
+	}
+	defer response.Body.Close()
+	if contentType := response.Header.Get("Content-Type"); contentType != "" {
+		w.Header().Set("Content-Type", contentType)
+	}
+	w.WriteHeader(response.StatusCode)
+	_, _ = io.Copy(w, io.LimitReader(response.Body, 64<<10))
+}
+
+func proxyWifidRoaming(path string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body io.Reader
+		if r.Method == http.MethodPut {
+			r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+			body = r.Body
+		}
+		request, err := http.NewRequest(r.Method, "http://wifid"+path, body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if r.Method == http.MethodPut {
+			request.Header.Set("Content-Type", "application/json")
+		}
+		client := wifidControlHTTPClient()
+		defer client.CloseIdleConnections()
+		response, err := client.Do(request)
+		if err != nil {
+			http.Error(w, "wifid control unavailable: "+err.Error(), http.StatusBadGateway)
+			return
+		}
+		defer response.Body.Close()
+		if contentType := response.Header.Get("Content-Type"); contentType != "" {
+			w.Header().Set("Content-Type", contentType)
+		}
+		w.WriteHeader(response.StatusCode)
+		_, _ = io.Copy(w, io.LimitReader(response.Body, 1<<20))
+	}
 }
 
 func hostapdAllStations(w http.ResponseWriter, r *http.Request) {
