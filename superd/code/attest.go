@@ -17,6 +17,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os/exec"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -50,6 +51,63 @@ var attestPolicies = map[string]attestPolicy{
 	"containers.plus.supernetworks.org/spr-networks/mesh_extension_": {MeshAttestationSANRegex, true},
 }
 
+// The SPR-networks custom plugins each live in their own GitHub repo
+// (spr-networks/spr-<name>) whose CI pushes ghcr.io/spr-networks/spr-<name>
+// with actions/attest-build-provenance. Unlike the static policies above, they
+// share a naming convention rather than a hardcoded workflow identity, so the
+// policy is derived per-image: each image is only ever verified against
+// provenance from its OWN repo's docker-image.yml workflow.
+var pluginImageHosts = map[string]bool{
+	"ghcr.io":                           true,
+	"containers.plus.supernetworks.org": true,
+}
+
+const pluginImageOrg = "spr-networks"
+
+// pluginRepoNameRegex constrains the repo's last path segment to a strict
+// charset so an arbitrary ref cannot inject regex metacharacters into the
+// derived SAN pattern. The leading spr- prefix marks it as a plugin repo.
+var pluginRepoNameRegex = regexp.MustCompile(`^spr-[a-z0-9._-]+$`)
+
+// pluginAttestPolicy derives the build-provenance policy for an SPR-networks
+// custom plugin image (ghcr.io/spr-networks/spr-* or the plus mirror). It ties
+// the image to its OWN repo's workflow identity: for a repo path
+// spr-networks/spr-tor the SAN regex is
+// ^https://github\.com/spr-networks/spr-tor/\.github/workflows/docker-image\.yml@
+// so a compromised sibling repo (spr-foo) cannot sign a different plugin's
+// image. Returns nil for anything that is not a well-formed plugin ref.
+func pluginAttestPolicy(image string) *attestPolicy {
+	// drop any @sha256:... digest suffix so tag- and digest-pinned refs
+	// resolve to the same repo path
+	if idx := strings.IndexByte(image, '@'); idx != -1 {
+		image = image[:idx]
+	}
+
+	host, repo, _ := splitImageRef(image)
+	if !pluginImageHosts[host] {
+		return nil
+	}
+
+	idx := strings.LastIndex(repo, "/")
+	if idx == -1 {
+		return nil
+	}
+	org := repo[:idx]
+	name := repo[idx+1:]
+
+	// least privilege: org must be exactly spr-networks and the repo name a
+	// strict spr-<name> slug, else refuse to derive a policy at all
+	if org != pluginImageOrg || !pluginRepoNameRegex.MatchString(name) {
+		return nil
+	}
+
+	sanRegex := `^https://github\.com/` +
+		regexp.QuoteMeta(pluginImageOrg+"/"+name) +
+		`/\.github/workflows/docker-image\.yml@`
+
+	return &attestPolicy{sanRegex: sanRegex, registry: true}
+}
+
 func attestationPolicyForImage(image string) *attestPolicy {
 	for prefix, policy := range attestPolicies {
 		if strings.HasPrefix(image, prefix) {
@@ -57,7 +115,7 @@ func attestationPolicyForImage(image string) *attestPolicy {
 			return &p
 		}
 	}
-	return nil
+	return pluginAttestPolicy(image)
 }
 
 type AttestResult struct {
