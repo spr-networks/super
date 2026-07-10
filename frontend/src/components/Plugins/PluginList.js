@@ -40,9 +40,77 @@ import EditPlugin from 'components/Plugins/EditPlugin'
 import { pluginAPI, api } from 'api'
 import { alertState } from 'AppContext'
 
-// drop the :tag and @sha256 so a plugin's expected repo matches the
-// attestation result keyed by repo tag (mirrors System/Docker.js)
-const normalizeRepo = (img) => (img || '').split('@')[0].replace(/:[^/]+$/, '')
+const AttestResultView = ({ result, showImage }) => (
+  <VStack space="sm">
+    {showImage ? (
+      <Text size="xs" bold>
+        {result.Image}
+      </Text>
+    ) : null}
+
+    <Badge
+      action={result.Verified ? 'success' : 'error'}
+      variant="outline"
+      size="sm"
+      alignSelf="flex-start"
+    >
+      <Icon
+        as={result.Verified ? ShieldCheckIcon : ShieldXIcon}
+        size="xs"
+        mr="$1"
+        color={result.Verified ? '$success700' : '$error700'}
+      />
+      <BadgeText>
+        {result.Verified ? 'Verified build (cosign)' : 'Unverified'}
+      </BadgeText>
+    </Badge>
+
+    {result.Digest ? (
+      <VStack space="xs">
+        <Text size="xs" color="$muted500">
+          Build hash
+        </Text>
+        <Text size="xs" color="$muted500">
+          {result.Digest}
+        </Text>
+      </VStack>
+    ) : null}
+
+    {result.Signer ? (
+      <VStack space="xs">
+        <Text size="xs" color="$muted500">
+          Signed by
+        </Text>
+        <Text size="xs" color="$muted500">
+          {result.Signer}
+        </Text>
+        {result.Issuer ? (
+          <Text size="xs" color="$muted500">
+            {result.Issuer}
+          </Text>
+        ) : null}
+      </VStack>
+    ) : null}
+
+    {!result.Verified && result.Error ? (
+      <Text size="xs" color="$error600">
+        {result.Error}
+      </Text>
+    ) : null}
+
+    {result.RekorURL ? (
+      <Link isExternal href={result.RekorURL}>
+        <HStack space="xs" alignItems="center">
+          <LinkText size="sm">
+            Verify in Sigstore
+            {result.LogIndex ? ` (Rekor #${result.LogIndex})` : ''}
+          </LinkText>
+          <Icon as={ExternalLinkIcon} color="$muted500" size="xs" />
+        </HStack>
+      </Link>
+    ) : null}
+  </VStack>
+)
 
 const PluginListItem = ({
   item,
@@ -50,10 +118,7 @@ const PluginListItem = ({
   handleChange,
   handleRestart,
   notifyChange,
-  attestByImage,
-  attestLoading,
-  attestLoaded,
-  attestError,
+  attestEntry,
   ensureAttest,
   refreshAttest,
   ...props
@@ -62,36 +127,17 @@ const PluginListItem = ({
   const editModalRef = useRef(null)
   const [attestExpanded, setAttestExpanded] = useState(false)
 
-  // expected image repo basename: last path segment of the GitURL
-  // (e.g. https://github.com/spr-networks/spr-tor -> spr-tor), else Name
-  const expectedRepo = (() => {
-    let git = (item.GitURL || '')
-      .replace(/\/+$/, '')
-      .replace(/\.git$/, '')
-    let seg = git.split('/').pop()
-    return seg || item.Name || ''
-  })()
-
-  // find the attestation whose normalized repo basename matches this plugin
-  const attest = (() => {
-    if (!expectedRepo) return null
-    let keys = Object.keys(attestByImage || {})
-    for (let k of keys) {
-      if (k.split('/').pop() === expectedRepo) return attestByImage[k]
-    }
-    return null
-  })()
+  const compose = item.ComposeFilePath
 
   const onToggleAttest = () => {
     const next = !attestExpanded
     setAttestExpanded(next)
-    // lazy: only query superd on first expand (guarded in the parent)
-    if (next) ensureAttest()
+    if (next && compose) ensureAttest(compose)
   }
 
   const getFieldDisplay = (label, value) => {
     if (!value || (Array.isArray(value) && value.length === 0)) return null
-    
+
     return (
       <HStack space="sm" w="$full">
         <Text size="sm" color="$muted500" minWidth={120}>
@@ -104,6 +150,84 @@ const PluginListItem = ({
     )
   }
 
+  const renderAttestBody = () => {
+    if (!compose) {
+      return (
+        <Text size="sm" color="$muted500">
+          This plugin has no compose file, so its build cannot be attested.
+        </Text>
+      )
+    }
+    if (!attestEntry || attestEntry.loading) {
+      return (
+        <HStack space="sm" alignItems="center">
+          <Spinner size="small" />
+          <Text size="sm" color="$muted500">
+            Checking provenance…
+          </Text>
+        </HStack>
+      )
+    }
+    if (attestEntry.error) {
+      return (
+        <VStack space="xs">
+          <Text size="sm" color="$error600">
+            {attestEntry.error}
+          </Text>
+          <Button
+            size="xs"
+            variant="outline"
+            action="secondary"
+            alignSelf="flex-start"
+            onPress={() => refreshAttest(compose)}
+          >
+            <ButtonText>Retry</ButtonText>
+          </Button>
+        </VStack>
+      )
+    }
+    const results = attestEntry.results || []
+    if (results.length === 0) {
+      return (
+        <VStack space="xs">
+          <Text size="sm" color="$muted500">
+            No attestable SPR image for this plugin. It may use a third-party or
+            locally built image.
+          </Text>
+          <Button
+            size="xs"
+            variant="outline"
+            action="secondary"
+            alignSelf="flex-start"
+            onPress={() => refreshAttest(compose)}
+          >
+            <ButtonText>Re-check</ButtonText>
+          </Button>
+        </VStack>
+      )
+    }
+    return (
+      <VStack space="md">
+        {results.map((r, i) => (
+          <AttestResultView
+            key={r.Image || i}
+            result={r}
+            showImage={results.length > 1}
+          />
+        ))}
+        <Button
+          size="xs"
+          variant="outline"
+          action="secondary"
+          alignSelf="flex-start"
+          onPress={() => refreshAttest(compose)}
+        >
+          <ButtonText>Re-check</ButtonText>
+        </Button>
+      </VStack>
+    )
+  }
+
   return (
     <ListItem>
       <VStack flex={1} space="md">
@@ -111,7 +235,7 @@ const PluginListItem = ({
           <Text size="lg" bold>
             {item.Name}
           </Text>
-          
+
           {item.Version === undefined ? (
             <Spinner size="small" />
           ) : (
@@ -140,7 +264,7 @@ const PluginListItem = ({
               <BadgeText>Has UI</BadgeText>
             </Badge>
           )}
-          
+
           {item.Plus && (
             <Badge variant="solid" action="warning">
               <BadgeText>PLUS</BadgeText>
@@ -163,113 +287,7 @@ const PluginListItem = ({
           </HStack>
         </Pressable>
 
-        {attestExpanded ? (
-          <Box pl="$6">
-            {attestLoading ? (
-              <HStack space="sm" alignItems="center">
-                <Spinner size="small" />
-                <Text size="sm" color="$muted500">
-                  Checking provenance…
-                </Text>
-              </HStack>
-            ) : attestError ? (
-              <VStack space="xs">
-                <Text size="sm" color="$error600">
-                  {attestError}
-                </Text>
-                <Button
-                  size="xs"
-                  variant="outline"
-                  action="secondary"
-                  alignSelf="flex-start"
-                  onPress={() => refreshAttest()}
-                >
-                  <ButtonText>Retry</ButtonText>
-                </Button>
-              </VStack>
-            ) : attest ? (
-              <VStack space="sm">
-                <Badge
-                  action={attest.Verified ? 'success' : 'error'}
-                  variant="outline"
-                  size="sm"
-                  alignSelf="flex-start"
-                >
-                  <Icon
-                    as={attest.Verified ? ShieldCheckIcon : ShieldXIcon}
-                    size="xs"
-                    mr="$1"
-                    color={attest.Verified ? '$success700' : '$error700'}
-                  />
-                  <BadgeText>
-                    {attest.Verified
-                      ? 'Verified build (cosign)'
-                      : 'Unverified'}
-                  </BadgeText>
-                </Badge>
-
-                <VStack space="xs">
-                  <Text size="xs" color="$muted500">
-                    Build hash
-                  </Text>
-                  <Text size="xs" color="$muted500">
-                    {attest.Digest}
-                  </Text>
-                </VStack>
-
-                {attest.Signer ? (
-                  <VStack space="xs">
-                    <Text size="xs" color="$muted500">
-                      Signed by
-                    </Text>
-                    <Text size="xs" color="$muted500">
-                      {attest.Signer}
-                    </Text>
-                    {attest.Issuer ? (
-                      <Text size="xs" color="$muted500">
-                        {attest.Issuer}
-                      </Text>
-                    ) : null}
-                  </VStack>
-                ) : null}
-
-                {attest.Error ? (
-                  <Text size="xs" color="$error600">
-                    {attest.Error}
-                  </Text>
-                ) : null}
-
-                {attest.RekorURL ? (
-                  <Link isExternal href={attest.RekorURL}>
-                    <HStack space="xs" alignItems="center">
-                      <LinkText size="sm">
-                        Verify in Sigstore
-                        {attest.LogIndex ? ` (Rekor #${attest.LogIndex})` : ''}
-                      </LinkText>
-                      <Icon as={ExternalLinkIcon} color="$muted500" size="xs" />
-                    </HStack>
-                  </Link>
-                ) : null}
-              </VStack>
-            ) : (
-              <VStack space="xs">
-                <Text size="sm" color="$muted500">
-                  No build attestation found for this image. It may be a
-                  locally built or third-party image.
-                </Text>
-                <Button
-                  size="xs"
-                  variant="outline"
-                  action="secondary"
-                  alignSelf="flex-start"
-                  onPress={() => refreshAttest()}
-                >
-                  <ButtonText>Re-check</ButtonText>
-                </Button>
-              </VStack>
-            )}
-          </Box>
-        ) : null}
+        {attestExpanded ? <Box pl="$6">{renderAttestBody()}</Box> : null}
       </VStack>
 
       <HStack space="md" alignItems="center">
@@ -319,9 +337,9 @@ const PluginListItem = ({
           }
           modalRef={editModalRef}
         >
-          <EditPlugin 
-            plugin={item} 
-            onClose={() => editModalRef.current?.()} 
+          <EditPlugin
+            plugin={item}
+            onClose={() => editModalRef.current?.()}
             notifyChange={notifyChange}
           />
         </ModalForm>
@@ -338,48 +356,42 @@ const PluginListItem = ({
 }
 
 const PluginList = ({ list, deleteListItem, notifyChange, ...props }) => {
-  // build-attestation state, keyed by normalized repo. queried lazily on the
-  // first time a user expands a plugin's "Build attestation" row (not on mount)
-  const [attestByImage, setAttestByImage] = useState({})
-  const [attestLoaded, setAttestLoaded] = useState(false)
-  const [attestLoading, setAttestLoading] = useState(false)
-  const [attestError, setAttestError] = useState(null)
+  const [attestByCompose, setAttestByCompose] = useState({})
 
-  const buildMap = (results) => {
-    let m = {}
-    ;(results || []).forEach((r) => {
-      m[normalizeRepo(r.Image)] = r
-    })
-    return m
-  }
+  const setEntry = (compose, patch) =>
+    setAttestByCompose((prev) => ({
+      ...prev,
+      [compose]: { ...(prev[compose] || {}), ...patch }
+    }))
 
-  // get -> cached results; put -> force superd to re-verify, then use its result
-  const loadAttest = (method = 'get') => {
-    setAttestLoading(true)
-    setAttestError(null)
-    const req =
-      method === 'put' ? api.put('/attestStatus') : api.get('/attestStatus')
-    return req
+  const loadPluginAttest = (compose) => {
+    if (!compose) return
+    setEntry(compose, { loading: true, error: null })
+    return api
+      .get('/pluginAttest?compose_file=' + encodeURIComponent(compose))
       .then((results) => {
-        setAttestByImage(buildMap(results))
-        setAttestLoaded(true)
+        setEntry(compose, {
+          loading: false,
+          error: null,
+          results: results || []
+        })
       })
       .catch((err) => {
-        setAttestError(
-          'Failed to query build attestation: ' + (err?.message || err)
-        )
+        setEntry(compose, {
+          loading: false,
+          error:
+            'Failed to query build attestation: ' + (err?.message || err)
+        })
       })
-      .finally(() => setAttestLoading(false))
   }
 
-  // lazy guard: tolerate item remounts (FlatList re-keys on refresh) by keying
-  // state in the parent, so a first-expand never triggers a refetch storm
-  const ensureAttest = () => {
-    if (attestLoaded || attestLoading) return
-    loadAttest('get')
+  const ensureAttest = (compose) => {
+    const entry = attestByCompose[compose]
+    if (entry && (entry.loading || entry.results || entry.error)) return
+    loadPluginAttest(compose)
   }
 
-  const refreshAttest = () => loadAttest('put')
+  const refreshAttest = (compose) => loadPluginAttest(compose)
 
   const handleChange = (plugin, Enabled) => {
     plugin.Enabled = Enabled
@@ -420,10 +432,7 @@ const PluginList = ({ list, deleteListItem, notifyChange, ...props }) => {
       handleChange={handleChange}
       handleRestart={handleRestart}
       notifyChange={notifyChange}
-      attestByImage={attestByImage}
-      attestLoading={attestLoading}
-      attestLoaded={attestLoaded}
-      attestError={attestError}
+      attestEntry={attestByCompose[item.ComposeFilePath]}
       ensureAttest={ensureAttest}
       refreshAttest={refreshAttest}
     />
