@@ -13,6 +13,7 @@ import (
 	"bufio"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -56,6 +57,14 @@ var ReleaseChannelFile = "configs/base/release_channel"
 var ReleaseVersionFile = "configs/base/release_version"
 
 var ReleaseInfoMtx sync.Mutex
+var composeCommandLocks sync.Map
+
+func lockComposeCommand(composeFile string) func() {
+	value, _ := composeCommandLocks.LoadOrStore(composeFile, &sync.Mutex{})
+	mutex := value.(*sync.Mutex)
+	mutex.Lock()
+	return mutex.Unlock
+}
 
 func getReleaseVersion() string {
 	ReleaseInfoMtx.Lock()
@@ -127,7 +136,7 @@ func getDefaultCompose() string {
 	return "docker-compose.yml"
 }
 
-func composeCommand(composeFileIN string, target string, command string, optional string, new_docker bool) {
+func composeCommand(composeFileIN string, target string, command string, optional string, new_docker bool) error {
 	args := []string{}
 	release_channel := ""
 	release_version := ""
@@ -155,6 +164,9 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		composeFile = defaultCompose
 	}
 
+	unlock := lockComposeCommand(composeFile)
+	defer unlock()
+
 	reloadComposeWhitelist()
 
 	composeAllowed := false
@@ -167,7 +179,7 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 
 	if composeAllowed == false {
 		fmt.Println("Compose file path is not whitelisted")
-		return
+		return fmt.Errorf("compose file path is not whitelisted: %s", composeFile)
 	}
 
 	/*
@@ -274,15 +286,21 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		args = append([]string{"compose"}, args...)
 	}
 
-	_, err = exec.Command(cmd, args...).Output()
+	output, err := exec.Command(cmd, args...).CombinedOutput()
 	if err != nil {
-		argS := fmt.Sprintf(cmd + " " + strings.Join(args, " "))
-		errString := err.Error() + " |" + argS
+		argS := strings.Join(append([]string{cmd}, args...), " ")
+		errString := err.Error()
+		if detail := strings.TrimSpace(string(output)); detail != "" {
+			errString += ": " + detail
+		}
+		errString += " |" + argS
 		fmt.Println("failure: " + errString)
 		//tbd good place for a sprbus event
 		sprbus.Publish("plugin:docker:failure", map[string]string{"Reason": "docker command failed", "Message": errString, "ComposeFile": composeFileIN})
-
+		return errors.New(errString)
 	}
+
+	return nil
 
 }
 
@@ -311,7 +329,9 @@ func update(w http.ResponseWriter, r *http.Request) {
 func start(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
-	composeCommand(compose, target, "up", "-d", true)
+	if err := composeCommand(compose, target, "up", "-d", true); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func stop(w http.ResponseWriter, r *http.Request) {
