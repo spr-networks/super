@@ -70,44 +70,58 @@ const AdminNavbar = ({
     return v
   }
 
-  const checkUpdate = () => {
+  const computeVersionStatus = (versions) => {
+    let sorted = [...(versions || [])].reverse() // sort by latest first
+    let latest = sorted.find((v) => !v.includes('-dev'))
+    let latestDev = sorted.find((v) => v.includes('-dev'))
+
+    let current = version
+    //tags like latest / latest-dev / custom builds can't be compared to a
+    //semver list; only flag versions that are actual version numbers
+    if (
+      current.match(/^\d/) &&
+      current != latest &&
+      current != latestDev
+    ) {
+      setVersionStatus('Mismatch')
+    } else {
+      setVersionStatus('')
+    }
+  }
+
+  const checkUpdate = async () => {
+    const now = new Date().getTime()
+
+    try {
+      let cached = JSON.parse(await AsyncStorage.getItem('releasesAvailable'))
+      if (cached?.versions && now - cached.time < 3600000) {
+        computeVersionStatus(cached.versions)
+        return
+      }
+    } catch (e) {}
+
     api
       .get('/releasesAvailable?container=super_base')
       .then((versions) => {
-        versions?.reverse() // sort by latest first
-        let latest = versions.find((v) => !v.includes('-dev'))
-        let latestDev = versions.find((v) => v.includes('-dev'))
-
-        let current = version
-        // if latest get version
-        //if (current.startsWith('latest')) {
-        //  current = current.includes('-dev') ? latestDev : latest
-        //
-        if (current != 'default' && current != latest && current != latestDev) {
-          setVersionStatus('Mismatch')
-        } else {
-          setVersionStatus('')
-        }
+        AsyncStorage.setItem(
+          'releasesAvailable',
+          JSON.stringify({ time: now, versions })
+        )
+        computeVersionStatus(versions)
       })
       .catch((err) => {})
-      .finally(() => {})
   }
 
   useEffect(() => {
+    if (version == 'default') {
+      return
+    }
+
     api
       .getCheckUpdates()
       .then((state) => {
-        const lastCheckTime = localStorage.getItem('lastUpdateCheckTime')
-
-        const currentTime = new Date().getTime()
-
-        if (
-          state == true &&
-          (!lastCheckTime || currentTime - lastCheckTime >= 3600000)
-        ) {
+        if (state == true) {
           checkUpdate()
-
-          localStorage.setItem('lastUpdateCheckTime', currentTime)
         }
       })
       .catch((err) => {})
@@ -198,16 +212,24 @@ const AdminNavbar = ({
                 <BadgeText
                   textTransform="none"
                   color={
-                    colorMode == 'light'
-                      ? '$navbarTextColorLight'
-                      : '$navbarTextColorDark'
+                    versionStatus !== ''
+                      ? colorMode == 'light'
+                        ? '$amber600'
+                        : '$amber400'
+                      : colorMode == 'light'
+                        ? '$navbarTextColorLight'
+                        : '$navbarTextColorDark'
                   }
                 >
                   {niceVersion(version)}
                 </BadgeText>
 
                 {versionStatus !== '' && (
-                  <BadgeIcon as={AlertCircleIcon} ml="$1" />
+                  <BadgeIcon
+                    as={AlertCircleIcon}
+                    ml="$1"
+                    color={colorMode == 'light' ? '$amber600' : '$amber400'}
+                  />
                 )}
               </Badge>
             </Pressable>
