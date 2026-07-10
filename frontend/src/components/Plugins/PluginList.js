@@ -128,9 +128,16 @@ const AttestResultView = ({ result, showImage }) => {
   )
 }
 
+const BUILTIN_SERVICE_OVERRIDE = {
+  'dns-block-extension': 'dns',
+  'dns-log-extension': 'dns'
+}
+
 const attestQueryFor = (item) => {
   const compose = item.ComposeFilePath || ''
-  const service = compose ? '' : (item.Name || '').toLowerCase()
+  const service = compose
+    ? ''
+    : BUILTIN_SERVICE_OVERRIDE[item.Name] || (item.Name || '').toLowerCase()
   if (!compose && !service) {
     return null
   }
