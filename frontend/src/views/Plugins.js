@@ -52,6 +52,10 @@ const Plugins = (props) => {
   }
 
   const getPluginVersionName = (plugin) => {
+    if (plugin.URI?.toLowerCase().startsWith('spr-')) {
+      return plugin.URI.toLowerCase()
+    }
+
     let name = plugin.Name.toLowerCase()
     if (name.match(/^dns-(block|log)-extension$/)) {
       name = 'dns'

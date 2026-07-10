@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	testContainer = "sprtest-label-container"
+	testContainer = "spr-label-container"
 	testImage     = "sprtest-label-image"
 	testLabel     = "org.sprtest.label"
 	testValue     = "hello-differential"
@@ -149,6 +149,63 @@ func TestDockerImageLabelViaContainer(t *testing.T) {
 	}
 	if got != testValue {
 		t.Errorf("dockerImageLabel() = %q, want %q", got, testValue)
+	}
+}
+
+func TestDockerImageLabelViaLegacyPluginAlias(t *testing.T) {
+	requireDocker(t)
+	setupLabeledContainer(t)
+
+	got, err := dockerImageLabel("super"+testContainer, testLabel)
+	if err != nil {
+		t.Fatalf("dockerImageLabel() error = %v", err)
+	}
+	if got != testValue {
+		t.Errorf("dockerImageLabel() = %q, want %q", got, testValue)
+	}
+}
+
+func TestDockerImageCandidates(t *testing.T) {
+	tests := []struct {
+		name  string
+		image string
+		want  []string
+	}{
+		{
+			name:  "legacy core service",
+			image: "superapi",
+			want: []string{
+				"superapi",
+				"ghcr.io/spr-networks/super_api",
+			},
+		},
+		{
+			name:  "plugin container",
+			image: "spr-atlas",
+			want: []string{
+				"spr-atlas",
+				"ghcr.io/spr-networks/spr-atlas:latest",
+			},
+		},
+		{
+			name:  "legacy frontend plugin alias",
+			image: "superspr-atlas",
+			want: []string{
+				"superspr-atlas",
+				"ghcr.io/spr-networks/super_spr_atlas",
+				"spr-atlas",
+				"ghcr.io/spr-networks/spr-atlas:latest",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := dockerImageCandidates(tt.image)
+			if strings.Join(got, "\n") != strings.Join(tt.want, "\n") {
+				t.Fatalf("dockerImageCandidates(%q) = %q, want %q", tt.image, got, tt.want)
+			}
+		})
 	}
 }
 

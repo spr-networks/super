@@ -707,21 +707,43 @@ func lastTagForRepository(path string) string {
 	return strings.Trim(string(stdout), "'\n")
 }
 
-func dockerImageLabel(image string, labelName string) (string, error) {
-	labelValue, err := dockerObjectLabel(image, labelName)
-	if err != nil {
-		//in case the container has not been created use the full image name
-		spr_prefix := "ghcr.io/spr-networks/super_"
-		image_name := strings.Replace(image, "super", "", 1)
-		image_name = strings.ReplaceAll(image_name, "-", "_")
+func dockerImageCandidates(image string) []string {
+	candidates := []string{image}
 
-		labelValue, err = dockerObjectLabel(spr_prefix+image_name, labelName)
-		if err != nil {
-			return "", err
-		}
+	// Core services historically use container names such as "superapi" and
+	// registry images such as "super_api". Keep that lookup for compatibility.
+	if strings.HasPrefix(image, "super") {
+		imageName := strings.TrimPrefix(image, "super")
+		imageName = strings.ReplaceAll(imageName, "-", "_")
+		candidates = append(candidates, "ghcr.io/spr-networks/super_"+imageName)
 	}
 
-	return labelValue, nil
+	// User plugins use spr-* container and image names. Older frontends prepend
+	// "super" to every plugin name, so accept both "spr-foo" and
+	// "superspr-foo" while preferring the running container over :latest.
+	pluginName := image
+	if strings.HasPrefix(image, "superspr-") {
+		pluginName = strings.TrimPrefix(image, "super")
+		candidates = append(candidates, pluginName)
+	}
+	if strings.HasPrefix(pluginName, "spr-") {
+		candidates = append(candidates, "ghcr.io/spr-networks/"+pluginName+":latest")
+	}
+
+	return candidates
+}
+
+func dockerImageLabel(image string, labelName string) (string, error) {
+	var lastErr error
+	for _, candidate := range dockerImageCandidates(image) {
+		labelValue, err := dockerObjectLabel(candidate, labelName)
+		if err == nil {
+			return labelValue, nil
+		}
+		lastErr = err
+	}
+
+	return "", lastErr
 }
 
 func version(w http.ResponseWriter, r *http.Request) {
