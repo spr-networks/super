@@ -157,6 +157,36 @@ func pluginComposeServices(composeFile string) []string {
 	return names
 }
 
+var networkBridgeConflictRe = regexp.MustCompile(`conflicts with network ([0-9a-f]{64}) \(([^)]+)\): networks have same bridge name`)
+
+func parseNetworkBridgeConflict(detail string) (id string, name string, ok bool) {
+	m := networkBridgeConflictRe.FindStringSubmatch(detail)
+	if m == nil {
+		return "", "", false
+	}
+	return m[1], m[2], true
+}
+
+func remediateNetworkBridgeConflict(detail string, removed map[string]bool) bool {
+	id, name, ok := parseNetworkBridgeConflict(detail)
+	if !ok || removed[id] {
+		return false
+	}
+	removed[id] = true
+	out, err := exec.Command("docker", "network", "rm", id).CombinedOutput()
+	if err != nil {
+		fmt.Println("failed to remove conflicting network " + name + " (" + id + "): " + strings.TrimSpace(string(out)))
+		return false
+	}
+	fmt.Println("removed stale network " + name + " (" + id + ") with conflicting bridge name, retrying")
+	sprbus.Publish("plugin:docker:remediation", map[string]string{
+		"Reason":  "removed stale network with conflicting bridge name",
+		"Network": name,
+		"ID":      id,
+	})
+	return true
+}
+
 func composeCommand(composeFileIN string, target string, command string, optional string, new_docker bool) error {
 	composeCommandMtx.Lock()
 	defer composeCommandMtx.Unlock()
@@ -208,7 +238,8 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		// causing the services to lose their network. dont do this,
 		// and take the restart hit for anything other than stop
 	*/
-	if (command == "stop" || command == "down") && target == "" && isVirtual() {
+	if (command == "stop" || command == "down" || command == "restart" || command == "up") &&
+		target == "" && isVirtual() {
 		//in virtual mode plugin commands run against the merged compose
 		//project: without a service target, stop/down would take the whole
 		//stack with them. target only the plugin's own services.
@@ -216,7 +247,7 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 			target = "pfw"
 		} else if composeFile == "plugins/plus/mesh_extension/docker-compose.yml" {
 			target = "mesh"
-		} else if composeFile != defaultCompose && strings.Contains(composeFile, "plugins") {
+		} else if composeFile != defaultCompose {
 			target = strings.Join(pluginComposeServices(composeFile), " ")
 		}
 	}
@@ -313,22 +344,30 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		args = append([]string{"compose"}, args...)
 	}
 
-	output, err := exec.Command(cmd, args...).CombinedOutput()
-	if err != nil {
-		argS := strings.Join(append([]string{cmd}, args...), " ")
-		errString := err.Error()
-		if detail := strings.TrimSpace(string(output)); detail != "" {
-			errString += ": " + detail
+	var output []byte
+	removedNetworks := map[string]bool{}
+	for attempt := 0; ; attempt++ {
+		output, err = exec.Command(cmd, args...).CombinedOutput()
+		if err == nil {
+			return nil
 		}
-		errString += " |" + argS
-		fmt.Println("failure: " + errString)
-		//tbd good place for a sprbus event
-		sprbus.Publish("plugin:docker:failure", map[string]string{"Reason": "docker command failed", "Message": errString, "ComposeFile": composeFileIN})
-		return errors.New(errString)
+		if command == "up" && attempt < 4 &&
+			remediateNetworkBridgeConflict(string(output), removedNetworks) {
+			continue
+		}
+		break
 	}
 
-	return nil
-
+	argS := strings.Join(append([]string{cmd}, args...), " ")
+	errString := err.Error()
+	if detail := strings.TrimSpace(string(output)); detail != "" {
+		errString += ": " + detail
+	}
+	errString += " |" + argS
+	fmt.Println("failure: " + errString)
+	//tbd good place for a sprbus event
+	sprbus.Publish("plugin:docker:failure", map[string]string{"Reason": "docker command failed", "Message": errString, "ComposeFile": composeFileIN})
+	return errors.New(errString)
 }
 
 func update(w http.ResponseWriter, r *http.Request) {
@@ -558,7 +597,13 @@ func restart(w http.ResponseWriter, r *http.Request) {
 	compose := r.URL.Query().Get("compose_file")
 
 	//run restart
-	go composeCommand(compose, target, "restart", "", target == "")
+	go func() {
+		err := composeCommand(compose, target, "restart", "", target == "")
+		if err != nil {
+			fmt.Println("restart failed, falling back to up -d for " + compose)
+			composeCommand(compose, target, "up", "-d", true)
+		}
+	}()
 }
 
 func ghcr_auth(w http.ResponseWriter, r *http.Request) {
