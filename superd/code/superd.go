@@ -57,14 +57,7 @@ var ReleaseChannelFile = "configs/base/release_channel"
 var ReleaseVersionFile = "configs/base/release_version"
 
 var ReleaseInfoMtx sync.Mutex
-var composeCommandLocks sync.Map
-
-func lockComposeCommand(composeFile string) func() {
-	value, _ := composeCommandLocks.LoadOrStore(composeFile, &sync.Mutex{})
-	mutex := value.(*sync.Mutex)
-	mutex.Lock()
-	return mutex.Unlock
-}
+var composeCommandMtx sync.Mutex
 
 func getReleaseVersion() string {
 	ReleaseInfoMtx.Lock()
@@ -137,6 +130,9 @@ func getDefaultCompose() string {
 }
 
 func composeCommand(composeFileIN string, target string, command string, optional string, new_docker bool) error {
+	composeCommandMtx.Lock()
+	defer composeCommandMtx.Unlock()
+
 	args := []string{}
 	release_channel := ""
 	release_version := ""
@@ -163,9 +159,6 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 	if composeFile == "" {
 		composeFile = defaultCompose
 	}
-
-	unlock := lockComposeCommand(composeFile)
-	defer unlock()
 
 	reloadComposeWhitelist()
 
