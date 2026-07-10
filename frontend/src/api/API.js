@@ -25,6 +25,11 @@ export const setApiURL = (url) => {
   gApiURL = url
 }
 
+export const isMockAPI = () => {
+  const { REACT_APP_API } = process.env
+  return REACT_APP_API == 'mock' || gApiURL == 'mock'
+}
+
 export const getApiURL = () => {
   /*if (gApiURL !== null) {
     return gApiURL
