@@ -63,6 +63,17 @@ type Topology struct {
 	GeneratedAt time.Time
 	Nodes       []TopoNode
 	Edges       []TopoEdge
+	Sinks       []TopoSink `json:",omitempty"`
+}
+
+// a routeable egress advertised by a plugin: outbound traffic can be sent
+// out Iface (optionally via IP) with a pfw ForwardingRule.DstInterface
+type TopoSink struct {
+	ID     string
+	Name   string
+	Iface  string
+	IP     string `json:",omitempty"`
+	Online bool
 }
 
 type wifiStation struct {
@@ -438,7 +449,7 @@ func buildTopology(devices map[string]DeviceEntry, interfaces []InterfaceConfig,
 	nodes = append(nodes, endpointNodes...)
 	edges = append(edges, endpointEdges...)
 
-	topology := Topology{time.Now(), nodes, edges}
+	topology := Topology{GeneratedAt: time.Now(), Nodes: nodes, Edges: edges}
 	sortTopology(&topology)
 	return topology
 }
@@ -571,6 +582,7 @@ var pluginTopoKinds = map[string]bool{
 }
 
 const maxPluginTopoNodes = 256
+const maxPluginSinks = 16
 
 func mergePluginTopology(topology *Topology, name string, uri string, pluginTopo Topology) {
 	rootID := "plugin:" + uri
@@ -614,6 +626,30 @@ func mergePluginTopology(topology *Topology, name string, uri string, pluginTopo
 		order = append(order, node.ID)
 	}
 
+	sinks := pluginTopo.Sinks
+	if len(sinks) > maxPluginSinks {
+		sinks = sinks[:maxPluginSinks]
+	}
+	for _, sink := range sinks {
+		if sink.ID == "" || sink.Iface == "" {
+			continue
+		}
+		id := prefix + "sink:" + sink.ID
+		if added[id] {
+			continue
+		}
+		added[id] = true
+		sinkName := sink.Name
+		if sinkName == "" {
+			sinkName = sink.Iface
+		}
+		topology.Nodes = append(topology.Nodes, TopoNode{ID: id, Kind: "sink", Name: sinkName,
+			IP: sink.IP, Iface: sink.Iface, Online: sink.Online})
+		topology.Edges = append(topology.Edges, TopoEdge{From: rootID, To: id, Layer: "l1", Kind: "wired"})
+		topology.Sinks = append(topology.Sinks, TopoSink{ID: id, Name: sinkName, Iface: sink.Iface,
+			IP: sink.IP, Online: sink.Online})
+	}
+
 	mapID := func(id string) string {
 		if id == "" || id == "root" || id == "router" {
 			return rootID
@@ -646,6 +682,139 @@ func mergePluginTopology(topology *Topology, name string, uri string, pluginTopo
 	for _, id := range order {
 		if !linked[id] {
 			topology.Edges = append(topology.Edges, TopoEdge{From: rootID, To: id, Layer: "l1", Kind: "wired"})
+		}
+	}
+}
+
+// mirror of pfw's rule types, just enough to derive device -> sink edges
+type pfwClientIdentifier struct {
+	Identity string
+	Group    string
+	SrcIP    string
+	Tag      string
+}
+
+type pfwAddress struct {
+	Domain string
+	IP     string
+}
+
+type pfwForwardingRule struct {
+	RuleName        string
+	Disabled        bool
+	Client          pfwClientIdentifier
+	Protocol        string
+	OriginalDst     pfwAddress
+	OriginalDstPort string
+	Dst             pfwAddress
+	DstInterface    string
+}
+
+func getPFWForwardingRules() []pfwForwardingRule {
+	Configmtx.Lock()
+	unixPath := ""
+	for _, entry := range config.Plugins {
+		if entry.Enabled && entry.URI == "pfw" && entry.UnixPath != "" {
+			unixPath = entry.UnixPath
+			break
+		}
+	}
+	Configmtx.Unlock()
+	if unixPath == "" {
+		return nil
+	}
+
+	c := http.Client{Timeout: 2 * time.Second}
+	c.Transport = &http.Transport{
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.Dial("unix", unixPath)
+		},
+	}
+	defer c.CloseIdleConnections()
+
+	resp, err := c.Get("http://plugin/config")
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil
+	}
+
+	cfg := struct{ ForwardingRules []pfwForwardingRule }{}
+	if json.NewDecoder(resp.Body).Decode(&cfg) != nil {
+		return nil
+	}
+	return cfg.ForwardingRules
+}
+
+func sinkRouteEdgeKind(rule pfwForwardingRule) string {
+	if rule.OriginalDstPort != "" {
+		if rule.OriginalDstPort == "53" {
+			return "route:dns"
+		}
+		return "route:split"
+	}
+	if rule.OriginalDst.Domain != "" ||
+		(rule.OriginalDst.IP != "" && rule.OriginalDst.IP != "0.0.0.0/0") {
+		return "route:split"
+	}
+	return "route"
+}
+
+func ruleClientDeviceIDs(client pfwClientIdentifier, devices map[string]DeviceEntry) []string {
+	ids := []string{}
+	for key, dev := range devices {
+		id := deviceNodeID(dev)
+		if id == "" || isTopologyIsolated(dev) {
+			continue
+		}
+		match := (client.SrcIP != "" && dev.RecentIP == client.SrcIP) ||
+			(client.Identity != "" && (key == client.Identity ||
+				strings.EqualFold(dev.MAC, client.Identity) || dev.WGPubKey == client.Identity)) ||
+			(client.Group != "" && slices.Contains(dev.Groups, client.Group)) ||
+			(client.Tag != "" && slices.Contains(dev.DeviceTags, client.Tag))
+		if match {
+			ids = append(ids, id)
+		}
+	}
+	sort.Strings(ids)
+	return ids
+}
+
+// devices routed to an advertised sink via pfw ForwardingRules show up as
+// policy edges: route (all traffic), route:split (CIDR/domain), route:dns
+func mergeSinkRouteEdges(topology *Topology, devices map[string]DeviceEntry) {
+	if len(topology.Sinks) == 0 {
+		return
+	}
+
+	ifaceToSink := map[string]string{}
+	for _, sink := range topology.Sinks {
+		if sink.Iface != "" {
+			if _, exists := ifaceToSink[sink.Iface]; !exists {
+				ifaceToSink[sink.Iface] = sink.ID
+			}
+		}
+	}
+
+	seen := map[string]bool{}
+	for _, rule := range getPFWForwardingRules() {
+		if rule.Disabled || rule.DstInterface == "" {
+			continue
+		}
+		sinkID, exists := ifaceToSink[rule.DstInterface]
+		if !exists {
+			continue
+		}
+		kind := sinkRouteEdgeKind(rule)
+		for _, devID := range ruleClientDeviceIDs(rule.Client, devices) {
+			key := devID + "|" + sinkID + "|" + kind
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+			topology.Edges = append(topology.Edges, TopoEdge{From: devID, To: sinkID, Layer: "policy", Kind: kind})
 		}
 	}
 }
@@ -801,6 +970,8 @@ func showTopology(w http.ResponseWriter, r *http.Request) {
 	for _, plugin := range getPluginTopologies() {
 		mergePluginTopology(&topology, plugin.Name, plugin.URI, plugin.Topology)
 	}
+
+	mergeSinkRouteEdges(&topology, devices)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(topology)

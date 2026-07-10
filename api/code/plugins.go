@@ -80,7 +80,7 @@ func (p PluginConfig) MatchesData(q PluginConfig) bool {
 }
 
 var gPlusExtensionDefaults = []PluginConfig{
-	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", false, false, false, "", "", []string{}, NetworkCapabilities{}},
+	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", false, false, true, "", "", []string{}, NetworkCapabilities{}},
 	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", false, false, false, "", "", []string{}, NetworkCapabilities{}},
 }
 
