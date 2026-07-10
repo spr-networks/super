@@ -51,6 +51,9 @@ const AddServicePort = ({ notifyChange, item, ...props }) => {
           setIsLoading(false)
         })
         .catch((err) => {
+          if (editing) {
+            firewallAPI.addServicePort(item).catch(() => {})
+          }
           context.error('Firewall API Failure: ' + err)
           setIsLoading(false)
         })

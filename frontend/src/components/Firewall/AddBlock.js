@@ -72,6 +72,9 @@ class AddBlockImpl extends React.Component {
         .addBlock(block)
         .then(done)
         .catch((err) => {
+          if (this.props.item) {
+            firewallAPI.addBlock(this.props.item).catch(() => {})
+          }
           this.props.alertContext.error('Firewall API Failure', err)
           this.setState({ isLoading: false })
         })

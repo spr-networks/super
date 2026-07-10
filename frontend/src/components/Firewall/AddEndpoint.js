@@ -126,21 +126,37 @@ class AddEndpointImpl extends React.Component {
 
     this.setState({ isLoading: true })
 
-    firewallAPI
-      .addEndpoint(rule)
-      .then(async () => {
-        if (tag && this.state.selected.length) {
-          await this.tagSelectedDevices(tag)
-        }
-        if (this.props.notifyChange) {
-          this.props.notifyChange('endpoint')
-        }
-        this.setState({ isLoading: false })
-      })
-      .catch((err) => {
-        this.props.alertContext.error('Firewall API Failure' + err.message)
-        this.setState({ isLoading: false })
-      })
+    const done = async () => {
+      if (tag && this.state.selected.length) {
+        await this.tagSelectedDevices(tag)
+      }
+      if (this.props.notifyChange) {
+        this.props.notifyChange('endpoint')
+      }
+      this.setState({ isLoading: false })
+    }
+
+    const fail = (err) => {
+      this.props.alertContext.error('Firewall API Failure' + err.message)
+      this.setState({ isLoading: false })
+    }
+
+    if (this.props.item) {
+      firewallAPI
+        .deleteEndpoint(this.props.item)
+        .then(() =>
+          firewallAPI
+            .addEndpoint(rule)
+            .then(done)
+            .catch((err) => {
+              firewallAPI.addEndpoint(this.props.item).catch(() => {})
+              fail(err)
+            })
+        )
+        .catch(fail)
+    } else {
+      firewallAPI.addEndpoint(rule).then(done).catch(fail)
+    }
   }
 
   componentDidMount() {
