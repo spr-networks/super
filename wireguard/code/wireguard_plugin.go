@@ -320,6 +320,30 @@ func removePeer(peer ClientPeer) error {
 	return nil
 }
 
+// parseAllowedIPs accepts the wg CLI's allowed-ips syntax: comma-separated
+// entries, each an IP/cidr or a bare IP (implied /32 or /128).
+func parseAllowedIPs(allowedIPs string) ([]net.IPNet, error) {
+	nets := []net.IPNet{}
+	for _, cidr := range strings.Split(allowedIPs, ",") {
+		entry := strings.TrimSpace(cidr)
+		_, ipnet, err := net.ParseCIDR(entry)
+		if err != nil {
+			ip := net.ParseIP(entry)
+			if ip == nil {
+				return nil, fmt.Errorf("invalid allowed-ips %s: %v", entry, err)
+			}
+			bits := 128
+			if ip4 := ip.To4(); ip4 != nil {
+				bits = 32
+				ip = ip4
+			}
+			ipnet = &net.IPNet{IP: ip, Mask: net.CIDRMask(bits, bits)}
+		}
+		nets = append(nets, *ipnet)
+	}
+	return nets, nil
+}
+
 // addPeer configures a peer on the interface, replicating
 // `wg set <iface> peer <pk> preshared-key <psk> allowed-ips <ips>`
 // (allowed-ips on the wg CLI replaces the existing list).
@@ -334,13 +358,9 @@ func addPeer(publicKey, presharedKey, allowedIPs string) error {
 		return fmt.Errorf("invalid preshared key: %v", err)
 	}
 
-	nets := []net.IPNet{}
-	for _, cidr := range strings.Split(allowedIPs, ",") {
-		_, ipnet, err := net.ParseCIDR(strings.TrimSpace(cidr))
-		if err != nil {
-			return fmt.Errorf("invalid allowed-ips %s: %v", cidr, err)
-		}
-		nets = append(nets, *ipnet)
+	nets, err := parseAllowedIPs(allowedIPs)
+	if err != nil {
+		return err
 	}
 
 	c, err := wgctrl.New()
