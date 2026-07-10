@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -34,6 +35,7 @@ var OldMeshGitURL = "github.com/spr-networks/mesh_extension"
 var MeshdSocketPath = TEST_PREFIX + "/state/plugins/mesh/socket"
 var DbSocketPath = TEST_PREFIX + "/state/plugins/db/socket"
 var CustomComposeAllowPath = TEST_PREFIX + "/configs/base/custom_compose_paths.json"
+var extensionStartMtx sync.Mutex
 
 type NetworkCapabilities struct {
 	Interface string
@@ -861,33 +863,87 @@ func removePluginNetworkCapabilities(plugin PluginConfig) error {
 }
 
 func getPluginContainerIP(interfaceName string) (string, error) {
-	// Use the shared dockerRequest function to inspect the network
-	data, err := dockerRequest("GET", "/v1.41/networks/"+interfaceName, nil)
-	if err != nil {
-		return "", err
-	}
-
-	var networkInfo struct {
-		Containers map[string]struct {
-			IPv4Address string `json:"IPv4Address"`
-		} `json:"Containers"`
-	}
-
-	err = json.Unmarshal(data, &networkInfo)
-	if err != nil {
-		return "", err
-	}
-
-	// Find the first container on this network
-	for _, container := range networkInfo.Containers {
-		if container.IPv4Address != "" {
-			// Extract IP from CIDR notation (e.g., "172.20.0.2/16" -> "172.20.0.2")
-			ip := strings.Split(container.IPv4Address, "/")[0]
+	// Compose normally prefixes network names with its project name, while
+	// NetworkCapabilities.Interface is the Linux bridge name. Try the direct
+	// name first for explicitly named networks, then resolve project-scoped
+	// networks by their bridge driver option.
+	directData, directErr := dockerRequest("GET", "/v1.41/networks/"+url.PathEscape(interfaceName), nil)
+	if directErr == nil {
+		if ip, err := pluginContainerIPFromNetwork(directData); err == nil {
 			return ip, nil
 		}
 	}
 
-	return "", fmt.Errorf("no container found on network %s", interfaceName)
+	data, err := dockerRequest("GET", "/v1.41/networks", nil)
+	if err != nil {
+		return "", fmt.Errorf("inspect network %s: %v; list networks: %w", interfaceName, directErr, err)
+	}
+
+	networkIDs, err := dockerNetworkIDsForBridge(data, interfaceName)
+	if err != nil {
+		return "", err
+	}
+
+	for _, networkID := range networkIDs {
+		data, err = dockerRequest("GET", "/v1.41/networks/"+url.PathEscape(networkID), nil)
+		if err != nil {
+			continue
+		}
+		if ip, ipErr := pluginContainerIPFromNetwork(data); ipErr == nil {
+			return ip, nil
+		}
+	}
+
+	return "", fmt.Errorf("no container found on Docker network for bridge %s", interfaceName)
+}
+
+type dockerPluginNetwork struct {
+	ID         string            `json:"Id"`
+	Name       string            `json:"Name"`
+	Options    map[string]string `json:"Options"`
+	Containers map[string]struct {
+		IPv4Address string `json:"IPv4Address"`
+	} `json:"Containers"`
+}
+
+func pluginContainerIPFromNetwork(data []byte) (string, error) {
+	var networkInfo dockerPluginNetwork
+	if err := json.Unmarshal(data, &networkInfo); err != nil {
+		return "", err
+	}
+
+	for _, container := range networkInfo.Containers {
+		if container.IPv4Address != "" {
+			return strings.SplitN(container.IPv4Address, "/", 2)[0], nil
+		}
+	}
+
+	return "", errors.New("network has no attached container with an IPv4 address")
+}
+
+func dockerNetworkIDsForBridge(data []byte, interfaceName string) ([]string, error) {
+	var networks []dockerPluginNetwork
+	if err := json.Unmarshal(data, &networks); err != nil {
+		return nil, err
+	}
+
+	var networkIDs []string
+	for _, network := range networks {
+		if network.Options["com.docker.network.bridge.name"] != interfaceName {
+			continue
+		}
+		if network.ID != "" {
+			networkIDs = append(networkIDs, network.ID)
+		} else if network.Name != "" {
+			networkIDs = append(networkIDs, network.Name)
+		}
+	}
+
+	if len(networkIDs) == 0 {
+		return nil, fmt.Errorf("no Docker network uses bridge %s", interfaceName)
+	}
+
+	return networkIDs, nil
 }
 
 func restartExtension(composeFilePath string) bool {
@@ -1028,6 +1084,8 @@ func installPlus() error {
 }
 
 func startExtensionServices() error {
+	extensionStartMtx.Lock()
+	defer extensionStartMtx.Unlock()
 
 	if PlusEnabled() {
 		//log into GHCR for PLUS
