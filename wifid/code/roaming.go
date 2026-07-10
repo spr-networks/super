@@ -26,7 +26,6 @@ var (
 )
 
 type roamingConfig struct {
-	Enabled                 bool     `json:"Enabled"`
 	DryRun                  bool     `json:"DryRun"`
 	PollIntervalSeconds     int      `json:"PollIntervalSeconds"`
 	ObservationDelaySeconds int      `json:"ObservationDelaySeconds"`
@@ -369,6 +368,21 @@ func (manager *roamingManager) transitionSent(request bssTransitionRequest, resp
 func (manager *roamingManager) observe(record roamingRecord) {
 	delay := time.Duration(manager.configCopy().ObservationDelaySeconds) * time.Second
 	time.Sleep(delay)
+	if !roamingFeatureEnabled() {
+		record.ObservedAt = time.Now().UTC()
+		record.State = "disabled"
+		manager.mu.Lock()
+		for i := range manager.history {
+			if manager.history[i].ID == record.ID {
+				manager.history[i] = record
+				break
+			}
+		}
+		delete(manager.inFlight, record.MAC)
+		_ = writeRoamingJSON(roamingHistoryPath, manager.history)
+		manager.mu.Unlock()
+		return
+	}
 	var topology roamingTopology
 	var err error
 	for attempt := 0; attempt < 3; attempt++ {
@@ -481,10 +495,10 @@ func (manager *roamingManager) recordDryRun(device topologyNode, target string) 
 }
 
 func (manager *roamingManager) autoOnce(ctx context.Context) {
-	config := manager.configCopy()
-	if !config.Enabled {
+	if !roamingFeatureEnabled() {
 		return
 	}
+	config := manager.configCopy()
 	topology, err := manager.topology.Fetch(ctx)
 	if err != nil {
 		return
@@ -496,10 +510,13 @@ func (manager *roamingManager) autoOnce(ctx context.Context) {
 		}
 	}
 	for _, device := range topology.Nodes {
-		if device.Kind != "device" || !device.Online || device.ConnType != "wifi" || device.Signal == nil || device.Signal.RSSI == 0 || device.Signal.RSSI > config.RSSIThresholdDBM {
+		if device.Kind != "device" || !device.Online || device.ConnType != "wifi" || device.Signal == nil || device.Signal.RSSI >= 0 || device.Signal.RSSI < -100 || device.Signal.RSSI > config.RSSIThresholdDBM {
 			continue
 		}
 		mac := normalizeControlMAC(device.MAC)
+		if !controlMACRE.MatchString(mac) {
+			continue
+		}
 		if !manager.withinLimits(mac, config, time.Now()) {
 			continue
 		}
@@ -557,6 +574,7 @@ func (manager *roamingManager) status() map[string]any {
 	manager.mu.RLock()
 	defer manager.mu.RUnlock()
 	return map[string]any{
+		"RoamingEnabled":    roamingFeatureEnabled(),
 		"Config":            manager.config,
 		"HistoryCount":      len(manager.history),
 		"ModelArms":         len(manager.model),

@@ -52,8 +52,15 @@ func getExistingDhcpSet() []ifaceMacKey {
 }
 
 func main() {
+	if len(os.Args) == 2 && os.Args[1] == "serve" {
+		if err := serveControl(defaultControlSocket); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
 	if len(os.Args) != 4 {
-		fmt.Println("Usage: add/remove iface mac")
+		fmt.Println("Usage: add/remove iface mac | serve")
 		os.Exit(1)
 	}
 

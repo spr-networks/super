@@ -22,6 +22,7 @@ const defaultControlSocket = "/state/wifi/wifid-control.sock"
 
 var wifiConfigDir = "/configs/wifi"
 var hostapdStateDir = "/state/wifi"
+var roamEnablePath = "/configs/wifi/roam_enable"
 
 var (
 	controlIfaceRE = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9-]*(\.[a-zA-Z0-9][a-zA-Z0-9-]*)*$`)
@@ -61,6 +62,21 @@ func normalizeControlMAC(mac string) string {
 	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(mac), "-", ":"))
 }
 
+func roamingFeatureEnabled() bool {
+	info, err := os.Stat(roamEnablePath)
+	return err == nil && info.Mode().IsRegular()
+}
+
+func requireRoamingEnabled(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !roamingFeatureEnabled() {
+			http.Error(w, "Wi-Fi roaming is disabled", http.StatusNotFound)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (hostapdCLI) Command(iface string, command ...string) (string, error) {
 	if !validControlIface(iface) {
 		return "", fmt.Errorf("invalid interface %q", iface)
@@ -72,7 +88,9 @@ func (hostapdCLI) Command(iface string, command ...string) (string, error) {
 	}
 	args := []string{"-p", controlDir, "-s", hostapdStateDir, "-i", iface}
 	args = append(args, command...)
-	out, err := exec.Command("hostapd_cli", args...).CombinedOutput()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "hostapd_cli", args...).CombinedOutput()
 	response := strings.TrimSpace(string(out))
 	if err != nil {
 		return response, fmt.Errorf("hostapd_cli %s: %w: %s", iface, err, response)
@@ -303,9 +321,12 @@ func controlHandler(controller *bssTransitionController, roaming *roamingManager
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /status", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]bool{"Ready": true})
+		_ = json.NewEncoder(w).Encode(map[string]bool{
+			"Ready":          true,
+			"RoamingEnabled": roamingFeatureEnabled(),
+		})
 	})
-	mux.HandleFunc("PUT /bss-transition", func(w http.ResponseWriter, r *http.Request) {
+	transitionHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
 		var request bssTransitionRequest
 		decoder := json.NewDecoder(r.Body)
@@ -325,8 +346,12 @@ func controlHandler(controller *bssTransitionController, roaming *roamingManager
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(response)
 	})
+	mux.Handle("PUT /bss-transition", requireRoamingEnabled(transitionHandler))
 	if roaming != nil {
-		mux.Handle("/roaming/", roamingHandler(roaming))
+		handler := roamingHandler(roaming)
+		// Status stays visible so callers can discover why the feature is off.
+		mux.Handle("/roaming/status", handler)
+		mux.Handle("/roaming/", requireRoamingEnabled(handler))
 	}
 	return mux
 }
