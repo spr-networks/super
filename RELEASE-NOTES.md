@@ -1,7 +1,12 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
-## v1.1.8
+## v1.1.10
+** Fixes **
+- Fix plugin startup races
+- Fix wireguard bug
+
+## v1.1.9
 ** Features **
 - Topology on react native, for iOS & android
 - Allow plugins to extend topology
