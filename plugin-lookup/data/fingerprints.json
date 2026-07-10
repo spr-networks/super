@@ -1,5 +1,5 @@
 {
-  "Version": "2026.07.0",
+  "Version": "2026.07.1",
   "CategorySuggestions": {
     "camera": {
       "Groups": [
@@ -104,6 +104,14 @@
       "Weight": 3
     },
     {
+      "SignalType": "hostname",
+      "Pattern": "^homeassistant",
+      "Vendor": "Nabu Casa, Inc.",
+      "Category": "iot-sensor",
+      "Weight": 4,
+      "Decisive": true
+    },
+    {
       "SignalType": "mac_vendor",
       "Pattern": "(Hikvision|Dahua|Axis Communications|Reolink|Wyze|Arlo|Ring)",
       "Category": "camera",
@@ -114,6 +122,18 @@
       "Pattern": "(Espressif|Tuya|Shelly|TP-Link|Liteon)",
       "Category": "iot-sensor",
       "Weight": 2
+    },
+    {
+      "SignalType": "mac_vendor",
+      "Pattern": "Nabu Casa",
+      "Category": "iot-sensor",
+      "Weight": 3
+    },
+    {
+      "SignalType": "mac_vendor",
+      "Pattern": "Resideo",
+      "Category": "iot-sensor",
+      "Weight": 3
     },
     {
       "SignalType": "mac_vendor",
@@ -284,6 +304,20 @@
       "Vendor": "ecobee",
       "Category": "iot-sensor",
       "Weight": 2
+    },
+    {
+      "SignalType": "dns",
+      "Pattern": "\\.honeywell\\.com$|\\.alarmnet\\.com$",
+      "Vendor": "Resideo",
+      "Category": "iot-sensor",
+      "Weight": 2
+    },
+    {
+      "SignalType": "dns",
+      "Pattern": "\\.meetflo\\.com$|\\.flosecurecloud\\.com$",
+      "Vendor": "Flo Smart Water Monitor",
+      "Category": "iot-sensor",
+      "Weight": 3
     },
     {
       "SignalType": "dns",
