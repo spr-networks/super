@@ -576,7 +576,6 @@ func mergePluginTopology(topology *Topology, name string, uri string, pluginTopo
 	rootID := "plugin:" + uri
 	prefix := rootID + ":"
 
-	//a node with ID "root" describes the plugin's own link (e.g. ConnType wireguard)
 	rootConnType := ""
 	for _, node := range pluginTopo.Nodes {
 		if node.ID == "root" && node.ConnType != "" {

@@ -494,6 +494,7 @@ func restartPlugin(name string) {
 		if entry.Name == name && entry.Enabled == true {
 			if entry.ComposeFilePath != "" {
 				callSuperdRestart(entry.ComposeFilePath, "")
+				applyPluginNetworkCapabilitiesRetry(entry)
 			}
 		}
 	}
@@ -782,6 +783,20 @@ func startExtension(composeFilePath string) bool {
 	return true
 }
 
+func applyPluginNetworkCapabilitiesRetry(plugin PluginConfig) {
+	go func() {
+		var err error
+		for i := 0; i < 36; i++ {
+			time.Sleep(5 * time.Second)
+			err = applyPluginNetworkCapabilities(plugin)
+			if err == nil {
+				return
+			}
+		}
+		fmt.Printf("Warning: Failed to apply network capabilities for plugin %s: %v\n", plugin.Name, err)
+	}()
+}
+
 func applyPluginNetworkCapabilities(plugin PluginConfig) error {
 	// Only apply if NetworkCapabilities are defined
 	if plugin.NetworkCapabilities.Interface == "" || len(plugin.NetworkCapabilities.Policies) == 0 {
@@ -811,10 +826,24 @@ func applyPluginNetworkCapabilities(plugin PluginConfig) error {
 
 	// Apply the rule directly via firewall function
 	FWmtx.Lock()
+	stale := []CustomInterfaceRule{}
+	for _, existing := range gFirewallConfig.CustomInterfaceRules {
+		if existing.RuleName == rule.RuleName && existing.SrcIP != rule.SrcIP {
+			stale = append(stale, existing)
+		}
+	}
+	for _, old := range stale {
+		if err := modifyCustomInterfaceRulesImpl(old, true); err != nil {
+			fmt.Printf("Failed to remove stale rule %s (%s): %v\n", old.RuleName, old.SrcIP, err)
+		}
+	}
 	err = modifyCustomInterfaceRulesImpl(rule, false) // false = add rule
 	FWmtx.Unlock()
 
 	if err != nil {
+		if strings.Contains(err.Error(), "Duplicate rule") {
+			return nil
+		}
 		fmt.Printf("Failed to apply network capabilities for plugin %s: %v\n", plugin.Name, err)
 		return err
 	}
@@ -1122,13 +1151,7 @@ func startExtensionServices() error {
 			}
 
 			// Apply network capabilities after plugin is started
-			go func(plugin PluginConfig) {
-				// Give the container time to start up
-				time.Sleep(5 * time.Second)
-				if err := applyPluginNetworkCapabilities(plugin); err != nil {
-					fmt.Printf("Warning: Failed to apply network capabilities for plugin %s: %v\n", plugin.Name, err)
-				}
-			}(entry)
+			applyPluginNetworkCapabilitiesRetry(entry)
 
 		}
 	}
