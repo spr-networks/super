@@ -49,6 +49,7 @@ import {
 
 import { AlertContext, ModalContext } from 'AppContext'
 import { classifyAPI, deviceAPI, topologyAPI } from 'api'
+import { pfwAPI } from 'api/Pfw'
 import {
   arcPath,
   computeLayout,
@@ -197,6 +198,7 @@ const Topology = () => {
 
   const nodes = topology?.Nodes || []
   const edges = topology?.Edges || []
+  const sinks = topology?.Sinks || []
 
   const attrFilterActive =
     deviceFilter.groups.length > 0 ||
@@ -562,6 +564,35 @@ const Topology = () => {
       .update(identity, data)
       .then(() => refresh())
       .catch((error) => context.error('Failed to update device', error))
+  }
+
+  const addRoute = (node, sink, scope) => {
+    const identity = deviceIdentity(node)
+    const base = {
+      RuleName: `Route ${node.Name || node.IP || identity} via ${sink.Name}`,
+      Client: { Identity: identity },
+      OriginalDst: { IP: scope.cidr || '0.0.0.0/0' },
+      Dst: { IP: sink.IP || '' },
+      DstInterface: sink.Iface
+    }
+    // port matching on an interface route needs a protocol: one rule per proto
+    const rules = scope.port
+      ? ['tcp', 'udp'].map((Protocol) => ({
+          ...base,
+          Protocol,
+          OriginalDstPort: scope.port
+        }))
+      : [base]
+
+    Promise.all(rules.map((rule) => pfwAPI.addForward(rule)))
+      .then(() => {
+        if (scope.dns) {
+          updateDevice(identity, { DNSCustom: scope.dns })
+        } else {
+          refresh()
+        }
+      })
+      .catch((error) => context.error('Failed to add route', error))
   }
 
   const editStyle = (node) => {
@@ -1316,6 +1347,8 @@ const Topology = () => {
             setMode('policy')
           }}
           onSelectPeer={(id) => setSelectedID(id)}
+          sinks={sinks}
+          onAddRoute={addRoute}
         />
       ) : null}
     </Box>

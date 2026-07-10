@@ -11,8 +11,9 @@ const KIND_ORDER = {
   leaf_router: 3,
   vpn: 4,
   extension: 5,
-  device: 6,
-  endpoint: 7
+  sink: 6,
+  device: 7,
+  endpoint: 8
 }
 
 export const isIsolated = (node) =>

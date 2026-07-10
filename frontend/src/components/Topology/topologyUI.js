@@ -35,6 +35,7 @@ import {
   TagIcon,
   TargetIcon,
   UsersIcon,
+  WaypointsIcon,
   WifiIcon
 } from 'lucide-react-native'
 
@@ -97,7 +98,8 @@ export const INFRA_ICONS = {
   vpn: EarthLockIcon,
   leaf_router: RouterIcon,
   endpoint: TargetIcon,
-  extension: BlocksIcon
+  extension: BlocksIcon,
+  sink: WaypointsIcon
 }
 
 //web renders CSS box shadows; native gets platform shadow props
@@ -136,6 +138,9 @@ export const nodeSubtitle = (node) => {
   if (node.Kind == 'device') return node.IP || (node.Online ? '' : 'offline')
   if (node.Kind == 'leaf_router' || node.Kind == 'endpoint') return node.IP
   if (node.Kind == 'ap_radio' || node.Kind == 'port') {
+    return node.Iface != node.Name ? node.Iface : ''
+  }
+  if (node.Kind == 'sink') {
     return node.Iface != node.Name ? node.Iface : ''
   }
   return ''
@@ -482,6 +487,82 @@ export const StyleEditor = ({ initialIcon, initialColor, onChange }) => {
   )
 }
 
+// route a device's outbound traffic to an advertised sink: pick a sink, scope
+// the rule with a CIDR + optional port, optionally rewrite plaintext DNS
+const RouteSinkSection = ({ sinks, onAdd }) => {
+  const [sinkID, setSinkID] = useState(null)
+  const [cidr, setCidr] = useState('0.0.0.0/0')
+  const [port, setPort] = useState('')
+  const [dns, setDns] = useState('')
+
+  const sink = sinks.find((s) => s.ID == sinkID)
+
+  return (
+    <VStack space="xs">
+      <Text size="xs" color="$muted500">
+        Route outbound via
+      </Text>
+      <HStack space="xs" flexWrap="wrap">
+        {sinks.map((s) => (
+          <Pressable
+            key={s.ID}
+            onPress={() => setSinkID(s.ID == sinkID ? null : s.ID)}
+          >
+            <Badge
+              action={s.ID == sinkID ? 'info' : s.Online ? 'success' : 'muted'}
+              variant={s.ID == sinkID ? 'solid' : 'outline'}
+              mb="$1"
+            >
+              <BadgeText>{s.Name}</BadgeText>
+            </Badge>
+          </Pressable>
+        ))}
+      </HStack>
+      {sink ? (
+        <VStack space="xs">
+          <Input size="sm" variant="outline">
+            <InputField
+              value={cidr}
+              onChangeText={setCidr}
+              placeholder="CIDR (0.0.0.0/0 = all traffic)"
+            />
+          </Input>
+          <Input size="sm" variant="outline">
+            <InputField
+              value={port}
+              onChangeText={setPort}
+              placeholder="Port or range (optional, ex: 53)"
+            />
+          </Input>
+          <Input size="sm" variant="outline">
+            <InputField
+              value={dns}
+              onChangeText={setDns}
+              placeholder="Rewrite plaintext DNS to IP (optional)"
+            />
+          </Input>
+          <Button
+            size="xs"
+            action="primary"
+            variant="outline"
+            isDisabled={!cidr.trim()}
+            onPress={() =>
+              onAdd(sink, {
+                cidr: cidr.trim(),
+                port: port.trim(),
+                dns: dns.trim()
+              })
+            }
+          >
+            <ButtonIcon as={WaypointsIcon} mr="$1" />
+            <ButtonText>Add route</ButtonText>
+          </Button>
+        </VStack>
+      ) : null}
+    </VStack>
+  )
+}
+
 export const DetailPanel = ({
   node,
   peers,
@@ -493,7 +574,9 @@ export const DetailPanel = ({
   onClose,
   onUpdateDevice,
   onConnect,
-  onSelectPeer
+  onSelectPeer,
+  sinks,
+  onAddRoute
 }) => {
   const fields = ['IP', 'TinyNet', 'VLANTag', 'MAC', 'SSID', 'Iface', 'ConnType'].filter(
     (field) => node[field]
@@ -725,6 +808,13 @@ export const DetailPanel = ({
             </VStack>
           ) : null}
 
+          {editable && sinks?.length && onAddRoute ? (
+            <RouteSinkSection
+              sinks={sinks}
+              onAdd={(sink, scope) => onAddRoute(node, sink, scope)}
+            />
+          ) : null}
+
           {editable ? (
             <VStack space="sm">
               <Button
@@ -787,6 +877,15 @@ export const linkPanelInfo = (link, byID) => {
       type = 'lan policy (one-way)'
     } else if (kind == 'policy:wan') {
       type = 'wan policy (one-way)'
+    } else if (kind == 'route' || kind.startsWith('route:')) {
+      type =
+        kind == 'route:dns'
+          ? 'Routed DNS (one-way)'
+          : kind == 'route:split'
+            ? 'Routed subnet (one-way)'
+            : 'Routed traffic (one-way)'
+      if (b.Iface) rows.push({ label: 'Interface', value: b.Iface })
+      if (b.IP) rows.push({ label: 'Via', value: b.IP })
     } else if (kind.startsWith('endpoint:')) {
       type = 'Endpoint access (one-way)'
       rows.push({ label: 'Destination', value: b.IP })
