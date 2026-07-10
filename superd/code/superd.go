@@ -160,6 +160,9 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		composeFile = defaultCompose
 	}
 
+	unlock := lockComposeCommand(composeFile)
+	defer unlock()
+
 	reloadComposeWhitelist()
 
 	composeAllowed := false
