@@ -9,6 +9,7 @@ import {
   InputField,
   InputIcon,
   InputSlot,
+  Spinner,
   Text,
   CloseIcon
 } from '@gluestack-ui/themed'
@@ -20,6 +21,7 @@ const FilterInputSelect = ({
   topic,
   items,
   isInline,
+  isLoading,
   onChangeText,
   onSubmitEditing,
   ...props
@@ -53,6 +55,11 @@ const FilterInputSelect = ({
   return (
     <>
       <Input size="sm" rounded="$md" w="$full" {...props}>
+        {isLoading ? (
+          <InputSlot pl="$3">
+            <Spinner size="small" />
+          </InputSlot>
+        ) : null}
         <InputField
           value={value}
           onChangeText={onChangeText}
@@ -79,6 +86,7 @@ FilterInputSelect.propTypes = {
   items: PropTypes.array,
   onChangeText: PropTypes.func,
   onSubmitEditing: PropTypes.func,
+  isLoading: PropTypes.bool,
   placeholder: PropTypes.string
 }
 

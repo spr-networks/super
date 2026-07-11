@@ -28,11 +28,50 @@ export const authFail =   [{
   }
 ]
 
+export const macViolation = [
+  {
+    Body:
+      'MAC/IP violation from {{IP.SrcIP#Device}} on {{InDev#Interface}}',
+    Event: {
+      Action: 'blocked',
+      Ethernet: { SrcMAC: '44:44:44:44:44:44' },
+      IP: { SrcIP: '192.168.2.104', DstIP: '192.168.2.1' },
+      InDev: 'eth1.1008'
+    },
+    NotificationType: 'warning',
+    RuleId: '7f3266dd-7697-44ce-8ddd-36a006043509',
+    State: '',
+    Title: 'MAC Filter Violation',
+    Topic: 'nft:drop:mac',
+    time: '2024-05-16T03:04:08.542451645Z'
+  }
+]
+
+export const dropPrivate = [
+  {
+    Body:
+      'Dropped traffic from {{IP.SrcIP#Device}} to {{IP.DstIP}}:{{TCP.DstPort}}',
+    Event: {
+      Action: 'blocked',
+      Ethernet: { SrcMAC: '55:55:55:55:55:55' },
+      IP: { SrcIP: '192.168.2.105', DstIP: '10.20.30.40' },
+      InDev: 'eth0',
+      TCP: { SrcPort: 51234, DstPort: 443 }
+    },
+    NotificationType: 'warning',
+    RuleId: '2adbec19-6b47-4a99-a499-ab0b8da652a8',
+    State: '',
+    Title: 'Drop Private Network Request',
+    Topic: 'nft:drop:private',
+    time: '2024-05-16T03:02:08.542451645Z'
+  }
+]
+
 export const wifiAuthFail = [
     {
         "Body": "{{MAC#Device}} {{MAC}} failed wifi authentication {{Reason}} with type {{Type}}",
         "Event": {
-            "MAC": "36:33:39:3c:28:b3",
+            "MAC": "33:33:33:33:33:33",
             "Reason": "noentry",
             "Status": "",
             "Type": "sae"
