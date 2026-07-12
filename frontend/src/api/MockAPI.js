@@ -1201,7 +1201,15 @@ export default function MockAPI(props = null) {
               Network: ''
             },
             ConfigOnly: false,
-            Containers: {},
+            Containers: {
+              abc123: {
+                Name: 'spr-mitmproxy',
+                EndpointID: 'e1',
+                MacAddress: '02:42:ac:14:00:02',
+                IPv4Address: '172.20.0.2/24',
+                IPv6Address: ''
+              }
+            },
             Options: {
               'com.docker.network.bridge.name': 'mitmweb0'
             },
@@ -2240,7 +2248,18 @@ export default function MockAPI(props = null) {
       })
 
       this.get('/info/docker', () => {
-        return []
+        return [
+          {
+            Id: 'abc123def456',
+            Names: ['/spr-mitmproxy'],
+            State: 'running',
+            NetworkSettings: {
+              Networks: {
+                'spr-mitmproxy_mitmnet': { IPAddress: '172.20.0.2' }
+              }
+            }
+          }
+        ]
       })
 
       this.put('/backup', (schema, request) => {

@@ -1,11 +1,14 @@
 import React, { useContext, useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
+  Badge,
+  BadgeText,
   Box,
   Button,
   ButtonIcon,
   ButtonText,
   HStack,
+  Pressable,
   RadioGroup,
   Radio,
   RadioIndicator,
@@ -26,7 +29,7 @@ import { trafficAPI, wifiAPI } from 'api'
 
 const TrafficList = (props) => {
   const context = useContext(AlertContext)
-  const regexLAN = /^192\.168\./ //TODO dont rely on this
+  const regexLAN = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/
 
   const [list, setList] = useState([])
   const [listFiltered, setListFiltered] = useState([])
@@ -188,6 +191,8 @@ const TrafficList = (props) => {
   useEffect(() => {
     if (filterIps.length) {
       navigate(`/admin/trafficlist/${filterIps.join(',')}`)
+    } else {
+      navigate('/admin/trafficlist/:ips')
     }
   }, [filterIps])
 
@@ -211,7 +216,13 @@ const TrafficList = (props) => {
   let types = ['WanOut', 'WanIn', 'LanIn', 'LanOut']
 
   const handleChangeClient = (ip) => {
-    setFilterIps([ip])
+    if (!ip) return
+    setFilterIps((prev) => (prev.includes(ip) ? prev : [...prev, ip]))
+    setPage(1)
+  }
+
+  const removeFilterIp = (ip) => {
+    setFilterIps((prev) => prev.filter((entry) => entry != ip))
     setPage(1)
   }
 
@@ -232,7 +243,6 @@ const TrafficList = (props) => {
           defaultValue={type}
           accessibilityLabel="Select Type"
           onChange={(type) => {
-            setFilterIps([])
             setType(type)
             setPage(1)
           }}
@@ -250,14 +260,36 @@ const TrafficList = (props) => {
             ))}
           </HStack>
         </RadioGroup>
-        <Box flex={1}>
+        <VStack flex={1} space="xs">
           <ClientSelect
             size="sm"
-            value={filterIps && filterIps[0]}
+            value={null}
             onChange={handleChangeClient}
             onSubmitEditing={handleChangeClient}
           />
-        </Box>
+          {filterIps.length ? (
+            <HStack space="xs" flexWrap="wrap" alignItems="center">
+              {filterIps.map((ip) => (
+                <Pressable key={ip} onPress={() => removeFilterIp(ip)}>
+                  <Badge action="info" variant="outline" size="sm">
+                    <BadgeText textTransform="none">{ip} ✕</BadgeText>
+                  </Badge>
+                </Pressable>
+              ))}
+              <Button
+                size="xs"
+                variant="link"
+                action="secondary"
+                onPress={() => {
+                  setFilterIps([])
+                  setPage(1)
+                }}
+              >
+                <ButtonText size="xs">Clear</ButtonText>
+              </Button>
+            </HStack>
+          ) : null}
+        </VStack>
       </VStack>
 
       <Box

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react'
 import PropTypes from 'prop-types'
 import { Platform, StyleSheet, TouchableOpacity } from 'react-native'
 import { deviceAPI, groupAPI, firewallAPI } from 'api'
+import { getContainerIpMap } from 'api/Containers'
 
 import {
   GlobeIcon,
@@ -56,6 +57,7 @@ const CIDR_DEFAULTS = [
 ]
 
 const TYPE_ICONS = {
+  container: ServerIcon,
   policy: BookCheckIcon,
   group: GlobeIcon,
   tag: TagIcon,
@@ -64,6 +66,7 @@ const TYPE_ICONS = {
 }
 
 const TYPE_COLORS = {
+  container: { bg: '$teal100', text: '$teal700' },
   policy: { bg: '$purple100', text: '$purple700' },
   group: { bg: '$green100', text: '$green700' },
   tag: { bg: '$amber100', text: '$amber700' },
@@ -75,6 +78,7 @@ const TYPE_COLORS = {
 const groupOptionsByType = (options) => {
   const groups = {
     devices: [],
+    containers: [],
     policies: [],
     tags: [],
     groups: [],
@@ -82,7 +86,9 @@ const groupOptionsByType = (options) => {
   }
 
   options.forEach(option => {
-    if (typeof option.value === 'object') {
+    if (option.type === 'container') {
+      groups.containers.push(option)
+    } else if (typeof option.value === 'object') {
       if (option.value.Policy) {
         groups.policies.push(option)
       } else if (option.value.Tag) {
@@ -170,12 +176,17 @@ const ClientSelect = (props) => {
   }
 
   useEffect(() => {
-    if (isDataLoaded && !props.value) return;
+    if (isDataLoaded && !props.value) {
+      setSelectedOption(null)
+      setInputValue("")
+      return
+    }
 
     const loadOptions = async () => {
       setIsLoading(true)
       try {
         const devicesPromise = deviceAPI.list();
+        const containersPromise = getContainerIpMap();
 
         let groupsPromise = null;
         let firewallConfigPromise = null;
@@ -209,6 +220,21 @@ const ClientSelect = (props) => {
         }
 
         let allOptionsList = [...deviceOptions]
+
+        try {
+          const containers = await containersPromise
+          const containerOptions = Object.entries(containers).map(
+            ([ip, c]) => ({
+              label: c.Name,
+              value: ip,
+              icon: 'Server',
+              color: '$teal500',
+              type: 'container',
+              subtitle: `${ip} · ${c.Iface}`
+            })
+          )
+          allOptionsList = [...allOptionsList, ...containerOptions]
+        } catch (e) {}
 
         if (props.showPolicies) {
           const policyOptions = [
@@ -741,6 +767,17 @@ const ClientSelect = (props) => {
                           {renderSectionHeader('Devices', groupedOptions.devices.length)}
                           {groupedOptions.devices.map((item, index) => (
                             <Box key={`device-${index}`}>
+                              {renderItem({ item })}
+                            </Box>
+                          ))}
+                        </>
+                      )}
+
+                      {groupedOptions?.containers.length > 0 && (
+                        <>
+                          {renderSectionHeader('Containers', groupedOptions.containers.length)}
+                          {groupedOptions.containers.map((item, index) => (
+                            <Box key={`container-${index}`}>
                               {renderItem({ item })}
                             </Box>
                           ))}

@@ -4,6 +4,7 @@ import { Chart as ChartJS } from 'chart.js/auto'
 import { Bar } from 'react-chartjs-2'
 
 import { deviceAPI, trafficAPI } from 'api'
+import { getContainerIpMap } from 'api/Containers'
 import DateRange from 'components/DateRange'
 import { AlertContext } from 'layouts/Admin'
 import { prettySize } from 'utils'
@@ -184,7 +185,12 @@ export default (props) => {
   const fetchData = async () => {
     try {
       let devices = await deviceAPI.list()
-      setDevices(Object.values(devices))
+      let containers = await getContainerIpMap()
+      let containerDevices = Object.entries(containers).map(([ip, c]) => ({
+        Name: c.Name,
+        RecentIP: ip
+      }))
+      setDevices([...Object.values(devices), ...containerDevices])
     } catch (err) {
       context.error(err)
     }
