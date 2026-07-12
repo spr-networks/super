@@ -16,6 +16,7 @@ import { Theme } from '@gluestack-style/react'
 import { config } from 'gluestack-ui.config'
 import {
   themes,
+  themeFontCss,
   DEFAULT_THEME,
   buildCustomTheme,
   customThemeCss,
@@ -79,6 +80,25 @@ export default function App() {
   }, [customThemeRecords])
 
   const activeCustom = customThemeRecords[theme]
+  const activeFont = activeCustom?.font || themes[theme]?.font
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const id = 'spr-theme-fonts'
+    let el = document.getElementById(id)
+    const css = themeFontCss(activeFont)
+    if (css) {
+      if (!el) {
+        el = document.createElement('style')
+        el.id = id
+        document.head.appendChild(el)
+      }
+      el.textContent = css
+    } else if (el) {
+      el.remove()
+    }
+  }, [activeFont])
+
   const effectiveColorMode = activeCustom
     ? activeCustom.colorMode
     : themes[theme]?.colorMode || colorMode

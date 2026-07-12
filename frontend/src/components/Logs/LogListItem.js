@@ -516,6 +516,7 @@ const LogListItemHeader = ({
   showJSON,
   setShowJSON,
   headerActionsDesktopOnly,
+  headerActions,
   ...props
 }) => {
   return (
@@ -551,6 +552,8 @@ const LogListItemHeader = ({
             : undefined
         }
       >
+        {headerActions || null}
+
         <Tooltip label="Toggle JSON data">
           <Button
             action="primary"
@@ -587,6 +590,7 @@ const LogListItem = React.memo(({
   onPress,
   contentProps,
   headerActionsDesktopOnly,
+  headerActions,
   ...props
 }) => {
   const [isParsable, setIsParsable] = useState(true)
@@ -631,6 +635,7 @@ const LogListItem = React.memo(({
           setShowJSON={hookSetShowJSON}
           TitleComponent={TitleComponent}
           headerActionsDesktopOnly={headerActionsDesktopOnly}
+          headerActions={headerActions}
         ></LogListItemHeader>
       ) : null}
       <HStack w="$full" {...contentProps}>

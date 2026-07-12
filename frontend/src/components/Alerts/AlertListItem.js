@@ -170,6 +170,19 @@ const AlertListItem = ({ item, notifyChange, ...props }) => {
       mb="$2"
       TitleComponent={TitleComponent}
       headerActionsDesktopOnly={true}
+      headerActions={
+        <>
+          <AlertIgnoreResolution
+            item={item}
+            onResolved={() => updateEventState(item, 'Resolved')}
+          />
+          <StateButton
+            item={item}
+            hasResolution={Boolean(resolution)}
+            onPress={(action) => updateEventState(item, action)}
+          />
+        </>
+      }
       contentProps={{ flexDirection: 'column' }}
       isHidden={!showEvent}
       onPress={() => setShowEvent(true)}
@@ -198,7 +211,11 @@ const AlertListItem = ({ item, notifyChange, ...props }) => {
           borderTopWidth={1}
           borderColor="$borderColorCardLight"
           justifyContent="flex-end"
-          sx={{ _dark: { borderColor: '$borderColorCardDark' } }}
+          display="flex"
+          sx={{
+            '@md': { display: 'none' },
+            _dark: { borderColor: '$borderColorCardDark' }
+          }}
         >
           <AlertIgnoreResolution
             item={item}
