@@ -234,7 +234,12 @@ func GetStats(w http.ResponseWriter, r *http.Request) {
 
 		return nil
 	}); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		status := http.StatusInternalServerError
+		if err == ErrBucketMissing {
+			status = http.StatusNotFound
+		}
+		http.Error(w, err.Error(), status)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -259,7 +264,12 @@ func GetBucketStats(w http.ResponseWriter, r *http.Request) {
 
 		return nil
 	}); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		status := http.StatusInternalServerError
+		if err == ErrBucketMissing {
+			status = http.StatusNotFound
+		}
+		http.Error(w, err.Error(), status)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -400,10 +410,10 @@ func GetBucket(w http.ResponseWriter, r *http.Request) {
 	}); err != nil {
 		log.Println(ApiError{ErrBucketGet, err})
 		switch err {
-		case ErrBucketGet:
-			http.Error(w, ErrBucketGet.Error(), http.StatusInternalServerError)
 		case ErrBucketMissing:
-			http.Error(w, ErrBucketMissing.Error(), http.StatusInternalServerError)
+			http.Error(w, ErrBucketMissing.Error(), http.StatusNotFound)
+		default:
+			http.Error(w, ErrBucketGet.Error(), http.StatusInternalServerError)
 		}
 		return
 	}
@@ -651,10 +661,10 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 	}); err != nil {
 		log.Println(ApiError{ErrBucketGet, err})
 		switch err {
-		case ErrBucketGet:
-			http.Error(w, ErrBucketGet.Error(), http.StatusInternalServerError)
 		case ErrBucketMissing:
-			http.Error(w, ErrBucketMissing.Error(), http.StatusInternalServerError)
+			http.Error(w, ErrBucketMissing.Error(), http.StatusNotFound)
+		default:
+			http.Error(w, ErrBucketGet.Error(), http.StatusInternalServerError)
 		}
 		return
 	}
