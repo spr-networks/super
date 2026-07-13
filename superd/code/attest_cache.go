@@ -42,7 +42,7 @@ func cachedAttest(digest string) (AttestResult, bool) {
 	return r, ok
 }
 
-func cacheAttestResult(digest string, result AttestResult) {
+func cacheAttestResult(digest string, result AttestResult, overwrite bool) {
 	if digest == "" || !result.Verified {
 		return
 	}
@@ -50,7 +50,7 @@ func cacheAttestResult(digest string, result AttestResult) {
 	defer attestCacheMtx.Unlock()
 	loadAttestCacheLocked()
 
-	if _, ok := gAttestCache[digest]; ok {
+	if _, ok := gAttestCache[digest]; ok && !overwrite {
 		return
 	}
 	gAttestCache[digest] = result

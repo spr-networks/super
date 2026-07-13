@@ -817,6 +817,9 @@ func pluginAttest(w http.ResponseWriter, r *http.Request) {
 	if service != "" {
 		params.Set("service", service)
 	}
+	if r.URL.Query().Get("force") != "" {
+		params.Set("force", "1")
+	}
 	target := "http://localhost/plugin_attest?" + params.Encode()
 	req, err := http.NewRequest(http.MethodGet, target, nil)
 	if err != nil {

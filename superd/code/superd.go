@@ -388,7 +388,7 @@ func update(w http.ResponseWriter, r *http.Request) {
 
 	//confirm the pulled images match what was verified
 	if getReleaseChannel() == "" {
-		go verifyPulledImages()
+		go verifyPulledImages(false)
 	}
 }
 

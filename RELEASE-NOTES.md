@@ -6,6 +6,7 @@
 - Topology sink support
 - Show build attestation in Plugins listing
 - Improved alerts
+- New theme & custom font support
 ** Fixes **
 - Make software update flow easier to understand
 - Call compose down when a plugin is deleted, and fall thru on update failures

@@ -442,12 +442,12 @@ const PluginList = ({ list, deleteListItem, notifyChange, ...props }) => {
       [key]: { ...(prev[key] || {}), ...patch }
     }))
 
-  const loadPluginAttest = (attestQuery) => {
+  const loadPluginAttest = (attestQuery, force) => {
     if (!attestQuery) return
     const { key, query } = attestQuery
     setEntry(key, { loading: true, error: null })
     return api
-      .get('/pluginAttest?' + query)
+      .get('/pluginAttest?' + query + (force ? '&force=1' : ''))
       .then((results) => {
         setEntry(key, {
           loading: false,
@@ -470,7 +470,7 @@ const PluginList = ({ list, deleteListItem, notifyChange, ...props }) => {
     loadPluginAttest(attestQuery)
   }
 
-  const refreshAttest = (attestQuery) => loadPluginAttest(attestQuery)
+  const refreshAttest = (attestQuery) => loadPluginAttest(attestQuery, true)
 
   const handleChange = (plugin, Enabled) => {
     plugin.Enabled = Enabled

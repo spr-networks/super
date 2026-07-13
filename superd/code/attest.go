@@ -343,7 +343,7 @@ func verifyUpdateImages(composeFile string, target string) error {
 			sprbus.Publish("superd:attest:failure", map[string]string{"Image": image, "Digest": digest, "Reason": err.Error()})
 		} else {
 			result.Verified = true
-			cacheAttestResult(digest, result)
+			cacheAttestResult(digest, result, false)
 			sprbus.Publish("superd:attest:ok", map[string]string{"Image": image, "Digest": digest})
 		}
 
@@ -361,7 +361,7 @@ func verifyUpdateImages(composeFile string, target string) error {
 
 // verifyPulledImages verifies provenance for all local SPR images and
 // publishes the results on the bus.
-func verifyPulledImages() {
+func verifyPulledImages(force bool) {
 	images := []dockerImageEntry{}
 	err := dockerAPIGetJSON("/images/json", &images)
 	if err != nil {
@@ -392,7 +392,7 @@ func verifyPulledImages() {
 		}
 
 		result := AttestResult{Image: tag, Digest: digest, Time: time.Now().UTC().Format(time.RFC3339)}
-		if cached, ok := cachedAttest(digest); ok {
+		if cached, ok := cachedAttest(digest); ok && !force {
 			result = cached
 			result.Image = tag
 		} else if digest == "" {
@@ -421,7 +421,7 @@ func verifyPulledImages() {
 			}
 		}
 
-		cacheAttestResult(digest, result)
+		cacheAttestResult(digest, result, force)
 
 		Attestmtx.Lock()
 		gAttestResults[tag] = result
@@ -438,7 +438,7 @@ func verifyPulledImages() {
 
 func attestStatus(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPut {
-		verifyPulledImages()
+		verifyPulledImages(true)
 	}
 
 	Attestmtx.Lock()
@@ -452,7 +452,7 @@ func attestStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(results)
 }
 
-func attestImageRemote(image string) AttestResult {
+func attestImageRemote(image string, force bool) AttestResult {
 	result := AttestResult{Image: image, Time: time.Now().UTC().Format(time.RFC3339)}
 
 	policy := attestationPolicyForImage(image)
@@ -471,10 +471,12 @@ func attestImageRemote(image string) AttestResult {
 	}
 	result.Digest = digest
 
-	if cached, ok := cachedAttest(digest); ok {
-		cached.Image = image
-		cached.Time = result.Time
-		return cached
+	if !force {
+		if cached, ok := cachedAttest(digest); ok {
+			cached.Image = image
+			cached.Time = result.Time
+			return cached
+		}
 	}
 
 	if policy.registry {
@@ -502,7 +504,7 @@ func attestImageRemote(image string) AttestResult {
 	}
 
 	if result.Verified {
-		cacheAttestResult(digest, result)
+		cacheAttestResult(digest, result, force)
 		Attestmtx.Lock()
 		gAttestResults[image] = result
 		Attestmtx.Unlock()
@@ -581,6 +583,7 @@ func parseComposeImages(composeFile, service string) ([]string, error) {
 func pluginAttest(w http.ResponseWriter, r *http.Request) {
 	compose := r.URL.Query().Get("compose_file")
 	service := r.URL.Query().Get("service")
+	force := r.URL.Query().Get("force") != ""
 
 	images, err := parseComposeImages(compose, service)
 	if err != nil {
@@ -590,7 +593,7 @@ func pluginAttest(w http.ResponseWriter, r *http.Request) {
 
 	results := []AttestResult{}
 	for _, image := range images {
-		results = append(results, attestImageRemote(image))
+		results = append(results, attestImageRemote(image, force))
 	}
 
 	w.Header().Set("Content-Type", "application/json")
