@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useContext, useState } from 'react'
 import { Platform } from 'react-native'
+import { AppContext } from 'AppContext'
 
 import {
   Badge,
@@ -490,12 +491,17 @@ export const StyleEditor = ({ initialIcon, initialColor, onChange }) => {
 // route a device's outbound traffic to an advertised sink: pick a sink, scope
 // the rule with a CIDR + optional port, optionally rewrite plaintext DNS
 const RouteSinkSection = ({ sinks, onAdd }) => {
+  const appContext = useContext(AppContext)
   const [sinkID, setSinkID] = useState(null)
   const [cidr, setCidr] = useState('0.0.0.0/0')
   const [port, setPort] = useState('')
   const [dns, setDns] = useState('')
 
   const sink = sinks.find((s) => s.ID == sinkID)
+
+  if (appContext.isPlusDisabled) {
+    return null
+  }
 
   return (
     <VStack space="xs">
