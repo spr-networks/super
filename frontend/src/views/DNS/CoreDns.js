@@ -4,6 +4,7 @@ import { AppContext, alertState } from 'AppContext'
 
 import { CoreDNS } from 'api/CoreDNS'
 import { blockAPI } from 'api/DNS'
+import { api, firewallAPI } from 'api'
 
 import {
   Box,
@@ -27,6 +28,22 @@ import {
 import { Trash2Icon, PlusIcon } from 'lucide-react-native'
 import { ListHeader } from 'components/List'
 
+//first usable IP of a CIDR, matching the API's SUBNETP1 (dhcp.go)
+const subnetFirstIP = (cidr) => {
+  let m = String(cidr)
+    .trim()
+    .match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)\/(\d+)$/)
+  if (!m) return ''
+  let octets = m.slice(1, 5).map(Number)
+  let bits = Number(m[5])
+  if (bits > 32 || octets.some((o) => o > 255)) return ''
+  let addr =
+    ((octets[0] << 24) | (octets[1] << 16) | (octets[2] << 8) | octets[3]) >>> 0
+  let network = bits == 0 ? 0 : (addr & (0xffffffff << (32 - bits))) >>> 0
+  let ip = (network + 1) >>> 0
+  return [ip >>> 24, (ip >>> 16) & 0xff, (ip >>> 8) & 0xff, ip & 0xff].join('.')
+}
+
 const CoreDns = (props) => {
   const [ip, setIp] = useState('')
   const [host, setHost] = useState('')
@@ -35,7 +52,10 @@ const CoreDns = (props) => {
   const [enableTls, setEnableTls] = useState(true)
   const [enableFamilyTls, setEnableFamilyTls] = useState(true)
   const [disableRebindingCheck, setDisableRebindingCheck] = useState(false)
-  
+  const [systemDnsOverride, setSystemDnsOverride] = useState('')
+  const [savedSystemDnsOverride, setSavedSystemDnsOverride] = useState('')
+  const [sprDnsIP, setSprDnsIP] = useState('')
+
   // New state for multiple providers
   const [upstreamProviders, setUpstreamProviders] = useState([])
   const [familyProviders, setFamilyProviders] = useState([])
@@ -106,13 +126,13 @@ const CoreDns = (props) => {
       UpstreamFamilyTLSHost: host_fam,
       DisableFamilyTls: !enableFamilyTls,
     }
-    
+
     // Add multiple providers if enabled
     if (useMultipleProviders) {
       config.UpstreamProviders = upstreamProviders.filter(p => p.IPAddress)
       config.FamilyProviders = familyProviders.filter(p => p.IPAddress)
     }
-    
+
     CoreDNS.setConfig(config).then(
       () => {
         alertState.success('Updated DNS Settings')
@@ -130,9 +150,37 @@ const CoreDns = (props) => {
         alertState.error('API Failure: ' + e.message)
       }
     )
+
+    let override = systemDnsOverride.trim()
+    if (override != savedSystemDnsOverride) {
+      firewallAPI.setSystemDnsOverride(override).then(
+        () => {
+          setSavedSystemDnsOverride(override)
+          alertState.success(
+            override == ''
+              ? 'System DNS override disabled'
+              : 'System DNS override set to ' + override
+          )
+        },
+        (e) => {
+          alertState.error('Failed to set System DNS override: ' + e.message)
+        }
+      )
+    }
   }
 
   useEffect(() => {
+    firewallAPI.config().then((config) => {
+      setSystemDnsOverride(config.SystemDNSOverride || '')
+      setSavedSystemDnsOverride(config.SystemDNSOverride || '')
+    })
+
+    api.get('/subnetConfig').then((config) => {
+      if (config.TinyNets?.length) {
+        setSprDnsIP(subnetFirstIP(config.TinyNets[0]))
+      }
+    })
+
     CoreDNS.config().then((config) => {
       // set defaults if empty
       if (
@@ -153,7 +201,7 @@ const CoreDns = (props) => {
       setIpFam(config.UpstreamFamilyIPAddress)
       setEnableTls(!config.DisableTls)
       setEnableFamilyTls(!config.DisableFamilyTls)
-      
+
       // Load multiple providers if available
       if (config.UpstreamProviders && config.UpstreamProviders.length > 0) {
         setUpstreamProviders(config.UpstreamProviders)
@@ -205,7 +253,7 @@ const CoreDns = (props) => {
             </CheckboxIndicator>
             <CheckboxLabel>Disabled</CheckboxLabel>
           </Checkbox>
-          
+
           <Text bold>
             Enable Multiple DNS Providers (Fallback Support)
           </Text>
@@ -418,6 +466,38 @@ const CoreDns = (props) => {
               </Button>
             </>
           )}
+
+          <Divider my="$2" />
+
+          <Text bold>System DNS Override</Text>
+          <Text size="sm" color="$muted500">
+            Override the router host's outbound DNS destination
+          </Text>
+          <HStack space="md" alignItems="center">
+            <Input variant="underlined" flex={1}>
+              <InputField
+                value={systemDnsOverride}
+                onChangeText={setSystemDnsOverride}
+                placeholder={
+                  sprDnsIP
+                    ? `${sprDnsIP} (empty = disabled)`
+                    : 'empty = disabled'
+                }
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </Input>
+            {sprDnsIP && systemDnsOverride.trim() != sprDnsIP ? (
+              <Button
+                size="sm"
+                action="secondary"
+                variant="outline"
+                onPress={() => setSystemDnsOverride(sprDnsIP)}
+              >
+                <ButtonText>Use SPR DNS</ButtonText>
+              </Button>
+            ) : null}
+          </HStack>
 
           <HStack>
             <Button action="primary" onPress={submitSettings}>
