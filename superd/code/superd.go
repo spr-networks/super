@@ -479,7 +479,7 @@ func updateContainer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updated := false
+	updated := r.URL.Query().Get("force") == "1"
 	for tag, id := range imageIDs(images) {
 		if id != before[tag] {
 			updated = true
@@ -754,6 +754,8 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 	out, _ = exec.Command("git", "pull").CombinedOutput()
 	fmt.Println(string(out))
 
+	gitChanged := !strings.Contains(strings.ToLower(string(out)), "up to date")
+
 	if creds.Plus == false && creds.AutoConfig == true {
 		data, err := configureUserPlugin(repo)
 		if err != nil {
@@ -766,10 +768,14 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(data)
+		os.Chdir("/super")
+		return
 	}
 
 	os.Chdir("/super")
 
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"Changed": gitChanged})
 }
 
 func getRepoName(gitURL string) string {
