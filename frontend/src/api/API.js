@@ -197,7 +197,7 @@ class API {
       headers
     }
 
-    if (body) {
+    if (body !== undefined && body !== null) {
       opts.body = JSON.stringify(body)
     }
 

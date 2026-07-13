@@ -77,6 +77,10 @@ export class APIFirewall extends API {
     return this.delete('custom_interface', data)
   }
 
+  setSystemDnsOverride(ip) {
+    return this.put('systemDnsOverride', ip ?? '')
+  }
+
   getTLS() {
     return this.get('enableTLS')
   }
