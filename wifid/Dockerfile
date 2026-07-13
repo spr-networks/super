@@ -50,11 +50,11 @@ COPY code/filter_dhcp_mismatch.c /code/
 WORKDIR /code
 RUN clang -O3 -target bpf -D __BPF_TRACING__ -I xdp-tools/headers/ -I xdp-tools/lib/libbpf/src/root/usr/include/ -c filter_dhcp_mismatch.c
 
-COPY code/main.go /code/
+COPY code/go.mod code/main.go code/control.go code/roaming.go /code/
 ARG USE_TMPFS=true
 RUN --mount=type=tmpfs,target=/tmpfs \
     [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
-    go build -trimpath -ldflags="-s -w" -o /hostap_dhcp_helper main.go
+    go build -trimpath -ldflags="-s -w" -o /hostap_dhcp_helper main.go control.go roaming.go
 
 # Build hostapd
 ARG HOSTAP_COMMIT=596ffafdda209026c4cfe5e5f0367fce745991d7

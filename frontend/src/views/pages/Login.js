@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { saveLogin, testLogin, setApiURL, getApiHostname } from 'api'
+import { saveLogin, testLogin, setApiURL, getApiHostname, isMockAPI } from 'api'
 import { useNavigate } from 'react-router-dom'
 
 import { api } from 'api'
@@ -97,6 +97,12 @@ const Login = (props) => {
           let msg = await err.response.text() // setup already done
         }
       })
+
+    if (isMockAPI()) {
+      //mock backend only accepts admin:admin, prefill it
+      setUsername('admin')
+      setPassword('admin')
+    }
 
     AsyncStorage.getItem('user').then((login) => {
       login = JSON.parse(login)

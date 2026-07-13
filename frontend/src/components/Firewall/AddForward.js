@@ -85,6 +85,9 @@ class AddForwardImpl extends React.Component {
           this.setState({ isLoading: false })
         })
         .catch((err) => {
+          if (this.props.item) {
+            firewallAPI.addForward(this.props.item).catch(() => {})
+          }
           this.props.alertContext.error('Firewall API Failure', err)
           this.setState({ isLoading: false })
         })

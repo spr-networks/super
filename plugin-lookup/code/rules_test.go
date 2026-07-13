@@ -136,3 +136,88 @@ func TestClassifyModelFromTXTIsHighConfidence(t *testing.T) {
 		t.Fatalf("confidence = %q, want High", result.Confidence)
 	}
 }
+
+// real-device fixtures against the shipped fingerprint db
+func TestShippedDBRealDevices(t *testing.T) {
+	db, err := loadFingerprintDB("../data/fingerprints.json")
+	if err != nil {
+		t.Fatalf("load shipped db: %v", err)
+	}
+
+	cases := []struct {
+		name       string
+		signals    DeviceSignals
+		category   string
+		vendor     string
+		confidence string
+	}{
+		{
+			name: "mac laptop via mdns txt model",
+			signals: DeviceSignals{
+				MAC: "aa:bb:cc:dd:ee:01",
+				TXT: map[string]string{"model": "MacBookPro18,3"},
+			},
+			category:   "laptop",
+			vendor:     "Apple",
+			confidence: "High",
+		},
+		{
+			name: "home assistant",
+			signals: DeviceSignals{
+				MAC:       "20:f8:3b:dd:ee:02",
+				OUIVendor: "Nabu Casa, Inc.",
+				Hostname:  "homeassistant",
+			},
+			category:   "iot-sensor",
+			vendor:     "Nabu Casa, Inc.",
+			confidence: "High",
+		},
+		{
+			name: "honeywell thermostat",
+			signals: DeviceSignals{
+				MAC:          "5c:fc:e1:dd:ee:03",
+				OUIVendor:    "Resideo",
+				ParamReqList: "1,3,6",
+				Domains: []string{
+					"tccprod01.honeywell.com",
+					"tccprod02.honeywell.com",
+					"lyric.alarmnet.com",
+				},
+			},
+			category: "iot-sensor",
+			vendor:   "Resideo",
+		},
+		{
+			name: "flo water monitor",
+			signals: DeviceSignals{
+				MAC:          "88:0c:e0:dd:ee:04",
+				OUIVendor:    "Texas Instruments",
+				ParamReqList: "1,3,12,15,6,33,121,42",
+				Domains: []string{
+					"mqtt.flosecurecloud.com",
+					"api-bulk.meetflo.com",
+				},
+			},
+			category: "iot-sensor",
+			vendor:   "Flo Smart Water Monitor",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := classifyDevice(&tc.signals, db)
+			if result.Category != tc.category {
+				t.Fatalf("category = %q, want %q (%#v)", result.Category, tc.category, result)
+			}
+			if result.Vendor != tc.vendor {
+				t.Fatalf("vendor = %q, want %q (%#v)", result.Vendor, tc.vendor, result)
+			}
+			if tc.confidence != "" && result.Confidence != tc.confidence {
+				t.Fatalf("confidence = %q, want %q (%#v)", result.Confidence, tc.confidence, result)
+			}
+			if result.Confidence == "Low" {
+				t.Fatalf("confidence Low, want at least Medium (%#v)", result)
+			}
+		})
+	}
+}

@@ -5,6 +5,127 @@
 // reskin is visible everywhere rather than only on a few semantic aliases.
 // Palettes are ported from QubitSphere.
 
+// ---------------------------------------------------------------------------
+// Theme fonts
+// ---------------------------------------------------------------------------
+// Self-hosted stacks a theme (built-in or custom) can opt into via `font`.
+// Injected at runtime on web only (see App.web.js).
+
+export const themeFonts = {
+  system: { name: 'System' },
+  technical: {
+    name: 'Technical',
+    faces: [
+      { family: 'Michroma', file: 'michroma-regular.woff2', weight: '400 900' },
+      { family: 'Rajdhani', file: 'rajdhani-500.woff2', weight: '100 500' },
+      { family: 'Rajdhani', file: 'rajdhani-600.woff2', weight: '600' },
+      { family: 'Rajdhani', file: 'rajdhani-700.woff2', weight: '700 900' }
+    ],
+    body: "'Rajdhani', 'Helvetica Neue', sans-serif",
+    heading: "'Michroma', 'Rajdhani', sans-serif",
+    bodySpacing: '0.03em',
+    headingSpacing: '0.08em',
+    headingTransform: 'uppercase'
+  },
+  terminal: {
+    name: 'Terminal',
+    faces: [
+      { family: 'Share Tech Mono', file: 'sharetechmono-regular.woff2', weight: '100 900' }
+    ],
+    body: "'Share Tech Mono', Menlo, monospace",
+    heading: "'Share Tech Mono', Menlo, monospace",
+    headingTransform: 'uppercase'
+  },
+  serif: {
+    name: 'Serif',
+    faces: [
+      { family: 'Lora', file: 'lora-400.woff2', weight: '100 500' },
+      { family: 'Lora', file: 'lora-600.woff2', weight: '600 900' }
+    ],
+    body: "'Lora', Georgia, serif",
+    heading: "'Lora', Georgia, serif"
+  },
+  inter: {
+    name: 'Inter',
+    faces: [
+      { family: 'Inter', file: 'inter-400.woff2', weight: '100 500' },
+      { family: 'Inter', file: 'inter-600.woff2', weight: '600 900' }
+    ],
+    body: "'Inter', 'Helvetica Neue', sans-serif",
+    heading: "'Inter', 'Helvetica Neue', sans-serif"
+  },
+  jetbrains: {
+    name: 'JetBrains Mono',
+    faces: [
+      { family: 'JetBrains Mono', file: 'jetbrainsmono-400.woff2', weight: '100 600' },
+      { family: 'JetBrains Mono', file: 'jetbrainsmono-700.woff2', weight: '700 900' }
+    ],
+    body: "'JetBrains Mono', Menlo, monospace",
+    heading: "'JetBrains Mono', Menlo, monospace"
+  },
+  scifi: {
+    name: 'Sci-Fi',
+    faces: [
+      { family: 'Orbitron', file: 'orbitron-500.woff2', weight: '100 600' },
+      { family: 'Orbitron', file: 'orbitron-700.woff2', weight: '700 900' },
+      { family: 'Inter', file: 'inter-400.woff2', weight: '100 500' },
+      { family: 'Inter', file: 'inter-600.woff2', weight: '600 900' }
+    ],
+    body: "'Inter', 'Helvetica Neue', sans-serif",
+    heading: "'Orbitron', 'Inter', sans-serif",
+    headingSpacing: '0.06em',
+    headingTransform: 'uppercase'
+  },
+  chakra: {
+    name: 'Chakra',
+    faces: [
+      { family: 'Chakra Petch', file: 'chakrapetch-400.woff2', weight: '100 500' },
+      { family: 'Chakra Petch', file: 'chakrapetch-600.woff2', weight: '600 900' }
+    ],
+    body: "'Chakra Petch', 'Helvetica Neue', sans-serif",
+    heading: "'Chakra Petch', 'Helvetica Neue', sans-serif"
+  }
+}
+
+export const isValidThemeFont = (fontId) =>
+  typeof fontId === 'string' &&
+  !fontId.includes('__') &&
+  /^[a-z][a-z0-9-]{0,31}$/.test(fontId) &&
+  Object.prototype.hasOwnProperty.call(themeFonts, fontId)
+
+export const themeFontFacesCss = (fontId) => {
+  if (!isValidThemeFont(fontId) || !themeFonts[fontId].faces) return ''
+  return themeFonts[fontId].faces
+    .map(
+      (f) =>
+        `@font-face { font-family: '${f.family}'; src: url('/fonts/${f.file}') format('woff2'); font-weight: ${f.weight}; font-display: swap; }`
+    )
+    .join('\n')
+}
+
+export const allThemeFontFacesCss = () =>
+  Object.keys(themeFonts).map(themeFontFacesCss).filter(Boolean).join('\n')
+
+export const themeFontCss = (fontId) => {
+  if (!isValidThemeFont(fontId)) return ''
+  const font = themeFonts[fontId]
+  if (!font.faces) return ''
+
+  const faces = themeFontFacesCss(fontId)
+
+  const body = `#root * { font-family: ${font.body} !important;${
+    font.bodySpacing ? ` letter-spacing: ${font.bodySpacing};` : ''
+  } }`
+
+  const heading = `#root h1, #root h2, #root h3, #root h4, #root h5, #root h6, #root [role='heading'] { font-family: ${
+    font.heading
+  } !important;${
+    font.headingSpacing ? ` letter-spacing: ${font.headingSpacing};` : ''
+  }${font.headingTransform ? ` text-transform: ${font.headingTransform};` : ''} }`
+
+  return [faces, body, heading].join('\n')
+}
+
 export const DEFAULT_THEME = 'default'
 
 export const themes = {
@@ -118,6 +239,60 @@ export const themes = {
       navbarBackgroundLight: '#F4EFE6',
       navbarBorderColorLight: '#D8CEBB',
       navbarTextColorLight: '#6A6258'
+    }
+  },
+
+  firstlight: {
+    name: 'FirstLight',
+    colorMode: 'dark',
+    font: 'technical',
+    swatch: { bg: '#171A21', accent: '#D2A24C' },
+    colors: {
+      // accent — ochre gold
+      primary50: '#FBF4E6',
+      primary100: '#F4E3C2',
+      primary200: '#EACD96',
+      primary300: '#E0B76F',
+      primary400: '#D2A24C',
+      primary500: '#C1913C',
+      primary600: '#A87A2C',
+      primary700: '#86601F',
+      primary800: '#644715',
+      primary900: '#422E0C',
+
+      // dark neutral surfaces -> charcoal
+      black: '#0C0E13',
+      blueGray900: '#0C0E13',
+      blueGray800: '#171A21',
+      blueGray700: '#232733',
+      coolGray900: '#171A21',
+      coolGray800: '#20242E',
+      coolGray700: '#2C313D',
+
+      // text/icons on dark -> neutral warm gray
+      muted50: '#F2F2EF',
+      muted100: '#E4E4E0',
+      muted200: '#C9CAC5',
+      muted300: '#ADAFAB',
+      muted400: '#8F9290',
+      muted500: '#7E8285',
+
+      // default Text/Heading color ramp (dark mode) -> off-white
+      textDark0: '#FFFFFF',
+      textDark50: '#F4F4F2',
+      textDark100: '#E8E8E5',
+      textDark200: '#D2D3D0',
+      textDark300: '#B6B8B6',
+      textDark400: '#979A99',
+      textDark500: '#7F8385',
+
+      backgroundContentDark: '#0C0E13',
+      backgroundCardDark: '#171A21',
+      borderColorCardDark: '#2C313D',
+      sidebarBackgroundDark: '#0C0E13',
+      navbarBackgroundDark: '#0C0E13',
+      navbarBorderColorDark: '#2C313D',
+      navbarTextColorDark: '#D2A24C'
     }
   },
 
@@ -414,7 +589,8 @@ const THEME_ORDER = [
   'blueprint',
   'blueprint_light',
   'whitestone',
-  'lab'
+  'lab',
+  'firstlight'
 ]
 
 // The default theme follows the light/dark toggle rather than pinning a mode,
@@ -633,7 +809,8 @@ export const DEFAULT_CUSTOM = {
   accent: '#38BDF8',
   background: '#0F1729',
   card: '#182136',
-  text: '#E2E8F5'
+  text: '#E2E8F5',
+  font: 'system'
 }
 
 // Identifiers for user-built themes are slugified from the name and prefixed
@@ -658,6 +835,7 @@ const sanitizeSpec = (spec) => {
     }
   }
   s.colorMode = s.colorMode === 'light' ? 'light' : 'dark'
+  s.font = isValidThemeFont(s.font) ? s.font : 'system'
   return s
 }
 
@@ -667,6 +845,7 @@ export const buildCustomTheme = (spec, name = 'Custom') => {
   return {
     name: name || 'Custom',
     colorMode: s.colorMode,
+    font: s.font,
     swatch: { bg: s.background, accent: s.accent },
     spec: s,
     colors: deriveCustomColors(s)

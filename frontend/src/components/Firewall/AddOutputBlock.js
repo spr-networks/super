@@ -83,6 +83,9 @@ class AddOutputBlockImpl extends React.Component {
         .addOutputBLock(block)
         .then(done)
         .catch((err) => {
+          if (this.props.item) {
+            firewallAPI.addOutputBLock(this.props.item).catch(() => {})
+          }
           this.props.alertContext.error('Firewall API Failure', err)
           this.setState({ isLoading: false })
         })

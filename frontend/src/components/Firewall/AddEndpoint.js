@@ -48,15 +48,20 @@ class AddEndpointImpl extends React.Component {
     this.handleChange = this.handleChange.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
 
-    if (props.item) {
+    const initial = props.item || props.draft
+    if (initial) {
       this.state = {
         ...this.state,
-        RuleName: props.item.RuleName || '',
-        Description: props.item.Description || '',
-        Protocol: props.item.Protocol || 'tcp',
-        IP: props.item.IP || '',
-        Port: props.item.Port || 'any',
-        Tag: (props.item.Tags && props.item.Tags[0]) || ''
+        RuleName: initial.RuleName || '',
+        Description: initial.Description || '',
+        Protocol: initial.Protocol || 'tcp',
+        IP: initial.IP || '',
+        Port: initial.Port || 'any',
+        Tag:
+          initial.Tag ||
+          (initial.Tags && initial.Tags[0]) ||
+          '',
+        selected: props.initialDeviceIds || []
       }
     }
   }
@@ -126,21 +131,37 @@ class AddEndpointImpl extends React.Component {
 
     this.setState({ isLoading: true })
 
-    firewallAPI
-      .addEndpoint(rule)
-      .then(async () => {
-        if (tag && this.state.selected.length) {
-          await this.tagSelectedDevices(tag)
-        }
-        if (this.props.notifyChange) {
-          this.props.notifyChange('endpoint')
-        }
-        this.setState({ isLoading: false })
-      })
-      .catch((err) => {
-        this.props.alertContext.error('Firewall API Failure' + err.message)
-        this.setState({ isLoading: false })
-      })
+    const done = async () => {
+      if (tag && this.state.selected.length) {
+        await this.tagSelectedDevices(tag)
+      }
+      if (this.props.notifyChange) {
+        this.props.notifyChange('endpoint')
+      }
+      this.setState({ isLoading: false })
+    }
+
+    const fail = (err) => {
+      this.props.alertContext.error('Firewall API Failure' + err.message)
+      this.setState({ isLoading: false })
+    }
+
+    if (this.props.item) {
+      firewallAPI
+        .deleteEndpoint(this.props.item)
+        .then(() =>
+          firewallAPI
+            .addEndpoint(rule)
+            .then(done)
+            .catch((err) => {
+              firewallAPI.addEndpoint(this.props.item).catch(() => {})
+              fail(err)
+            })
+        )
+        .catch(fail)
+    } else {
+      firewallAPI.addEndpoint(rule).then(done).catch(fail)
+    }
   }
 
   componentDidMount() {
@@ -352,6 +373,8 @@ export default function AddEndpoint(props) {
   return (
     <AddEndpointImpl
       item={props.item}
+      draft={props.draft}
+      initialDeviceIds={props.initialDeviceIds}
       notifyChange={props.notifyChange}
       alertContext={alertContext}
     ></AddEndpointImpl>

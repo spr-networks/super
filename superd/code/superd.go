@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -31,6 +32,7 @@ import (
 
 import (
 	"github.com/gorilla/mux"
+	yaml "go.yaml.in/yaml/v3"
 )
 
 import (
@@ -129,6 +131,62 @@ func getDefaultCompose() string {
 	return "docker-compose.yml"
 }
 
+// service names declared in a plugin compose file, for targeting
+// stop/down in virtual mode where plugins run in the merged project
+func pluginComposeServices(composeFile string) []string {
+	data, err := os.ReadFile(composeFile)
+	if err != nil {
+		fmt.Println("failed to read compose file", composeFile, err)
+		return nil
+	}
+
+	doc := struct {
+		Services map[string]interface{} `yaml:"services"`
+	}{}
+
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		fmt.Println("failed to parse compose file", composeFile, err)
+		return nil
+	}
+
+	names := []string{}
+	for name := range doc.Services {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+var networkBridgeConflictRe = regexp.MustCompile(`conflicts with network ([0-9a-f]{64}) \(([^)]+)\): networks have same bridge name`)
+
+func parseNetworkBridgeConflict(detail string) (id string, name string, ok bool) {
+	m := networkBridgeConflictRe.FindStringSubmatch(detail)
+	if m == nil {
+		return "", "", false
+	}
+	return m[1], m[2], true
+}
+
+func remediateNetworkBridgeConflict(detail string, removed map[string]bool) bool {
+	id, name, ok := parseNetworkBridgeConflict(detail)
+	if !ok || removed[id] {
+		return false
+	}
+	removed[id] = true
+	out, err := exec.Command("docker", "network", "rm", id).CombinedOutput()
+	if err != nil {
+		fmt.Println("failed to remove conflicting network " + name + " (" + id + "): " + strings.TrimSpace(string(out)))
+		return false
+	}
+	fmt.Println("removed stale network " + name + " (" + id + ") with conflicting bridge name, retrying")
+	sprbus.Publish("plugin:docker:remediation", map[string]string{
+		"Reason":  "removed stale network with conflicting bridge name",
+		"Network": name,
+		"ID":      id,
+	})
+	return true
+}
+
 func composeCommand(composeFileIN string, target string, command string, optional string, new_docker bool) error {
 	composeCommandMtx.Lock()
 	defer composeCommandMtx.Unlock()
@@ -180,16 +238,23 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		// causing the services to lose their network. dont do this,
 		// and take the restart hit for anything other than stop
 	*/
-	if command == "stop" && target == "" && isVirtual() {
-		//define target for virtual to avoid total restart
-		//TBD; need a tenable solution for this. perhaps parse compose file and pull
-		//the first service.
+	if (command == "stop" || command == "down" || command == "restart" || command == "up") &&
+		target == "" && isVirtual() {
+		//in virtual mode plugin commands run against the merged compose
+		//project: without a service target, stop/down would take the whole
+		//stack with them. target only the plugin's own services.
 		if composeFile == "plugins/plus/pfw_extension/docker-compose.yml" {
 			target = "pfw"
 		} else if composeFile == "plugins/plus/mesh_extension/docker-compose.yml" {
 			target = "mesh"
+		} else if composeFile != defaultCompose {
+			target = strings.Join(pluginComposeServices(composeFile), " ")
 		}
+	}
 
+	if isVirtual() && command == "down" && target == "" && composeFile != defaultCompose {
+		//never run an untargeted down against the merged project
+		return fmt.Errorf("refusing untargeted down of %s in virtual mode", composeFile)
 	}
 
 	add_buildctx := ""
@@ -210,7 +275,7 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 	}
 
 	if target != "" {
-		args = append(args, target)
+		args = append(args, strings.Fields(target)...)
 	}
 
 	cmd := "docker-compose"
@@ -279,22 +344,30 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		args = append([]string{"compose"}, args...)
 	}
 
-	output, err := exec.Command(cmd, args...).CombinedOutput()
-	if err != nil {
-		argS := strings.Join(append([]string{cmd}, args...), " ")
-		errString := err.Error()
-		if detail := strings.TrimSpace(string(output)); detail != "" {
-			errString += ": " + detail
+	var output []byte
+	removedNetworks := map[string]bool{}
+	for attempt := 0; ; attempt++ {
+		output, err = exec.Command(cmd, args...).CombinedOutput()
+		if err == nil {
+			return nil
 		}
-		errString += " |" + argS
-		fmt.Println("failure: " + errString)
-		//tbd good place for a sprbus event
-		sprbus.Publish("plugin:docker:failure", map[string]string{"Reason": "docker command failed", "Message": errString, "ComposeFile": composeFileIN})
-		return errors.New(errString)
+		if command == "up" && attempt < 4 &&
+			remediateNetworkBridgeConflict(string(output), removedNetworks) {
+			continue
+		}
+		break
 	}
 
-	return nil
-
+	argS := strings.Join(append([]string{cmd}, args...), " ")
+	errString := err.Error()
+	if detail := strings.TrimSpace(string(output)); detail != "" {
+		errString += ": " + detail
+	}
+	errString += " |" + argS
+	fmt.Println("failure: " + errString)
+	//tbd good place for a sprbus event
+	sprbus.Publish("plugin:docker:failure", map[string]string{"Reason": "docker command failed", "Message": errString, "ComposeFile": composeFileIN})
+	return errors.New(errString)
 }
 
 func update(w http.ResponseWriter, r *http.Request) {
@@ -315,7 +388,7 @@ func update(w http.ResponseWriter, r *http.Request) {
 
 	//confirm the pulled images match what was verified
 	if getReleaseChannel() == "" {
-		go verifyPulledImages()
+		go verifyPulledImages(false)
 	}
 }
 
@@ -331,6 +404,129 @@ func stop(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
 	go composeCommand(compose, target, "stop", "", false)
+}
+
+var composeVarPattern = regexp.MustCompile(`\$\{([A-Za-z_][A-Za-z0-9_]*)(:-([^}]*))?\}`)
+
+func expandComposeVar(s string) string {
+	return composeVarPattern.ReplaceAllStringFunc(s, func(m string) string {
+		parts := composeVarPattern.FindStringSubmatch(m)
+		val := os.Getenv(parts[1])
+		if val == "" {
+			val = parts[3]
+		}
+		return val
+	})
+}
+
+func pluginComposeImages(composeFile string) []string {
+	reloadComposeWhitelist()
+
+	composeAllowed := false
+	for _, entry := range ComposeAllowList {
+		if entry == composeFile {
+			composeAllowed = true
+			break
+		}
+	}
+
+	if composeAllowed == false {
+		fmt.Println("Compose file path is not whitelisted", composeFile)
+		return nil
+	}
+
+	data, err := os.ReadFile(composeFile)
+	if err != nil {
+		return nil
+	}
+
+	doc := struct {
+		Services map[string]struct {
+			Image string `yaml:"image"`
+		} `yaml:"services"`
+	}{}
+
+	if yaml.Unmarshal(data, &doc) != nil {
+		return nil
+	}
+
+	images := []string{}
+	for _, svc := range doc.Services {
+		if svc.Image != "" {
+			images = append(images, expandComposeVar(svc.Image))
+		}
+	}
+	sort.Strings(images)
+	return images
+}
+
+func imageIDs(tags []string) map[string]string {
+	ids := map[string]string{}
+	for _, tag := range tags {
+		out, err := exec.Command("docker", "image", "inspect", "-f", "{{.Id}}", tag).Output()
+		if err == nil {
+			ids[tag] = strings.TrimSpace(string(out))
+		} else {
+			ids[tag] = ""
+		}
+	}
+	return ids
+}
+
+// pull a plugin's images; if any changed, cycle the plugin with down + up
+func updateContainer(w http.ResponseWriter, r *http.Request) {
+	compose := r.URL.Query().Get("compose_file")
+	if compose == "" {
+		http.Error(w, "compose_file required", 400)
+		return
+	}
+
+	images := pluginComposeImages(compose)
+	if len(images) == 0 {
+		http.Error(w, "no images found in compose file", 400)
+		return
+	}
+
+	before := imageIDs(images)
+
+	if err := composeCommand(compose, "", "pull", "", false); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	updated := r.URL.Query().Get("force") == "1"
+	for tag, id := range imageIDs(images) {
+		if id != before[tag] {
+			updated = true
+			break
+		}
+	}
+
+	if updated {
+		if err := composeCommand(compose, "", "down", "", false); err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+		if err := composeCommand(compose, "", "up", "-d", true); err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"Updated": updated})
+}
+
+// remove a plugin's containers and networks (docker compose down)
+func down(w http.ResponseWriter, r *http.Request) {
+	compose := r.URL.Query().Get("compose_file")
+	if compose == "" {
+		//never run a bare down against the default compose
+		http.Error(w, "compose_file required", 400)
+		return
+	}
+
+	go composeCommand(compose, "", "down", "", false)
 }
 
 func docker_ps(w http.ResponseWriter, r *http.Request) {
@@ -416,7 +612,13 @@ func restart(w http.ResponseWriter, r *http.Request) {
 	compose := r.URL.Query().Get("compose_file")
 
 	//run restart
-	go composeCommand(compose, target, "restart", "", target == "")
+	go func() {
+		err := composeCommand(compose, target, "restart", "", target == "")
+		if err != nil {
+			fmt.Println("restart failed, falling back to up -d for " + compose)
+			composeCommand(compose, target, "up", "-d", true)
+		}
+	}()
 }
 
 func ghcr_auth(w http.ResponseWriter, r *http.Request) {
@@ -567,6 +769,8 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 	out, _ = exec.Command("git", "pull").CombinedOutput()
 	fmt.Println(string(out))
 
+	gitChanged := !strings.Contains(strings.ToLower(string(out)), "up to date")
+
 	if creds.Plus == false && creds.AutoConfig == true {
 		data, err := configureUserPlugin(repo)
 		if err != nil {
@@ -579,10 +783,14 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(data)
+		os.Chdir("/super")
+		return
 	}
 
 	os.Chdir("/super")
 
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"Changed": gitChanged})
 }
 
 func getRepoName(gitURL string) string {
@@ -597,7 +805,7 @@ func getRepoName(gitURL string) string {
 func configureUserPlugin(repoName string) ([]byte, error) {
 	pluginConfigPath := filepath.Join("/super", "plugins", "user", repoName, "plugin.json")
 	if _, err := os.Stat(pluginConfigPath); os.IsNotExist(err) {
-		return []byte{}, fmt.Errorf("Could not find user plugin config " + pluginConfigPath)
+		return []byte{}, fmt.Errorf("could not find user plugin config %s", pluginConfigPath)
 	}
 
 	data, err := os.ReadFile(pluginConfigPath)
@@ -707,21 +915,43 @@ func lastTagForRepository(path string) string {
 	return strings.Trim(string(stdout), "'\n")
 }
 
-func dockerImageLabel(image string, labelName string) (string, error) {
-	labelValue, err := dockerObjectLabel(image, labelName)
-	if err != nil {
-		//in case the container has not been created use the full image name
-		spr_prefix := "ghcr.io/spr-networks/super_"
-		image_name := strings.Replace(image, "super", "", 1)
-		image_name = strings.ReplaceAll(image_name, "-", "_")
+func dockerImageCandidates(image string) []string {
+	candidates := []string{image}
 
-		labelValue, err = dockerObjectLabel(spr_prefix+image_name, labelName)
-		if err != nil {
-			return "", err
-		}
+	// Core services historically use container names such as "superapi" and
+	// registry images such as "super_api". Keep that lookup for compatibility.
+	if strings.HasPrefix(image, "super") {
+		imageName := strings.TrimPrefix(image, "super")
+		imageName = strings.ReplaceAll(imageName, "-", "_")
+		candidates = append(candidates, "ghcr.io/spr-networks/super_"+imageName)
 	}
 
-	return labelValue, nil
+	// User plugins use spr-* container and image names. Older frontends prepend
+	// "super" to every plugin name, so accept both "spr-foo" and
+	// "superspr-foo" while preferring the running container over :latest.
+	pluginName := image
+	if strings.HasPrefix(image, "superspr-") {
+		pluginName = strings.TrimPrefix(image, "super")
+		candidates = append(candidates, pluginName)
+	}
+	if strings.HasPrefix(pluginName, "spr-") {
+		candidates = append(candidates, "ghcr.io/spr-networks/"+pluginName+":latest")
+	}
+
+	return candidates
+}
+
+func dockerImageLabel(image string, labelName string) (string, error) {
+	var lastErr error
+	for _, candidate := range dockerImageCandidates(image) {
+		labelValue, err := dockerObjectLabel(candidate, labelName)
+		if err == nil {
+			return labelValue, nil
+		}
+		lastErr = err
+	}
+
+	return "", lastErr
 }
 
 func version(w http.ResponseWriter, r *http.Request) {
@@ -1108,8 +1338,11 @@ func main() {
 	unix_plugin_router := mux.NewRouter().StrictSlash(true)
 	unix_plugin_router.HandleFunc("/restart", restart).Methods("PUT")
 	unix_plugin_router.HandleFunc("/attest_status", attestStatus).Methods("GET", "PUT")
+	unix_plugin_router.HandleFunc("/plugin_attest", pluginAttest).Methods("GET")
 	unix_plugin_router.HandleFunc("/start", start).Methods("PUT")
 	unix_plugin_router.HandleFunc("/stop", stop).Methods("PUT")
+	unix_plugin_router.HandleFunc("/down", down).Methods("PUT")
+	unix_plugin_router.HandleFunc("/update_container", updateContainer).Methods("PUT")
 	unix_plugin_router.HandleFunc("/update", update).Methods("PUT")
 	unix_plugin_router.HandleFunc("/remove", removeUserContainer).Methods("PUT")
 	unix_plugin_router.HandleFunc("/build", build).Methods("PUT")

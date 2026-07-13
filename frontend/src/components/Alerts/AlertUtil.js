@@ -86,7 +86,15 @@ export const eventTemplate = (
   //const supportTags = Platform.OS == 'web'
   const addElement = (val) => {
     if (supportTags) {
-      elements.push(<Text size="sm">{val}</Text>)
+      if (React.isValidElement(val)) {
+        elements.push(val)
+      } else {
+        elements.push(
+          <Text size="sm" flexShrink={1}>
+            {val}
+          </Text>
+        )
+      }
     } else {
       elements.push(val)
     }
@@ -135,7 +143,14 @@ export const eventTemplate = (
 
   if (supportTags) {
     return (
-      <HStack space="xs" justifyContent="flex-start" flexWrap="wrap">
+      <HStack
+        w="$full"
+        minWidth={0}
+        space="xs"
+        alignItems="center"
+        justifyContent="flex-start"
+        flexWrap="wrap"
+      >
         {elements.map((element, idx) => (
           <React.Fragment key={idx}>{element}</React.Fragment>
         ))}

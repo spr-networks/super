@@ -59,6 +59,16 @@ class AddContainerInterfaceRuleImpl extends React.Component {
   constructor(props) {
     super(props)
 
+    if (props.item) {
+      this.state = {
+        ...this.state,
+        ...props.item,
+        Policies: props.item.Policies || [],
+        Groups: props.item.Groups || [],
+        Tags: props.item.Tags || []
+      }
+    }
+
     this.handleChange = this.handleChange.bind(this)
     this.handleSubmit = this.handleSubmit.bind(this)
   }
@@ -97,13 +107,29 @@ class AddContainerInterfaceRuleImpl extends React.Component {
       this.setState({ isLoading: false })
     }
 
-    firewallAPI
-      .addCustomInterfaceRule(crule)
-      .then(done)
-      .catch((err) => {
-        this.props.alertContext.error('Firewall API Failure', err)
-        this.setState({ isLoading: false })
-      })
+    const fail = (err) => {
+      this.props.alertContext.error('Firewall API Failure', err)
+      this.setState({ isLoading: false })
+    }
+
+    if (this.props.item) {
+      firewallAPI
+        .deleteCustomInterfaceRule(this.props.item)
+        .then(() =>
+          firewallAPI
+            .addCustomInterfaceRule(crule)
+            .then(done)
+            .catch((err) => {
+              firewallAPI
+                .addCustomInterfaceRule(this.props.item)
+                .catch(() => {})
+              fail(err)
+            })
+        )
+        .catch(fail)
+    } else {
+      firewallAPI.addCustomInterfaceRule(crule).then(done).catch(fail)
+    }
   }
 
   componentDidMount() {
@@ -339,6 +365,7 @@ export default function AddContainerInterfaceRule(props) {
       appContext={props.appContext}
       interfaceList={props.interfaceList}
       netBlocks={props.netBlocks}
+      item={props.item}
     ></AddContainerInterfaceRuleImpl>
   )
 }

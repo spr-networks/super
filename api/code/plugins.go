@@ -80,7 +80,7 @@ func (p PluginConfig) MatchesData(q PluginConfig) bool {
 }
 
 var gPlusExtensionDefaults = []PluginConfig{
-	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", false, false, false, "", "", []string{}, NetworkCapabilities{}},
+	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", false, false, true, "", "", []string{}, NetworkCapabilities{}},
 	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", false, false, false, "", "", []string{}, NetworkCapabilities{}},
 }
 
@@ -309,8 +309,11 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 					config.Plugins = append(config.Plugins[:idx], config.Plugins[idx+1:]...)
 					found = true
 
-					// plugin was deleted, stop it
-					stopExtension(entry.ComposeFilePath)
+					// plugin was deleted, take its compose project down
+					// (containers + networks); fall back to stop for older superd
+					if !downExtension(entry.ComposeFilePath) {
+						stopExtension(entry.ComposeFilePath)
+					}
 					// Remove network capabilities firewall rules
 					removePluginNetworkCapabilities(entry)
 					// also remove if its a custom plugin
@@ -494,6 +497,7 @@ func restartPlugin(name string) {
 		if entry.Name == name && entry.Enabled == true {
 			if entry.ComposeFilePath != "" {
 				callSuperdRestart(entry.ComposeFilePath, "")
+				applyPluginNetworkCapabilitiesRetry(entry)
 			}
 		}
 	}
@@ -593,21 +597,19 @@ func plusToken(w http.ResponseWriter, r *http.Request) {
 	Configmtx.Lock()
 	defer Configmtx.Unlock()
 
-	if validPlusToken(token) {
-		config.PlusToken = token
-		err := installPlus()
-		if err == nil {
-			saveConfigLocked()
-			fmt.Println("[+] Installed token")
-			return
-		} else {
-			config.PlusToken = ""
-			fmt.Println("[-] Installation failure")
-		}
+	if !validPlusToken(token) {
+		http.Error(w, "Invalid token", 400)
+		return
 	}
 
-	http.Error(w, "Invalid token", 400)
-	return
+	config.PlusToken = token
+	saveConfigLocked()
+	fmt.Println("[+] Installed token")
+
+	if err := installPlus(); err != nil {
+		fmt.Println("[-] Plus install issue:", err)
+		http.Error(w, "Token saved, but Plus install had errors: "+err.Error(), 500)
+	}
 }
 
 func getSuperdClient() http.Client {
@@ -717,7 +719,7 @@ func generatePFWAPIToken() {
 
 }
 
-func downloadExtension(user string, secret string, gitURL string, Plus bool, AutoConfig bool) bool {
+func downloadExtension(user string, secret string, gitURL string, Plus bool, AutoConfig bool) (bool, bool) {
 	params := url.Values{}
 	params.Set("git_url", gitURL)
 
@@ -735,7 +737,7 @@ func downloadExtension(user string, secret string, gitURL string, Plus bool, Aut
 	data, err := superdRequest("update_git", params, bytes.NewBuffer(jsonValue))
 	if err != nil {
 		SprbusPublish("plugin:download:failure", map[string]string{"GitURL": gitURL, "Reason": err.Error()})
-		return false
+		return false, false
 	}
 
 	SprbusPublish("plugin:download:success", map[string]string{"GitURL": gitURL})
@@ -746,18 +748,20 @@ func downloadExtension(user string, secret string, gitURL string, Plus bool, Aut
 		if err == nil {
 			//override GitURL
 			plugin.GitURL = gitURL
-			return installUserPluginConfig(plugin)
+			return true, installUserPluginConfig(plugin)
 		} else {
 			SprbusPublish("plugin:install:failure", map[string]string{"GitURL": gitURL, "Reason": err.Error()})
-			return false
+			return false, false
 		}
 	}
 
-	return true
+	var result struct{ Changed bool }
+	json.Unmarshal(data, &result)
+	return result.Changed, true
 }
 
 func downloadPlusExtension(gitURL string) bool {
-	ret := downloadExtension(PlusUser, config.PlusToken, gitURL, true, false)
+	_, ret := downloadExtension(PlusUser, config.PlusToken, gitURL, true, false)
 	if ret == true && gitURL == PfwGitURL || gitURL == OldPfwGitURL {
 		generatePFWAPIToken()
 	}
@@ -765,7 +769,8 @@ func downloadPlusExtension(gitURL string) bool {
 }
 
 func downloadUserExtension(gitURL string, AutoConfig bool) bool {
-	return downloadExtension("", "", gitURL, false, AutoConfig)
+	_, ret := downloadExtension("", "", gitURL, false, AutoConfig)
+	return ret
 }
 
 func startExtension(composeFilePath string) bool {
@@ -780,6 +785,20 @@ func startExtension(composeFilePath string) bool {
 	}
 
 	return true
+}
+
+func applyPluginNetworkCapabilitiesRetry(plugin PluginConfig) {
+	go func() {
+		var err error
+		for i := 0; i < 36; i++ {
+			time.Sleep(5 * time.Second)
+			err = applyPluginNetworkCapabilities(plugin)
+			if err == nil {
+				return
+			}
+		}
+		fmt.Printf("Warning: Failed to apply network capabilities for plugin %s: %v\n", plugin.Name, err)
+	}()
 }
 
 func applyPluginNetworkCapabilities(plugin PluginConfig) error {
@@ -811,10 +830,24 @@ func applyPluginNetworkCapabilities(plugin PluginConfig) error {
 
 	// Apply the rule directly via firewall function
 	FWmtx.Lock()
+	stale := []CustomInterfaceRule{}
+	for _, existing := range gFirewallConfig.CustomInterfaceRules {
+		if existing.RuleName == rule.RuleName && existing.SrcIP != rule.SrcIP {
+			stale = append(stale, existing)
+		}
+	}
+	for _, old := range stale {
+		if err := modifyCustomInterfaceRulesImpl(old, true); err != nil {
+			fmt.Printf("Failed to remove stale rule %s (%s): %v\n", old.RuleName, old.SrcIP, err)
+		}
+	}
 	err = modifyCustomInterfaceRulesImpl(rule, false) // false = add rule
 	FWmtx.Unlock()
 
 	if err != nil {
+		if strings.Contains(err.Error(), "Duplicate rule") {
+			return nil
+		}
 		fmt.Printf("Failed to apply network capabilities for plugin %s: %v\n", plugin.Name, err)
 		return err
 	}
@@ -1041,6 +1074,92 @@ func stopExtension(composeFilePath string) bool {
 	return true
 }
 
+func updatePluginContainer(w http.ResponseWriter, r *http.Request) {
+	name := trimLower(mux.Vars(r)["name"])
+
+	Configmtx.Lock()
+	var plugin PluginConfig
+	found := false
+	for _, entry := range config.Plugins {
+		if trimLower(entry.Name) == name && entry.Enabled {
+			plugin = entry
+			found = true
+			break
+		}
+	}
+	Configmtx.Unlock()
+
+	if !found || plugin.ComposeFilePath == "" {
+		http.Error(w, "Not found", 404)
+		return
+	}
+
+	//1. update the plugin source first so a changed compose is used for the pull
+	gitChanged := false
+	if plugin.GitURL != "" {
+		gitOK := false
+		if plugin.Plus {
+			gitChanged, gitOK = downloadExtension(PlusUser, config.PlusToken, plugin.GitURL, true, false)
+		} else {
+			gitChanged, gitOK = downloadExtension("", "", plugin.GitURL, false, false)
+		}
+		if !gitOK {
+			http.Error(w, "git update failed", 502)
+			return
+		}
+	}
+
+	c := http.Client{Timeout: 15 * time.Minute}
+	c.Transport = &http.Transport{
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.Dial("unix", SuperdSocketPath)
+		},
+	}
+	defer c.CloseIdleConnections()
+
+	params := url.Values{"compose_file": {plugin.ComposeFilePath}}
+	if gitChanged {
+		params.Set("force", "1")
+	}
+	req, _ := http.NewRequest(http.MethodPut, "http://localhost/update_container?"+params.Encode(), nil)
+	resp, err := c.Do(req)
+	if err != nil {
+		http.Error(w, "update failed: "+err.Error(), 502)
+		return
+	}
+	defer resp.Body.Close()
+
+	data, _ := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, string(data), resp.StatusCode)
+		return
+	}
+
+	var imageResult struct{ Updated bool }
+	json.Unmarshal(data, &imageResult)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{
+		"Updated":      gitChanged || imageResult.Updated,
+		"GitUpdated":   gitChanged,
+		"ImageUpdated": imageResult.Updated,
+	})
+}
+
+// take a plugin's compose project down: removes its containers and networks
+func downExtension(composeFilePath string) bool {
+	if composeFilePath == "" {
+		return true
+	}
+
+	_, err := superdRequest("down", url.Values{"compose_file": {composeFilePath}}, nil)
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
 // remove container from docker
 func removeExtension(composeFilePath string) bool {
 	fmt.Println("!! removing plugin=", composeFilePath)
@@ -1080,7 +1199,11 @@ func installPlus() error {
 		fmt.Println("failed to log into ghcr")
 	}
 
-	return startExtensionServices()
+	if err := startExtensionServices(); err != nil {
+		fmt.Println("[i] some extensions failed to start:", err)
+	}
+
+	return nil
 }
 
 func startExtensionServices() error {
@@ -1092,13 +1215,18 @@ func startExtensionServices() error {
 		ghcrSuperdLogin()
 	}
 
+	//one broken plugin must not block the rest from starting
+	failed := []string{}
+
 	for _, entry := range config.Plugins {
 		if entry.ComposeFilePath != "" && entry.Enabled == true {
 
 			if PlusEnabled() && entry.Plus == true {
 				//only plus extensions update on start for now
 				if !updateExtension(entry.ComposeFilePath) {
-					return errors.New("Could not update Extension at " + entry.ComposeFilePath)
+					fmt.Println("Could not update Extension at " + entry.ComposeFilePath)
+					failed = append(failed, entry.Name)
+					continue
 				}
 
 				//if it is pfw we restart for fw rules to refresh after api
@@ -1106,31 +1234,35 @@ func startExtensionServices() error {
 					if !restartExtension(entry.ComposeFilePath) {
 						//try a start
 						if !startExtension(entry.ComposeFilePath) {
-							return errors.New("Could not start Extension at " + entry.ComposeFilePath)
+							fmt.Println("Could not start Extension at " + entry.ComposeFilePath)
+							failed = append(failed, entry.Name)
+							continue
 						}
 					}
 				} else {
 					if !startExtension(entry.ComposeFilePath) {
-						return errors.New("Could not start Extension at " + entry.ComposeFilePath)
+						fmt.Println("Could not start Extension at " + entry.ComposeFilePath)
+						failed = append(failed, entry.Name)
+						continue
 					}
 				}
 
 			} else {
 				if !startExtension(entry.ComposeFilePath) {
-					return errors.New("Could not start Extension at " + entry.ComposeFilePath)
+					fmt.Println("Could not start Extension at " + entry.ComposeFilePath)
+					failed = append(failed, entry.Name)
+					continue
 				}
 			}
 
 			// Apply network capabilities after plugin is started
-			go func(plugin PluginConfig) {
-				// Give the container time to start up
-				time.Sleep(5 * time.Second)
-				if err := applyPluginNetworkCapabilities(plugin); err != nil {
-					fmt.Printf("Warning: Failed to apply network capabilities for plugin %s: %v\n", plugin.Name, err)
-				}
-			}(entry)
+			applyPluginNetworkCapabilitiesRetry(entry)
 
 		}
+	}
+
+	if len(failed) > 0 {
+		return errors.New("failed to start extensions: " + strings.Join(failed, ", "))
 	}
 	return nil
 }

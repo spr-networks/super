@@ -504,3 +504,30 @@ func TestProcessBugAlerts(t *testing.T) {
 		}
 	}
 }
+
+func TestAlertIgnoreExceptionCondition(t *testing.T) {
+	event := map[string]interface{}{
+		"Ethernet": map[string]interface{}{"SrcMAC": "aa:bb:cc:dd:ee:ff"},
+		"IP":       map[string]interface{}{"DstIP": "10.0.0.8"},
+	}
+	condition := ConditionEntry{
+		JPath: `$[?(@.Ethernet.SrcMAC!="aa:bb:cc:dd:ee:ff" || @.IP.DstIP!="10.0.0.8")]`,
+	}
+
+	err, matched, _ := matchEventCondition([]interface{}{event}, condition)
+	if err != nil {
+		t.Fatalf("ignore condition failed to evaluate: %v", err)
+	}
+	if matched {
+		t.Fatal("exact ignored signature should not satisfy the alert condition")
+	}
+
+	event["IP"].(map[string]interface{})["DstIP"] = "10.0.0.9"
+	err, matched, _ = matchEventCondition([]interface{}{event}, condition)
+	if err != nil {
+		t.Fatalf("ignore condition failed to evaluate: %v", err)
+	}
+	if !matched {
+		t.Fatal("a different signature should continue to satisfy the alert condition")
+	}
+}

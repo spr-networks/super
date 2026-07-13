@@ -7,6 +7,7 @@ export {
   saveLogin,
   getApiURL,
   setApiURL,
+  isMockAPI,
   getApiHostname,
   getWsURL,
   setJWTOTPHeader,

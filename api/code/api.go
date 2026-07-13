@@ -799,6 +799,51 @@ func attestStatus(w http.ResponseWriter, r *http.Request) {
 	w.Write(body)
 }
 
+func pluginAttest(w http.ResponseWriter, r *http.Request) {
+	compose := r.URL.Query().Get("compose_file")
+	service := r.URL.Query().Get("service")
+	if compose == "" && service == "" {
+		http.Error(w, "compose_file or service is required", 400)
+		return
+	}
+
+	c := getSuperdClient()
+	defer c.CloseIdleConnections()
+
+	params := url.Values{}
+	if compose != "" {
+		params.Set("compose_file", compose)
+	}
+	if service != "" {
+		params.Set("service", service)
+	}
+	if r.URL.Query().Get("force") != "" {
+		params.Set("force", "1")
+	}
+	target := "http://localhost/plugin_attest?" + params.Encode()
+	req, err := http.NewRequest(http.MethodGet, target, nil)
+	if err != nil {
+		http.Error(w, "failed to make superd request", 400)
+		return
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		http.Error(w, "failed to request plugin attestation from superd", 400)
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		http.Error(w, "failed to get plugin attestation", 400)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(body)
+}
+
 // return "version" if <= 1 params else {"name": "version"}
 func getContainerVersion(w http.ResponseWriter, r *http.Request) {
 	var containers []string
@@ -3240,6 +3285,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/update", update).Methods("PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/version", getContainerVersion).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/attestStatus", attestStatus).Methods("GET", "PUT", "OPTIONS")
+	external_router_authenticated.HandleFunc("/pluginAttest", pluginAttest).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/features", getFeatures).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/autoupdate", autoUpdate).Methods("GET", "PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/checkupdates", checkUpdates).Methods("GET", "PUT", "DELETE")
@@ -3268,6 +3314,10 @@ func main() {
 	external_router_authenticated.HandleFunc("/reloadPSKFiles", reloadPSKFiles).Methods("PUT")
 
 	//hostapd information
+	external_router_authenticated.HandleFunc("/hostapd/roaming/config", proxyWifidRoaming("/roaming/config")).Methods("GET", "PUT")
+	external_router_authenticated.HandleFunc("/hostapd/roaming/status", proxyWifidRoaming("/roaming/status")).Methods("GET")
+	external_router_authenticated.HandleFunc("/hostapd/roaming/history", proxyWifidRoaming("/roaming/history")).Methods("GET")
+	external_router_authenticated.HandleFunc("/hostapd/roaming/model", proxyWifidRoaming("/roaming/model")).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/status", hostapdStatus).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/all_stations", hostapdAllStations).Methods("GET")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/config", hostapdConfig).Methods("GET")
@@ -3277,6 +3327,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/enable", hostapdEnableInterface).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/disable", hostapdDisableInterface).Methods("PUT")
 	external_router_authenticated.HandleFunc("/hostapd/{interface}/deauth", hostapdDeauth).Methods("PUT")
+	external_router_authenticated.HandleFunc("/hostapd/{interface}/bssTransition", hostapdBSSTransition).Methods("PUT")
 
 	external_router_authenticated.HandleFunc("/authorizedKeys", authorizedKeysHandler).Methods("GET", "PUT")
 
@@ -3321,6 +3372,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/plugins", getPlugins).Methods("GET")
 	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins(external_router_authenticated, external_router_public)).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/plugins/{name}/restart", handleRestartPlugin).Methods("PUT")
+	external_router_authenticated.HandleFunc("/plugins/{name}/update_container", updatePluginContainer).Methods("PUT")
 	//TBD: API Docs
 	external_router_authenticated.HandleFunc("/plugin/custom_compose_paths", applyJwtOtpCheck(modifyCustomComposePaths)).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/plugin/install_user_url", installUserPluginGitUrl(external_router_authenticated, external_router_public)).Methods("PUT")
@@ -3359,6 +3411,7 @@ func main() {
 	unix_wifid_router.HandleFunc("/reportDisconnect", reportDisconnect).Methods("PUT")
 	unix_wifid_router.HandleFunc("/interfaces", getEnabledAPInterfaces).Methods("GET")
 	unix_wifid_router.HandleFunc("/interfaces_virtual_bss", getEnabledVirtualBSSInterfaces).Methods("GET")
+	unix_wifid_router.HandleFunc("/topology", showTopology).Methods("GET")
 
 	// DHCP actions
 	unix_dhcpd_router.HandleFunc("/dhcpRequest", dhcpRequest).Methods("PUT")

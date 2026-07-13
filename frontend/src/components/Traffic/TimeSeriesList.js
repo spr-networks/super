@@ -25,7 +25,7 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
   const context = useContext(AppContext)
   const modalContext = useContext(ModalContext)
 
-  const regexLAN = /^192\.168\./ //TODO dont rely on this
+  const regexLAN = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/
 
   const [list, setList] = useState([])
   const [showASN, setShowASN] = useState(
@@ -154,10 +154,18 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
                   </Text>
                 </Tooltip>
                 {type == 'WanOut' ? (
-                  <DeviceItem
-                    item={context.getDevice(item.Src, 'RecentIP')}
-                    size="sm"
-                  />
+                  <Pressable onPress={() => onPressIp(item.Src)}>
+                    <DeviceItem
+                      item={
+                        context.getDevice(item.Src, 'RecentIP') || {
+                          Name: item.Src,
+                          Style: { Icon: 'Ethernet', Color: '$blueGray500' }
+                        }
+                      }
+                      size="sm"
+                      noPress
+                    />
+                  </Pressable>
                 ) : (
                   <Text size="sm" onPress={() => onPressIp(item.Src)}>
                     {item.Src}
@@ -178,10 +186,18 @@ const TimeSeriesList = ({ data, type, filterIps, setFilterIps, ...props }) => {
                   </Text>
                 </Tooltip>
                 {type == 'WanIn' ? (
-                  <DeviceItem
-                    item={context.getDevice(item.Dst, 'RecentIP')}
-                    size="sm"
-                  />
+                  <Pressable onPress={() => onPressIp(item.Dst)}>
+                    <DeviceItem
+                      item={
+                        context.getDevice(item.Dst, 'RecentIP') || {
+                          Name: item.Dst,
+                          Style: { Icon: 'Ethernet', Color: '$blueGray500' }
+                        }
+                      }
+                      size="sm"
+                      noPress
+                    />
+                  </Pressable>
                 ) : (
                   <Text size="sm" onPress={() => onPressIp(item.Dst)}>
                     {item.Dst}

@@ -1,6 +1,20 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.1.12
+** Features **
+- Topology sink support
+- Show build attestation in Plugins listing
+- Improved alerts
+- New theme & custom font support
+** Fixes **
+- Make software update flow easier to understand
+- Call compose down when a plugin is deleted, and fall thru on update failures
+
+## v1.1.11
+** Fixes **
+- Re-release for merge failure
+
 ## v1.1.10
 ** Fixes **
 - Fix plugin startup races

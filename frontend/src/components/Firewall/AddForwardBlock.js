@@ -86,6 +86,9 @@ class AddForwardBlockImpl extends React.Component {
         .addForwardBlock(block)
         .then(done)
         .catch((err) => {
+          if (this.props.item) {
+            firewallAPI.addForwardBlock(this.props.item).catch(() => {})
+          }
           this.props.alertContext.error('Firewall API Failure', err)
           this.setState({ isLoading: false })
         })

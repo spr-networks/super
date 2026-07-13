@@ -17,6 +17,17 @@ is_valid_ifname() {
 
 /scripts/update_iface_names.sh
 
+# Private control plane for validated hostapd operations requested by the API.
+# It owns BSS transition command construction so raw hostapd commands are never
+# exposed over the external API.
+(
+  while true; do
+    /hostap_dhcp_helper serve
+    echo "wifid control exited; restarting in 5 seconds" >&2
+    sleep 5
+  done
+) &
+
 IFACES=$(curl --unix-socket /state/wifi/apisock http://localhost/interfaces)
 RET=$?
 

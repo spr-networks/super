@@ -18,6 +18,7 @@ import {
   VStack,
   Text,
   AddIcon,
+  EditIcon,
   TrashIcon
 } from '@gluestack-ui/themed'
 
@@ -29,10 +30,12 @@ const ContainerInterfaceRulesList = (props) => {
   let title = props.title || `ContainerInterfaceRulesList:`
 
   let refModal = useRef(null)
+  let refEditModal = useRef(null)
   const appContext = useContext(AppContext)
   const alertContext = useContext(AlertContext)
   const [interfaceList, setInterfaceList] = useState([])
   const [netBlocks, setNetblocks] = useState([])
+  const [editItem, setEditItem] = useState(null)
 
   useEffect(() => {
     api
@@ -76,6 +79,17 @@ const ContainerInterfaceRulesList = (props) => {
     props.notifyChange('custom_interface')
   }
 
+  const notifyChangeEdit = (t) => {
+    refEditModal.current()
+    setEditItem(null)
+    props.notifyChange('custom_interface')
+  }
+
+  const editListItem = (item) => {
+    setEditItem(item)
+    refEditModal.current()
+  }
+
   return (
     <VStack>
       <ListHeader
@@ -101,6 +115,19 @@ const ContainerInterfaceRulesList = (props) => {
           />
         </ModalForm>
       </ListHeader>
+
+      <ModalForm title={`Edit Custom Interface Rule`} modalRef={refEditModal}>
+        {editItem ? (
+          <AddContainerInterfaceRule
+            key={JSON.stringify(editItem)}
+            item={editItem}
+            notifyChange={notifyChangeEdit}
+            appContext={appContext}
+            interfaceList={interfaceList}
+            netBlocks={netBlocks}
+          />
+        ) : null}
+      </ModalForm>
 
       <FlatList
         data={list}
@@ -152,6 +179,15 @@ const ContainerInterfaceRulesList = (props) => {
 
             <Button
               ml="$3"
+              alignSelf="center"
+              size="sm"
+              action="secondary"
+              variant="link"
+              onPress={() => editListItem(item)}
+            >
+              <ButtonIcon as={EditIcon} />
+            </Button>
+            <Button
               alignSelf="center"
               size="sm"
               action="negative"

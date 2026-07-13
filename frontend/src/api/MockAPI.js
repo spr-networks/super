@@ -1,7 +1,13 @@
 import { createServer, Model, Response } from 'miragejs'
 import { Base64 } from 'utils'
 
-import { wifiAuthFail, nftDrop, authFail } from 'api/mock/alertbucket'
+import {
+  authFail,
+  dropPrivate,
+  macViolation,
+  nftDrop,
+  wifiAuthFail
+} from 'api/mock/alertbucket'
 
 import * as jsonpath from 'jsonpath'
 
@@ -14,6 +20,14 @@ const rpick = (l) => l[parseInt(r(l.length))]
 
 let mockCustomFingerprints = []
 let mockDbBuckets = {}
+let mockAlertRules = null
+const mockAlertItems = (bucket, items, filter) => {
+  const updated = items.map(
+    (item) =>
+      mockDbBuckets[`${bucket}/timekey:${item.time}`] || item
+  )
+  return filter ? jsonpath.query(updated, filter) : updated
+}
 let mockPersonas = [
   {
     Name: 'gamer',
@@ -248,11 +262,35 @@ let mockTopoNodes = [
     IP: '100.64.0.9',
     ConnType: 'wireguard',
     Online: false
+  },
+  {
+    ID: 'plugin:nebula',
+    Kind: 'extension',
+    Name: 'NEBULA',
+    ConnType: 'wireguard',
+    Online: true
+  },
+  {
+    ID: 'plugin:gluetun',
+    Kind: 'extension',
+    Name: 'GLUETUN',
+    ConnType: 'wireguard',
+    Online: true
+  },
+  {
+    ID: 'plugin:reticulum',
+    Kind: 'extension',
+    Name: 'RETICULUM',
+    ConnType: 'wireguard',
+    Online: true
   }
 ]
 
 const mockTopoL1Edges = [
   { From: 'router', To: 'iface:eth0', Layer: 'l1', Kind: 'uplink' },
+  { From: 'router', To: 'plugin:nebula', Layer: 'l1', Kind: 'wireguard' },
+  { From: 'router', To: 'plugin:gluetun', Layer: 'l1', Kind: 'wireguard' },
+  { From: 'router', To: 'plugin:reticulum', Layer: 'l1', Kind: 'wireguard' },
   { From: 'router', To: 'iface:wlan1', Layer: 'l1', Kind: 'wifi' },
   { From: 'router', To: 'iface:wg0', Layer: 'l1', Kind: 'wg' },
   { From: 'router', To: 'iface:eth1', Layer: 'l1', Kind: 'wired' },
@@ -1187,7 +1225,15 @@ export default function MockAPI(props = null) {
               Network: ''
             },
             ConfigOnly: false,
-            Containers: {},
+            Containers: {
+              abc123: {
+                Name: 'spr-mitmproxy',
+                EndpointID: 'e1',
+                MacAddress: '02:42:ac:14:00:02',
+                IPv4Address: '172.20.0.2/24',
+                IPv6Address: ''
+              }
+            },
             Options: {
               'com.docker.network.bridge.name': 'mitmweb0'
             },
@@ -2226,7 +2272,18 @@ export default function MockAPI(props = null) {
       })
 
       this.get('/info/docker', () => {
-        return []
+        return [
+          {
+            Id: 'abc123def456',
+            Names: ['/spr-mitmproxy'],
+            State: 'running',
+            NetworkSettings: {
+              Networks: {
+                'spr-mitmproxy_mitmnet': { IPAddress: '172.20.0.2' }
+              }
+            }
+          }
+        ]
       })
 
       this.put('/backup', (schema, request) => {
@@ -3530,6 +3587,8 @@ export default function MockAPI(props = null) {
           'nft:wan:in',
           'www:auth:user:success',
           'alert:auth:failure:',
+          'alert:nft:drop:mac:',
+          'alert:nft:drop:private:',
           'alert:nft:drop:input:',
           'alert:wifi:auth:fail:',
           'nft:drop:input',
@@ -3673,25 +3732,34 @@ export default function MockAPI(props = null) {
           ]
         } else if (bucket.startsWith('alert:auth:failure:')) {
           try {
-            if (filter) return jsonpath.query(authFail, filter)
+            return mockAlertItems(bucket, authFail, filter)
           } catch (e) {
             alert(e)
           }
-          return authFail
+        } else if (bucket.startsWith('alert:nft:drop:mac')) {
+          try {
+            return mockAlertItems(bucket, macViolation, filter)
+          } catch (e) {
+            alert(e)
+          }
+        } else if (bucket.startsWith('alert:nft:drop:private')) {
+          try {
+            return mockAlertItems(bucket, dropPrivate, filter)
+          } catch (e) {
+            alert(e)
+          }
         } else if (bucket.startsWith('alert:nft:drop:input')) {
           try {
-            if (filter) return jsonpath.query(nftDrop, filter)
+            return mockAlertItems(bucket, nftDrop, filter)
           } catch (e) {
             alert(e)
           }
-          return nftDrop
         } else if (bucket.startsWith('alert:wifi:auth:fail')) {
           try {
-            if (filter) return jsonpath.query(wifiAuthFail, filter)
+            return mockAlertItems(bucket, wifiAuthFail, filter)
           } catch (e) {
             alert(e)
           }
-          return wifiAuthFail
         }
 
         //log:api
@@ -4020,7 +4088,32 @@ export default function MockAPI(props = null) {
             RuleId: '95b8992a-53ff-46ad-a6d8-9882fc13241f'
           }
         ]
-        return alerts
+        if (!mockAlertRules) mockAlertRules = alerts
+        return mockAlertRules
+      })
+
+      this.put('/alerts/:index', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        const index = Number(request.params.index)
+        if (!mockAlertRules || !mockAlertRules[index]) {
+          return new Response(400, {}, { error: 'invalid index' })
+        }
+        const updated = JSON.parse(request.requestBody || '{}')
+        updated.RuleId = mockAlertRules[index].RuleId
+        mockAlertRules[index] = updated
+        return mockAlertRules
+      })
+
+      this.put('/alerts', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        const added = JSON.parse(request.requestBody || '{}')
+        added.RuleId = added.RuleId || `mock-alert-${Date.now()}`
+        mockAlertRules = [...(mockAlertRules || []), added]
+        return mockAlertRules
       })
 
       this.get('/otp_status', (schema, request) => {

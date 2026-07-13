@@ -28,6 +28,7 @@ import {
   Badge,
   BadgeIcon,
   BadgeText,
+  Pressable,
   Box,
   Button,
   ButtonText,
@@ -288,7 +289,6 @@ const DNSLogHistoryList = (props) => {
 
           if (rejected.length) {
             context.error('No DNS query history for ' + rejected.join(','))
-            setFilterIps([])
           }
 
           let lists = results
@@ -383,19 +383,36 @@ const DNSLogHistoryList = (props) => {
     return listFiltered
   }
 
-  const handleChangeIp = (ip) => {
-    setFilterIps([ip])
-
+  const persistFilterIps = (ips) => {
     AsyncStorage.getItem('select')
       .then((oldSelect) => {
         let select = JSON.parse(oldSelect) || {}
 
-        select.filterIps = [ip]
+        select.filterIps = ips
         AsyncStorage.setItem('select', JSON.stringify(select))
           .then((res) => {})
           .catch((err) => {})
       })
       .catch((err) => {})
+  }
+
+  const handleChangeIp = (ip) => {
+    if (!ip) return
+    userTouched.current = true
+    setFilterIps((prev) => {
+      let next = prev.includes(ip) ? prev : [...prev, ip]
+      persistFilterIps(next)
+      return next
+    })
+  }
+
+  const removeFilterIp = (ip) => {
+    userTouched.current = true
+    setFilterIps((prev) => {
+      let next = prev.filter((entry) => entry != ip)
+      persistFilterIps(next)
+      return next
+    })
   }
 
   const handleChange = (value) => {
@@ -429,14 +446,21 @@ const DNSLogHistoryList = (props) => {
     refreshList()
   }
 
+  const userTouched = React.useRef(false)
+
+  // seed from the parent (URL params / stored select) until the user takes
+  // control of the picker; after that the child is the single source of truth
   useEffect(() => {
-    setFilterIps(props.ips)
-    setFilterText(props.filterText)
+    if (userTouched.current) return
+    if (props.ips?.length) setFilterIps(props.ips)
+    if (props.filterText) setFilterText(props.filterText)
   }, [props.ips, props.filterText])
 
   useEffect(() => {
     if (filterIps.length) {
-      navigate(`/admin/dnsLog/${filterIps.join(',') || ':ips'}/${filterText || ':text'}`)
+      navigate(`/admin/dnsLog/${filterIps.join(',')}/${filterText || ':text'}`)
+    } else {
+      navigate(`/admin/dnsLog/:ips/${filterText || ':text'}`)
     }
   }, [filterIps, filterText])
 
@@ -672,10 +696,30 @@ const DNSLogHistoryList = (props) => {
             >
               <FormControlLabelText size="sm">Client</FormControlLabelText>
             </FormControlLabel>
-            <ClientSelect
-              value={filterIps ? filterIps[0] : null}
-              onChange={handleChangeIp}
-            />
+            <ClientSelect value={null} onChange={handleChangeIp} />
+            {filterIps.length ? (
+              <HStack space="xs" flexWrap="wrap" alignItems="center" mt="$1">
+                {filterIps.map((ip) => (
+                  <Pressable key={ip} onPress={() => removeFilterIp(ip)}>
+                    <Badge action="info" variant="outline" size="sm">
+                      <BadgeText textTransform="none">{ip} ✕</BadgeText>
+                    </Badge>
+                  </Pressable>
+                ))}
+                <Button
+                  size="xs"
+                  variant="link"
+                  action="secondary"
+                  onPress={() => {
+                    userTouched.current = true
+                    setFilterIps([])
+                    persistFilterIps([])
+                  }}
+                >
+                  <ButtonText size="xs">Clear</ButtonText>
+                </Button>
+              </HStack>
+            ) : null}
           </FormControl>
           <Button
             sx={{ '@md': { display: 'none' } }}

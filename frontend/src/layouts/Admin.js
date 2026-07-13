@@ -25,6 +25,7 @@ import {
   themeAPI,
   wifiAPI
 } from 'api'
+import { getContainerIpMap, containerDevice } from 'api/Containers'
 import { ucFirst } from 'utils'
 
 import {
@@ -275,6 +276,7 @@ const AdminLayout = ({
   const [version, setVersion] = useState('default')
   const [features, setFeatures] = useState([])
   const [devices, setDevices] = useState([])
+  const containersRef = React.useRef({})
   const [groups, setGroups] = useState([])
   const [routes, setRoutes] = useState(allRoutes)
 
@@ -306,7 +308,11 @@ const AdminLayout = ({
 
   const getDevice = (value, type = 'MAC') => {
     if (!value) return null
-    return devices.find((d) => d[type] == value)
+    let dev = devices.find((d) => d[type] == value)
+    if (!dev && type == 'RecentIP' && containersRef.current[value]) {
+      return containerDevice(value, containersRef.current[value])
+    }
+    return dev
   }
 
   const getGroups = () => {
@@ -433,6 +439,12 @@ const AdminLayout = ({
       .catch((err) => {})
 
     // cache devices
+    getContainerIpMap()
+      .then((map) => {
+        containersRef.current = map
+      })
+      .catch(() => {})
+
     getDevices().then((res) => {
       //console.log('++ got', res.length, 'devices')
     })

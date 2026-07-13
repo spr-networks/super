@@ -234,7 +234,7 @@ const ActionSheetMenu = ({
       </Button>
       <Actionsheet
         isOpen={isOpen}
-        onClose={() => setIsOpen(!isOpen)}
+        onClose={() => setIsOpen(false)}
         zIndex={999}
         useRNModal
       >

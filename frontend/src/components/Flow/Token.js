@@ -241,7 +241,7 @@ const Token = ({
         placement="bottom"
         trigger={trigger}
         isOpen={isOpen}
-        onClose={() => setIsOpen(!isOpen)}
+        onClose={() => setIsOpen(false)}
       >
         <PopoverBackdrop />
         <PopoverContent w={260}>

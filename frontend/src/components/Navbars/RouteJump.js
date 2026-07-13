@@ -239,7 +239,7 @@ const RouteJump = ({ ...props }) => {
         placement="bottom left"
         trigger={trigger}
         isOpen={isOpen}
-        onClose={() => setIsOpen(!isOpen)}
+        onClose={() => setIsOpen(false)}
         initialFocusRef={refInput}
         offset={-44}
         display={isOpen ? 'flex' : 'none'}

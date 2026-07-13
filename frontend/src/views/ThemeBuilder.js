@@ -1,8 +1,8 @@
-import React, { useContext, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { Linking, Platform } from 'react-native'
 
 import { AppContext, AlertContext } from 'AppContext'
-import { DEFAULT_CUSTOM } from 'Themes'
+import { DEFAULT_CUSTOM, themeFonts, allThemeFontFacesCss } from 'Themes'
 import ThemePreview from 'components/ThemePreview'
 
 import {
@@ -100,6 +100,18 @@ export default function ThemeBuilder() {
   const [spec, setSpec] = useState(DEFAULT_CUSTOM)
   const [name, setName] = useState('Custom')
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const id = 'spr-font-preview'
+    let el = document.getElementById(id)
+    if (!el) {
+      el = document.createElement('style')
+      el.id = id
+      document.head.appendChild(el)
+    }
+    el.textContent = allThemeFontFacesCss()
+  }, [])
+
   const update = (key) => (value) => setSpec({ ...spec, [key]: value })
 
   const valid =
@@ -133,7 +145,8 @@ export default function ThemeBuilder() {
           accent: spec.accent,
           background: spec.background,
           card: spec.card,
-          text: spec.text
+          text: spec.text,
+          font: spec.font || 'system'
         },
         null,
         2
@@ -203,6 +216,30 @@ export default function ThemeBuilder() {
                 onPress={() => setSpec({ ...spec, colorMode: m })}
               >
                 <ButtonText>{m == 'light' ? 'Light' : 'Dark'}</ButtonText>
+              </Button>
+            ))}
+          </HStack>
+        </VStack>
+
+        <VStack space="xs">
+          <Text bold size="sm">
+            Font
+          </Text>
+          <HStack space="sm" flexWrap="wrap">
+            {Object.entries(themeFonts).map(([id, f]) => (
+              <Button
+                key={id}
+                size="sm"
+                mb="$1"
+                variant={(spec.font || 'system') == id ? 'solid' : 'outline'}
+                action={
+                  (spec.font || 'system') == id ? 'primary' : 'secondary'
+                }
+                onPress={() => setSpec({ ...spec, font: id })}
+              >
+                <ButtonText style={f.body ? { fontFamily: f.body } : {}}>
+                  {f.name}
+                </ButtonText>
               </Button>
             ))}
           </HStack>

@@ -11,8 +11,9 @@ const KIND_ORDER = {
   leaf_router: 3,
   vpn: 4,
   extension: 5,
-  device: 6,
-  endpoint: 7
+  sink: 6,
+  device: 7,
+  endpoint: 8
 }
 
 export const isIsolated = (node) =>
@@ -179,10 +180,37 @@ export const computeLayout = (nodes, edges, collapsedIDs = []) => {
     )
     const branchKids = kids.filter((kid) => !leafKids.includes(kid))
 
-    branchKids.forEach((kid) => {
+    const extensionRow = branchKids.filter(
+      (kid) =>
+        byID[kid]?.Kind == 'extension' && !(treeChildren[kid] || []).length
+    )
+    const normalBranchKids = branchKids.filter(
+      (kid) => !extensionRow.includes(kid)
+    )
+
+    normalBranchKids.forEach((kid) => {
       visible.add(kid)
       visit(walk(kid, depth + 1))
     })
+
+    if (extensionRow.length) {
+      const extRow = nextRow + 0.5
+      const blockID = 'block:extensions:' + id
+      extensionRow.forEach((kid, index) => {
+        visible.add(kid)
+        depths[kid] = depth + 1 + index
+        rows[kid] = extRow
+        blockOf[kid] = blockID
+      })
+      blocks.push({
+        id: blockID,
+        parent: id,
+        kind: 'extensions',
+        members: extensionRow
+      })
+      nextRow = extRow + 1.5
+      visit(extRow)
+    }
 
     //extensions always group their nodes into a block grid
     const forceBlock = byID[id]?.Kind == 'extension' && leafKids.length > 0

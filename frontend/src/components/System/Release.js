@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 
+import { Platform } from 'react-native'
 import {
   Box,
   Button,
@@ -10,7 +11,14 @@ import {
   FormControlLabelText,
   FormControlHelper,
   FormControlHelperText,
+  Heading,
   HStack,
+  Modal,
+  ModalBackdrop,
+  ModalBody,
+  ModalContent,
+  ModalHeader,
+  Spinner,
   Text,
   VStack,
   ArrowUpIcon,
@@ -285,29 +293,98 @@ const ReleaseInfo = ({ showModal, ...props }) => {
       })
   }
 
+  const [updateStatus, setUpdateStatus] = useState(null)
+  const updatePollRef = useRef(null)
+
+  const stopUpdatePoll = () => {
+    if (updatePollRef.current) {
+      clearInterval(updatePollRef.current)
+      updatePollRef.current = null
+    }
+  }
+
+  useEffect(() => {
+    return () => stopUpdatePoll()
+  }, [])
+
   const runUpdate = () => {
-    context.info(`Update started`)
+    const started = Date.now()
+    setUpdateStatus({
+      phase: 'Requesting update...',
+      elapsed: 0,
+      done: false,
+      error: null
+    })
+
+    const succeed = () => {
+      stopUpdatePoll()
+      updateRelease()
+      const elapsed = Math.round((Date.now() - started) / 1000)
+      api
+        .version()
+        .then((v) => {
+          setUpdateStatus({
+            phase: `Update complete — running ${v}`,
+            elapsed,
+            done: true,
+            error: null
+          })
+        })
+        .catch(() => {
+          setUpdateStatus({
+            phase: 'Update complete',
+            elapsed,
+            done: true,
+            error: null
+          })
+        })
+    }
 
     api
       .put('/update')
       .then(() => {
-        //happens if already on the latest version, will return 200
-        context.success('Update complete')
+        //200 means already on the latest version
+        succeed()
       })
       .catch((err) => {
-        //otherwise times out.
-        //poll for the API coming back up
-        let interval = setInterval(() => {
+        //the request drops while services restart; poll until the API is back
+        setUpdateStatus((s) => ({
+          ...s,
+          phase: 'Downloading update & restarting services...'
+        }))
+
+        updatePollRef.current = setInterval(() => {
+          const elapsed = Math.round((Date.now() - started) / 1000)
+
+          if (elapsed > 600) {
+            stopUpdatePoll()
+            setUpdateStatus({
+              phase: '',
+              elapsed,
+              done: true,
+              error:
+                'Update is taking longer than expected. The router may still be updating — check again shortly, or inspect superd logs.'
+            })
+            return
+          }
+
+          setUpdateStatus((s) =>
+            s?.done
+              ? s
+              : {
+                  ...s,
+                  elapsed,
+                  phase:
+                    elapsed > 20
+                      ? 'Waiting for services to come back online...'
+                      : 'Downloading update & restarting services...'
+                }
+          )
+
           api
             .get('/release')
-            .then(() => {
-              clearInterval(interval)
-              context.success('Update complete')
-              updateRelease()
-            })
-            .catch(() => {
-              context.info(`Waiting for update`)
-            })
+            .then(() => succeed())
+            .catch(() => {})
         }, 1000)
       })
   }
@@ -490,6 +567,65 @@ const ReleaseInfo = ({ showModal, ...props }) => {
           )}
         </>
       ) : null}
+
+      <Modal
+        isOpen={updateStatus != null}
+        onClose={() => {
+          if (updateStatus?.done) {
+            setUpdateStatus(null)
+          }
+        }}
+        useRNModal={Platform.OS == 'web'}
+      >
+        <ModalBackdrop />
+        <ModalContent maxWidth={400}>
+          <ModalHeader>
+            <Heading size="sm">Software Update</Heading>
+          </ModalHeader>
+          <ModalBody pb="$6">
+            <VStack space="md" alignItems="center" py="$4">
+              {!updateStatus?.done ? <Spinner size="large" /> : null}
+
+              {updateStatus?.error ? (
+                <Text textAlign="center" color="$red500">
+                  {updateStatus.error}
+                </Text>
+              ) : (
+                <Text textAlign="center">{updateStatus?.phase}</Text>
+              )}
+
+              {updateStatus?.elapsed > 0 ? (
+                <Text size="sm" color="$muted500">
+                  {updateStatus.elapsed}s elapsed
+                </Text>
+              ) : null}
+
+              {!updateStatus?.done ? (
+                <Text size="xs" color="$muted500" textAlign="center">
+                  Services restart during the update and this page may be
+                  briefly unreachable. Do not power off the router.
+                </Text>
+              ) : (
+                <HStack space="md">
+                  {Platform.OS == 'web' ? (
+                    <Button size="sm" onPress={() => window.location.reload()}>
+                      <ButtonText>Reload UI</ButtonText>
+                    </Button>
+                  ) : null}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    action="secondary"
+                    onPress={() => setUpdateStatus(null)}
+                  >
+                    <ButtonText>Close</ButtonText>
+                  </Button>
+                </HStack>
+              )}
+            </VStack>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </Box>
   )
 }

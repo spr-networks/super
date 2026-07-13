@@ -478,8 +478,8 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
     return (
       <ScrollView
         maxHeight={maxHeight}
-        borderColor="$secondary200"
-        sx={{ _dark: { borderColor: '$secondary700' } }}
+        borderColor="$borderColorCardLight"
+        sx={{ _dark: { borderColor: '$borderColorCardDark' } }}
         borderWidth="$0"
         {...props}
       >
@@ -515,14 +515,21 @@ const LogListItemHeader = ({
   isParsable,
   showJSON,
   setShowJSON,
+  headerActionsDesktopOnly,
+  headerActions,
   ...props
 }) => {
   return (
     <HStack
       w="$full"
-      bg="$coolGray100"
+      bg="$backgroundCardLight"
+      borderBottomWidth={1}
+      borderColor="$borderColorCardLight"
       sx={{
-        _dark: { bg: '$secondary950' }
+        _dark: {
+          bg: '$backgroundCardDark',
+          borderColor: '$borderColorCardDark'
+        }
       }}
       alignItems="center"
       px="$4"
@@ -535,7 +542,18 @@ const LogListItemHeader = ({
         </Text>
       )}
 
-      <ButtonGroup ml="auto" space="md">
+      <ButtonGroup
+        ml="auto"
+        space="md"
+        display={headerActionsDesktopOnly ? 'none' : 'flex'}
+        sx={
+          headerActionsDesktopOnly
+            ? { '@md': { display: 'flex' } }
+            : undefined
+        }
+      >
+        {headerActions || null}
+
         <Tooltip label="Toggle JSON data">
           <Button
             action="primary"
@@ -570,6 +588,9 @@ const LogListItem = React.memo(({
   TitleComponent,
   children,
   onPress,
+  contentProps,
+  headerActionsDesktopOnly,
+  headerActions,
   ...props
 }) => {
   const [isParsable, setIsParsable] = useState(true)
@@ -595,10 +616,13 @@ const LogListItem = React.memo(({
       alignItems="flex-start"
       flexDirection="column"
       p="$0"
-      bg="$coolGray50"
-      borderColor="$secondary200"
+      bg="$backgroundCardLight"
+      borderColor="$borderColorCardLight"
       sx={{
-        _dark: { bg: '$secondary900', borderColor: '$secondary800' }
+        _dark: {
+          bg: '$backgroundCardDark',
+          borderColor: '$borderColorCardDark'
+        }
       }}
       space="$0"
       {...props}
@@ -610,9 +634,11 @@ const LogListItem = React.memo(({
           showJSON={showJSON}
           setShowJSON={hookSetShowJSON}
           TitleComponent={TitleComponent}
+          headerActionsDesktopOnly={headerActionsDesktopOnly}
+          headerActions={headerActions}
         ></LogListItemHeader>
       ) : null}
-      <HStack w="$full">
+      <HStack w="$full" {...contentProps}>
         <PrettyItem
           item={item}
           selected={selected}
