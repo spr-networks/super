@@ -597,21 +597,19 @@ func plusToken(w http.ResponseWriter, r *http.Request) {
 	Configmtx.Lock()
 	defer Configmtx.Unlock()
 
-	if validPlusToken(token) {
-		config.PlusToken = token
-		err := installPlus()
-		if err == nil {
-			saveConfigLocked()
-			fmt.Println("[+] Installed token")
-			return
-		} else {
-			config.PlusToken = ""
-			fmt.Println("[-] Installation failure")
-		}
+	if !validPlusToken(token) {
+		http.Error(w, "Invalid token", 400)
+		return
 	}
 
-	http.Error(w, "Invalid token", 400)
-	return
+	config.PlusToken = token
+	saveConfigLocked()
+	fmt.Println("[+] Installed token")
+
+	if err := installPlus(); err != nil {
+		fmt.Println("[-] Plus install issue:", err)
+		http.Error(w, "Token saved, but Plus install had errors: "+err.Error(), 500)
+	}
 }
 
 func getSuperdClient() http.Client {
@@ -1201,7 +1199,11 @@ func installPlus() error {
 		fmt.Println("failed to log into ghcr")
 	}
 
-	return startExtensionServices()
+	if err := startExtensionServices(); err != nil {
+		fmt.Println("[i] some extensions failed to start:", err)
+	}
+
+	return nil
 }
 
 func startExtensionServices() error {
