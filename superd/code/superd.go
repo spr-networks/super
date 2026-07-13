@@ -420,6 +420,21 @@ func expandComposeVar(s string) string {
 }
 
 func pluginComposeImages(composeFile string) []string {
+	reloadComposeWhitelist()
+
+	composeAllowed := false
+	for _, entry := range ComposeAllowList {
+		if entry == composeFile {
+			composeAllowed = true
+			break
+		}
+	}
+
+	if composeAllowed == false {
+		fmt.Println("Compose file path is not whitelisted", composeFile)
+		return nil
+	}
+
 	data, err := os.ReadFile(composeFile)
 	if err != nil {
 		return nil
