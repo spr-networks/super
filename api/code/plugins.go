@@ -721,7 +721,7 @@ func generatePFWAPIToken() {
 
 }
 
-func downloadExtension(user string, secret string, gitURL string, Plus bool, AutoConfig bool) bool {
+func downloadExtension(user string, secret string, gitURL string, Plus bool, AutoConfig bool) (bool, bool) {
 	params := url.Values{}
 	params.Set("git_url", gitURL)
 
@@ -739,7 +739,7 @@ func downloadExtension(user string, secret string, gitURL string, Plus bool, Aut
 	data, err := superdRequest("update_git", params, bytes.NewBuffer(jsonValue))
 	if err != nil {
 		SprbusPublish("plugin:download:failure", map[string]string{"GitURL": gitURL, "Reason": err.Error()})
-		return false
+		return false, false
 	}
 
 	SprbusPublish("plugin:download:success", map[string]string{"GitURL": gitURL})
@@ -750,18 +750,20 @@ func downloadExtension(user string, secret string, gitURL string, Plus bool, Aut
 		if err == nil {
 			//override GitURL
 			plugin.GitURL = gitURL
-			return installUserPluginConfig(plugin)
+			return true, installUserPluginConfig(plugin)
 		} else {
 			SprbusPublish("plugin:install:failure", map[string]string{"GitURL": gitURL, "Reason": err.Error()})
-			return false
+			return false, false
 		}
 	}
 
-	return true
+	var result struct{ Changed bool }
+	json.Unmarshal(data, &result)
+	return result.Changed, true
 }
 
 func downloadPlusExtension(gitURL string) bool {
-	ret := downloadExtension(PlusUser, config.PlusToken, gitURL, true, false)
+	_, ret := downloadExtension(PlusUser, config.PlusToken, gitURL, true, false)
 	if ret == true && gitURL == PfwGitURL || gitURL == OldPfwGitURL {
 		generatePFWAPIToken()
 	}
@@ -769,7 +771,8 @@ func downloadPlusExtension(gitURL string) bool {
 }
 
 func downloadUserExtension(gitURL string, AutoConfig bool) bool {
-	return downloadExtension("", "", gitURL, false, AutoConfig)
+	_, ret := downloadExtension("", "", gitURL, false, AutoConfig)
+	return ret
 }
 
 func startExtension(composeFilePath string) bool {
@@ -1073,26 +1076,39 @@ func stopExtension(composeFilePath string) bool {
 	return true
 }
 
-// pull a plugin's images via superd; superd cycles it down+up when a new
-// image arrived. long timeout: pulls can take minutes.
 func updatePluginContainer(w http.ResponseWriter, r *http.Request) {
 	name := trimLower(mux.Vars(r)["name"])
 
 	Configmtx.Lock()
-	compose := ""
+	var plugin PluginConfig
 	found := false
 	for _, entry := range config.Plugins {
 		if trimLower(entry.Name) == name && entry.Enabled {
-			compose = entry.ComposeFilePath
+			plugin = entry
 			found = true
 			break
 		}
 	}
 	Configmtx.Unlock()
 
-	if !found || compose == "" {
+	if !found || plugin.ComposeFilePath == "" {
 		http.Error(w, "Not found", 404)
 		return
+	}
+
+	//1. update the plugin source first so a changed compose is used for the pull
+	gitChanged := false
+	if plugin.GitURL != "" {
+		gitOK := false
+		if plugin.Plus {
+			gitChanged, gitOK = downloadExtension(PlusUser, config.PlusToken, plugin.GitURL, true, false)
+		} else {
+			gitChanged, gitOK = downloadExtension("", "", plugin.GitURL, false, false)
+		}
+		if !gitOK {
+			http.Error(w, "git update failed", 502)
+			return
+		}
 	}
 
 	c := http.Client{Timeout: 15 * time.Minute}
@@ -1103,7 +1119,10 @@ func updatePluginContainer(w http.ResponseWriter, r *http.Request) {
 	}
 	defer c.CloseIdleConnections()
 
-	params := url.Values{"compose_file": {compose}}
+	params := url.Values{"compose_file": {plugin.ComposeFilePath}}
+	if gitChanged {
+		params.Set("force", "1")
+	}
 	req, _ := http.NewRequest(http.MethodPut, "http://localhost/update_container?"+params.Encode(), nil)
 	resp, err := c.Do(req)
 	if err != nil {
@@ -1118,8 +1137,15 @@ func updatePluginContainer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var imageResult struct{ Updated bool }
+	json.Unmarshal(data, &imageResult)
+
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(data)
+	json.NewEncoder(w).Encode(map[string]bool{
+		"Updated":      gitChanged || imageResult.Updated,
+		"GitUpdated":   gitChanged,
+		"ImageUpdated": imageResult.Updated,
+	})
 }
 
 // take a plugin's compose project down: removes its containers and networks

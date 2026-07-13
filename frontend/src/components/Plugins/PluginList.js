@@ -172,7 +172,11 @@ const PluginListItem = ({
       .then((res) => {
         setUpdating(false)
         if (res?.Updated) {
-          alertState.success(`${item.Name} updated to the latest image`)
+          let parts = []
+          if (res.GitUpdated) parts.push('source')
+          if (res.ImageUpdated) parts.push('image')
+          let what = parts.length ? parts.join(' + ') : 'container'
+          alertState.success(`${item.Name} updated (${what})`)
           notifyChange()
         } else {
           alertState.info(`${item.Name} is already up to date`)
