@@ -35,6 +35,7 @@ import {
   ShieldCheckIcon,
   TagIcon,
   TargetIcon,
+  TrashIcon,
   UsersIcon,
   WaypointsIcon,
   WifiIcon
@@ -490,7 +491,7 @@ export const StyleEditor = ({ initialIcon, initialColor, onChange }) => {
 
 // route a device's outbound traffic to an advertised sink: pick a sink, scope
 // the rule with a CIDR + optional port, optionally rewrite plaintext DNS
-const RouteSinkSection = ({ sinks, onAdd }) => {
+const RouteSinkSection = ({ sinks, routes, onAdd, onRemoveRoute }) => {
   const appContext = useContext(AppContext)
   const [sinkID, setSinkID] = useState(null)
   const [cidr, setCidr] = useState('0.0.0.0/0')
@@ -505,6 +506,38 @@ const RouteSinkSection = ({ sinks, onAdd }) => {
 
   return (
     <VStack space="xs">
+      {routes?.length ? (
+        <VStack space="xs">
+          <Text size="xs" color="$muted500">
+            Current routes
+          </Text>
+          {routes.map(({ rule, index }) => (
+            <HStack
+              key={index}
+              space="sm"
+              alignItems="center"
+              justifyContent="space-between"
+            >
+              <VStack flex={1}>
+                <Text size="xs" numberOfLines={1}>
+                  {rule.RuleName || 'Route'}
+                </Text>
+                <Text size="2xs" color="$muted500" numberOfLines={1}>
+                  {[rule.Dst?.IP, rule.DstInterface].filter(Boolean).join(' · ')}
+                </Text>
+              </VStack>
+              <Button
+                size="xs"
+                variant="link"
+                action="secondary"
+                onPress={() => onRemoveRoute(index)}
+              >
+                <ButtonIcon as={TrashIcon} color="$red700" />
+              </Button>
+            </HStack>
+          ))}
+        </VStack>
+      ) : null}
       <Text size="xs" color="$muted500">
         Route outbound via
       </Text>
@@ -582,13 +615,18 @@ export const DetailPanel = ({
   onConnect,
   onSelectPeer,
   sinks,
-  onAddRoute
+  onAddRoute,
+  routes,
+  onRemoveRoute
 }) => {
   const fields = ['IP', 'TinyNet', 'VLANTag', 'MAC', 'SSID', 'Iface', 'ConnType'].filter(
     (field) => node[field]
   )
   const identity = node.MAC || node.ID?.replace(/^dev:/, '')
   const editable = node.Kind == 'device' && identity
+  const deviceRoutes = (routes || [])
+    .map((rule, index) => ({ rule, index }))
+    .filter(({ rule }) => node.IP && rule.Client?.SrcIP == node.IP)
 
   const placement = compact
     ? { left: 12, right: 12, bottom: 12, maxHeight: '52%' }
@@ -817,7 +855,9 @@ export const DetailPanel = ({
           {editable && sinks?.length && onAddRoute ? (
             <RouteSinkSection
               sinks={sinks}
+              routes={deviceRoutes}
               onAdd={(sink, scope) => onAddRoute(node, sink, scope)}
+              onRemoveRoute={onRemoveRoute}
             />
           ) : null}
 

@@ -180,10 +180,37 @@ export const computeLayout = (nodes, edges, collapsedIDs = []) => {
     )
     const branchKids = kids.filter((kid) => !leafKids.includes(kid))
 
-    branchKids.forEach((kid) => {
+    const extensionRow = branchKids.filter(
+      (kid) =>
+        byID[kid]?.Kind == 'extension' && !(treeChildren[kid] || []).length
+    )
+    const normalBranchKids = branchKids.filter(
+      (kid) => !extensionRow.includes(kid)
+    )
+
+    normalBranchKids.forEach((kid) => {
       visible.add(kid)
       visit(walk(kid, depth + 1))
     })
+
+    if (extensionRow.length) {
+      const extRow = nextRow + 0.5
+      const blockID = 'block:extensions:' + id
+      extensionRow.forEach((kid, index) => {
+        visible.add(kid)
+        depths[kid] = depth + 1 + index
+        rows[kid] = extRow
+        blockOf[kid] = blockID
+      })
+      blocks.push({
+        id: blockID,
+        parent: id,
+        kind: 'extensions',
+        members: extensionRow
+      })
+      nextRow = extRow + 1.5
+      visit(extRow)
+    }
 
     //extensions always group their nodes into a block grid
     const forceBlock = byID[id]?.Kind == 'extension' && leafKids.length > 0

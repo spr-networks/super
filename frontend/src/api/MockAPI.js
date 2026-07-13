@@ -262,11 +262,35 @@ let mockTopoNodes = [
     IP: '100.64.0.9',
     ConnType: 'wireguard',
     Online: false
+  },
+  {
+    ID: 'plugin:nebula',
+    Kind: 'extension',
+    Name: 'NEBULA',
+    ConnType: 'wireguard',
+    Online: true
+  },
+  {
+    ID: 'plugin:gluetun',
+    Kind: 'extension',
+    Name: 'GLUETUN',
+    ConnType: 'wireguard',
+    Online: true
+  },
+  {
+    ID: 'plugin:reticulum',
+    Kind: 'extension',
+    Name: 'RETICULUM',
+    ConnType: 'wireguard',
+    Online: true
   }
 ]
 
 const mockTopoL1Edges = [
   { From: 'router', To: 'iface:eth0', Layer: 'l1', Kind: 'uplink' },
+  { From: 'router', To: 'plugin:nebula', Layer: 'l1', Kind: 'wireguard' },
+  { From: 'router', To: 'plugin:gluetun', Layer: 'l1', Kind: 'wireguard' },
+  { From: 'router', To: 'plugin:reticulum', Layer: 'l1', Kind: 'wireguard' },
   { From: 'router', To: 'iface:wlan1', Layer: 'l1', Kind: 'wifi' },
   { From: 'router', To: 'iface:wg0', Layer: 'l1', Kind: 'wg' },
   { From: 'router', To: 'iface:eth1', Layer: 'l1', Kind: 'wired' },
