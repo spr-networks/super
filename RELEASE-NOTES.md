@@ -2,86 +2,86 @@
 # Secure Programmable Router (SPR) Release Notes
 
 ## v1.1.13
-** Features **
+**Features**
 - ASN/Geoblock support
 - Consolidate traffic views and add traffic insights
 - Add improved internet health, failover screen
-** Fixes **
+**Fixes**
 - Improve dhcp reliability when setting up a wifi uplink
 - Clarify the role of wifi passwords during the setup wizard
 - Harden image pull when vetting digests
 - Fix fd close error handling for link ping
 
 ## v1.1.12
-** Features **
+**Features**
 - Topology sink support
 - Show build attestation in Plugins listing
 - Improved alerts
 - New theme & custom font support
-** Fixes **
+**Fixes**
 - Make software update flow easier to understand
 - Call compose down when a plugin is deleted, and fall thru on update failures
 
 ## v1.1.11
-** Fixes **
+**Fixes**
 - Re-release for merge failure
 
 ## v1.1.10
-** Fixes **
+**Fixes**
 - Fix plugin startup races
 - Fix wireguard bug
 
 ## v1.1.9
-** Features **
+**Features**
 - Topology on react native, for iOS & android
 - Allow plugins to extend topology
-** Fixes **
+**Fixes**
 - Fix plugins UI glitches
 - Hostapd security update
 
 ## v1.1.8
-** Features **
+**Features**
 - Add topology map and mesh/API support for it
 - Add device classification flows
 - Add more filters for bulk editing
 - Parental controls for time limits
-** Fixes **
+**Fixes**
 - Improve mesh refresh for api restarts
 - Fix UI glitch with guest networks showing as enabled when not set
 - Cache attestation results
 
 ## v1.1.7
-** Features **
+**Features**
 - Add new ui themes
 - base/scripts now includes a tool to verify reproducible container builds against sigstore
 - Add devices to a new service endpoint from within the UI
-** Fixes **
+**Fixes**
 - Fix endpoint fw rules, further nft cleanup and bug fixes
 - Update node dependencies & CI
 
 ## v1.1.6
-** Features **
+**Features**
 - Begin showing attestation info in the System info pane
-** Fixes **
+**Fixes**
 - Update hostapd
 - Add missing add device button removed during bulk edits
 - Fix more FS timestamp fixes for bit-reproducible docker builds
 
 ## v1.1.5
-** Fixes **
+**Fixes**
 - FS timestamp fixes for bit-reproducible docker builds
 
 ## v1.1.4
-** Fixes **
+**Fixes**
 - iOS UI glitches
 - Improved wireguard disable from plugins toggle
 - Deleting a device now deletes its dns history bucket
-** Improvements **
+**Improvements**
 - Enable bit-reproducible docker builds
 - Plugin restart button
 
 ## v1.1.3
-** Fixes **
+**Fixes**
 - Build improvements for attestation, node updates
 - Improve firewall settings UI forms, add descriptions
 - Fix removal of expired roles in coredns-block
@@ -89,21 +89,21 @@
 - Fix DNS settings checkboxes
 
 ## v1.1.2
-** Fixes **
+**Fixes**
 - api.github aggressively limits public attestation checks so switch to ghcr registry
 
 ## v1.1.1
-** Fixes **
+**Fixes**
 - Fix db/bus buffering 
 - Fix iOS select menu for dns log filter 
-** Improvements **
+**Improvements**
 - New UI for bulk device edits
 
 
 ## v1.1.0 
-** Fixes **
+**Fixes**
 - address hostapd use-after-free bug with mld
-** Improvements **
+**Improvements**
 - Enforce build attestation for updates
 - Remove gRPC dependency for sprbus, migrating to sprbus-json
 - Switch to direct nftables calls to reduce overhead 
@@ -534,7 +534,7 @@ Key Fixes
 * Add `base/configs/custom_compose_paths.json` support to superd, enabling loading of custom compose files from the UI
 * Pretty Events in Event Log
 
- **Fixes**
+**Fixes**
 * UI errors related to the gluestack migration (wifi uplink, PFW, misc)
 * Fix tag and group list normalization to remove empty entries
 * VPN Endpoint/Domain name add was broken
