@@ -1194,26 +1194,21 @@ func pingTest(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Error creating raw socket: %v\n", 400)
 			return
 		}
-		defer syscall.Close(fd)
 
 		if err := bindToDevice(fd, ief.Name); err != nil {
+			syscall.Close(fd)
 			http.Error(w, "Error binding to interface", 400)
 			return
 		}
 
-		f := os.NewFile(uintptr(fd), "")
+		f := os.NewFile(uintptr(fd), "ping")
 		conn, err := net.FilePacketConn(f)
+		f.Close()
 		if err != nil {
 			http.Error(w, "Error creating ICMP connection", 400)
 			return
 		}
 		defer conn.Close()
-
-		err = bindToDevice(fd, ief.Name)
-		if err != nil {
-			http.Error(w, "Failed to listen on interface", 400)
-			return
-		}
 
 		msg := icmp.Message{
 			Type: ipv4.ICMPTypeEcho,
