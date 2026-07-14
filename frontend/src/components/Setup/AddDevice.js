@@ -5,6 +5,7 @@ import { AlertContext } from 'layouts/Admin'
 import { WifiConnect } from 'views/Devices/ConnectDevice'
 
 import {
+  Box,
   Button,
   ButtonText,
   FormControl,
@@ -23,6 +24,8 @@ import {
   RadioIndicator,
   RadioIcon,
   RadioLabel,
+  Icon,
+  InfoIcon,
   Text,
   VStack,
   AlertCircleIcon,
@@ -142,6 +145,30 @@ const AddDevice = ({ disabled, onClose, onConnect, ...props }) => {
           <Text size="md" textAlign="center">
             Now connect your device
           </Text>
+          <Box
+            alignSelf="center"
+            w="$full"
+            rounded="$lg"
+            borderWidth={1}
+            borderColor="$muted200"
+            bg="$primary50"
+            px="$4"
+            py="$3"
+            sx={{
+              '@md': { maxWidth: 540 },
+              _dark: { bg: '$blueGray800', borderColor: '$muted700' }
+            }}
+          >
+            <HStack space="sm">
+              <Icon as={InfoIcon} color="$primary600" mt="$0.5" />
+              <Text size="sm" flex={1}>
+                This password works for one device only. The first device to
+                connect claims it — if you scan the QR code with your phone,
+                the password belongs to your phone. Every device you add later
+                gets its own password.
+              </Text>
+            </HStack>
+          </Box>
           <WifiConnect
             device={device}
             goBackSuccess={props.deviceAddedCallback}
@@ -171,8 +198,9 @@ const AddDevice = ({ disabled, onClose, onConnect, ...props }) => {
   return (
     <VStack space="3xl" p="$4">
       <Text size="md">
-        Add & connect your first device. In the next step, connect using your
-        current device or a new one
+        Add & connect your first device. SPR gives every device its own unique
+        wifi password. In the next step, connect using your current device or a
+        new one
       </Text>
       <VStack
         space="3xl"
