@@ -278,6 +278,14 @@ func insightCurrentBucketLocked(now time.Time) *insightBucket {
 	return bucket
 }
 
+func insightRecentBucketsLocked(now time.Time) []*insightBucket {
+	buckets := []*insightBucket{insightCurrentBucketLocked(now)}
+	if len(gInsightBuckets) > 1 {
+		buckets = append(buckets, gInsightBuckets[len(gInsightBuckets)-2])
+	}
+	return buckets
+}
+
 type insightDelta struct {
 	device  string
 	remote  string
@@ -382,15 +390,17 @@ func collectTrafficInsights() {
 	now := time.Now()
 
 	gInsightsMtx.Lock()
-	for _, devStats := range insightCurrentBucketLocked(now).Devices {
-		for remote, stat := range devStats {
-			if remote == gInsightOtherKey || stat.ASN != 0 || remotes[remote] {
-				continue
-			}
-			ip := net.ParseIP(remote)
-			if ip != nil && !ip.IsPrivate() && !insightSkipRemote(ip) {
-				remotes[remote] = true
-				remoteList = append(remoteList, remote)
+	for _, b := range insightRecentBucketsLocked(now) {
+		for _, devStats := range b.Devices {
+			for remote, stat := range devStats {
+				if remote == gInsightOtherKey || stat.ASN != 0 || remotes[remote] {
+					continue
+				}
+				ip := net.ParseIP(remote)
+				if ip != nil && !ip.IsPrivate() && !insightSkipRemote(ip) {
+					remotes[remote] = true
+					remoteList = append(remoteList, remote)
+				}
 			}
 		}
 	}
@@ -404,6 +414,10 @@ func collectTrafficInsights() {
 	gInsightPrev = current
 
 	bucket := insightCurrentBucketLocked(now)
+	var prevBucket *insightBucket
+	if len(gInsightBuckets) > 1 {
+		prevBucket = gInsightBuckets[len(gInsightBuckets)-2]
+	}
 	for _, delta := range deltas {
 		devStats, exists := bucket.Devices[delta.device]
 		if !exists {
@@ -444,18 +458,34 @@ func collectTrafficInsights() {
 				stat.Domain = DNSCache[delta.remote]
 				DNSCachemtx.RUnlock()
 			}
+			if stat.Domain == "" && prevBucket != nil {
+				if prevStats, exists := prevBucket.Devices[delta.device]; exists {
+					if prevStat, exists := prevStats[delta.remote]; exists {
+						stat.Domain = prevStat.Domain
+					}
+				}
+			}
 		}
 	}
 
-	for _, devStats := range bucket.Devices {
-		for remote, stat := range devStats {
-			if remote == gInsightOtherKey || stat.ASN != 0 {
-				continue
-			}
-			if entry, exists := asns[remote]; exists && entry.ASN != 0 {
-				stat.ASN = entry.ASN
-				stat.ASNName = entry.Name
-				stat.Country = entry.Country
+	for _, b := range insightRecentBucketsLocked(now) {
+		for _, devStats := range b.Devices {
+			for remote, stat := range devStats {
+				if remote == gInsightOtherKey {
+					continue
+				}
+				if stat.ASN == 0 {
+					if entry, exists := asns[remote]; exists && entry.ASN != 0 {
+						stat.ASN = entry.ASN
+						stat.ASNName = entry.Name
+						stat.Country = entry.Country
+					}
+				}
+				if stat.Domain == "" {
+					DNSCachemtx.RLock()
+					stat.Domain = DNSCache[remote]
+					DNSCachemtx.RUnlock()
+				}
 			}
 		}
 	}
