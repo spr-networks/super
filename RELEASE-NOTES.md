@@ -5,6 +5,8 @@
 ** Features **
 - ASN/Geoblock
 - Improved internet health, failover
+** Fixes **
+- Improve dhcp reliability when setting up a wifi uplink
 
 ## v1.1.12
 ** Features **
