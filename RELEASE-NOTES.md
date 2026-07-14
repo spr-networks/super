@@ -3,10 +3,12 @@
 
 ## v1.1.13
 ** Features **
-- ASN/Geoblock
-- Improved internet health, failover
+- ASN/Geoblock support
+- Consolidate traffic views and add traffic insights
+- Add improved internet health, failover screen
 ** Fixes **
 - Improve dhcp reliability when setting up a wifi uplink
+- Clarify the role of wifi passwords during the setup wizard
 
 ## v1.1.12
 ** Features **
