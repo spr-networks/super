@@ -2730,7 +2730,11 @@ export default function MockAPI(props = null) {
             Country: 'US',
             BytesIn: mb(900),
             BytesOut: mb(80),
-            Devices: devs([0.6, 0.3, 0.1]),
+            Devices: [
+              ...devs([0.55, 0.3, 0.1]),
+              { IP: '172.17.0.3', BytesIn: mb(6), BytesOut: mb(40) },
+              { IP: '172.17.0.5', BytesIn: mb(2), BytesOut: mb(1) }
+            ],
             ASNs: [
               {
                 ASN: 15169,
@@ -2813,7 +2817,8 @@ export default function MockAPI(props = null) {
           TotalIn,
           TotalOut,
           Countries,
-          ASNs
+          ASNs,
+          ContainerNets: ['172.17.0.0/16']
         }
       })
 
@@ -2883,6 +2888,13 @@ export default function MockAPI(props = null) {
             BytesIn: mb(3),
             BytesOut: mb(1),
             LastSeen: seen(600)
+          },
+          {
+            IP: '203.0.113.9',
+            Domain: '',
+            BytesIn: mb(2),
+            BytesOut: mb(1),
+            LastSeen: seen(700)
           }
         ]
 

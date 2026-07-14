@@ -37,6 +37,7 @@ import {
   ArrowUpIcon,
   BanIcon,
   ChevronRightIcon,
+  ContainerIcon,
   GlobeIcon,
   RefreshCwIcon
 } from 'lucide-react-native'
@@ -78,6 +79,48 @@ const deviceFallback = (ip) => ({
   Name: ip,
   Style: { Icon: 'Ethernet', Color: '$blueGray500' }
 })
+
+const ipToLong = (ip) => {
+  let parts = (ip || '').split('.').map(Number)
+  if (parts.length != 4 || parts.some((p) => isNaN(p) || p < 0 || p > 255)) {
+    return null
+  }
+  return (
+    (((parts[0] << 24) >>> 0) + (parts[1] << 16) + (parts[2] << 8) + parts[3]) >>>
+    0
+  )
+}
+
+const ipInCidrs = (ip, cidrs) => {
+  let addr = ipToLong(ip)
+  if (addr == null) {
+    return false
+  }
+
+  for (let cidr of cidrs || []) {
+    let [base, bits] = cidr.split('/')
+    let baseAddr = ipToLong(base)
+    let prefix = parseInt(bits)
+    if (baseAddr == null || isNaN(prefix) || prefix < 0 || prefix > 32) {
+      continue
+    }
+    let mask = prefix == 0 ? 0 : (~0 << (32 - prefix)) >>> 0
+    if (((addr & mask) >>> 0) == ((baseAddr & mask) >>> 0)) {
+      return true
+    }
+  }
+
+  return false
+}
+
+const ContainerItem = ({ ip }) => (
+  <HStack space="md" alignItems="center">
+    <Icon as={ContainerIcon} color="$blueGray500" />
+    <Text size="sm" bold>
+      {ip}
+    </Text>
+  </HStack>
+)
 
 const BytesCell = ({ BytesIn, BytesOut }) => (
   <VStack alignItems="flex-end" w={90}>
@@ -478,8 +521,12 @@ const DeviceDetail = ({ ip, minutes, devicesByIp, navigate }) => {
                       {item.Domain || item.IP}
                     </Text>
                     <Text size="xs" color="$muted500" isTruncated>
-                      {item.Domain ? `${item.IP} · ` : ''}
-                      {item.ASNName || `AS${item.ASN}`}
+                      {[
+                        item.Domain ? item.IP : null,
+                        item.ASNName || (item.ASN ? `AS${item.ASN}` : null)
+                      ]
+                        .filter((x) => x)
+                        .join(' · ')}
                     </Text>
                   </VStack>
 
@@ -508,7 +555,7 @@ const timeRanges = [
   { label: '7 days', minutes: 10080 }
 ]
 
-const tabs = ['Countries', 'ASNs', 'Devices']
+const tabs = ['Countries', 'ASNs', 'Devices', 'Containers']
 
 const TrafficInsights = (props) => {
   const context = useContext(AlertContext)
@@ -697,13 +744,21 @@ const TrafficInsights = (props) => {
       )
     }
 
+    let isContainerTab = tab == 'Containers'
+    let containerNets = overview.ContainerNets || []
+    let deviceList = deviceTotals().filter(
+      (d) => ipInCidrs(d.IP, containerNets) == isContainerTab
+    )
+
     return (
       <FlatList
-        data={withShare(deviceTotals())}
+        data={withShare(deviceList)}
         contentContainerStyle={{ paddingBottom: 48 }}
         ListEmptyComponent={
           <Text p="$4" size="sm" color="$muted500">
-            No traffic recorded in the selected window
+            {isContainerTab
+              ? 'No container traffic recorded in the selected window'
+              : 'No traffic recorded in the selected window'}
           </Text>
         }
         renderItem={({ item }) => (
@@ -720,11 +775,15 @@ const TrafficInsights = (props) => {
                 flex={1}
                 onPress={() => navigate(`/admin/traffic_insights/${item.IP}`)}
               >
-                <DeviceItem
-                  size="sm"
-                  item={devicesByIp[item.IP] || deviceFallback(item.IP)}
-                  noPress
-                />
+                {isContainerTab ? (
+                  <ContainerItem ip={item.IP} />
+                ) : (
+                  <DeviceItem
+                    size="sm"
+                    item={devicesByIp[item.IP] || deviceFallback(item.IP)}
+                    noPress
+                  />
+                )}
               </Pressable>
               <BytesCell BytesIn={item.BytesIn} BytesOut={item.BytesOut} />
               <Pressable
@@ -775,7 +834,11 @@ const TrafficInsights = (props) => {
               ))}
             </ButtonGroup>
           ) : (
-            <Heading size="sm">Device Traffic</Heading>
+            <Heading size="sm">
+              {ipInCidrs(detailIp, overview?.ContainerNets)
+                ? 'Container Traffic'
+                : 'Device Traffic'}
+            </Heading>
           )}
 
           <HStack space="md" alignItems="center" marginLeft="auto">

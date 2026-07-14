@@ -617,9 +617,8 @@ const WanHealth = () => {
       <VStack space="md" p="$4">
         <HStack justifyContent="space-between" alignItems="center">
           <VStack>
-            <Heading size="md">Internet Health</Heading>
+            <Heading size="md"></Heading>
             <Text size="xs" color="$muted500">
-              Latency, packet loss, outages and speed for every WAN uplink
             </Text>
           </VStack>
           <HStack space="sm">
