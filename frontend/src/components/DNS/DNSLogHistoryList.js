@@ -12,15 +12,14 @@ import { useNavigate } from 'react-router-dom'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { format as timeAgo } from 'timeago.js'
 
-import { AlertContext, ModalContext } from 'AppContext'
+import { AlertContext, AppContext, ModalContext } from 'AppContext'
 import DNSAddOverride from './DNSAddOverride'
 import ClientSelect from 'components/ClientSelect'
 import { Select } from 'components/Select'
 import ModalForm from 'components/ModalForm'
 import JSONSyntax from 'components/SyntaxHighlighter'
 import { Tooltip } from 'components/Tooltip'
-import { dbAPI, deviceAPI } from 'api'
-import { getContainerIpMap } from 'api/Containers'
+import { dbAPI } from 'api'
 import { prettyDate } from 'utils'
 import { ListHeader } from 'components/List'
 import Pagination from 'components/Pagination'
@@ -232,6 +231,7 @@ const ListItem = ({
 const DNSLogHistoryList = (props) => {
   const context = useContext(AlertContext)
   const modalContext = useContext(ModalContext)
+  const appContext = useContext(AppContext)
   const navigate = useNavigate()
 
   const [list, setList] = useState([])
@@ -241,7 +241,6 @@ const DNSLogHistoryList = (props) => {
   const [filterType, setFilterType] = useState('')
   const [selectedDomain, setSelectedDomain] = useState('')
   const [selectedType, setSelectedType] = useState('')
-  const [deviceNames, setDeviceNames] = useState({})
   const [page, setPage] = useState(1)
   const perPage = 20
   const [total, setTotal] = useState(0)
@@ -458,31 +457,10 @@ const DNSLogHistoryList = (props) => {
     if (props.filterText) setFilterText(props.filterText)
   }, [props.ips, props.filterText])
 
-  useEffect(() => {
-    deviceAPI
-      .list()
-      .then((devices) => {
-        let names = {}
-        Object.values(devices).forEach((device) => {
-          if (device.RecentIP && device.Name) {
-            names[device.RecentIP] = device.Name
-          }
-        })
-        getContainerIpMap()
-          .then((containers) => {
-            Object.entries(containers).forEach(([ip, entry]) => {
-              if (!names[ip] && entry.Name) {
-                names[ip] = entry.Name
-              }
-            })
-            setDeviceNames(names)
-          })
-          .catch(() => setDeviceNames(names))
-      })
-      .catch(() => {})
-  }, [])
-
-  const ipLabel = (ip) => (deviceNames[ip] ? `${deviceNames[ip]} (${ip})` : ip)
+  const ipLabel = (ip) => {
+    const dev = appContext.getDevice(ip, 'RecentIP')
+    return dev?.Name ? `${dev.Name} (${ip})` : ip
+  }
 
   useEffect(() => {
     if (filterIps.length) {
