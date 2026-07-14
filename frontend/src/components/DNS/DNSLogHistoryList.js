@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { format as timeAgo } from 'timeago.js'
 
-import { AlertContext, ModalContext } from 'AppContext'
+import { AlertContext, AppContext, ModalContext } from 'AppContext'
 import DNSAddOverride from './DNSAddOverride'
 import ClientSelect from 'components/ClientSelect'
 import { Select } from 'components/Select'
@@ -231,6 +231,7 @@ const ListItem = ({
 const DNSLogHistoryList = (props) => {
   const context = useContext(AlertContext)
   const modalContext = useContext(ModalContext)
+  const appContext = useContext(AppContext)
   const navigate = useNavigate()
 
   const [list, setList] = useState([])
@@ -456,6 +457,11 @@ const DNSLogHistoryList = (props) => {
     if (props.filterText) setFilterText(props.filterText)
   }, [props.ips, props.filterText])
 
+  const ipLabel = (ip) => {
+    const dev = appContext.getDevice(ip, 'RecentIP')
+    return dev?.Name ? `${dev.Name} (${ip})` : ip
+  }
+
   useEffect(() => {
     if (filterIps.length) {
       navigate(`/admin/dnsLog/${filterIps.join(',')}/${filterText || ':text'}`)
@@ -616,7 +622,10 @@ const DNSLogHistoryList = (props) => {
       </ModalForm>
 
       <ListHeader
-        title={filterIps.join(',') + ' DNS Log'}
+        title={
+          (filterIps.length ? filterIps.map(ipLabel).join(', ') + ' ' : '') +
+          'DNS Log'
+        }
         description={total ? `${total} records` : ''}
       >
         <HStack

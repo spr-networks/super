@@ -3248,10 +3248,19 @@ func main() {
 	external_router_authenticated.HandleFunc("/firewall/enableTLS", enableTLS).Methods("GET", "PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/firewall/systemDnsOverride", systemDNSOverride).Methods("PUT")
 
+	external_router_authenticated.HandleFunc("/firewall/geo_block/config", geoBlockConfigHandler).Methods("GET", "PUT")
+	external_router_authenticated.HandleFunc("/firewall/geo_block/status", geoBlockStatusHandler).Methods("GET")
+	external_router_authenticated.HandleFunc("/firewall/geo_block/refresh", geoBlockRefreshHandler).Methods("PUT")
+	external_router_authenticated.HandleFunc("/firewall/geo_block/country/{cc}", geoBlockCountryHandler).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/firewall/geo_block/asn/{asn}", geoBlockASNHandler).Methods("PUT", "DELETE")
+
 	//traffic monitoring
 	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")
 	external_router_authenticated.HandleFunc("/traffic_history", getTrafficHistory).Methods("GET")
 	external_router_authenticated.HandleFunc("/iptraffic", getIPTraffic).Methods("GET")
+	external_router_authenticated.HandleFunc("/traffic_insights/config", trafficInsightsConfigHandler).Methods("GET", "PUT")
+	external_router_authenticated.HandleFunc("/traffic_insights/overview", trafficInsightsOverviewHandler).Methods("GET")
+	external_router_authenticated.HandleFunc("/traffic_insights/device/{ip}", trafficInsightsDeviceHandler).Methods("GET")
 
 	//network topology
 	external_router_authenticated.HandleFunc("/topology", showTopology).Methods("GET")
@@ -3359,6 +3368,15 @@ func main() {
 	external_router_authenticated.HandleFunc("/link/ip", updateLANLinkIPConfig).Methods("PUT")
 	external_router_authenticated.HandleFunc("/link/vlan/{interface}/{state}", updateLinkVlanTrunk).Methods("PUT")
 
+	//wan health monitoring
+	external_router_authenticated.HandleFunc("/wan/status", getWanStatus).Methods("GET")
+	external_router_authenticated.HandleFunc("/wan/history/{interface}", getWanHistory).Methods("GET")
+	external_router_authenticated.HandleFunc("/wan/outages", getWanOutages).Methods("GET")
+	external_router_authenticated.HandleFunc("/wan/config", getWanHealthConfig).Methods("GET")
+	external_router_authenticated.HandleFunc("/wan/config", updateWanHealthConfig).Methods("PUT")
+	external_router_authenticated.HandleFunc("/wan/speedtest", getWanSpeedResults).Methods("GET")
+	external_router_authenticated.HandleFunc("/wan/speedtest/{interface}", runWanSpeedTest).Methods("PUT")
+
 	//	external_router_authenticated.HandleFunc("/uplink/{interface}/bond", mangeBondInterface).Methods("PUT", "DELETE")
 	//	external_router_authenticated.HandleFunc("/uplink/loadBalance", setLoadBalanceStrategy).Methods("PUT")
 
@@ -3457,8 +3475,15 @@ func main() {
 	// collect traffic accounting statistics
 	trafficTimer()
 
+	initTrafficInsights()
+
+	initGeoBlock()
+
 	// parental controls: enforce persona time limits + block schedules
 	parentalControlLoop()
+
+	// wan uplink health probes, outage tracking, failover
+	go wanHealthLoop()
 
 	// alerts, connect to eventbus
 	go AlertsRunEventListener()

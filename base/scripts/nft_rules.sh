@@ -244,6 +244,12 @@ table inet filter {
     flags interval;
   }
 
+  # ASN / country deny list ranges. Managed by the API (geo_block.go)
+  set geo_block {
+    type ipv4_addr;
+    flags interval;
+  }
+
   chain PFWDROPLOG {
     counter log prefix "drop:pfw " group 1
     counter drop
@@ -362,6 +368,9 @@ table inet filter {
     counter ip saddr . ip daddr . ip protocol . tcp dport vmap @fwd_block
     counter ip saddr . ip daddr . ip protocol . udp dport vmap @fwd_block
 
+    # ASN / country deny list
+    counter ip daddr @geo_block goto DROPGEOLOG
+
     #jump USERDEF_FORWARD
 
 
@@ -472,6 +481,10 @@ table inet filter {
     type filter hook output priority 0; policy accept
     # Output Block rules
     counter ip saddr . ip daddr . ip protocol  vmap @output_block
+
+    # ASN / country deny list
+    counter ip daddr @geo_block goto DROPGEOLOG
+
     oifname @uplink_interfaces ip daddr @supernetworks goto DROPLOGOUTP
     oifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGOUTP
     tcp dport 53 jump DNS_OUTPUT
@@ -484,6 +497,11 @@ table inet filter {
 
   chain DROPLOGFWD {
     counter log prefix "drop:forward " group 1
+    counter drop
+  }
+
+  chain DROPGEOLOG {
+    counter log prefix "drop:geo " group 1
     counter drop
   }
 

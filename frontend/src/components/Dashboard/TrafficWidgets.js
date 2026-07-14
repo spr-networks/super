@@ -59,7 +59,7 @@ export const TotalTraffic = (props) => {
 
             let x = new Date(start)
             x.setMinutes(start.getMinutes() - i)
-            let y = h1 - h2
+            let y = Math.max(h1 - h2, 0)
 
             traffic[label].push({ x, y })
           })
@@ -145,7 +145,12 @@ export const DeviceTraffic = ({ minutes, showEmpty, ...props }) => {
   }, [])
 
   let diffSize = (szs) => {
-    return szs[0] - szs[szs.length - 1]
+    let total = 0
+    for (let i = szs.length - 1; i > 0; i--) {
+      let delta = szs[i - 1] - szs[i]
+      total += delta >= 0 ? delta : szs[i - 1]
+    }
+    return Math.max(total, 0)
   }
 
   let title = `Traffic Last ${windowMinutes} minutes`
@@ -233,7 +238,14 @@ export const DeviceTrafficPane = ({ showEmpty, ...props }) => {
     fetchData(trafficWindows[nextIdx].minutes)
   }
 
-  let diffSize = (szs) => szs[0] - szs[szs.length - 1]
+  let diffSize = (szs) => {
+    let sum = 0
+    for (let i = szs.length - 1; i > 0; i--) {
+      let delta = szs[i - 1] - szs[i]
+      sum += delta >= 0 ? delta : szs[i - 1]
+    }
+    return Math.max(sum, 0)
+  }
 
   let total = {}
   for (let timeWindow of history.slice(0, win.minutes)) {

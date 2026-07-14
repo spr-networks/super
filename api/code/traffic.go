@@ -353,6 +353,8 @@ func trafficTimer() {
 				collectBandwithStats()
 
 				collectIPTrafficStats()
+
+				collectTrafficInsights()
 			}
 		}
 	}

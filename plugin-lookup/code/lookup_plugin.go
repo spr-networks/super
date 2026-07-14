@@ -182,6 +182,9 @@ func main() {
 	unix_plugin_router.HandleFunc("/asns/{ip}", pluginGetASNs).Methods("GET")
 	unix_plugin_router.HandleFunc("/oui/{mac}", pluginGetOUI).Methods("GET")
 	unix_plugin_router.HandleFunc("/ouis/{mac}", pluginGetOUIs).Methods("GET")
+	unix_plugin_router.HandleFunc("/asn_ranges/{asns}", pluginGetASNRanges).Methods("GET")
+	unix_plugin_router.HandleFunc("/country_ranges/{countries}", pluginGetCountryRanges).Methods("GET")
+	unix_plugin_router.HandleFunc("/asn_search/{query}", pluginGetASNSearch).Methods("GET")
 
 	if classifier != nil {
 		classifier.registerRoutes(unix_plugin_router)

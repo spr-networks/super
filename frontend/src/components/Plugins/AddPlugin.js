@@ -32,6 +32,7 @@ const AddPlugin = (props) => {
   const [Enabled, setEnabled] = useState(true)
   const [GitURL, setGitURL] = useState('')
   const [HasUI, setHasUI] = useState(false)
+  const [HasTopology, setHasTopology] = useState(false)
   const [InstallTokenPath, setInstallTokenPath] = useState('')
   const [ScopedPaths, setScopedPaths] = useState('')
 
@@ -76,6 +77,7 @@ const AddPlugin = (props) => {
       Enabled,
       GitURL,
       HasUI,
+      HasTopology,
       InstallTokenPath,
       ScopedPaths: scopedPathsArray
     }
@@ -238,6 +240,7 @@ const AddPlugin = (props) => {
       <FormControl>
         <Checkbox
           value={Enabled}
+          isChecked={Enabled}
           onChange={setEnabled}
         >
           <CheckboxIndicator mr="$2">
@@ -256,6 +259,7 @@ const AddPlugin = (props) => {
       <FormControl>
         <Checkbox
           value={HasUI}
+          isChecked={HasUI}
           onChange={setHasUI}
         >
           <CheckboxIndicator mr="$2">
@@ -267,6 +271,25 @@ const AddPlugin = (props) => {
         <FormControlHelper>
           <FormControlHelperText>
             Plugin provides a user interface
+          </FormControlHelperText>
+        </FormControlHelper>
+      </FormControl>
+
+      <FormControl>
+        <Checkbox
+          value={HasTopology}
+          isChecked={HasTopology}
+          onChange={setHasTopology}
+        >
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>Has Topology</CheckboxLabel>
+        </Checkbox>
+
+        <FormControlHelper>
+          <FormControlHelperText>
+            Plugin exports nodes and sinks to the network topology view
           </FormControlHelperText>
         </FormControlHelper>
       </FormControl>

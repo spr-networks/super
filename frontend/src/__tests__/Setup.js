@@ -252,7 +252,9 @@ describe('Setup', () => {
 
     await waitFor(
       () => {
-        expect(screen.getByText('SPR is now configured!')).toBeTruthy()
+        expect(
+          screen.getByText('Congratulations! SPR is now configured')
+        ).toBeTruthy()
       },
       { timeout: 3000 }
     )

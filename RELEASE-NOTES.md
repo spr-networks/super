@@ -1,6 +1,17 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.1.13
+** Features **
+- ASN/Geoblock support
+- Consolidate traffic views and add traffic insights
+- Add improved internet health, failover screen
+** Fixes **
+- Improve dhcp reliability when setting up a wifi uplink
+- Clarify the role of wifi passwords during the setup wizard
+- Harden image pull when vetting digests
+- Fix fd close error handling for link ping
+
 ## v1.1.12
 ** Features **
 - Topology sink support

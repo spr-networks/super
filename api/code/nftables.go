@@ -2239,6 +2239,68 @@ func AddCIDRToSet(family, tableName, setName, cidr string) error {
 	return client.conn.Flush()
 }
 
+func AddIPRangesToSet(family, tableName, setName string, ranges [][2]net.IP) error {
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
+	}
+
+	set, err := client.GetMap(f, tableName, setName)
+	if err != nil {
+		return err
+	}
+
+	batch := []nftables.SetElement{}
+	flush := func() error {
+		if len(batch) == 0 {
+			return nil
+		}
+		if err := client.conn.SetAddElements(set, batch); err != nil {
+			return err
+		}
+		if err := client.conn.Flush(); err != nil {
+			return err
+		}
+		batch = batch[:0]
+		return nil
+	}
+
+	for _, r := range ranges {
+		start := r[0].To4()
+		end := r[1].To4()
+		if start == nil || end == nil {
+			continue
+		}
+
+		next := make(net.IP, 4)
+		copy(next, end)
+		overflow := true
+		for i := 3; i >= 0; i-- {
+			if next[i] < 255 {
+				next[i]++
+				overflow = false
+				break
+			}
+			next[i] = 0
+		}
+		if overflow {
+			continue
+		}
+
+		batch = append(batch,
+			nftables.SetElement{Key: start},
+			nftables.SetElement{Key: next, IntervalEnd: true})
+
+		if len(batch) >= 2000 {
+			if err := flush(); err != nil {
+				return err
+			}
+		}
+	}
+
+	return flush()
+}
+
 // AddIPVerdictToMap adds an IP address with verdict to a map
 func AddIPVerdictToMap(family, tableName, mapName, ip, verdict string) error {
 	f, client, err := withFamily(family)

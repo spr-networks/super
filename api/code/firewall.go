@@ -479,6 +479,17 @@ func setDefaultUplinkGateway(iface string, index int) bool {
 	return ret
 }
 
+func setMainUplinkRoute(outbound []string) {
+	//assumes Interfacesmtx is locked
+	if len(outbound) == 0 {
+		return
+	}
+	gw, _ := getDefaultGatewayLocked(outbound[0])
+	if gw != "" {
+		exec.Command("ip", "route", "replace", "default", "via", gw, "dev", outbound[0]).Output()
+	}
+}
+
 func updateOutboundRoutes() {
 	ticker := time.NewTicker(10 * time.Second)
 	for {
@@ -486,12 +497,11 @@ func updateOutboundRoutes() {
 		case <-ticker.C:
 			Interfacesmtx.Lock()
 			outbound := collectOutbound()
+			setMainUplinkRoute(outbound)
 			Interfacesmtx.Unlock()
 
 			FWmtx.Lock()
 			for i, iface := range outbound {
-				//TBD check that the interface actually reaches the internet
-				// if it does not, move it into a deactivated state and rebuild uplink
 				setDefaultUplinkGateway(iface, i)
 			}
 			FWmtx.Unlock()
@@ -515,6 +525,10 @@ func collectOutbound() []string {
 			gw, _ := getDefaultGatewayLocked(iface.Name)
 			if gw == "" {
 				//no gateway set, reject this outbound
+				continue
+			}
+
+			if wanHealthIfaceDead(iface.Name) {
 				continue
 			}
 
@@ -611,6 +625,8 @@ func rebuildUplink() {
 		}
 
 	}
+
+	setMainUplinkRoute(outbound)
 
 	// Flush the route cache to ensure the new route is used immediately.
 	err = exec.Command("ip", "route", "flush", "cache").Run()

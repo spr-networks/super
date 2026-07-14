@@ -305,12 +305,13 @@ func composeImages(composeFile string, target string) ([]string, error) {
 // verifyUpdateImages checks build provenance for every SPR image an update
 // would pull, before pulling. Returns an error if any image fails, so the
 // update can be aborted without downloading the unverified image.
-func verifyUpdateImages(composeFile string, target string) error {
+func verifyUpdateImages(composeFile string, target string) (map[string]string, error) {
 	images, err := composeImages(composeFile, target)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	verified := map[string]string{}
 	failures := []string{}
 	for _, image := range images {
 		policy := attestationPolicyForImage(image)
@@ -343,6 +344,7 @@ func verifyUpdateImages(composeFile string, target string) error {
 			sprbus.Publish("superd:attest:failure", map[string]string{"Image": image, "Digest": digest, "Reason": err.Error()})
 		} else {
 			result.Verified = true
+			verified[image] = digest
 			cacheAttestResult(digest, result, false)
 			sprbus.Publish("superd:attest:ok", map[string]string{"Image": image, "Digest": digest})
 		}
@@ -353,7 +355,55 @@ func verifyUpdateImages(composeFile string, target string) error {
 	}
 
 	if len(failures) != 0 {
-		return fmt.Errorf("provenance verification failed: %s", strings.Join(failures, "; "))
+		return nil, fmt.Errorf("provenance verification failed: %s", strings.Join(failures, "; "))
+	}
+
+	return verified, nil
+}
+
+func verifyPulledUpdate(composeFile string, target string, verified map[string]string) error {
+	images, err := composeImages(composeFile, target)
+	if err != nil {
+		return err
+	}
+
+	failures := []string{}
+	for _, image := range images {
+		policy := attestationPolicyForImage(image)
+		if policy == nil {
+			continue
+		}
+
+		digest, err := imageRepoDigest(image)
+		if err != nil {
+			failures = append(failures, image+": "+err.Error())
+			continue
+		}
+
+		if verified[image] == digest {
+			continue
+		}
+
+		if cached, ok := cachedAttest(digest); ok && cached.Verified {
+			continue
+		}
+
+		if policy.registry {
+			host, repo, _ := splitImageRef(image)
+			err = verifyRegistryAttestation(host, repo, digest, policy.sanRegex)
+		} else {
+			err = verifyGithubAttestation(digest, policy.sanRegex)
+		}
+
+		if err != nil {
+			failures = append(failures, image+": pulled digest "+digest+" failed verification: "+err.Error())
+			fmt.Println("[-] attest: pulled image failed verification", image, digest, err)
+			sprbus.Publish("superd:attest:failure", map[string]string{"Image": image, "Digest": digest, "Reason": err.Error()})
+		}
+	}
+
+	if len(failures) != 0 {
+		return fmt.Errorf("post-pull verification failed: %s", strings.Join(failures, "; "))
 	}
 
 	return nil

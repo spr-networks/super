@@ -32,8 +32,22 @@ const EditPlugin = ({ plugin, onClose, notifyChange, ...props }) => {
   const [Enabled, setEnabled] = useState(plugin.Enabled || false)
   const [GitURL, setGitURL] = useState(plugin.GitURL || '')
   const [HasUI, setHasUI] = useState(plugin.HasUI || false)
+  const [HasTopology, setHasTopology] = useState(plugin.HasTopology || false)
   const [InstallTokenPath, setInstallTokenPath] = useState(plugin.InstallTokenPath || '')
   const [ScopedPaths, setScopedPaths] = useState(plugin.ScopedPaths ? plugin.ScopedPaths.join(', ') : '')
+
+  useEffect(() => {
+    setName(plugin.Name || '')
+    setURI(plugin.URI || '')
+    setUnixPath(plugin.UnixPath || '')
+    setComposeFilePath(plugin.ComposeFilePath || '')
+    setEnabled(plugin.Enabled || false)
+    setGitURL(plugin.GitURL || '')
+    setHasUI(plugin.HasUI || false)
+    setHasTopology(plugin.HasTopology || false)
+    setInstallTokenPath(plugin.InstallTokenPath || '')
+    setScopedPaths(plugin.ScopedPaths ? plugin.ScopedPaths.join(', ') : '')
+  }, [plugin])
 
   const handleChange = (name, value) => {
     if (name == 'Name') {
@@ -76,6 +90,7 @@ const EditPlugin = ({ plugin, onClose, notifyChange, ...props }) => {
       Enabled,
       GitURL,
       HasUI,
+      HasTopology,
       InstallTokenPath,
       ScopedPaths: scopedPathsArray
     }
@@ -242,6 +257,7 @@ const EditPlugin = ({ plugin, onClose, notifyChange, ...props }) => {
       <FormControl>
         <Checkbox
           value={Enabled}
+          isChecked={Enabled}
           onChange={setEnabled}
         >
           <CheckboxIndicator mr="$2">
@@ -260,6 +276,7 @@ const EditPlugin = ({ plugin, onClose, notifyChange, ...props }) => {
       <FormControl>
         <Checkbox
           value={HasUI}
+          isChecked={HasUI}
           onChange={setHasUI}
         >
           <CheckboxIndicator mr="$2">
@@ -271,6 +288,25 @@ const EditPlugin = ({ plugin, onClose, notifyChange, ...props }) => {
         <FormControlHelper>
           <FormControlHelperText>
             Plugin provides a user interface
+          </FormControlHelperText>
+        </FormControlHelper>
+      </FormControl>
+
+      <FormControl>
+        <Checkbox
+          value={HasTopology}
+          isChecked={HasTopology}
+          onChange={setHasTopology}
+        >
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>Has Topology</CheckboxLabel>
+        </Checkbox>
+
+        <FormControlHelper>
+          <FormControlHelperText>
+            Plugin exports nodes and sinks to the network topology view
           </FormControlHelperText>
         </FormControlHelper>
       </FormControl>

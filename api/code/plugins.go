@@ -168,6 +168,16 @@ func updateConfigPluginDefaults(config *APIConfig) bool {
 				update = true
 			}
 		}
+
+		//sync plus plugin metadata saved before newer fields existed
+		if entry.Plus {
+			for _, def := range gPlusExtensionDefaults {
+				if entry.UnixPath == def.UnixPath && entry.HasTopology != def.HasTopology {
+					config.Plugins[i].HasTopology = def.HasTopology
+					update = true
+				}
+			}
+		}
 	}
 
 	return update
@@ -522,8 +532,7 @@ func enablePlugin(name string) bool {
 			if entry.Name == name {
 				config.Plugins[i].Enabled = true
 				if entry.ComposeFilePath != "" {
-					startExtension(entry.ComposeFilePath)
-					ret = true
+					ret = startExtension(entry.ComposeFilePath)
 				}
 				break
 			}
