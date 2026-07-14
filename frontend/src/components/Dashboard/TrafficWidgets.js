@@ -59,7 +59,7 @@ export const TotalTraffic = (props) => {
 
             let x = new Date(start)
             x.setMinutes(start.getMinutes() - i)
-            let y = h1 - h2
+            let y = Math.max(h1 - h2, 0)
 
             traffic[label].push({ x, y })
           })
@@ -145,7 +145,12 @@ export const DeviceTraffic = ({ minutes, showEmpty, ...props }) => {
   }, [])
 
   let diffSize = (szs) => {
-    return szs[0] - szs[szs.length - 1]
+    let total = 0
+    for (let i = szs.length - 1; i > 0; i--) {
+      let delta = szs[i - 1] - szs[i]
+      total += delta >= 0 ? delta : szs[i - 1]
+    }
+    return Math.max(total, 0)
   }
 
   let title = `Traffic Last ${windowMinutes} minutes`

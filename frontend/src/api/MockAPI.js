@@ -56,6 +56,41 @@ let mockPersonasState = {
   PauseUntil: {},
   GrantUntil: {}
 }
+
+let mockTrafficInsightsConfig = { Enabled: true, RetentionDays: 7 }
+
+let mockGeoBlockConfig = {
+  Enabled: false,
+  DenyCountries: ['AR'],
+  DenyASNs: [{ ASN: 13335, Name: 'CLOUDFLARENET, US' }],
+  Lists: [
+    {
+      URI: 'https://www.spamhaus.org/drop/asndrop.json',
+      Enabled: false,
+      Note: 'Spamhaus ASN-DROP'
+    }
+  ],
+  RefreshSeconds: 86400
+}
+
+const mockASNTable = [
+  { ASN: 7922, Name: 'COMCAST-7922, US', Country: 'US', RangeCount: 1234 },
+  { ASN: 15169, Name: 'GOOGLE, US', Country: 'US', RangeCount: 981 },
+  { ASN: 16509, Name: 'AMAZON-02, US', Country: 'US', RangeCount: 3122 },
+  { ASN: 13335, Name: 'CLOUDFLARENET, US', Country: 'US', RangeCount: 1685 },
+  { ASN: 54113, Name: 'FASTLY, US', Country: 'US', RangeCount: 402 },
+  { ASN: 2906, Name: 'AS-SSI, US', Country: 'US', RangeCount: 168 },
+  { ASN: 3320, Name: 'DTAG, DE', Country: 'DE', RangeCount: 4230 },
+  {
+    ASN: 8075,
+    Name: 'MICROSOFT-CORP-MSN-AS-BLOCK, US',
+    Country: 'US',
+    RangeCount: 2874
+  },
+  { ASN: 32934, Name: 'FACEBOOK, US', Country: 'US', RangeCount: 310 },
+  { ASN: 24940, Name: 'HETZNER-AS, DE', Country: 'DE', RangeCount: 512 },
+  { ASN: 7303, Name: 'Telecom Argentina S.A., AR', Country: 'AR', RangeCount: 890 }
+]
 const mockDefaultFingerprints = [
     { SignalType: 'hostname', Pattern: '^(ring|ring-|ringdoorbell|ringchime)', Vendor: 'Ring', Category: 'camera', Weight: 5, Decisive: true },
     { SignalType: 'mdns_service', Pattern: '_ipp\\._tcp|_ipps\\._tcp|_printer\\._tcp', Category: 'printer', Weight: 5, Decisive: true },
@@ -2665,6 +2700,286 @@ export default function MockAPI(props = null) {
         }
 
         return result
+      })
+
+      this.get('/traffic_insights/config', () => mockTrafficInsightsConfig)
+
+      this.put('/traffic_insights/config', (schema, request) => {
+        mockTrafficInsightsConfig = JSON.parse(request.requestBody)
+        return mockTrafficInsightsConfig
+      })
+
+      this.get('/traffic_insights/overview', (schema, request) => {
+        let minutes = parseInt(request.queryParams.minutes || 1440)
+        let scale = Math.max(minutes / 60, 1)
+        let ips = schema.devices
+          .all()
+          .models.map((d) => d.RecentIP)
+          .slice(0, 4)
+
+        const mb = (n) => Math.round(n * scale * 1e6 + r(1e6))
+        const devs = (fracs) =>
+          fracs.map((f, i) => ({
+            IP: ips[i % ips.length],
+            BytesIn: mb(f * 40),
+            BytesOut: mb(f * 4)
+          }))
+
+        let Countries = [
+          {
+            Country: 'US',
+            BytesIn: mb(900),
+            BytesOut: mb(80),
+            Devices: devs([0.6, 0.3, 0.1]),
+            ASNs: [
+              {
+                ASN: 15169,
+                Name: 'GOOGLE, US',
+                BytesIn: mb(400),
+                BytesOut: mb(30)
+              },
+              {
+                ASN: 16509,
+                Name: 'AMAZON-02, US',
+                BytesIn: mb(300),
+                BytesOut: mb(25)
+              },
+              {
+                ASN: 13335,
+                Name: 'CLOUDFLARENET, US',
+                BytesIn: mb(120),
+                BytesOut: mb(15)
+              }
+            ]
+          },
+          {
+            Country: 'DE',
+            BytesIn: mb(120),
+            BytesOut: mb(14),
+            Devices: devs([0.7, 0.3]),
+            ASNs: [
+              { ASN: 3320, Name: 'DTAG, DE', BytesIn: mb(80), BytesOut: mb(9) },
+              {
+                ASN: 24940,
+                Name: 'HETZNER-AS, DE',
+                BytesIn: mb(40),
+                BytesOut: mb(5)
+              }
+            ]
+          },
+          {
+            Country: 'AR',
+            BytesIn: mb(30),
+            BytesOut: mb(6),
+            Devices: devs([1]),
+            ASNs: [
+              {
+                ASN: 7303,
+                Name: 'Telecom Argentina S.A., AR',
+                BytesIn: mb(30),
+                BytesOut: mb(6)
+              }
+            ]
+          },
+          {
+            Country: '',
+            BytesIn: mb(4),
+            BytesOut: mb(1),
+            Devices: devs([1]),
+            ASNs: []
+          }
+        ]
+
+        let ASNs = [
+          { ASN: 15169, Name: 'GOOGLE, US', Country: 'US' },
+          { ASN: 16509, Name: 'AMAZON-02, US', Country: 'US' },
+          { ASN: 13335, Name: 'CLOUDFLARENET, US', Country: 'US' },
+          { ASN: 3320, Name: 'DTAG, DE', Country: 'DE' },
+          { ASN: 24940, Name: 'HETZNER-AS, DE', Country: 'DE' },
+          { ASN: 7303, Name: 'Telecom Argentina S.A., AR', Country: 'AR' }
+        ].map((a, i) => ({
+          ...a,
+          BytesIn: mb(400 / (i + 1)),
+          BytesOut: mb(40 / (i + 1)),
+          Devices: devs(i % 2 ? [0.8, 0.2] : [0.5, 0.3, 0.2])
+        }))
+
+        let TotalIn = Countries.reduce((s, c) => s + c.BytesIn, 0)
+        let TotalOut = Countries.reduce((s, c) => s + c.BytesOut, 0)
+
+        return {
+          Start: new Date(Date.now() - minutes * 60e3).toISOString(),
+          End: new Date().toISOString(),
+          TotalIn,
+          TotalOut,
+          Countries,
+          ASNs
+        }
+      })
+
+      this.get('/traffic_insights/device/:ip', (schema, request) => {
+        let minutes = parseInt(request.queryParams.minutes || 1440)
+        let scale = Math.max(minutes / 60, 1)
+        const mb = (n) => Math.round(n * scale * 1e6 + r(1e6))
+        const seen = (m) => new Date(Date.now() - m * 60e3).toISOString()
+
+        let Destinations = [
+          {
+            IP: '142.250.72.14',
+            Domain: 'youtube.com',
+            ASN: 15169,
+            ASNName: 'GOOGLE, US',
+            Country: 'US',
+            BytesIn: mb(300),
+            BytesOut: mb(10),
+            LastSeen: seen(2)
+          },
+          {
+            IP: '151.101.1.140',
+            Domain: 'cdn.example.com',
+            ASN: 54113,
+            ASNName: 'FASTLY, US',
+            Country: 'US',
+            BytesIn: mb(120),
+            BytesOut: mb(8),
+            LastSeen: seen(12)
+          },
+          {
+            IP: '45.57.40.1',
+            Domain: 'netflix.com',
+            ASN: 2906,
+            ASNName: 'AS-SSI, US',
+            Country: 'US',
+            BytesIn: mb(90),
+            BytesOut: mb(3),
+            LastSeen: seen(45)
+          },
+          {
+            IP: '140.82.112.3',
+            Domain: 'github.com',
+            ASN: 36459,
+            ASNName: 'GITHUB, US',
+            Country: 'US',
+            BytesIn: mb(20),
+            BytesOut: mb(6),
+            LastSeen: seen(90)
+          },
+          {
+            IP: '116.203.30.100',
+            Domain: 'static.example.de',
+            ASN: 24940,
+            ASNName: 'HETZNER-AS, DE',
+            Country: 'DE',
+            BytesIn: mb(12),
+            BytesOut: mb(2),
+            LastSeen: seen(200)
+          },
+          {
+            IP: '181.30.128.1',
+            Domain: '',
+            ASN: 7303,
+            ASNName: 'Telecom Argentina S.A., AR',
+            Country: 'AR',
+            BytesIn: mb(3),
+            BytesOut: mb(1),
+            LastSeen: seen(600)
+          }
+        ]
+
+        return {
+          IP: request.params.ip,
+          BytesIn: Destinations.reduce((s, d) => s + d.BytesIn, 0),
+          BytesOut: Destinations.reduce((s, d) => s + d.BytesOut, 0),
+          Destinations
+        }
+      })
+
+      const mockGeoBlockStatus = () => {
+        let lists = mockGeoBlockConfig.Lists.filter((l) => l.Enabled)
+        let Sources = [
+          ...mockGeoBlockConfig.DenyCountries.map((cc) => ({
+            Type: 'country',
+            Key: cc,
+            Ranges: 4321
+          })),
+          ...mockGeoBlockConfig.DenyASNs.map((a) => ({
+            Type: 'asn',
+            Key: `AS${a.ASN}`,
+            Ranges: 10
+          })),
+          ...lists.map((l) => ({
+            Type: 'list',
+            Key: l.URI,
+            Ranges: 999,
+            ASNs: 42,
+            LastFetch: new Date(Date.now() - 3600e3).toISOString(),
+            Error: ''
+          }))
+        ]
+
+        return {
+          Enabled: mockGeoBlockConfig.Enabled,
+          LastRefresh: new Date(Date.now() - 3600e3).toISOString(),
+          RangesProgrammed: Sources.reduce((s, src) => s + src.Ranges, 0),
+          Sources
+        }
+      }
+
+      this.get('/firewall/geo_block/config', () => mockGeoBlockConfig)
+
+      this.put('/firewall/geo_block/config', (schema, request) => {
+        mockGeoBlockConfig = JSON.parse(request.requestBody)
+        return mockGeoBlockConfig
+      })
+
+      this.put('/firewall/geo_block/country/:cc', (schema, request) => {
+        let cc = request.params.cc.toUpperCase()
+        if (!mockGeoBlockConfig.DenyCountries.includes(cc)) {
+          mockGeoBlockConfig.DenyCountries.push(cc)
+        }
+        return mockGeoBlockConfig
+      })
+
+      this.delete('/firewall/geo_block/country/:cc', (schema, request) => {
+        let cc = request.params.cc.toUpperCase()
+        mockGeoBlockConfig.DenyCountries =
+          mockGeoBlockConfig.DenyCountries.filter((c) => c != cc)
+        return mockGeoBlockConfig
+      })
+
+      this.put('/firewall/geo_block/asn/:asn', (schema, request) => {
+        let asn = parseInt(request.params.asn)
+        if (!mockGeoBlockConfig.DenyASNs.map((a) => a.ASN).includes(asn)) {
+          let entry = mockASNTable.find((a) => a.ASN == asn)
+          mockGeoBlockConfig.DenyASNs.push({
+            ASN: asn,
+            Name: entry?.Name || `AS${asn}`
+          })
+        }
+        return mockGeoBlockConfig
+      })
+
+      this.delete('/firewall/geo_block/asn/:asn', (schema, request) => {
+        let asn = parseInt(request.params.asn)
+        mockGeoBlockConfig.DenyASNs = mockGeoBlockConfig.DenyASNs.filter(
+          (a) => a.ASN != asn
+        )
+        return mockGeoBlockConfig
+      })
+
+      this.get('/firewall/geo_block/status', () => mockGeoBlockStatus())
+
+      this.put('/firewall/geo_block/refresh', () => mockGeoBlockStatus())
+
+      this.get('/plugins/lookup/asn_search/:query', (schema, request) => {
+        let q = `${request.params.query}`.toLowerCase()
+        return mockASNTable
+          .filter(
+            (a) =>
+              a.Name.toLowerCase().includes(q) ||
+              `${a.ASN}`.includes(q.replace(/^as/, ''))
+          )
+          .slice(0, 25)
       })
 
       this.get('/notifications', (schema) => {

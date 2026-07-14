@@ -11,9 +11,7 @@ import NotificationsLogView from 'views/NotificationsLog'
 import Login from 'views/pages/Login'
 import Setup from 'views/pages/Setup'
 import SignalStrength from 'views/Traffic/SignalStrength'
-import Traffic from 'views/Traffic/Traffic'
-import TrafficTimeSeries from 'views/Traffic/TrafficTimeSeries'
-import TrafficList from 'views/Traffic/TrafficList'
+import TrafficTabs from 'views/Traffic/TrafficTabs'
 import Topology from 'views/Topology/Topology'
 import WirelessConfiguration from 'views/WirelessConfiguration'
 import Groups from 'views/Groups/Groups'
@@ -51,7 +49,6 @@ import {
   AlertTriangleIcon,
   ArrowUpCircleIcon,
   BanIcon,
-  BarChart3Icon,
   BarChartHorizontalIcon,
   BellIcon,
   CableIcon,
@@ -62,12 +59,10 @@ import {
   EyeIcon,
   FlameIcon,
   GaugeIcon,
-  GlobeIcon,
   HammerIcon,
   HomeIcon,
   KeyIcon,
   LaptopIcon,
-  LineChartIcon,
   ListTreeIcon,
   NetworkIcon,
   PuzzleIcon,
@@ -187,6 +182,56 @@ const routes = [
         hideSimple: true,
         layout: 'admin',
         plus: true
+      },
+      {
+        path: 'signal/strength',
+        name: 'Signal Strength',
+        icon: SignalIcon,
+        hidden: true,
+        component: SignalStrength,
+        layout: 'admin'
+      },
+      {
+        path: 'traffic',
+        name: 'Traffic',
+        icon: BarChartHorizontalIcon,
+        component: TrafficTabs,
+        layout: 'admin'
+      },
+      {
+        path: 'traffic/summary',
+        name: 'Bandwidth Summary',
+        component: TrafficTabs,
+        hidden: true,
+        layout: 'admin'
+      },
+      {
+        path: 'timeseries',
+        name: 'Bandwidth Timeseries',
+        component: TrafficTabs,
+        hidden: true,
+        layout: 'admin'
+      },
+      {
+        path: 'trafficlist/:ips',
+        name: 'Traffic',
+        component: TrafficTabs,
+        hidden: true,
+        layout: 'admin'
+      },
+      {
+        path: 'traffic_insights',
+        name: 'Traffic Insights',
+        component: TrafficTabs,
+        hidden: true,
+        layout: 'admin'
+      },
+      {
+        path: 'traffic_insights/:ip',
+        name: 'Traffic Insights',
+        component: TrafficTabs,
+        hidden: true,
+        layout: 'admin'
       }
     ]
   },
@@ -263,44 +308,6 @@ const routes = [
         icon: HammerIcon,
         hideSimple: true,
         component: CoreDns,
-        layout: 'admin'
-      }
-    ]
-  },
-  {
-    name: 'Traffic',
-    icon: LineChartIcon,
-    state: 'trafficCollapse',
-    views: [
-      {
-        path: 'traffic',
-        name: 'Bandwidth Summary',
-        icon: LineChartIcon,
-        component: Traffic,
-        layout: 'admin',
-        hidden: Platform.OS == 'ios'
-      },
-      {
-        path: 'timeseries',
-        name: 'Bandwidth Timeseries',
-        icon: BarChart3Icon,
-        component: TrafficTimeSeries,
-        layout: 'admin',
-        hidden: Platform.OS == 'ios'
-      },
-      {
-        path: 'signal/strength',
-        name: 'Signal Strength',
-        icon: SignalIcon,
-        hideSimple: true,
-        component: SignalStrength,
-        layout: 'admin'
-      },
-      {
-        path: 'trafficlist/:ips',
-        name: 'Traffic',
-        icon: BarChartHorizontalIcon,
-        component: TrafficList,
         layout: 'admin'
       }
     ]

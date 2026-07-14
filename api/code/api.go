@@ -3248,10 +3248,19 @@ func main() {
 	external_router_authenticated.HandleFunc("/firewall/enableTLS", enableTLS).Methods("GET", "PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/firewall/systemDnsOverride", systemDNSOverride).Methods("PUT")
 
+	external_router_authenticated.HandleFunc("/firewall/geo_block/config", geoBlockConfigHandler).Methods("GET", "PUT")
+	external_router_authenticated.HandleFunc("/firewall/geo_block/status", geoBlockStatusHandler).Methods("GET")
+	external_router_authenticated.HandleFunc("/firewall/geo_block/refresh", geoBlockRefreshHandler).Methods("PUT")
+	external_router_authenticated.HandleFunc("/firewall/geo_block/country/{cc}", geoBlockCountryHandler).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/firewall/geo_block/asn/{asn}", geoBlockASNHandler).Methods("PUT", "DELETE")
+
 	//traffic monitoring
 	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")
 	external_router_authenticated.HandleFunc("/traffic_history", getTrafficHistory).Methods("GET")
 	external_router_authenticated.HandleFunc("/iptraffic", getIPTraffic).Methods("GET")
+	external_router_authenticated.HandleFunc("/traffic_insights/config", trafficInsightsConfigHandler).Methods("GET", "PUT")
+	external_router_authenticated.HandleFunc("/traffic_insights/overview", trafficInsightsOverviewHandler).Methods("GET")
+	external_router_authenticated.HandleFunc("/traffic_insights/device/{ip}", trafficInsightsDeviceHandler).Methods("GET")
 
 	//network topology
 	external_router_authenticated.HandleFunc("/topology", showTopology).Methods("GET")
@@ -3465,6 +3474,10 @@ func main() {
 	WSRunNotify()
 	// collect traffic accounting statistics
 	trafficTimer()
+
+	initTrafficInsights()
+
+	initGeoBlock()
 
 	// parental controls: enforce persona time limits + block schedules
 	parentalControlLoop()

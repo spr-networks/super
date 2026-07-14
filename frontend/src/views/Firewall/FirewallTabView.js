@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 import { firewallAPI } from 'api'
 import EndpointList from 'components/Firewall/EndpointList'
@@ -8,6 +9,7 @@ import OutputBlockList from 'components/Firewall/OutputBlockList'
 import ForwardBlockList from 'components/Firewall/ForwardBlockList'
 import MulticastPorts from 'components/Firewall/MulticastPorts'
 import ContainerInterfaceRulesList from 'components/Firewall/ContainerInterfaceRulesList'
+import GeoBlockPane from 'components/Firewall/GeoBlockPane'
 
 import {
   ArrowLeftToLineIcon,
@@ -15,6 +17,7 @@ import {
   BanIcon,
   CastIcon,
   ContainerIcon,
+  GlobeIcon,
   RouteIcon,
   RouteOffIcon,
   ShieldBan,
@@ -26,6 +29,7 @@ import TabView from 'components/TabView'
 
 
 const FirewallTabView = (props) => {
+  const [searchParams] = useSearchParams()
   const [config, setConfig] = useState({})
   const [activeTab, setActiveTab] = useState(0) // Default to first tab
 
@@ -104,11 +108,21 @@ const FirewallTabView = (props) => {
            notifyChange={fetchConfig}
          />
        )
+     },
+     {
+       title: 'ASN/Geo Block',
+       icon: GlobeIcon,
+       component: () => <GeoBlockPane />
      }
    ]
+
+  const tabParam = searchParams.get('tab')
+  const initialIndex = tabs.findIndex((t) => t.title == tabParam)
+
   return (
     <TabView
       tabs={tabs}
+      initialIndex={initialIndex > 0 ? initialIndex : 0}
     />
   )
 }

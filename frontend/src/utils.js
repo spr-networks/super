@@ -60,7 +60,10 @@ export const timeAgo = (timestamp) => {
 export const prettySize = (sz, round = false) => {
   let szType = 'b'
 
-  if (sz >= 1024 * 1e3) {
+  if (sz >= 1024 * 1e3 * 1e3) {
+    sz /= 1024 * 1e3 * 1e3
+    szType = 'GB'
+  } else if (sz >= 1024 * 1e3) {
     sz /= 1024 * 1e3
     szType = 'MB'
   } else if (sz >= 1024) {

@@ -127,6 +127,26 @@
     "RuleId": "481822f4-a20c-4cec-92d9-dad032d2c450"
   },
   {
+    "TopicPrefix": "nft:drop:geo",
+    "MatchAnyOne": false,
+    "InvertRule": false,
+    "Conditions": [],
+    "Actions": [
+      {
+        "SendNotification": false,
+        "StoreAlert": true,
+        "MessageTitle": "ASN/Geo Block",
+        "MessageBody": "Blocked {{IP.SrcIP#Device}} {{IP.SrcIP}} to {{IP.DstIP}} {{RecentDomainDst}} on the ASN/Country deny list",
+        "NotificationType": "warning",
+        "GrabEvent": true,
+        "GrabValues": false
+      }
+    ],
+    "Name": "ASN/Geo Block",
+    "Disabled": false,
+    "RuleId": "40dcbc47-afe6-4056-af12-1254ea1d6f33"
+  },
+  {
     "TopicPrefix": "dns:serve:",
     "MatchAnyOne": false,
     "InvertRule": false,

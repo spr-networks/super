@@ -1,6 +1,11 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.1.13
+** Features **
+- ASN/Geoblock
+- Improved internet health, failover
+
 ## v1.1.12
 ** Features **
 - Topology sink support

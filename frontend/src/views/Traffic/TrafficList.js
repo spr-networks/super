@@ -199,15 +199,14 @@ const TrafficList = (props) => {
   //init
   useEffect(() => {
     let { ips } = params
-    if (ips != ':ips') {
-      ips = ips.split(',')
-      setFilterIps(ips)
+    if (ips && ips != ':ips') {
+      setFilterIps(ips.split(','))
     }
     refreshList()
 
     const interval = setInterval(refreshList, 10 * 1e3)
     return () => clearInterval(interval)
-  }, [])
+  }, [params.ips])
 
   useEffect(() => {
     setListFiltered(filterList(list))
