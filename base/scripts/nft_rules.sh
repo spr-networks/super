@@ -481,6 +481,10 @@ table inet filter {
     type filter hook output priority 0; policy accept
     # Output Block rules
     counter ip saddr . ip daddr . ip protocol  vmap @output_block
+
+    # ASN / country deny list
+    counter ip daddr @geo_block goto DROPGEOLOG
+
     oifname @uplink_interfaces ip daddr @supernetworks goto DROPLOGOUTP
     oifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGOUTP
     tcp dport 53 jump DNS_OUTPUT
