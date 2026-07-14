@@ -880,6 +880,7 @@ const Setup = (props) => {
   }
 
   if (setupStage === 4) {
+    const routerIP = getNewRouterIP()
     return (
       <SetupScrollView>
         <SetupHeading title="Setup Finished" />
@@ -887,7 +888,51 @@ const Setup = (props) => {
         <VStack space="xl" my="$4">
           <HStack space="sm" alignItems="center">
             <CheckIcon color="$success500" />
-            <Text>SPR is now configured!</Text>
+            <Text>Congratulations! SPR is now configured</Text>
+          </HStack>
+
+          <Box
+            rounded="$lg"
+            borderWidth={1}
+            borderColor="$muted200"
+            bg="$primary50"
+            px="$4"
+            py="$3"
+            sx={{
+              _dark: { bg: '$blueGray800', borderColor: '$muted700' }
+            }}
+          >
+            <HStack space="sm">
+              <Icon as={InfoIcon} color="$primary600" mt="$0.5" />
+              <VStack flex={1} space="sm">
+                <Text size="sm" bold>
+                  Every device needs its own unique wifi password
+                </Text>
+                <Text size="sm">
+                  The password you just used belongs to your first device only.
+                  If another device can't join with the same password — don't
+                  panic, that's normal. It's how SPR keeps your network secure.
+                </Text>
+                <Text size="sm">
+                  To bring another device online, open{' '}
+                  <Text size="sm" bold>
+                    http://{routerIP || '192.168.2.1'}
+                  </Text>{' '}
+                  from a connected device and use Devices, Add Device to get a
+                  fresh password for it.
+                </Text>
+              </VStack>
+            </HStack>
+          </Box>
+
+          <HStack space="sm" alignItems="center">
+            <Icon as={BookOpenTextIcon} color="$muted500" />
+            <Link
+              isExternal
+              href="https://www.supernetworks.org/pages/docs/faq"
+            >
+              <Text>Learn more about how SPR secures your wifi</Text>
+            </Link>
           </HStack>
 
           <HStack space="sm" alignItems="center">
