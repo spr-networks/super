@@ -14,9 +14,9 @@ Create an adaptive, micro-segmented network for managing WiFi devices, remote VP
 * Policy Based / Zero Trust Network Access
 * Per-Device DNS Rules & Ad Block Lists
 
-<img width="1218" alt="image" src="https://github.com/spr-networks/super/assets/37549748/c0ebf4fe-0a29-4087-a039-53968c87a00b">
+<a href="https://demo.supernetworks.org/"><img width="1218" alt="image" src="https://github.com/spr-networks/super/assets/37549748/c0ebf4fe-0a29-4087-a039-53968c87a00b"></a>
 
-<img width="1218" alt="Network topology" src="docs/img/topology.png">
+<a href="https://demo.supernetworks.org/"><img width="1218" alt="Network topology" src="docs/img/topology.png"></a>
 
 ## Features
 
@@ -33,12 +33,10 @@ Create an adaptive, micro-segmented network for managing WiFi devices, remote VP
     <td valign="top" width="33%">
       <p align="center"><img src="docs/img/paper-firewall.png" width="120" alt=""><br><b>Firewall</b></p>
       <ul>
-        <li>One-way connectivity to service resources</li>
-        <li>Device Groups & Isolation</li>
-        <li>Port Forwarding</li>
-        <li>Custom Interface rules for integrations</li>
-        <li>Scheduling, Event-Based Triggers *</li>
-        <li>DNAT Rewriting *</li>
+        <li>Policy based routing</li>
+        <li>Isolation by default</li>
+        <li>Bidirectional groups and unidirectional service rules</li>
+        <li>Secure container networking</li>
       </ul>
     </td>
     <td valign="top" width="33%">
@@ -46,7 +44,7 @@ Create an adaptive, micro-segmented network for managing WiFi devices, remote VP
       <ul>
         <li>WPA3/2</li>
         <li>WPA1 backwards compatibility</li>
-        <li>WiFi 6 Support</li>
+        <li>WiFi 6, 7 Support including MLO and 320mhz channels on supported hardware</li>
       </ul>
     </td>
   </tr>
@@ -68,6 +66,7 @@ Create an adaptive, micro-segmented network for managing WiFi devices, remote VP
         <li>Remote DNS Queries with DNS over HTTPs</li>
         <li>DNS Ad Block lists</li>
         <li>Per-Device DNS Rules and Overrides</li>
+        <li>DNS Rebinding Protection</li>
       </ul>
     </td>
     <td valign="top" width="33%">
@@ -84,20 +83,23 @@ Create an adaptive, micro-segmented network for managing WiFi devices, remote VP
       <ul>
         <li>Traffic Insights by Country & ASN</li>
         <li>Internet & Uplink Health Monitoring</li>
-        <li>IP Traffic</li>
+        <li>Alerts</li>
         <li>DNS Logs</li>
         <li>Event System & DB</li>
-        <li>API</li>
       </ul>
     </td>
     <td valign="top" width="33%">
-      <p align="center">
-        <img src="docs/img/docker.svg" width="44" alt="">&nbsp;&nbsp;<img src="docs/img/linux.svg" width="44" alt="">&nbsp;&nbsp;<img src="docs/img/raspberrypi.svg" width="44" alt="">
-        <br><b>Interoperability</b>
-      </p>
+      <p align="center"><b>Interoperability</b></p>
       <ul>
         <li>Runs on a wide variety of Linux systems with Docker</li>
         <li>API Plugin System</li>
+      </ul>
+    </td>
+    <td valign="top" width="33%">
+      <p align="center"><b>Parental Controls</b></p>
+      <ul>
+        <li>Family DNS Rules</li>
+        <li>Device Time Limits</li>
       </ul>
     </td>
   </tr>
@@ -107,7 +109,13 @@ Create an adaptive, micro-segmented network for managing WiFi devices, remote VP
 
 See where each device's traffic goes, with blocking by country or ASN:
 
-<img width="1218" alt="Traffic Insights" src="docs/img/traffic-insights.png">
+<a href="https://demo.supernetworks.org/"><img width="1218" alt="Traffic Insights" src="docs/img/traffic-insights.png"></a>
+
+## Plugins
+
+Extend SPR with Docker based plugins. Use community supported plugins or write your own. Browse the catalog at https://www.supernetworks.org/plugins.html
+
+<a href="https://www.supernetworks.org/plugins.html"><img width="1218" alt="Plugin catalog" src="docs/img/plugins.png"></a>
 
 ## How it Works
 
@@ -159,7 +167,7 @@ docker-compose up -d
 * [supernetworks.org](https://www.supernetworks.org/)
 * [API Docs](https://www.supernetworks.org/pages/api/0)
 * [Documentation Home](https://www.supernetworks.org/pages/docs/intro)
-* [Raspberry Pi 4 Setup Guide](https://www.supernetworks.org/pages/docs/setup_guides/pi4b)
+* [Raspberry Pi 4/5 Setup Guide](https://www.supernetworks.org/pages/docs/setup_guides/pi4b)
 * [General Setup Guide](https://www.supernetworks.org/pages/docs/setup_guides/setup_run_spr)
 * [Virtual Setup Guide (Personal VPN)](https://www.supernetworks.org/pages/docs/setup_guides/virtual_spr)
 
