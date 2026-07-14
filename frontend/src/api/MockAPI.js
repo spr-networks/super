@@ -949,6 +949,141 @@ export default function MockAPI(props = null) {
         return authOK(request) ? '"Online"' : '"Error"'
       })
 
+      const wanNow = () => Math.floor(Date.now() / 1000)
+      const wanOutageStart = wanNow() - 45 * 60
+
+      this.get('/wan/status', (schema, request) => {
+        return [
+          {
+            Iface: 'eth0',
+            Up: true,
+            Active: true,
+            Gateway: '192.168.100.1',
+            LatencyMs: 12.4,
+            JitterMs: 1.1,
+            LossPct: 0,
+            LastChange: wanNow() - 86400 * 3,
+            TotalOutages: 1,
+            Downtime24h: 313
+          },
+          {
+            Iface: 'wlan1',
+            Up: false,
+            Active: false,
+            Gateway: '10.20.30.1',
+            LatencyMs: 0,
+            JitterMs: 0,
+            LossPct: 100,
+            LastChange: wanOutageStart,
+            TotalOutages: 2,
+            Downtime24h: wanNow() - wanOutageStart
+          }
+        ]
+      })
+
+      this.get('/wan/history/:iface', (schema, request) => {
+        let iface = request.params.iface
+        let scale = request.queryParams.scale || 'minutes'
+        let count = parseInt(
+          request.queryParams.count || (scale == 'hours' ? 720 : 1440)
+        )
+        let step = scale == 'hours' ? 3600 : 60
+        let base = iface == 'eth0' ? 12 : 35
+        let now = wanNow()
+        let samples = []
+        let eth0Start = now - 3600 * 5
+        for (let i = 0; i < count; i++) {
+          let t = now - i * step
+          let inOutage =
+            (iface == 'wlan1' && t > wanOutageStart) ||
+            (iface == 'eth0' && t > eth0Start && t < eth0Start + 313)
+          let wave =
+            Math.sin(t / 1800) * 3 + Math.sin(t / 300) * 1.5 + (i % 7) * 0.3
+          samples.push({
+            Time: t,
+            LatencyMs: inOutage ? 0 : Math.max(1, base + wave),
+            JitterMs: inOutage ? 0 : 1 + Math.abs(Math.sin(t / 900)) * 2,
+            LossPct: inOutage ? 100 : i % 40 == 0 ? 2.5 : 0,
+            Up: !inOutage
+          })
+        }
+        return samples
+      })
+
+      this.get('/wan/outages', (schema, request) => {
+        return [
+          {
+            Iface: 'wlan1',
+            Start: wanOutageStart,
+            End: 0,
+            Reason: 'probe timeouts'
+          },
+          {
+            Iface: 'eth0',
+            Start: wanNow() - 3600 * 5,
+            End: wanNow() - 3600 * 5 + 313,
+            Reason: 'probe timeouts'
+          },
+          {
+            Iface: 'wlan1',
+            Start: wanNow() - 86400 * 2,
+            End: wanNow() - 86400 * 2 + 1320,
+            Reason: 'probe timeouts'
+          }
+        ]
+      })
+
+      let wanMockConfig = {
+        Enabled: true,
+        IntervalSeconds: 5,
+        ProbeTargets: ['1.1.1.1', '8.8.8.8'],
+        FailThreshold: 4,
+        RecoverThreshold: 3,
+        FailoverEnabled: true,
+        SpeedTestURL: 'https://speed.cloudflare.com/__down?bytes=33554432'
+      }
+
+      this.get('/wan/config', (schema, request) => {
+        return wanMockConfig
+      })
+
+      this.put('/wan/config', (schema, request) => {
+        wanMockConfig = { ...wanMockConfig, ...JSON.parse(request.requestBody) }
+        return wanMockConfig
+      })
+
+      this.get('/wan/speedtest', (schema, request) => {
+        return [
+          {
+            Iface: 'eth0',
+            Time: wanNow() - 3600 * 20,
+            DownMbps: 941.7,
+            Seconds: 3.4,
+            Bytes: 33554432,
+            URL: 'https://speed.cloudflare.com/__down?bytes=33554432'
+          },
+          {
+            Iface: 'wlan1',
+            Time: wanNow() - 86400 * 4,
+            DownMbps: 87.2,
+            Seconds: 8.1,
+            Bytes: 33554432,
+            URL: 'https://speed.cloudflare.com/__down?bytes=33554432'
+          }
+        ]
+      })
+
+      this.put('/wan/speedtest/:iface', (schema, request) => {
+        return {
+          Iface: request.params.iface,
+          Time: wanNow(),
+          DownMbps: request.params.iface == 'eth0' ? 936.2 : 91.4,
+          Seconds: 3.6,
+          Bytes: 33554432,
+          URL: 'https://speed.cloudflare.com/__down?bytes=33554432'
+        }
+      })
+
       this.get('/devices', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })

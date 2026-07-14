@@ -3359,6 +3359,15 @@ func main() {
 	external_router_authenticated.HandleFunc("/link/ip", updateLANLinkIPConfig).Methods("PUT")
 	external_router_authenticated.HandleFunc("/link/vlan/{interface}/{state}", updateLinkVlanTrunk).Methods("PUT")
 
+	//wan health monitoring
+	external_router_authenticated.HandleFunc("/wan/status", getWanStatus).Methods("GET")
+	external_router_authenticated.HandleFunc("/wan/history/{interface}", getWanHistory).Methods("GET")
+	external_router_authenticated.HandleFunc("/wan/outages", getWanOutages).Methods("GET")
+	external_router_authenticated.HandleFunc("/wan/config", getWanHealthConfig).Methods("GET")
+	external_router_authenticated.HandleFunc("/wan/config", updateWanHealthConfig).Methods("PUT")
+	external_router_authenticated.HandleFunc("/wan/speedtest", getWanSpeedResults).Methods("GET")
+	external_router_authenticated.HandleFunc("/wan/speedtest/{interface}", runWanSpeedTest).Methods("PUT")
+
 	//	external_router_authenticated.HandleFunc("/uplink/{interface}/bond", mangeBondInterface).Methods("PUT", "DELETE")
 	//	external_router_authenticated.HandleFunc("/uplink/loadBalance", setLoadBalanceStrategy).Methods("PUT")
 
@@ -3459,6 +3468,9 @@ func main() {
 
 	// parental controls: enforce persona time limits + block schedules
 	parentalControlLoop()
+
+	// wan uplink health probes, outage tracking, failover
+	go wanHealthLoop()
 
 	// alerts, connect to eventbus
 	go AlertsRunEventListener()

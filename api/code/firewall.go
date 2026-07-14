@@ -518,6 +518,10 @@ func collectOutbound() []string {
 				continue
 			}
 
+			if wanHealthIfaceDead(iface.Name) {
+				continue
+			}
+
 			outbound = append(outbound, iface.Name)
 			if len(outbound) > 128 {
 				//rules start at 11. 253/254/255 reserved

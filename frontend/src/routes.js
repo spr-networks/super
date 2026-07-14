@@ -43,8 +43,8 @@ import AlertsTabView from 'views/AlertsTabView'
 import Alerts from 'views/Alerts'
 import AlertSettings from 'views/AlertSettings'
 import AddAlert from 'views/Alerts/AddAlert'
-import SpeedTest from 'views/SpeedTest'
 import Supernetworks from 'views/Supernetworks'
+import WanHealthTabView from 'views/WanHealthTabView'
 
 import {
   ActivityIcon,
@@ -61,7 +61,6 @@ import {
   EarthLockIcon,
   EyeIcon,
   FlameIcon,
-  GaugeCircleIcon,
   GaugeIcon,
   GlobeIcon,
   HammerIcon,
@@ -174,6 +173,13 @@ const routes = [
         layout: 'admin'
       },
       {
+        path: 'wan',
+        name: 'Internet Health',
+        icon: ActivityIcon,
+        component: WanHealthTabView,
+        layout: 'admin'
+      },
+      {
         path: 'mesh',
         name: 'MESH',
         icon: RouterIcon,
@@ -181,14 +187,6 @@ const routes = [
         hideSimple: true,
         layout: 'admin',
         plus: true
-      },
-      {
-        path: 'speedtest',
-        name: 'Speed Test',
-        icon: GaugeCircleIcon,
-        component: SpeedTest,
-        hideSimple: true,
-        layout: 'admin'
       }
     ]
   },
