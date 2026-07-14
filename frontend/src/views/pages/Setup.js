@@ -333,7 +333,8 @@ const Setup = (props) => {
                   }
                   if (
                     entry.ifname.startsWith('sprloop') ||
-                    entry.ifname.startsWith('wlan')
+                    entry.ifname.startsWith('wlan') ||
+                    newWiFiInterfaces.includes(entry.ifname)
                   ) {
                     continue
                   }
