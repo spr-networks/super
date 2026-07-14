@@ -3,6 +3,25 @@
 
 JSON=/configs/base/interfaces.json
 STATE=/state/dhcp-client/
+WPA_STATE=/state/wifi_uplink
+
+function dhcp_iface() {
+  name=$1
+  echo "Running coredhcp_client for ${name}"
+
+  /coredhcp_client -d -i ${name} -v ${RUN_WAN_DHCP_IPV} -lf ${STATE}/coredhcp-${name}.json
+  GATEWAY=$(jq -r '.Routers[0] // empty' ${STATE}/coredhcp-${name}.json 2>/dev/null)
+  if [ -z "$GATEWAY" ]
+  then
+    echo "Failed, trying dhclient for ${name}"
+    # NOTE: apparmor on ubuntu wants /var/run/dhclient*.lease
+    rm /var/run/dhclient_${name}.lease
+    dhclient -lf /var/run/dhclient_${name}.lease ${name}
+    GATEWAY=$(grep -E "^\s+option routers" /var/run/dhclient_${name}.lease  | awk '{print $3}' | cut -d ',' -f1 | cut -d ';' -f1)
+  fi
+  # write the gateway router IP to disk
+  echo $GATEWAY > /state/dhcp-client/gateway.${name}
+}
 
 function run_dhcp() {
   # clear out the dhcp states
@@ -33,26 +52,10 @@ function run_dhcp() {
     # will use WANIF if configs/base/interfaces.json is not available
     names=$(jq -r '.[] | select(.Type == "Uplink" and .Enabled and (.Subtype == null or .Subtype != "pppup") and (.DisableDHCP == null or .DisableDHCP != true)) | .Name' "$JSON")
     [ -z "$names" ] && names="$WANIF"
-    # Iterate over the array and run dhclient for each name
     for name in ${names[@]}; do
-        echo "Running coredhcp_client for ${name}"
-
-        /coredhcp_client -d -i ${name} -v ${RUN_WAN_DHCP_IPV} -lf ${STATE}/coredhcp-${name}.json
-        GATEWAY=$(jq -r .Routers[0] <  ${STATE}/coredhcp-${name}.json)
-        # check for an IP, if no IP, run dhclient as a fallback
-        ping 1.1.1.1 -c 1 -W 3
-        ret=$?
-        if [ "$ret" -ne "0" ]
-        then
-          echo "Failed, trying dhclient for ${name}"
-          # NOTE: apparmor on ubuntu wants /var/run/dhclient*.lease
-          rm /var/run/dhclient_${name}.lease
-          dhclient -lf /var/run/dhclient_${name}.lease ${name}
-          GATEWAY=$(grep -E "^\s+option routers" /var/run/dhclient_${name}.lease  | awk '{print $3}' | cut -d ',' -f1 | cut -d ';' -f1)
-        fi
-        # write the gateway router IP to disk
-        echo $GATEWAY > /state/dhcp-client/gateway.${name}
+        dhcp_iface ${name} &
     done
+    wait
 
     # Handle static IP assignments
     jq -r '.[] | select(.Type == "Uplink" and .Enabled and .DisableDHCP == true) | "\(.Name) \(.IP) \(.Router)"' $JSON |
@@ -67,11 +70,28 @@ function run_dhcp() {
   fi
 }
 
-run_dhcp
+function config_sig() {
+  {
+    jq -r '.[] | select(.Type == "Uplink" and .Enabled and (.Subtype == null or .Subtype != "pppup")) | "\(.Name) \(.Subtype) \(.DisableDHCP) \(.IP) \(.Router)"' "$JSON" 2>/dev/null | sort
+    cat ${WPA_STATE}/status.* 2>/dev/null
+  } | md5sum | cut -d' ' -f1
+}
+
+mkdir -p ${WPA_STATE}
+LAST_SIG=""
 
 while true; do
-  inotifywait -e modify "$JSON"
-  killall -1 coredhcp_client
-  killall -1 dhclient
-  run_dhcp
+  SIG=$(config_sig)
+  if [ "$SIG" != "$LAST_SIG" ]; then
+    LAST_SIG="$SIG"
+    killall -1 coredhcp_client 2>/dev/null
+    killall -1 dhclient 2>/dev/null
+    run_dhcp
+    continue
+  fi
+  inotifywait -q -t 300 -e modify -e close_write -e moved_to -e create "$(dirname $JSON)" ${WPA_STATE} >/dev/null 2>&1
+  ret=$?
+  if [ "$ret" -ne "0" ] && [ "$ret" -ne "2" ]; then
+    sleep 5
+  fi
 done

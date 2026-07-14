@@ -23,3 +23,4 @@ services:
     logging: *default-logging
     volumes:
       - "${SUPERDIR}./configs/wifi_uplink/:/configs/wifi_uplink/"
+      - "${SUPERDIR}./state/wifi_uplink/:/state/wifi_uplink/"

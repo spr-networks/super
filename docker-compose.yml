@@ -102,6 +102,7 @@ services:
     volumes:
       - ${PWD}/configs/base/:/configs/base/:ro
       - ${PWD}/state/dhcp-client/:/state/dhcp-client/
+      - ${PWD}/state/wifi_uplink/:/state/wifi_uplink/:ro
   dns:
     container_name: superdns
     image: ghcr.io/spr-networks/super_dns:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
