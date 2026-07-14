@@ -238,7 +238,14 @@ export const DeviceTrafficPane = ({ showEmpty, ...props }) => {
     fetchData(trafficWindows[nextIdx].minutes)
   }
 
-  let diffSize = (szs) => szs[0] - szs[szs.length - 1]
+  let diffSize = (szs) => {
+    let sum = 0
+    for (let i = szs.length - 1; i > 0; i--) {
+      let delta = szs[i - 1] - szs[i]
+      sum += delta >= 0 ? delta : szs[i - 1]
+    }
+    return Math.max(sum, 0)
+  }
 
   let total = {}
   for (let timeWindow of history.slice(0, win.minutes)) {
