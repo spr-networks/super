@@ -376,18 +376,24 @@ func update(w http.ResponseWriter, r *http.Request) {
 
 	//on the main release channel, verify build provenance for the images this
 	//update would pull. on failure abort before downloading anything.
+	verified := map[string]string{}
 	if getReleaseChannel() == "" {
-		err := verifyUpdateImages(compose, target)
+		v, err := verifyUpdateImages(compose, target)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 			return
 		}
+		verified = v
 	}
 
 	composeCommand(compose, target, "pull", "", false)
 
-	//confirm the pulled images match what was verified
 	if getReleaseChannel() == "" {
+		err := verifyPulledUpdate(compose, target, verified)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
 		go verifyPulledImages(false)
 	}
 }
