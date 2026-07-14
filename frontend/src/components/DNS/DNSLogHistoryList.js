@@ -19,7 +19,8 @@ import { Select } from 'components/Select'
 import ModalForm from 'components/ModalForm'
 import JSONSyntax from 'components/SyntaxHighlighter'
 import { Tooltip } from 'components/Tooltip'
-import { dbAPI } from 'api'
+import { dbAPI, deviceAPI } from 'api'
+import { getContainerIpMap } from 'api/Containers'
 import { prettyDate } from 'utils'
 import { ListHeader } from 'components/List'
 import Pagination from 'components/Pagination'
@@ -240,6 +241,7 @@ const DNSLogHistoryList = (props) => {
   const [filterType, setFilterType] = useState('')
   const [selectedDomain, setSelectedDomain] = useState('')
   const [selectedType, setSelectedType] = useState('')
+  const [deviceNames, setDeviceNames] = useState({})
   const [page, setPage] = useState(1)
   const perPage = 20
   const [total, setTotal] = useState(0)
@@ -457,6 +459,32 @@ const DNSLogHistoryList = (props) => {
   }, [props.ips, props.filterText])
 
   useEffect(() => {
+    deviceAPI
+      .list()
+      .then((devices) => {
+        let names = {}
+        Object.values(devices).forEach((device) => {
+          if (device.RecentIP && device.Name) {
+            names[device.RecentIP] = device.Name
+          }
+        })
+        getContainerIpMap()
+          .then((containers) => {
+            Object.entries(containers).forEach(([ip, entry]) => {
+              if (!names[ip] && entry.Name) {
+                names[ip] = entry.Name
+              }
+            })
+            setDeviceNames(names)
+          })
+          .catch(() => setDeviceNames(names))
+      })
+      .catch(() => {})
+  }, [])
+
+  const ipLabel = (ip) => (deviceNames[ip] ? `${deviceNames[ip]} (${ip})` : ip)
+
+  useEffect(() => {
     if (filterIps.length) {
       navigate(`/admin/dnsLog/${filterIps.join(',')}/${filterText || ':text'}`)
     } else {
@@ -616,7 +644,10 @@ const DNSLogHistoryList = (props) => {
       </ModalForm>
 
       <ListHeader
-        title={filterIps.join(',') + ' DNS Log'}
+        title={
+          (filterIps.length ? filterIps.map(ipLabel).join(', ') + ' ' : '') +
+          'DNS Log'
+        }
         description={total ? `${total} records` : ''}
       >
         <HStack
