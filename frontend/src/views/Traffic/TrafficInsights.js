@@ -44,6 +44,7 @@ import {
 
 import { AlertContext } from 'layouts/Admin'
 import { deviceAPI, geoBlockAPI, trafficInsightsAPI } from 'api'
+import { getContainerIpMap, containerDevice } from 'api/Containers'
 import { prettySize, timeAgo } from 'utils'
 import DeviceItem from 'components/Devices/DeviceItem'
 import { ListHeader } from 'components/List'
@@ -113,12 +114,19 @@ const ipInCidrs = (ip, cidrs) => {
   return false
 }
 
-const ContainerItem = ({ ip }) => (
+const ContainerItem = ({ ip, device }) => (
   <HStack space="md" alignItems="center">
     <Icon as={ContainerIcon} color="$blueGray500" />
-    <Text size="sm" bold>
-      {ip}
-    </Text>
+    <VStack>
+      <Text size="sm" bold>
+        {device?.Name || ip}
+      </Text>
+      {device?.Name ? (
+        <Text size="xs" color="$muted500">
+          {ip}
+        </Text>
+      ) : null}
+    </VStack>
   </HStack>
 )
 
@@ -579,18 +587,23 @@ const TrafficInsights = (props) => {
   }
 
   const fetchDevices = () => {
-    deviceAPI
-      .list()
-      .then((devs) => {
-        let byIp = {}
-        Object.values(devs || {}).map((d) => {
-          if (d.RecentIP) {
-            byIp[d.RecentIP] = d
-          }
-        })
-        setDevicesByIp(byIp)
+    Promise.all([
+      deviceAPI.list().catch(() => ({})),
+      getContainerIpMap()
+    ]).then(([devs, containers]) => {
+      let byIp = {}
+      Object.values(devs || {}).map((d) => {
+        if (d.RecentIP) {
+          byIp[d.RecentIP] = d
+        }
       })
-      .catch(() => {})
+      Object.entries(containers || {}).map(([ip, entry]) => {
+        if (!byIp[ip]) {
+          byIp[ip] = containerDevice(ip, entry)
+        }
+      })
+      setDevicesByIp(byIp)
+    })
   }
 
   const refreshGeo = () => {
@@ -776,7 +789,7 @@ const TrafficInsights = (props) => {
                 onPress={() => navigate(`/admin/traffic_insights/${item.IP}`)}
               >
                 {isContainerTab ? (
-                  <ContainerItem ip={item.IP} />
+                  <ContainerItem ip={item.IP} device={devicesByIp[item.IP]} />
                 ) : (
                   <DeviceItem
                     size="sm"

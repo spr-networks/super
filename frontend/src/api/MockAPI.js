@@ -2452,6 +2452,26 @@ export default function MockAPI(props = null) {
                 'spr-mitmproxy_mitmnet': { IPAddress: '172.20.0.2' }
               }
             }
+          },
+          {
+            Id: 'def456abc789',
+            Names: ['/superplugin-lookup'],
+            State: 'running',
+            NetworkSettings: {
+              Networks: {
+                bridge: { IPAddress: '172.17.0.3' }
+              }
+            }
+          },
+          {
+            Id: 'fedcba987654',
+            Names: ['/superdyndns'],
+            State: 'running',
+            NetworkSettings: {
+              Networks: {
+                bridge: { IPAddress: '172.17.0.5' }
+              }
+            }
           }
         ]
       })

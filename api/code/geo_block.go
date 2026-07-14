@@ -75,7 +75,16 @@ type geoBlockCache struct {
 }
 
 var gGeoMtx sync.Mutex
-var gGeoConfig = GeoBlockConfig{RefreshSeconds: 86400}
+var gGeoConfig = GeoBlockConfig{
+	RefreshSeconds: 86400,
+	Lists: []GeoBlockList{
+		{
+			URI:     "https://www.spamhaus.org/drop/asndrop.json",
+			Enabled: false,
+			Note:    "Spamhaus ASN-DROP",
+		},
+	},
+}
 var gGeoStatus = GeoBlockStatus{}
 var gGeoRefreshMtx sync.Mutex
 
