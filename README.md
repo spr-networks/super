@@ -107,10 +107,6 @@ Create an adaptive, micro-segmented network for managing WiFi devices, remote VP
 
 &ast; Some features are part of SPR PLUS, a paid subscription to support the project
 
-See where each device's traffic goes, with blocking by country or ASN:
-
-<a href="https://demo.supernetworks.org/"><img width="1218" alt="Traffic Insights" src="docs/img/traffic-insights.png"></a>
-
 ## Plugins
 
 Extend SPR with Docker based plugins. Use community supported plugins or write your own. Browse the catalog at https://www.supernetworks.org/plugins.html
