@@ -63,6 +63,7 @@ var gInsightBuckets = []*insightBucket{}
 var gInsightPrev = map[string]insightCounter{}
 var gInsightASNCache = map[string]asnCacheEntry{}
 var gInsightDirty = false
+var gInsightLookupErrTime time.Time
 
 func loadTrafficInsightsConfig() {
 	data, err := os.ReadFile(TrafficInsightsConfigPath)
@@ -160,6 +161,29 @@ func insightSupernets() []*net.IPNet {
 	return nets
 }
 
+func insightContainerNets() []string {
+	nets := []string{}
+	dockernet := os.Getenv("DOCKERNET")
+	if strings.Contains(dockernet, "/") {
+		_, _, err := net.ParseCIDR(dockernet)
+		if err == nil {
+			nets = append(nets, dockernet)
+		}
+	}
+	return nets
+}
+
+func parseInsightNets(subnets []string) []*net.IPNet {
+	nets := []*net.IPNet{}
+	for _, subnet := range subnets {
+		_, ipnet, err := net.ParseCIDR(subnet)
+		if err == nil {
+			nets = append(nets, ipnet)
+		}
+	}
+	return nets
+}
+
 func ipInNets(ip net.IP, nets []*net.IPNet) bool {
 	for _, ipnet := range nets {
 		if ipnet.Contains(ip) {
@@ -205,6 +229,12 @@ func insightLookupASNs(ips []string) map[string]asnCacheEntry {
 		}{}
 		err := lookupPluginGet("/asns/"+strings.Join(missing[start:end], ","), &entries)
 		if err != nil {
+			gInsightsMtx.Lock()
+			if time.Since(gInsightLookupErrTime) > 10*time.Minute {
+				gInsightLookupErrTime = time.Now()
+				log.Println("traffic_insights: ASN lookup failed, check the plugin-lookup container:", err)
+			}
+			gInsightsMtx.Unlock()
 			break
 		}
 
@@ -330,6 +360,7 @@ func collectTrafficInsights() {
 	if len(nets) == 0 {
 		return
 	}
+	nets = append(nets, parseInsightNets(insightContainerNets())...)
 
 	gInsightsMtx.Lock()
 	prev := gInsightPrev
@@ -347,9 +378,25 @@ func collectTrafficInsights() {
 			remoteList = append(remoteList, remote)
 		}
 	}
-	asns := insightLookupASNs(remoteList)
 
 	now := time.Now()
+
+	gInsightsMtx.Lock()
+	for _, devStats := range insightCurrentBucketLocked(now).Devices {
+		for remote, stat := range devStats {
+			if remote == gInsightOtherKey || stat.ASN != 0 || remotes[remote] {
+				continue
+			}
+			ip := net.ParseIP(remote)
+			if ip != nil && !ip.IsPrivate() && !insightSkipRemote(ip) {
+				remotes[remote] = true
+				remoteList = append(remoteList, remote)
+			}
+		}
+	}
+	gInsightsMtx.Unlock()
+
+	asns := insightLookupASNs(remoteList)
 
 	gInsightsMtx.Lock()
 	defer gInsightsMtx.Unlock()
@@ -396,6 +443,19 @@ func collectTrafficInsights() {
 				DNSCachemtx.RLock()
 				stat.Domain = DNSCache[delta.remote]
 				DNSCachemtx.RUnlock()
+			}
+		}
+	}
+
+	for _, devStats := range bucket.Devices {
+		for remote, stat := range devStats {
+			if remote == gInsightOtherKey || stat.ASN != 0 {
+				continue
+			}
+			if entry, exists := asns[remote]; exists && entry.ASN != 0 {
+				stat.ASN = entry.ASN
+				stat.ASNName = entry.Name
+				stat.Country = entry.Country
 			}
 		}
 	}
@@ -461,12 +521,13 @@ type InsightCountry struct {
 }
 
 type InsightOverview struct {
-	Start     time.Time
-	End       time.Time
-	TotalIn   uint64
-	TotalOut  uint64
-	Countries []InsightCountry
-	ASNs      []InsightASNBytes
+	Start         time.Time
+	End           time.Time
+	TotalIn       uint64
+	TotalOut      uint64
+	Countries     []InsightCountry
+	ASNs          []InsightASNBytes
+	ContainerNets []string `json:",omitempty"`
 }
 
 func sortedDevBytes(devices map[string]*InsightDevBytes) []InsightDevBytes {
@@ -554,12 +615,13 @@ func trafficInsightsOverviewHandler(w http.ResponseWriter, r *http.Request) {
 	gInsightsMtx.Unlock()
 
 	overview := InsightOverview{
-		Start:     start,
-		End:       end,
-		TotalIn:   totalIn,
-		TotalOut:  totalOut,
-		Countries: []InsightCountry{},
-		ASNs:      []InsightASNBytes{},
+		Start:         start,
+		End:           end,
+		TotalIn:       totalIn,
+		TotalOut:      totalOut,
+		Countries:     []InsightCountry{},
+		ASNs:          []InsightASNBytes{},
+		ContainerNets: insightContainerNets(),
 	}
 
 	for cc, agg := range countries {
