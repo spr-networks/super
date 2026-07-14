@@ -522,8 +522,7 @@ func enablePlugin(name string) bool {
 			if entry.Name == name {
 				config.Plugins[i].Enabled = true
 				if entry.ComposeFilePath != "" {
-					startExtension(entry.ComposeFilePath)
-					ret = true
+					ret = startExtension(entry.ComposeFilePath)
 				}
 				break
 			}

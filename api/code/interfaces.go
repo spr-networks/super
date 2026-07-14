@@ -368,10 +368,10 @@ func updateInterfaceType(Iface string, Type string, Subtype string, Enabled bool
 		err := writeInterfacesConfigLocked(interfaces)
 		if reset {
 			resetInterface(interfaces, Iface, prev_type, prev_subtype, Enabled, false)
+		}
 
-			if Type == "Uplink" && Enabled {
-				addUplinkEntry(Iface, Subtype, true)
-			}
+		if Type == "Uplink" && Enabled {
+			addUplinkEntry(Iface, Subtype, true)
 		}
 
 		return interfaces, err
