@@ -289,8 +289,8 @@ const GeoBlockPane = () => {
               Enable ASN / Country blocking
             </Text>
             <Text size="xs" color="$muted500">
-              Blocked destinations are dropped for all devices and logged as
-              drop:geo events
+              Blocked destinations are dropped for all devices, containers and
+              the router itself, and logged as drop:geo events
             </Text>
           </VStack>
           <Switch
