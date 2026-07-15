@@ -1,6 +1,11 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.1.14
+**Fixes**
+- Fix route spam 
+- CustomDNS element nft rules were broken
+
 ## v1.1.13
 **Features**
 - ASN/Geoblock support
