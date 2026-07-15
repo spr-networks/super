@@ -39,3 +39,49 @@ func TestDockerNetworkIDsForBridgeMissing(t *testing.T) {
 		t.Fatal("dockerNetworkIDsForBridge() error = nil, want an error")
 	}
 }
+
+func TestCheckCurrentPluginNetworkRules(t *testing.T) {
+	desired := CustomInterfaceRule{
+		BaseRule:  BaseRule{RuleName: "Plugin-spr-atlas"},
+		Interface: "spr-atlas",
+		SrcIP:     "172.26.0.2",
+		Policies:  []string{"wan", "dns"},
+		Groups:    []string{},
+		Tags:      []string{},
+	}
+	rules := []CustomInterfaceRule{
+		{
+			BaseRule:  BaseRule{RuleName: "Plugin-spr-nebula"},
+			Interface: "spr-nebula",
+			SrcIP:     "172.23.0.2",
+		},
+		{
+			BaseRule:  BaseRule{RuleName: "Plugin-spr-atlas"},
+			Interface: "spr-atlas",
+			SrcIP:     "172.29.0.2",
+			Policies:  []string{"wan", "dns"},
+			Groups:    []string{},
+			Tags:      []string{},
+		},
+		{
+			BaseRule:  BaseRule{RuleName: "Plugin-spr-atlas"},
+			Interface: "spr-atlas",
+			SrcIP:     "172.26.0.2",
+			Policies:  []string{"dns"},
+			Groups:    []string{},
+			Tags:      []string{},
+		},
+		desired,
+	}
+
+	hasCurrent, stale := checkCurrentPluginNetworkRules(rules, desired)
+	if !hasCurrent {
+		t.Fatal("checkCurrentPluginNetworkRules() hasCurrent = false, want true")
+	}
+	if len(stale) != 2 {
+		t.Fatalf("checkCurrentPluginNetworkRules() stale count = %d, want 2", len(stale))
+	}
+	if stale[0].SrcIP != "172.29.0.2" {
+		t.Fatalf("first stale SrcIP = %q, want %q", stale[0].SrcIP, "172.29.0.2")
+	}
+}

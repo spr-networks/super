@@ -36,6 +36,9 @@ var MeshdSocketPath = TEST_PREFIX + "/state/plugins/mesh/socket"
 var DbSocketPath = TEST_PREFIX + "/state/plugins/db/socket"
 var CustomComposeAllowPath = TEST_PREFIX + "/configs/base/custom_compose_paths.json"
 var extensionStartMtx sync.Mutex
+var pluginNetworkReconcileOnce sync.Once
+
+const pluginNetworkReconcileInterval = time.Minute * 5
 
 type NetworkCapabilities struct {
 	Interface string
@@ -479,6 +482,10 @@ func PluginRoutes(external_router_authenticated *mux.Router, external_router_pub
 		}
 	}
 
+	pluginNetworkReconcileOnce.Do(func() {
+		go pluginNetworkCapabilitiesReconcileLoop()
+	})
+
 	//start extension
 	withRetry(30, 3, startExtensionServices)
 }
@@ -810,6 +817,45 @@ func applyPluginNetworkCapabilitiesRetry(plugin PluginConfig) {
 	}()
 }
 
+func pluginNetworkCapabilitiesReconcileLoop() {
+	reconcilePluginNetworkCapabilities()
+
+	ticker := time.NewTicker(pluginNetworkReconcileInterval)
+	defer ticker.Stop()
+	for range ticker.C {
+		reconcilePluginNetworkCapabilities()
+	}
+}
+
+func reconcilePluginNetworkCapabilities() {
+	Configmtx.Lock()
+	plugins := append([]PluginConfig(nil), config.Plugins...)
+	Configmtx.Unlock()
+
+	for _, plugin := range plugins {
+		if !plugin.Enabled {
+			continue
+		}
+		_ = applyPluginNetworkCapabilities(plugin)
+	}
+}
+
+func checkCurrentPluginNetworkRules(rules []CustomInterfaceRule, desired CustomInterfaceRule) (bool, []CustomInterfaceRule) {
+	hasCurrent := false
+	stale := []CustomInterfaceRule{}
+	for _, existing := range rules {
+		if existing.RuleName != desired.RuleName {
+			continue
+		}
+		if existing.Equals(&desired) {
+			hasCurrent = true
+			continue
+		}
+		stale = append(stale, existing)
+	}
+	return hasCurrent, stale
+}
+
 func applyPluginNetworkCapabilities(plugin PluginConfig) error {
 	// Only apply if NetworkCapabilities are defined
 	if plugin.NetworkCapabilities.Interface == "" || len(plugin.NetworkCapabilities.Policies) == 0 {
@@ -819,7 +865,6 @@ func applyPluginNetworkCapabilities(plugin PluginConfig) error {
 	// Get container IP for this plugin
 	containerIP, err := getPluginContainerIP(plugin.NetworkCapabilities.Interface)
 	if err != nil {
-		fmt.Printf("Failed to get container IP for plugin %s: %v\n", plugin.Name, err)
 		return err
 	}
 
@@ -839,29 +884,34 @@ func applyPluginNetworkCapabilities(plugin PluginConfig) error {
 
 	// Apply the rule directly via firewall function
 	FWmtx.Lock()
-	stale := []CustomInterfaceRule{}
-	for _, existing := range gFirewallConfig.CustomInterfaceRules {
-		if existing.RuleName == rule.RuleName && existing.SrcIP != rule.SrcIP {
-			stale = append(stale, existing)
-		}
-	}
+	hasCurrent, stale := checkCurrentPluginNetworkRules(gFirewallConfig.CustomInterfaceRules, rule)
+	var staleErr error
 	for _, old := range stale {
 		if err := modifyCustomInterfaceRulesImpl(old, true); err != nil {
 			fmt.Printf("Failed to remove stale rule %s (%s): %v\n", old.RuleName, old.SrcIP, err)
+			if staleErr == nil {
+				staleErr = err
+			}
 		}
 	}
-	err = modifyCustomInterfaceRulesImpl(rule, false) // false = add rule
+	if !hasCurrent {
+		err = modifyCustomInterfaceRulesImpl(rule, false) // false = add rule
+	}
 	FWmtx.Unlock()
 
 	if err != nil {
 		if strings.Contains(err.Error(), "Duplicate rule") {
 			return nil
 		}
-		fmt.Printf("Failed to apply network capabilities for plugin %s: %v\n", plugin.Name, err)
 		return err
 	}
+	if staleErr != nil {
+		return staleErr
+	}
 
-	fmt.Printf("Applied network capabilities for plugin %s\n", plugin.Name)
+	if !hasCurrent || len(stale) > 0 {
+		fmt.Printf("Applied network capabilities for plugin %s\n", plugin.Name)
+	}
 	return nil
 }
 
