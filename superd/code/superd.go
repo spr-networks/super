@@ -1142,10 +1142,10 @@ func remote_container_tags(w http.ResponseWriter, r *http.Request) {
 	params.Set("service", "ghcr.io")
 	params.Set("scope", "repository:spr-networks/"+container+":pull")
 
-	append := "?" + params.Encode()
+	query := "?" + params.Encode()
 
 	// Set up the request to get the token
-	req, err := http.NewRequest("GET", "https://"+host+"/token"+append, nil)
+	req, err := http.NewRequest("GET", "https://"+host+"/token"+query, nil)
 	if err != nil {
 		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
 		return
@@ -1190,43 +1190,78 @@ func remote_container_tags(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set up the request to get the list of tags
-	tagsURL := "https://" + host + "/v2/spr-networks/" + container + "/tags/list?n=99999999999"
-	req, err = http.NewRequest("GET", tagsURL, nil)
-	if err != nil {
-		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
-		return
-	}
-
-	// Add the Authorization header with the token
-	req.Header.Set("Authorization", "Bearer "+token.Token)
-
-	// Send the request and get the response
-	resp, err = client.Do(req)
-	if err != nil {
-		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
-		return
-	}
-	defer resp.Body.Close()
-
-	// Print the response body
-	body, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
-		return
-	}
-
-	// Parse the response body to get the list of tags
+	// Fetch the list of tags. The registry caps each page (ghcr: 1000 tags)
+	// and paginates via the Link header, so follow rel="next" until done.
 	var tagsResp struct {
 		Tags []string `json:"tags"`
 	}
-	if err := json.Unmarshal(body, &tagsResp); err != nil {
-		http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
-		return
+
+	tagsURL := "https://" + host + "/v2/spr-networks/" + container + "/tags/list?n=1000"
+	for page := 0; page < 100 && tagsURL != ""; page++ {
+		req, err = http.NewRequest("GET", tagsURL, nil)
+		if err != nil {
+			http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+			return
+		}
+
+		// Add the Authorization header with the token
+		req.Header.Set("Authorization", "Bearer "+token.Token)
+
+		// Send the request and get the response
+		resp, err = client.Do(req)
+		if err != nil {
+			http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+			return
+		}
+
+		body, err = ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+			return
+		}
+
+		var pageResp struct {
+			Tags []string `json:"tags"`
+		}
+		if err := json.Unmarshal(body, &pageResp); err != nil {
+			http.Error(w, "Failed to retrieve tags "+err.Error(), 400)
+			return
+		}
+		tagsResp.Tags = append(tagsResp.Tags, pageResp.Tags...)
+
+		tagsURL = nextTagsPageURL(host, resp.Header.Get("Link"))
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tagsResp)
+}
+
+// parse an RFC 5988 Link header for rel="next" and resolve it against host.
+// registries return a path reference like </v2/...?last=x&n=1000>; rel="next"
+func nextTagsPageURL(host string, linkHeader string) string {
+	if linkHeader == "" {
+		return ""
+	}
+	for _, entry := range strings.Split(linkHeader, ",") {
+		if !strings.Contains(entry, `rel="next"`) {
+			continue
+		}
+		start := strings.Index(entry, "<")
+		end := strings.Index(entry, ">")
+		if start == -1 || end == -1 || end <= start+1 {
+			return ""
+		}
+		ref := entry[start+1 : end]
+		if strings.HasPrefix(ref, "https://") || strings.HasPrefix(ref, "http://") {
+			return ref
+		}
+		if !strings.HasPrefix(ref, "/") {
+			ref = "/" + ref
+		}
+		return "https://" + host + ref
+	}
+	return ""
 }
 
 func compose_paths(w http.ResponseWriter, r *http.Request) {
