@@ -467,16 +467,29 @@ func setDefaultUplinkGateway(iface string, index int) bool {
 	}
 
 	ret := true
-	cmd := exec.Command("ip", "route", "replace", "default", "via", gateway, "dev", iface, "table", table)
-	_, err = cmd.Output()
+	err = replaceDefaultRouteOnlink(gateway, iface, firstOutboundRouteTable+index)
 	if err != nil {
-		log.Print("Error with route setup", cmd, err)
+		log.Println("Error with route setup", iface, gateway, table, err)
 		ret = false
 	}
 
-	cmd = exec.Command("ip", "route", "flush", "cache")
-	_, _ = cmd.Output()
+	exec.Command("ip", "route", "flush", "cache").Output()
 	return ret
+}
+
+func countConfiguredUplinksLocked() int {
+	count := 0
+	for _, iface := range loadInterfacesConfigLocked() {
+		if iface.Type == "Uplink" && iface.Subtype != "pppup" && iface.Enabled {
+			count++
+		}
+	}
+	return count
+}
+
+func mainRouteMatches(gw string, dev string) bool {
+	curGw, curDev := getMainDefaultRoute()
+	return curGw == gw && curDev == dev
 }
 
 func setMainUplinkRoute(outbound []string) {
@@ -484,9 +497,19 @@ func setMainUplinkRoute(outbound []string) {
 	if len(outbound) == 0 {
 		return
 	}
+	if countConfiguredUplinksLocked() < 2 {
+		return
+	}
 	gw, _ := getDefaultGatewayLocked(outbound[0])
-	if gw != "" {
-		exec.Command("ip", "route", "replace", "default", "via", gw, "dev", outbound[0]).Output()
+	if gw == "" {
+		return
+	}
+	if mainRouteMatches(gw, outbound[0]) {
+		return
+	}
+	err := replaceDefaultRouteOnlink(gw, outbound[0], 0)
+	if err != nil {
+		log.Println("Error with main route setup", outbound[0], gw, err)
 	}
 }
 
@@ -501,8 +524,10 @@ func updateOutboundRoutes() {
 			Interfacesmtx.Unlock()
 
 			FWmtx.Lock()
-			for i, iface := range outbound {
-				setDefaultUplinkGateway(iface, i)
+			if len(outbound) >= 2 {
+				for i, iface := range outbound {
+					setDefaultUplinkGateway(iface, i)
+				}
 			}
 			FWmtx.Unlock()
 		}
@@ -556,13 +581,7 @@ func rebuildUplink() {
 	if len(outbound) < 2 {
 		//dont need more, outbound will work as is
 
-		if len(outbound) == 1 {
-			//ensure we have the gw set
-			gw, _ := getDefaultGatewayLocked(outbound[0])
-			if gw != "" {
-				exec.Command("ip", "route", "replace", "default", "via", gw, "dev", outbound[0]).Output()
-			}
-		}
+		setMainUplinkRoute(outbound)
 		return
 	}
 

@@ -371,6 +371,19 @@ func getRouteGatewayForTable(Table string) string {
 	return ""
 }
 
+func getMainDefaultRoute() (string, string) {
+	// Stub implementation for macOS
+	return "", ""
+}
+
+func replaceDefaultRouteOnlink(gw string, dev string, table int) error {
+	return fmt.Errorf("netlink not supported on macOS")
+}
+
+func replaceLinkRoute(subnet string, dev string, table int) error {
+	return fmt.Errorf("netlink not supported on macOS")
+}
+
 // CIDR operations
 func AddIPIfaceCIDRVerdictElement(family, tableName, mapName, cidr, iface, verdict string) error {
 	return fmt.Errorf("nftables not supported on macOS")
