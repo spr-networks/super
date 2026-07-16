@@ -5,6 +5,7 @@
 **Fixes**
 - Fix route spam 
 - CustomDNS element nft rules were broken
+- Wireguard multicast was broken
 
 ## v1.1.13
 **Features**
