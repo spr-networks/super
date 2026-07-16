@@ -22,18 +22,20 @@ Limitations
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
+	"strings"
 
-	"encoding/json"
 	"github.com/pion/mdns"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/sys/unix"
-	"io/ioutil"
-	"strings"
+	"golang.zx2c4.com/wireguard/wgctrl"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 var debug = false
@@ -45,6 +47,8 @@ var InterfacesPublicConfigFile = TEST_PREFIX + "/state/public/interfaces.json"
 var PublicIPIfaceMapFile = TEST_PREFIX + "/state/public/ip-iface-map.json"
 var MulticastConfigFile = TEST_PREFIX + "/configs/base/multicast.json"
 var SetupDoneFile = TEST_PREFIX + "/configs/base/.setup_done"
+
+const WireGuardInterface = "wg0"
 
 type MulticastAddress struct {
 	Address  string //address:port pair
@@ -195,6 +199,108 @@ type listener4 struct {
 	*ipv4.PacketConn
 }
 
+func wireGuardDevice(peer wgtypes.Peer, devices map[string]DeviceEntry) (DeviceEntry, bool) {
+	publicKey := peer.PublicKey.String()
+	for _, device := range devices {
+		if device.WGPubKey == publicKey {
+			return device, true
+		}
+	}
+
+	return DeviceEntry{}, false
+}
+
+func wireGuardPeerAllowsIP(peer wgtypes.Peer, ip net.IP) bool {
+	for _, allowed := range peer.AllowedIPs {
+		if allowed.Contains(ip) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func wireGuardPeerIP(peer wgtypes.Peer, devices map[string]DeviceEntry) net.IP {
+	if device, ok := wireGuardDevice(peer, devices); ok {
+		if ip := net.ParseIP(device.RecentIP).To4(); ip != nil && wireGuardPeerAllowsIP(peer, ip) {
+			return ip
+		}
+	}
+
+	for _, allowed := range peer.AllowedIPs {
+		ones, bits := allowed.Mask.Size()
+		ip := allowed.IP.To4()
+		if bits == 32 && ones == 32 && ip != nil && !ip.IsMulticast() {
+			return ip
+		}
+	}
+
+	return nil
+}
+
+func deviceHasAnyTag(device DeviceEntry, tags []string) bool {
+	for _, wantedTag := range tags {
+		for _, currentTag := range device.DeviceTags {
+			if wantedTag == currentTag {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func wireGuardPeerDestinations(peers []wgtypes.Peer, devices map[string]DeviceEntry, excludeSourceIP net.IP, tags []string) []net.IP {
+	destinations := []net.IP{}
+	seen := map[string]bool{}
+
+	for _, peer := range peers {
+		if peer.Endpoint == nil {
+			continue
+		}
+
+		if excludeSourceIP != nil && wireGuardPeerAllowsIP(peer, excludeSourceIP) {
+			continue
+		}
+
+		if len(tags) != 0 {
+			device, ok := wireGuardDevice(peer, devices)
+			if !ok || !deviceHasAnyTag(device, tags) {
+				continue
+			}
+		}
+
+		ip := wireGuardPeerIP(peer, devices)
+		if ip == nil || (excludeSourceIP != nil && ip.Equal(excludeSourceIP)) {
+			continue
+		}
+
+		key := ip.String()
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		destinations = append(destinations, ip)
+	}
+
+	return destinations
+}
+
+func currentWireGuardPeerDestinations(interfaceName string, devices map[string]DeviceEntry, excludeSourceIP net.IP, tags []string) ([]net.IP, error) {
+	client, err := wgctrl.New()
+	if err != nil {
+		return nil, err
+	}
+	defer client.Close()
+
+	device, err := client.Device(interfaceName)
+	if err != nil {
+		return nil, err
+	}
+
+	return wireGuardPeerDestinations(device.Peers, devices, excludeSourceIP, tags), nil
+}
+
 func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool, tags []string) {
 	l4 := listener4{}
 
@@ -265,12 +371,13 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool,
 			fmt.Println("got conn and data", n, peer.String(), oob.IfIndex)
 		}
 
-		if iface, err := net.InterfaceByIndex(oob.IfIndex); err != nil || !relayableInterface(iface.Name) {
+		ingressInterface, err := net.InterfaceByIndex(oob.IfIndex)
+		if err != nil || !relayableInterface(ingressInterface.Name) {
 			if err != nil {
 				fmt.Println("got err for interface index", oob.IfIndex, err)
 			} else {
 				if debug {
-					fmt.Println("dropping from interface not specified for relay", iface.Name)
+					fmt.Println("dropping from interface not specified for relay", ingressInterface.Name)
 				}
 			}
 			continue
@@ -280,12 +387,11 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool,
 		queueZeroconf(peer.(*net.UDPAddr).IP.String(), saddr.Port, buffer[0:n])
 
 		//replay message out over idx
-		writeit := func(idx int) {
+		writeit := func(iface net.Interface, destination *net.UDPAddr) {
 			var woob *ipv4.ControlMessage
 			//set src as the original peer address. Note: requires IP_TRANSPARENT set on the socket
-			woob = &ipv4.ControlMessage{IfIndex: idx, Src: peer.(*net.UDPAddr).IP}
-			// set dest as saddr (multicast)
-			if _, err = l4.WriteTo(buffer[0:n], woob, saddr); err != nil {
+			woob = &ipv4.ControlMessage{IfIndex: iface.Index, Src: peer.(*net.UDPAddr).IP}
+			if _, err = l4.WriteTo(buffer[0:n], woob, destination); err != nil {
 
 				//NOTE: this will warn often about `required key not available`
 				//when sending to wireguard devices without the key
@@ -295,7 +401,7 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool,
 					return
 				}
 
-				fmt.Println("failed to write: ", err)
+				fmt.Println("failed to write on", iface.Name, "to", destination, ":", err)
 				return
 			}
 		}
@@ -323,6 +429,26 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool,
 		for _, iface := range ifaces {
 
 			if relayableInterface(iface.Name) {
+				if iface.Name == WireGuardInterface {
+					var excludeIP net.IP
+					if ingressInterface.Name == WireGuardInterface {
+						excludeIP = peer.(*net.UDPAddr).IP
+					}
+					destinations, wgErr := currentWireGuardPeerDestinations(iface.Name, devices, excludeIP, tags)
+					if wgErr != nil {
+						fmt.Println("failed to list wireguard peers:", wgErr)
+						continue
+					}
+					for _, destinationIP := range destinations {
+						destination := &net.UDPAddr{IP: destinationIP, Port: saddr.Port}
+						if debug {
+							fmt.Println(n, peer.String(), " being relayed to wireguard peer -> ", destination)
+						}
+						writeit(iface, destination)
+					}
+					continue
+				}
+
 				//if theres tags, make sure the receiver has the tag
 
 				if len(tags) != 0 {
@@ -342,7 +468,7 @@ func handleProxy(s_saddr string, relayableInterface func(ifaceName string) bool,
 				if debug {
 					fmt.Println(n, peer.String(), " being broadcast to -> ", iface.Name, iface.Index, n)
 				}
-				writeit(iface.Index)
+				writeit(iface, saddr)
 			}
 		}
 
@@ -546,7 +672,7 @@ func main() {
 		}
 		//workaround for now for wireguard
 		// until it is in interfaces
-		if strings.Contains(ifaceName, "wg0") {
+		if ifaceName == WireGuardInterface {
 			return true
 		}
 
