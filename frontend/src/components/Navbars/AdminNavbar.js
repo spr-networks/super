@@ -94,7 +94,11 @@ const AdminNavbar = ({
 
     try {
       let cached = JSON.parse(await AsyncStorage.getItem('releasesAvailable'))
-      if (cached?.versions && now - cached.time < 3600000) {
+      if (
+        cached?.versions &&
+        cached.current == version &&
+        now - cached.time < 3600000
+      ) {
         computeVersionStatus(cached.versions)
         return
       }
@@ -105,7 +109,7 @@ const AdminNavbar = ({
       .then((versions) => {
         AsyncStorage.setItem(
           'releasesAvailable',
-          JSON.stringify({ time: now, versions })
+          JSON.stringify({ time: now, versions, current: version })
         )
         computeVersionStatus(versions)
       })

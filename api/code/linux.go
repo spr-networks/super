@@ -4,6 +4,7 @@
 package main
 
 import (
+	"fmt"
 	"net"
 	"strconv"
 	"syscall"
@@ -74,6 +75,76 @@ func getRouteGatewayForTable(Table string) string {
 	}
 
 	return ""
+}
+
+func getMainDefaultRoute() (string, string) {
+	routes, err := netlink.RouteListFiltered(netlink.FAMILY_V4, &netlink.Route{Table: unix.RT_TABLE_MAIN}, netlink.RT_FILTER_TABLE)
+	if err != nil {
+		return "", ""
+	}
+
+	gw := ""
+	dev := ""
+	count := 0
+	for _, route := range routes {
+		if route.Dst != nil {
+			continue
+		}
+		count++
+		if route.Gw != nil {
+			gw = route.Gw.String()
+		}
+		if link, err := netlink.LinkByIndex(route.LinkIndex); err == nil {
+			dev = link.Attrs().Name
+		}
+	}
+
+	if count != 1 {
+		return "", ""
+	}
+	return gw, dev
+}
+
+func replaceDefaultRouteOnlink(gw string, dev string, table int) error {
+	link, err := netlink.LinkByName(dev)
+	if err != nil {
+		return err
+	}
+
+	gwIP := net.ParseIP(gw)
+	if gwIP == nil {
+		return fmt.Errorf("invalid gateway %s", gw)
+	}
+
+	if table == 0 {
+		table = unix.RT_TABLE_MAIN
+	}
+
+	return netlink.RouteReplace(&netlink.Route{
+		LinkIndex: link.Attrs().Index,
+		Gw:        gwIP,
+		Table:     table,
+		Flags:     int(netlink.FLAG_ONLINK),
+	})
+}
+
+func replaceLinkRoute(subnet string, dev string, table int) error {
+	link, err := netlink.LinkByName(dev)
+	if err != nil {
+		return err
+	}
+
+	_, dst, err := net.ParseCIDR(subnet)
+	if err != nil {
+		return err
+	}
+
+	return netlink.RouteReplace(&netlink.Route{
+		LinkIndex: link.Attrs().Index,
+		Dst:       dst,
+		Table:     table,
+		Scope:     netlink.SCOPE_LINK,
+	})
 }
 
 func isLinkReallyUpNetlink(interfaceName string) bool {

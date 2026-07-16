@@ -293,6 +293,67 @@ func saveConfig() error {
 	return nil
 }
 
+func withoutLegacyMulticastAllowedIPs(allowedIPs []net.IPNet) ([]net.IPNet, bool) {
+	filtered := make([]net.IPNet, 0, len(allowedIPs))
+	changed := false
+
+	for _, allowed := range allowedIPs {
+		ones, bits := allowed.Mask.Size()
+		if bits == 32 && ones == 4 && allowed.IP.Equal(net.IPv4(224, 0, 0, 0)) {
+			changed = true
+			continue
+		}
+		filtered = append(filtered, allowed)
+	}
+
+	return filtered, changed
+}
+
+func removeLegacyMulticastAllowedIPs() (bool, error) {
+	client, err := wgctrl.New()
+	if err != nil {
+		return false, err
+	}
+	defer client.Close()
+
+	device, err := client.Device(WireguardInterface)
+	if err != nil {
+		return false, err
+	}
+
+	peerConfigs := []wgtypes.PeerConfig{}
+	for _, peer := range device.Peers {
+		allowedIPs, changed := withoutLegacyMulticastAllowedIPs(peer.AllowedIPs)
+		if !changed {
+			continue
+		}
+		peerConfigs = append(peerConfigs, wgtypes.PeerConfig{
+			PublicKey:         peer.PublicKey,
+			ReplaceAllowedIPs: true,
+			AllowedIPs:        allowedIPs,
+		})
+	}
+
+	if len(peerConfigs) == 0 {
+		return false, nil
+	}
+
+	if err := client.ConfigureDevice(WireguardInterface, wgtypes.Config{Peers: peerConfigs}); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func migrateLegacyMulticastAllowedIPs() error {
+	changed, err := removeLegacyMulticastAllowedIPs()
+	if err != nil || !changed {
+		return err
+	}
+
+	return saveConfig()
+}
+
 func removePeer(peer ClientPeer) error {
 	publicKey, err := wgtypes.ParseKey(peer.PublicKey)
 	if err != nil {
@@ -561,8 +622,7 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 
 	// TODO verify pubkey
 
-	//add a new peer with multicast support
-	AllowedIPs := config.Interface.Address + ",224.0.0.0/4"
+	allowedIPs := config.Interface.Address
 
 	PresharedKey, err := genPresharedKey()
 	if err != nil {
@@ -570,7 +630,7 @@ func pluginPeer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = addPeer(peer.PublicKey, PresharedKey, AllowedIPs)
+	err = addPeer(peer.PublicKey, PresharedKey, allowedIPs)
 	if err != nil {
 		fmt.Println("wg set error:", err)
 		http.Error(w, err.Error(), 400)
@@ -766,6 +826,12 @@ func pluginUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := migrateLegacyMulticastAllowedIPs(); err != nil {
+		fmt.Println("failed to remove legacy multicast AllowedIPs", err)
+		http.Error(w, "wg multicast migration error", 500)
+		return
+	}
+
 	informPeersToApi()
 
 	w.Header().Set("Content-Type", "application/json")
@@ -889,6 +955,10 @@ func main() {
 	if wireguardEnabledInConfig() {
 		if _, err := exec.Command("/scripts/up.sh").Output(); err != nil {
 			fmt.Println("wg up failed at startup", err)
+		}
+
+		if err := migrateLegacyMulticastAllowedIPs(); err != nil {
+			fmt.Println("failed to remove legacy multicast AllowedIPs", err)
 		}
 	}
 

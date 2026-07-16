@@ -295,12 +295,14 @@ func wanSyncProbeRoutes(uplinks []string) {
 		if gw == "" {
 			continue
 		}
-		for _, subnet := range wanIfaceSubnets(iface) {
-			exec.Command("ip", "route", "replace", subnet, "dev", iface,
-				"table", table).Run()
+		tableNum, err := strconv.Atoi(table)
+		if err != nil {
+			continue
 		}
-		exec.Command("ip", "route", "replace", "default", "via", gw, "dev", iface,
-			"table", table).Run()
+		for _, subnet := range wanIfaceSubnets(iface) {
+			replaceLinkRoute(subnet, iface, tableNum)
+		}
+		replaceDefaultRouteOnlink(gw, iface, tableNum)
 		if gWanProbeRules[iface] != table {
 			exec.Command("ip", "rule", "add", "oif", iface, "table", table,
 				"priority", wanProbeRulePref).Run()

@@ -212,6 +212,9 @@ func (c *NFTClient) AddMapElementRange(family TableFamily, tableName, mapName st
 	// Don't pad concatenated types - use actual byte length
 	// The google/nftables library will handle the proper alignment
 
+	key = coerceToType(set.KeyType, key)
+	keyEnd = coerceToType(set.KeyType, keyEnd)
+
 	element := nftables.SetElement{
 		Key: key,
 	}
@@ -278,6 +281,8 @@ func (c *NFTClient) AddMapElementRange(family TableFamily, tableName, mapName st
 			value = verdictBytes
 		}
 
+		value = coerceToType(set.DataType, value)
+
 		// Check if we need to pad the value as well
 		if set.IsMap && set.DataType.Bytes > uint32(len(value)) {
 			paddedValue := make([]byte, set.DataType.Bytes)
@@ -321,6 +326,9 @@ func (c *NFTClient) DeleteMapElementRange(family TableFamily, tableName, mapName
 	if err != nil {
 		return fmt.Errorf("failed to get map %s/%s/%s: %w", familyToString(family), tableName, mapName, err)
 	}
+
+	key = coerceToType(set.KeyType, key)
+	keyEnd = coerceToType(set.KeyType, keyEnd)
 
 	// For concatenated types, we need to ensure proper alignment
 	// The google/nftables library expects keys to match the exact size
@@ -378,6 +386,8 @@ func (c *NFTClient) GetMapElement(family TableFamily, tableName, mapName string,
 	if err != nil {
 		return err
 	}
+
+	key = coerceToType(set.KeyType, key)
 
 	elements, err := c.conn.GetSetElements(set)
 	if err != nil {
@@ -841,6 +851,15 @@ func formatElementKey(keyBytes []byte) interface{} {
 }
 
 // compareKeys compares two keys for equality
+func coerceToType(t nftables.SetDatatype, b []byte) []byte {
+	if t.Name == "ipv4_addr" && len(b) != 4 {
+		if ipBytes := IPToBytes(string(b)); ipBytes != nil {
+			return ipBytes
+		}
+	}
+	return b
+}
+
 func compareKeys(key1, key2 []byte) bool {
 	if len(key1) != len(key2) {
 		return false
