@@ -25,8 +25,10 @@ import (
 var GeoBlockConfigPath = TEST_PREFIX + "/configs/base/geo_block.json"
 var GeoBlockCachePath = TEST_PREFIX + "/state/api/geo_block_ranges.json"
 var LookupPluginSocketPath = TEST_PREFIX + "/state/plugins/plugin-lookup/lookup_plugin"
+var PFWConfigPath = TEST_PREFIX + "/configs/pfw/rules.json"
 
 const gGeoBlockSetName = "geo_block"
+const gGeoRouteMapName = "geo_route"
 
 type GeoASN struct {
 	ASN  int
@@ -43,6 +45,9 @@ type GeoBlockConfig struct {
 	Enabled        bool
 	DenyCountries  []string
 	DenyASNs       []GeoASN
+	RouteCountries []string
+	RouteASNs      []GeoASN
+	RouteInterface string
 	Lists          []GeoBlockList
 	RefreshSeconds int
 }
@@ -60,6 +65,7 @@ type GeoBlockStatus struct {
 	Enabled          bool
 	LastRefresh      string
 	RangesProgrammed int
+	RoutesProgrammed int
 	Sources          []GeoBlockSource
 }
 
@@ -121,6 +127,8 @@ func geoBlockConfigCopy() GeoBlockConfig {
 	config := gGeoConfig
 	config.DenyCountries = append([]string{}, gGeoConfig.DenyCountries...)
 	config.DenyASNs = append([]GeoASN{}, gGeoConfig.DenyASNs...)
+	config.RouteCountries = append([]string{}, gGeoConfig.RouteCountries...)
+	config.RouteASNs = append([]GeoASN{}, gGeoConfig.RouteASNs...)
 	config.Lists = append([]GeoBlockList{}, gGeoConfig.Lists...)
 	return config
 }
@@ -345,6 +353,95 @@ func programGeoBlockSet(ranges []GeoIPRange) error {
 	return AddIPRangesToSet("inet", "filter", gGeoBlockSetName, pairs)
 }
 
+func geoRouteActive(config GeoBlockConfig) bool {
+	return config.RouteInterface != "" && (len(config.RouteCountries) != 0 || len(config.RouteASNs) != 0)
+}
+
+func geoRouteChain(iface string) (string, error) {
+	if strings.HasPrefix(iface, "site") {
+		index, err := strconv.Atoi(strings.TrimPrefix(iface, "site"))
+		if err == nil && index >= 0 {
+			return "mark" + strconv.Itoa(1000+index), nil
+		}
+	}
+
+	Interfacesmtx.Lock()
+	outbound := collectOutbound()
+	Interfacesmtx.Unlock()
+	for index, entry := range outbound {
+		if entry == iface {
+			return "mark" + strconv.Itoa(firstOutboundRouteTable+index), nil
+		}
+	}
+
+	pfw := struct {
+		IfaceMarkMap struct{ Map map[string]string }
+	}{}
+	data, err := os.ReadFile(PFWConfigPath)
+	if err == nil {
+		err = json.Unmarshal(data, &pfw)
+	}
+	if err != nil || pfw.IfaceMarkMap.Map[iface] == "" {
+		return "", fmt.Errorf("PFW route not found: %s", iface)
+	}
+	return "mark" + pfw.IfaceMarkMap.Map[iface], nil
+}
+
+func refreshGeoRoute(config GeoBlockConfig) (int, GeoBlockSource) {
+	if !geoRouteActive(config) {
+		FlushMapByName("inet", "mangle", gGeoRouteMapName)
+		return 0, GeoBlockSource{}
+	}
+
+	ranges := []GeoIPRange{}
+	countries, err := resolveCountryRanges(config.RouteCountries)
+	if err == nil {
+		for _, entry := range countries {
+			ranges = append(ranges, entry.Ranges...)
+		}
+	}
+	asnNumbers := []int{}
+	for _, entry := range config.RouteASNs {
+		asnNumbers = append(asnNumbers, entry.ASN)
+	}
+	if err == nil {
+		var asns []lookupASNRanges
+		asns, err = resolveASNRanges(asnNumbers)
+		for _, entry := range asns {
+			ranges = append(ranges, entry.Ranges...)
+		}
+	}
+
+	source := GeoBlockSource{Type: "route", Key: config.RouteInterface}
+	if err != nil {
+		source.Error = err.Error()
+		return 0, source
+	}
+	ranges = mergeGeoRanges(ranges)
+	chain, err := geoRouteChain(config.RouteInterface)
+	if err == nil {
+		err = CheckChainExists("inet", "mangle", chain)
+	}
+	if err == nil {
+		pairs := [][2]net.IP{}
+		for _, r := range ranges {
+			pairs = append(pairs, [2]net.IP{net.ParseIP(r.Start), net.ParseIP(r.End)})
+		}
+		FWmtx.Lock()
+		err = FlushMapByName("inet", "mangle", gGeoRouteMapName)
+		if err == nil {
+			err = AddIPRangesToSet("inet", "mangle", gGeoRouteMapName, pairs, "jump "+chain)
+		}
+		FWmtx.Unlock()
+	}
+	if err != nil {
+		source.Error = err.Error()
+		return 0, source
+	}
+	source.Ranges = len(ranges)
+	return len(ranges), source
+}
+
 func saveGeoBlockCache(cache geoBlockCache) {
 	data, err := json.Marshal(cache)
 	if err == nil {
@@ -368,10 +465,14 @@ func geoBlockRefresh() GeoBlockStatus {
 
 	config := geoBlockConfigCopy()
 	now := time.Now().UTC().Format(time.RFC3339)
+	routeCount, routeSource := refreshGeoRoute(config)
 
 	if !config.Enabled {
 		FlushSetWithTable("inet", "filter", gGeoBlockSetName)
-		status := GeoBlockStatus{Enabled: false, LastRefresh: now}
+		status := GeoBlockStatus{Enabled: false, LastRefresh: now, RoutesProgrammed: routeCount}
+		if routeSource.Type != "" {
+			status.Sources = append(status.Sources, routeSource)
+		}
 		gGeoMtx.Lock()
 		gGeoStatus = status
 		gGeoMtx.Unlock()
@@ -379,6 +480,9 @@ func geoBlockRefresh() GeoBlockStatus {
 	}
 
 	sources := []GeoBlockSource{}
+	if routeSource.Type != "" {
+		sources = append(sources, routeSource)
+	}
 	allRanges := []GeoIPRange{}
 
 	countries, err := resolveCountryRanges(config.DenyCountries)
@@ -443,13 +547,14 @@ func geoBlockRefresh() GeoBlockStatus {
 		Enabled:          true,
 		LastRefresh:      now,
 		RangesProgrammed: len(merged),
+		RoutesProgrammed: routeCount,
 		Sources:          sources,
 	}
 
 	if len(merged) == 0 {
 		anyError := false
 		for _, source := range sources {
-			if source.Error != "" {
+			if source.Error != "" && source.Type != "route" {
 				anyError = true
 				break
 			}
@@ -514,7 +619,7 @@ func geoBlockTicker() {
 		time.Sleep(time.Minute)
 
 		config := geoBlockConfigCopy()
-		if !config.Enabled {
+		if !config.Enabled && !geoRouteActive(config) {
 			continue
 		}
 
@@ -539,6 +644,16 @@ func initGeoBlock() {
 	loadGeoBlockConfig()
 	go func() {
 		applyGeoBlockFromCache()
+		config := geoBlockConfigCopy()
+		if geoRouteActive(config) {
+			count, source := refreshGeoRoute(config)
+			gGeoMtx.Lock()
+			gGeoStatus.RoutesProgrammed = count
+			if source.Error == "" {
+				gGeoStatus.LastRefresh = time.Now().UTC().Format(time.RFC3339)
+			}
+			gGeoMtx.Unlock()
+		}
 		geoBlockTicker()
 	}()
 }
@@ -553,11 +668,28 @@ func validateGeoBlockConfig(config *GeoBlockConfig) error {
 		countries = append(countries, cc)
 	}
 	config.DenyCountries = countries
+	countries = []string{}
+	for _, cc := range config.RouteCountries {
+		cc = strings.ToUpper(strings.TrimSpace(cc))
+		if len(cc) != 2 || cc[0] < 'A' || cc[0] > 'Z' || cc[1] < 'A' || cc[1] > 'Z' {
+			return fmt.Errorf("invalid route country code: %s", cc)
+		}
+		countries = append(countries, cc)
+	}
+	config.RouteCountries = countries
 
 	for _, entry := range config.DenyASNs {
 		if entry.ASN <= 0 {
 			return fmt.Errorf("invalid ASN: %d", entry.ASN)
 		}
+	}
+	for _, entry := range config.RouteASNs {
+		if entry.ASN <= 0 {
+			return fmt.Errorf("invalid route ASN: %d", entry.ASN)
+		}
+	}
+	if (len(config.RouteCountries) != 0 || len(config.RouteASNs) != 0) && !isValidIface(config.RouteInterface) {
+		return fmt.Errorf("invalid route interface: %s", config.RouteInterface)
 	}
 
 	for _, list := range config.Lists {

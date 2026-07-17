@@ -1871,6 +1871,9 @@ func AddIPIfaceCIDRVerdictElement(family, tableName, mapName, cidr, iface, verdi
 
 // createVerdictData creates verdict data for nftables elements
 func createVerdictData(verdict string) (*expr.Verdict, error) {
+	if strings.HasPrefix(verdict, "jump ") {
+		return &expr.Verdict{Kind: expr.VerdictJump, Chain: strings.TrimPrefix(verdict, "jump ")}, nil
+	}
 	switch verdict {
 	case "accept":
 		return &expr.Verdict{Kind: expr.VerdictAccept}, nil
@@ -2258,7 +2261,7 @@ func AddCIDRToSet(family, tableName, setName, cidr string) error {
 	return client.conn.Flush()
 }
 
-func AddIPRangesToSet(family, tableName, setName string, ranges [][2]net.IP) error {
+func AddIPRangesToSet(family, tableName, setName string, ranges [][2]net.IP, verdict ...string) error {
 	f, client, err := withFamily(family)
 	if err != nil {
 		return err
@@ -2267,6 +2270,13 @@ func AddIPRangesToSet(family, tableName, setName string, ranges [][2]net.IP) err
 	set, err := client.GetMap(f, tableName, setName)
 	if err != nil {
 		return err
+	}
+	var verdictData *expr.Verdict
+	if len(verdict) != 0 {
+		verdictData, err = createVerdictData(verdict[0])
+		if err != nil {
+			return err
+		}
 	}
 
 	batch := []nftables.SetElement{}
@@ -2307,7 +2317,7 @@ func AddIPRangesToSet(family, tableName, setName string, ranges [][2]net.IP) err
 		}
 
 		batch = append(batch,
-			nftables.SetElement{Key: start},
+			nftables.SetElement{Key: start, VerdictData: verdictData},
 			nftables.SetElement{Key: next, IntervalEnd: true})
 
 		if len(batch) >= 2000 {
