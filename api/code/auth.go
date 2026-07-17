@@ -275,21 +275,18 @@ func authenticateToken(token string) (bool, string, []string) {
 
 func scopedPathMatch(method string, pathToMatch string, paths []string) bool {
 	for _, entry := range paths {
-		parts := strings.Split(entry, ":")
+		parts := strings.SplitN(entry, ":", 2)
 		if len(parts) > 1 {
 			if !strings.HasPrefix(pathToMatch, parts[0]) {
 				//prefix did not match, carry on
 				continue
 			}
-			if parts[1] == "r" && method == http.MethodGet {
-				return true
-			} else if parts[1] == "r" {
-				//wrong method. skip
-				continue
+			switch parts[1] {
+			case "r":
+				return method == http.MethodGet
+			case "rw":
+				return method == http.MethodGet || method == http.MethodPut || method == http.MethodPost || method == http.MethodPatch || method == http.MethodDelete
 			}
-			//this falls through into failure.
-			// :r is the only one that is valid right now
-			// so we can ignore the others
 		} else {
 			if strings.HasPrefix(pathToMatch, entry) {
 				return true

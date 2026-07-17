@@ -2356,8 +2356,7 @@ func updateLocalMappings(IP string, Name string) {
 	LocalMappingsmtx.Lock()
 	defer LocalMappingsmtx.Unlock()
 
-	var localMappingsPath = TEST_PREFIX + "/state/dns/local_mappings"
-	data, err := ioutil.ReadFile(localMappingsPath)
+	data, err := ioutil.ReadFile(LocalMappingsPath)
 	if err != nil {
 		data = []byte{}
 	}
@@ -2376,7 +2375,7 @@ func updateLocalMappings(IP string, Name string) {
 		new_data += ip + " " + hostname + "\n"
 	}
 	new_data += IP + " " + entryName + "\n"
-	ioutil.WriteFile(localMappingsPath, []byte(new_data), 0600)
+	ioutil.WriteFile(LocalMappingsPath, []byte(new_data), 0600)
 }
 
 func refreshWireguardDevice(MAC string, IP string, PublicKey string, Iface string, Name string, Create bool) {
@@ -3283,6 +3282,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/setup_done", finalizeSetup).Methods("PUT")
 
 	external_router_authenticated.HandleFunc("/dnsSettings", dnsSettings).Methods("GET", "PUT")
+	external_router_authenticated.HandleFunc("/dns/hostnames/{hostname}", dnsHostname).Methods("GET", "PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/multicastSettings", multicastSettings).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/customThemes", customThemes).Methods("GET", "PUT")
 
