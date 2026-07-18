@@ -1,8 +1,8 @@
 import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useNavigate } from 'react-router-dom'
-import { api } from 'api'
+import { api, clearLogin } from 'api'
+import { clearSecureLogin } from 'api/SecureStore'
 
 import {
   Badge,
@@ -57,7 +57,11 @@ const AdminNavbar = ({
 
   const navigate = useNavigate()
   const logout = async () => {
-    await AsyncStorage.removeItem('user')
+    try {
+      await api.put('/logout') // revokes passkey tokens
+    } catch (e) {}
+    await clearSecureLogin()
+    await clearLogin()
     navigate('/')
   }
 

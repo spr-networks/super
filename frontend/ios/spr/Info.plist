@@ -33,6 +33,8 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Unlock your saved SPR login</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Location for WiFi</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

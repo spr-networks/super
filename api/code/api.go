@@ -3410,6 +3410,16 @@ func main() {
 	external_router_authenticated.HandleFunc("/otp_status", otpStatus).Methods("GET")
 	external_router_authenticated.HandleFunc("/otp_jwt_test", applyJwtOtpCheck(testJWTOTP)).Methods("PUT")
 
+	external_router_authenticated.HandleFunc("/webauthn/status", webauthnStatus).Methods("GET")
+	external_router_authenticated.HandleFunc("/webauthn/register", webauthnRegisterBegin).Methods("PUT")
+	external_router_authenticated.HandleFunc("/webauthn/register", webauthnRegisterFinish).Methods("POST")
+	external_router_authenticated.HandleFunc("/webauthn/credential", webauthnDeleteCredential).Methods("DELETE")
+	external_router_authenticated.HandleFunc("/webauthn/validate", webauthnValidateBegin).Methods("PUT")
+	external_router_authenticated.HandleFunc("/webauthn/validate", webauthnValidateFinish).Methods("POST")
+	external_router_authenticated.HandleFunc("/logout", webauthnLogout).Methods("PUT")
+	external_router_public.HandleFunc("/webauthn/login", webauthnLoginBegin).Methods("PUT")
+	external_router_public.HandleFunc("/webauthn/login", webauthnLoginFinish).Methods("POST")
+
 	// alerts
 	external_router_authenticated.HandleFunc("/alerts", getAlertSettings).Methods("GET")
 	external_router_authenticated.HandleFunc("/alerts", modifyAlertSettings).Methods("PUT")

@@ -16,7 +16,7 @@ export default class AuthSettings extends Component {
     return (
       <View h="$full">
         <OTPSettings />
-        {/*<WebAuthn />*/}
+        <WebAuthn />
         <AuthTokenList />
         <SSHKeys />
       </View>

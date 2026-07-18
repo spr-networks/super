@@ -389,7 +389,11 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 		username, password, ok := r.BasicAuth()
 		if ok {
 			failType = "user"
-			if authenticateUser(username, password) {
+			rateKey := authRateKey("password", r)
+			if authFailureRateLimited(rateKey) {
+				reason = "too many failed attempts"
+			} else if authenticateUser(username, password) {
+				authFailureRateClear(rateKey)
 				//check if all user requests should have a JWT check, if so, use it.
 				if shouldCheckOTPJWT(r, username) && !hasValidJwtOtpHeader(username, r) {
 					reason = "invalid or missing JWT OTP"
@@ -401,6 +405,7 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 					return
 				}
 			} else {
+				authFailureRateRecord(rateKey)
 				reason = "bad password"
 			}
 		} else {
@@ -517,6 +522,11 @@ func updateAuthTokens(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
+	}
+
+	if r.Method == http.MethodDelete {
+		//close any websockets authenticated by a deleted token
+		WSCloseAll()
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -871,6 +881,52 @@ func cleanupOTPAttemptsLocked() {
 	}
 }
 
+func authRateKey(mechanism string, r *http.Request) string {
+	return "login:" + mechanism + ":" + clientIP(r)
+}
+
+func authFailureRateLimited(key string) bool {
+	otpAttemptsMtx.Lock()
+	defer otpAttemptsMtx.Unlock()
+
+	attempt := otpAttempts[key]
+	return attempt != nil && time.Now().Before(attempt.LockedUntil)
+}
+
+func authFailureRateRecord(key string) {
+	otpAttemptsMtx.Lock()
+	defer otpAttemptsMtx.Unlock()
+
+	cleanupOTPAttemptsLocked()
+
+	attempt := otpAttempts[key]
+	if attempt == nil {
+		attempt = new(OTPAttempt)
+		otpAttempts[key] = attempt
+	}
+
+	if time.Since(attempt.LastAttempt) > otpAttemptWindow {
+		attempt.Count = 0
+	}
+
+	attempt.Count++
+	attempt.LastAttempt = time.Now()
+
+	if attempt.Count >= maxOTPAttempts {
+		attempt.LockedUntil = time.Now().Add(otpLockoutDuration)
+		if err := saveOTPLockoutsLocked(); err != nil {
+			log.Printf("Error saving OTP lockouts: %v", err)
+		}
+		log.Printf("auth rate limit exceeded for %s", key)
+	}
+}
+
+func authFailureRateClear(key string) {
+	otpAttemptsMtx.Lock()
+	defer otpAttemptsMtx.Unlock()
+	delete(otpAttempts, key)
+}
+
 func initAuth() {
 	migratePasswordsToHash()
 	initJwtOtpSecret()
@@ -892,9 +948,19 @@ func generateOTPToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(gJwtOtpSecret) != 32 {
-		http.Error(w, "JWT OTP Setup Failed", 400)
+	tokenString, err := signJwtOtpToken(user)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
 		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tokenString)
+}
+
+func signJwtOtpToken(user string) (string, error) {
+	if len(gJwtOtpSecret) != 32 {
+		return "", fmt.Errorf("JWT OTP Setup Failed")
 	}
 
 	claims := &jwt.RegisteredClaims{
@@ -904,14 +970,7 @@ func generateOTPToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(gJwtOtpSecret))
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tokenString)
+	return token.SignedString([]byte(gJwtOtpSecret))
 }
 
 func hasValidJwtOtpHeader(username string, r *http.Request) bool {
@@ -975,7 +1034,7 @@ func applyJwtOtpCheck(handler http.HandlerFunc) http.HandlerFunc {
 
 func shouldCheckOTPJWT(r *http.Request, username string) bool {
 
-	if r.URL.Path == "/otp_validate" {
+	if r.URL.Path == "/otp_validate" || r.URL.Path == "/webauthn/validate" {
 		return false
 	}
 

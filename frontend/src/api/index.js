@@ -5,6 +5,8 @@ export {
   api,
   testLogin,
   saveLogin,
+  saveTokenLogin,
+  clearLogin,
   getApiURL,
   setApiURL,
   isMockAPI,
