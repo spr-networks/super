@@ -44,6 +44,7 @@ type OTPAttempt struct {
 
 var otpAttempts = make(map[string]*OTPAttempt)
 var otpAttemptsMtx sync.Mutex
+var passwordFingerprintKey [sha256.Size]byte
 
 const (
 	maxOTPAttempts        = 5                // Maximum attempts before lockout
@@ -915,7 +916,7 @@ func authFailureRateRecord(key string) {
 }
 
 func authPasswordFailureRateRecord(key, username, password string) {
-	mac := hmac.New(sha256.New, gJwtOtpSecret)
+	mac := hmac.New(sha256.New, passwordFingerprintKey[:])
 	mac.Write([]byte(username))
 	mac.Write([]byte{0})
 	mac.Write([]byte(password))
@@ -984,6 +985,9 @@ func authFailureRateClear(key string) {
 }
 
 func initAuth() {
+	if _, err := crand.Read(passwordFingerprintKey[:]); err != nil {
+		log.Fatal("failed to initialize password rate limiter: ", err)
+	}
 	migratePasswordsToHash()
 	initJwtOtpSecret()
 	loadOTPLockouts()
