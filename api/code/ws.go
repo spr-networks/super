@@ -218,7 +218,7 @@ func authWebsocket(r *http.Request, c *websocket.Conn, OtpOff bool) bool {
 			SprbusPublish("auth:success", map[string]string{"type": "user", "name": pieces[0], "reason": remoteIP(r) + ":" + "websocket", "ip": remoteIP(r)})
 			return true
 		} else {
-			authFailureRateRecord(rateKey)
+			authPasswordFailureRateRecord(rateKey, pieces[0], pieces[1])
 			SprbusPublish("auth:failure", map[string]string{"type": "user", "name": pieces[0], "reason": remoteIP(r) + ":" + "bad credentails on websocket", "ip": remoteIP(r)})
 		}
 	} else {

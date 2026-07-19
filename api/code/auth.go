@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/hmac"
 	"crypto/pbkdf2"
 	crand "crypto/rand"
 	"crypto/sha256"
@@ -33,18 +34,25 @@ var Tokensmtx sync.Mutex
 
 // OTP rate limiting
 type OTPAttempt struct {
-	Count       int
-	LastAttempt time.Time
-	LockedUntil time.Time
+	Count           int
+	LastAttempt     time.Time
+	LockedUntil     time.Time
+	FailedPasswords map[[sha256.Size]byte]struct{} `json:"-"`
+	LastPassword    [sha256.Size]byte              `json:"-"`
+	HasLastPassword bool                           `json:"-"`
 }
 
 var otpAttempts = make(map[string]*OTPAttempt)
 var otpAttemptsMtx sync.Mutex
 
 const (
-	maxOTPAttempts     = 5                // Maximum attempts before lockout
-	otpLockoutDuration = 15 * time.Minute // Lockout duration
-	otpAttemptWindow   = 1 * time.Minute  // Time window for rate limiting
+	maxOTPAttempts        = 5                // Maximum attempts before lockout
+	otpLockoutDuration    = 15 * time.Minute // Lockout duration
+	otpAttemptWindow      = 1 * time.Minute  // Time window for rate limiting
+	passwordMaxAttempts   = 10
+	passwordRetryDelay    = 5 * time.Minute
+	passwordAttemptWindow = 15 * time.Minute
+	passwordRatePrefix    = "login:password:"
 )
 
 type Token struct {
@@ -391,7 +399,9 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 			failType = "user"
 			rateKey := authRateKey("password", r)
 			if authFailureRateLimited(rateKey) {
-				reason = "too many failed attempts"
+				w.Header().Set("Retry-After", strconv.Itoa(int(passwordRetryDelay/time.Second)))
+				http.Error(w, "Too many password attempts. Retry shortly.", http.StatusTooManyRequests)
+				return
 			} else if authenticateUser(username, password) {
 				authFailureRateClear(rateKey)
 				//check if all user requests should have a JWT check, if so, use it.
@@ -405,7 +415,7 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 					return
 				}
 			} else {
-				authFailureRateRecord(rateKey)
+				authPasswordFailureRateRecord(rateKey, username, password)
 				reason = "bad password"
 			}
 		} else {
@@ -804,7 +814,7 @@ func saveOTPLockoutsLocked() error {
 	now := time.Now()
 
 	for user, attempt := range otpAttempts {
-		if now.Before(attempt.LockedUntil) {
+		if !strings.HasPrefix(user, passwordRatePrefix) && now.Before(attempt.LockedUntil) {
 			lockouts[user] = attempt
 		}
 	}
@@ -856,6 +866,9 @@ func loadOTPLockouts() error {
 	// Validate and merge loaded lockouts
 	now := time.Now()
 	for user, attempt := range lockouts {
+		if strings.HasPrefix(user, passwordRatePrefix) {
+			continue
+		}
 		// Validate the attempt data
 		if attempt == nil {
 			continue
@@ -874,8 +887,12 @@ func cleanupOTPAttemptsLocked() {
 	// Must be called with otpAttemptsMtx already locked
 	now := time.Now()
 	for user, attempt := range otpAttempts {
+		attemptWindow := otpAttemptWindow
+		if strings.HasPrefix(user, passwordRatePrefix) {
+			attemptWindow = passwordAttemptWindow
+		}
 		// Remove entries that are no longer locked and haven't been used recently
-		if now.After(attempt.LockedUntil) && time.Since(attempt.LastAttempt) > otpAttemptWindow {
+		if now.After(attempt.LockedUntil) && time.Since(attempt.LastAttempt) > attemptWindow {
 			delete(otpAttempts, user)
 		}
 	}
@@ -894,10 +911,30 @@ func authFailureRateLimited(key string) bool {
 }
 
 func authFailureRateRecord(key string) {
+	authFailureRateRecordFingerprint(key, nil)
+}
+
+func authPasswordFailureRateRecord(key, username, password string) {
+	mac := hmac.New(sha256.New, gJwtOtpSecret)
+	mac.Write([]byte(username))
+	mac.Write([]byte{0})
+	mac.Write([]byte(password))
+	var fingerprint [sha256.Size]byte
+	copy(fingerprint[:], mac.Sum(nil))
+	authFailureRateRecordFingerprint(key, &fingerprint)
+}
+
+func authFailureRateRecordFingerprint(key string, fingerprint *[sha256.Size]byte) {
 	otpAttemptsMtx.Lock()
 	defer otpAttemptsMtx.Unlock()
 
 	cleanupOTPAttemptsLocked()
+
+	maxAttempts, retryDelay, attemptWindow := maxOTPAttempts, otpLockoutDuration, otpAttemptWindow
+	passwordAttempt := strings.HasPrefix(key, passwordRatePrefix)
+	if passwordAttempt {
+		maxAttempts, retryDelay, attemptWindow = passwordMaxAttempts, passwordRetryDelay, passwordAttemptWindow
+	}
 
 	attempt := otpAttempts[key]
 	if attempt == nil {
@@ -905,17 +942,36 @@ func authFailureRateRecord(key string) {
 		otpAttempts[key] = attempt
 	}
 
-	if time.Since(attempt.LastAttempt) > otpAttemptWindow {
+	if time.Since(attempt.LastAttempt) > attemptWindow {
 		attempt.Count = 0
+		attempt.FailedPasswords = nil
+		attempt.HasLastPassword = false
+	}
+
+	if fingerprint != nil {
+		if attempt.HasLastPassword && attempt.LastPassword == *fingerprint {
+			return
+		}
+		attempt.LastPassword, attempt.HasLastPassword = *fingerprint, true
+		if attempt.FailedPasswords == nil {
+			attempt.FailedPasswords = make(map[[sha256.Size]byte]struct{})
+		} else if _, duplicate := attempt.FailedPasswords[*fingerprint]; duplicate {
+			return
+		}
+		if len(attempt.FailedPasswords) < passwordMaxAttempts {
+			attempt.FailedPasswords[*fingerprint] = struct{}{}
+		}
 	}
 
 	attempt.Count++
 	attempt.LastAttempt = time.Now()
 
-	if attempt.Count >= maxOTPAttempts {
-		attempt.LockedUntil = time.Now().Add(otpLockoutDuration)
-		if err := saveOTPLockoutsLocked(); err != nil {
-			log.Printf("Error saving OTP lockouts: %v", err)
+	if attempt.Count >= maxAttempts {
+		attempt.LockedUntil = time.Now().Add(retryDelay)
+		if !passwordAttempt {
+			if err := saveOTPLockoutsLocked(); err != nil {
+				log.Printf("Error saving OTP lockouts: %v", err)
+			}
 		}
 		log.Printf("auth rate limit exceeded for %s", key)
 	}
