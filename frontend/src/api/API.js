@@ -47,6 +47,9 @@ export const getApiURL = () => {
   }
 
   if (REACT_APP_API) {
+    if (Platform.OS == 'web' && process.env.NODE_ENV == 'development') {
+      return document.location.origin + '/__spr_api/'
+    }
     try {
       let url = new URL(REACT_APP_API)
       return url.toString()

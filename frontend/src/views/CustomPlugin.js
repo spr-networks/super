@@ -45,11 +45,11 @@ const getPluginHTML = async (plugin, theme) => {
     Authorization
   }
 
-  let pathname = `/plugins/${plugin.URI}`
+  let pathname = `plugins/${plugin.URI}`
 
   let api_url = api.getApiURL()
   let u = new URL(api_url)
-  u.pathname = pathname
+  u.pathname += pathname
 
   let url = u.toString()
   let res = await fetch(url, { headers })
@@ -74,7 +74,7 @@ const getPluginHTML = async (plugin, theme) => {
   // frontend instead of the plugin. Pin the base to the api's plugin static
   // route (/admin/custom_plugin/<URI>/static/... -> plugin socket /static/...)
   let baseHref = new URL(
-    `/admin/custom_plugin/${encodeURIComponent(plugin.URI)}/`,
+    `admin/custom_plugin/${encodeURIComponent(plugin.URI)}/`,
     api_url
   ).toString()
   html = html.replace('<head>', `<head><base href="${baseHref}"/>`)

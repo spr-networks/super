@@ -187,7 +187,8 @@
       "__DEV__": true
     },
     "moduleNameMapper": {
-      "^@react-native-clipboard/clipboard$": "<rootDir>/node_modules/@react-native-clipboard/clipboard/jest/clipboard-mock.js"
+      "^@react-native-clipboard/clipboard$": "<rootDir>/node_modules/@react-native-clipboard/clipboard/jest/clipboard-mock.js",
+      "^api/SecureStore$": "<rootDir>/src/api/SecureStore.js"
     }
   },
   "packageManager": "yarn@4.17.0"
