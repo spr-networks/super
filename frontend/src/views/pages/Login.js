@@ -65,6 +65,7 @@ const Login = (props) => {
         navigate('/admin/home')
       } else {
         if (
+          Platform.OS !== 'web' &&
           hostname.length &&
           !hostname.match(/^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)|(spr\.local)$/)
         ) {

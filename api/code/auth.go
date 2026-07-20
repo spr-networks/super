@@ -1092,6 +1092,42 @@ func applyJwtOtpCheck(handler http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+func applyPasswordAuthCheck(handler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		username, _, ok := r.BasicAuth()
+		if !ok || username != "admin" {
+			http.Error(w, "Password authentication required", http.StatusUnauthorized)
+			return
+		}
+		handler(w, r)
+	}
+}
+
+func applyFactorManagementCheck(handler http.HandlerFunc) http.HandlerFunc {
+	return applyPasswordAuthCheck(func(w http.ResponseWriter, r *http.Request) {
+		username, _, _ := r.BasicAuth()
+		if secondFactorConfigured(username) && !hasValidJwtOtpHeader(username, r) {
+			http.Error(w, "Second-factor authentication required", http.StatusUnauthorized)
+			return
+		}
+		handler(w, r)
+	})
+}
+
+func secondFactorConfigured(username string) bool {
+	Tokensmtx.Lock()
+	defer Tokensmtx.Unlock()
+
+	settings, _ := otpLoadLocked()
+	for _, entry := range settings.OTPUsers {
+		if entry.Name == username && entry.Confirmed {
+			return true
+		}
+	}
+	entry := webauthnLoadLocked().Users[username]
+	return entry != nil && len(entry.Credentials) != 0
+}
+
 func shouldCheckOTPJWT(r *http.Request, username string) bool {
 
 	if r.URL.Path == "/otp_validate" || r.URL.Path == "/webauthn/validate" {
