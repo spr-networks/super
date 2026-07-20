@@ -458,6 +458,9 @@ func hostapdChannelSwitch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	calculated := ChanCalc(channelParams.Mode, channelParams.Channel, channelParams.Bandwidth, channelParams.HT_Enable, channelParams.VHT_Enable, channelParams.HE_Enable, channelParams.EHT_Enable)
+	if rustapChannelSwitchIfOwned(w, iface, channelParams, calculated) {
+		return
+	}
 	err = ChanSwitch(iface, channelParams.Bandwidth, calculated.Freq1, calculated.Freq2, channelParams.HT_Enable, channelParams.VHT_Enable, channelParams.HE_Enable)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
@@ -666,6 +669,11 @@ func hostapdAllStations(w http.ResponseWriter, r *http.Request) {
 }
 
 func getHostapdJson(iface string) (map[string]interface{}, error) {
+	if rustap, ok, err := rustapConfigForInterface(iface); err != nil {
+		return nil, err
+	} else if ok {
+		return rustap, nil
+	}
 	data, err := ioutil.ReadFile(getHostapdConfigPath(iface))
 	if err != nil {
 		fmt.Println(err)
@@ -1017,6 +1025,9 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	iface := mux.Vars(r)["interface"]
 	if !isValidIface(iface) {
 		http.Error(w, "Invalid interface", 400)
+		return
+	}
+	if rustapUpdateConfigIfOwned(w, r, iface) {
 		return
 	}
 
