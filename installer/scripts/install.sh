@@ -130,6 +130,12 @@ git clone --depth 1 https://github.com/spr-networks/super
 cd /home/spr/super
 cp -R base/template_configs configs
 
+# Install or upgrade the packaged KVM runtime on supported arm64 hosts. The
+# package merges its Docker runtime entries without replacing runsc settings.
+if [ "$(uname -m)" = "aarch64" ]; then
+  ./host-packages/spr-krun-runtime/install-latest.sh
+fi
+
 mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
 ln -s /dev/null /lib/udev/rules.d/80-net-setup-link.rules
 

@@ -1,0 +1,83 @@
+#!/bin/sh
+# Register or remove the packaged runtime without replacing other Docker
+# settings (including SPR's runsc runtimes).
+set -eu
+
+DAEMON_JSON=${SPR_DOCKER_DAEMON_JSON:-/etc/docker/daemon.json}
+RUNTIME_PATH=/usr/libexec/spr-krun-runtime/crun
+MODE=install
+RELOAD=true
+
+usage() {
+    echo "usage: spr-krun-runtime-configure [--remove] [--no-reload]" >&2
+}
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --remove)
+            MODE=remove
+            ;;
+        --no-reload)
+            RELOAD=false
+            ;;
+        *)
+            usage
+            exit 2
+            ;;
+    esac
+    shift
+done
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo "spr-krun-runtime-configure must run as root" >&2
+    exit 1
+fi
+
+install -d -m 0755 "$(dirname "$DAEMON_JSON")"
+tmp=$(mktemp "${DAEMON_JSON}.tmp.XXXXXX")
+trap 'rm -f "$tmp"' EXIT HUP INT TERM
+
+if [ -f "$DAEMON_JSON" ]; then
+    if ! jq empty "$DAEMON_JSON" >/dev/null 2>&1; then
+        echo "$DAEMON_JSON is not valid JSON; refusing to replace it" >&2
+        exit 1
+    fi
+    input=$DAEMON_JSON
+else
+    input=/dev/null
+fi
+
+if [ "$MODE" = "install" ]; then
+    if [ "$input" = /dev/null ]; then
+        jq -n --arg path "$RUNTIME_PATH" '{
+            runtimes: {
+                "spr-krun": {path: $path}
+            }
+        }' > "$tmp"
+    else
+        jq --arg path "$RUNTIME_PATH" '
+            .runtimes = (.runtimes // {}) |
+            .runtimes["spr-krun"] = {path: $path}
+        ' "$input" > "$tmp"
+    fi
+else
+    if [ "$input" = /dev/null ]; then
+        exit 0
+    fi
+    jq --arg path "$RUNTIME_PATH" '
+        if .runtimes["spr-krun"].path == $path then
+            del(.runtimes["spr-krun"])
+        else . end
+    ' "$input" > "$tmp"
+fi
+
+chmod 0644 "$tmp"
+chown root:root "$tmp"
+mv "$tmp" "$DAEMON_JSON"
+trap - EXIT HUP INT TERM
+
+if [ "$RELOAD" = true ] &&
+   command -v systemctl >/dev/null 2>&1 &&
+   systemctl is-active --quiet docker; then
+    systemctl reload docker
+fi

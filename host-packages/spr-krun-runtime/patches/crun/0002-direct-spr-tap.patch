@@ -1,0 +1,230 @@
+From: SPR Networks <support@supernetworks.org>
+Subject: [PATCH] krun: connect guests directly to an SPR-managed TAP
+
+Use libkrun's native TAP backend instead of a userspace network stack when
+krun.tap_name is present. The dedicated runtime creates a host TAP with a
+stable guest MAC. libkrun's embedded init configures the guest from DHCP
+before starting the container process.
+
+The runtime uses the host network namespace, so SPR CoreDHCP receives guest
+broadcasts directly on the TAP and owns address, route, DNS, device, and
+policy assignment. Mark runtime-created TAPs with an interface alias and
+refuse to delete a same-named interface that SPR did not create.
+---
+ src/libcrun/handlers/krun.c | 158 ++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 155 insertions(+), 3 deletions(-)
+
+diff --git a/src/libcrun/handlers/krun.c b/src/libcrun/handlers/krun.c
+index 57192b7..38abd2b 100644
+--- a/src/libcrun/handlers/krun.c
++++ b/src/libcrun/handlers/krun.c
+@@ -30,6 +30,8 @@
+ #include <sys/types.h>
+ #include <sys/sysmacros.h>
+ #include <fcntl.h>
++#include <ctype.h>
++#include <net/if.h>
+ #include <sched.h>
+ #include <ocispec/runtime_spec_schema_config_schema.h>
+ 
+@@ -96,6 +98,7 @@ struct krun_config
+   json_object *config_doc;
+   json_object *config_tree;
+   bool use_passt;
++  bool use_tap;
+ };
+ 
+ /* libkrun handler.  */
+@@ -256,9 +259,12 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+   runtime_spec_schema_config_schema *def = container->container_def;
+   int32_t (*krun_set_vm_config) (uint32_t ctx_id, uint8_t num_vcpus, uint32_t ram_mib);
+   int32_t (*krun_add_net_unixstream) (uint32_t ctx_id, const char *c_path, int fd, uint8_t *const c_mac, uint32_t features, uint32_t flags);
++  int32_t (*krun_add_net_tap) (uint32_t ctx_id, const char *c_tap_name, uint8_t *const c_mac, uint32_t features, uint32_t flags);
+   int32_t (*krun_add_vsock_port2) (uint32_t ctx_id, uint32_t port, const char *c_filepath, bool listen);
+-  const char *vsock_path;
+-  int cpus, ram_mib, gpu_flags, nested_virt, vsock_port, ret;
++  const char *vsock_path, *tap_name, *mac_string;
++  unsigned int mac_values[6];
++  uint8_t mac[6];
++  int chars, cpus, ram_mib, gpu_flags, nested_virt, vsock_port, ret;
+   cpu_set_t set;
+ 
+   cpus = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.cpus", "cpus");
+@@ -336,6 +342,35 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+       if (UNLIKELY (ret < 0))
+         return crun_make_error (err, -ret, "could not set krun net configuration");
+     }
++  else if (kconf->use_tap)
++    {
++      tap_name = find_annotation (container, "krun.tap_name");
++      mac_string = find_annotation (container, "krun.net_mac");
++      if (tap_name == NULL || mac_string == NULL)
++        return crun_make_error (err, EINVAL, "krun TAP networking requires krun.tap_name and krun.net_mac");
++
++      chars = 0;
++      if (sscanf (mac_string, "%2x:%2x:%2x:%2x:%2x:%2x%n",
++                  &mac_values[0], &mac_values[1], &mac_values[2],
++                  &mac_values[3], &mac_values[4], &mac_values[5],
++                  &chars)
++              != 6
++          || mac_string[chars] != '\0')
++        return crun_make_error (err, EINVAL, "krun.net_mac must be a six-octet MAC address");
++
++      for (int i = 0; i < 6; i++)
++        mac[i] = (uint8_t) mac_values[i];
++      if ((mac[0] & 1) != 0)
++        return crun_make_error (err, EINVAL, "krun.net_mac must be a unicast MAC address");
++
++      krun_add_net_tap = dlsym (handle, "krun_add_net_tap");
++      if (krun_add_net_tap == NULL)
++        return crun_make_error (err, 0, "could not find symbol `krun_add_net_tap` in the krun library");
++
++      ret = krun_add_net_tap (ctx_id, tap_name, &mac[0], COMPAT_NET_FEATURES, NET_FLAG_DHCP_CLIENT);
++      if (UNLIKELY (ret < 0))
++        return crun_make_error (err, -ret, "could not configure krun TAP device `%s`", tap_name);
++    }
+ 
+   vsock_path = find_annotation (container, "krun.vsock_path");
+   vsock_port = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.vsock_port", "vsock_port");
+@@ -600,7 +635,14 @@ libkrun_start_passt (void *cookie, libcrun_container_t *container)
+ 
+   use_passt = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.use_passt", "use_passt");
+   if (use_passt > 0)
+-    kconf->use_passt = 1;
++    {
++      if (kconf->use_tap)
++        {
++          errno = EINVAL;
++          return -1;
++        }
++      kconf->use_passt = 1;
++    }
+   else
+     return 0;
+ 
+@@ -657,6 +699,112 @@ libkrun_start_passt (void *cookie, libcrun_container_t *container)
+   return 0;
+ }
+ 
++static bool
++libkrun_valid_ifname (const char *name)
++{
++  size_t len;
++
++  if (name == NULL)
++    return false;
++
++  len = strlen (name);
++  if (len == 0 || len >= IFNAMSIZ)
++    return false;
++
++  for (size_t i = 0; i < len; i++)
++    if (! isalnum ((unsigned char) name[i]) && name[i] != '_' && name[i] != '-' && name[i] != '.')
++      return false;
++
++  return true;
++}
++
++static int
++libkrun_run_ip (char **argv, const char *operation, libcrun_error_t *err)
++{
++  int ret;
++
++  ret = run_process (argv, err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  if (UNLIKELY (ret != 0))
++    return crun_make_error (err, EINVAL, "%s failed with exit status %d", operation, ret);
++
++  return 0;
++}
++
++/*
++ * Create the host TAP used as the guest's device-facing SPR interface. The
++ * dedicated runtime uses the host network namespace; CoreDHCP receives guest
++ * broadcasts directly on this TAP and assigns the guest's routed tiny subnet.
++ */
++static int
++libkrun_setup_tap (void *cookie, libcrun_container_t *container, libcrun_error_t *err)
++{
++  struct krun_config *kconf = (struct krun_config *) cookie;
++  const char *tap_name;
++  char *delete_tap[] = { (char *) "ip", (char *) "tuntap", (char *) "del", (char *) "dev", NULL, (char *) "mode", (char *) "tap", NULL };
++  char *add_tap[] = { (char *) "ip", (char *) "tuntap", (char *) "add", (char *) "dev", NULL, (char *) "mode", (char *) "tap", NULL };
++  char *tag_tap[] = { (char *) "ip", (char *) "link", (char *) "set", (char *) "dev", NULL, (char *) "alias", (char *) "spr-krun-runtime", NULL };
++  char *up_tap[] = { (char *) "ip", (char *) "link", (char *) "set", (char *) "dev", NULL, (char *) "up", NULL };
++  char ifalias_path[sizeof ("/sys/class/net//ifalias") + IFNAMSIZ];
++  char ifalias[64];
++  ssize_t ifalias_len;
++  int ifalias_fd;
++  int ret;
++
++  tap_name = find_annotation (container, "krun.tap_name");
++  if (tap_name == NULL)
++    return 0;
++
++  if (! libkrun_valid_ifname (tap_name))
++    return crun_make_error (err, EINVAL, "invalid krun TAP interface name");
++
++  kconf->use_tap = true;
++
++  delete_tap[4] = (char *) tap_name;
++  add_tap[4] = (char *) tap_name;
++  tag_tap[4] = (char *) tap_name;
++  up_tap[4] = (char *) tap_name;
++
++  /* A killed runtime can leave its persistent TAP behind. Reclaim only an
++   * interface carrying our ownership marker; never delete an arbitrary host
++   * interface merely because a container supplied its name. */
++  if (if_nametoindex (tap_name) != 0)
++    {
++      ret = snprintf (ifalias_path, sizeof (ifalias_path), "/sys/class/net/%s/ifalias", tap_name);
++      if (UNLIKELY (ret < 0 || (size_t) ret >= sizeof (ifalias_path)))
++        return crun_make_error (err, EINVAL, "could not construct krun TAP ownership path");
++
++      ifalias_fd = open (ifalias_path, O_RDONLY | O_CLOEXEC);
++      if (UNLIKELY (ifalias_fd < 0))
++        return crun_make_error (err, EEXIST, "interface `%s` already exists and is not an SPR krun TAP", tap_name);
++
++      ifalias_len = TEMP_FAILURE_RETRY (read (ifalias_fd, ifalias, sizeof (ifalias) - 1));
++      close (ifalias_fd);
++      if (UNLIKELY (ifalias_len < 0))
++        return crun_make_error (err, errno, "read krun TAP ownership marker");
++      while (ifalias_len > 0 && (ifalias[ifalias_len - 1] == '\n' || ifalias[ifalias_len - 1] == '\r'))
++        ifalias_len--;
++      ifalias[ifalias_len] = '\0';
++      if (strcmp (ifalias, "spr-krun-runtime") != 0)
++        return crun_make_error (err, EEXIST, "interface `%s` already exists and is not an SPR krun TAP", tap_name);
++
++      ret = libkrun_run_ip (delete_tap, "remove stale krun TAP", err);
++      if (UNLIKELY (ret < 0))
++        return ret;
++    }
++
++  ret = libkrun_run_ip (add_tap, "create krun TAP", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++
++  ret = libkrun_run_ip (tag_tap, "mark krun TAP ownership", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++
++  return libkrun_run_ip (up_tap, "bring up krun TAP", err);
++}
++
+ /* libkrun_create_kvm_device: explicitly adds kvm device.  */
+ static int
+ libkrun_configure_container (void *cookie, enum handler_configure_phase phase,
+@@ -722,6 +870,10 @@ libkrun_configure_container (void *cookie, enum handler_configure_phase phase,
+   if (phase != HANDLER_CONFIGURE_AFTER_MOUNTS)
+     return 0;
+ 
++  ret = libkrun_setup_tap (cookie, container, err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++
+   ret = libkrun_start_passt (cookie, container);
+   if (UNLIKELY (ret < 0))
+     return crun_make_error (err, errno, "start passt");
+-- 
+2.47.3

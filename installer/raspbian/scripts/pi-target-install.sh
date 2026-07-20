@@ -70,6 +70,18 @@ dpkg --configure -a
 # sync with install.sh and cross-install.sh
 apt -y upgrade --no-download
 apt -y install --no-download --no-install-recommends nftables wireless-regdb ethtool nano iw fdisk tmux conntrack jq inotify-tools dhcpcd cloud-guest-utils tcpdump iperf3
+
+# Install the same versioned host runtime package published with this image.
+mapfile -t KRUN_DEBS < <(find /var/cache/apt/archives -maxdepth 1 -name 'spr-krun-runtime_*_arm64.deb' -print)
+if [ "${#KRUN_DEBS[@]}" -ne 1 ]; then
+  echo "FATAL: expected one SPR krun runtime package; found ${#KRUN_DEBS[@]}" >&2
+  exit 1
+fi
+KRUN_DEB=${KRUN_DEBS[0]}
+dpkg --unpack "$KRUN_DEB" || exit 1
+apt-get -y --fix-broken --no-download --no-install-recommends install || exit 1
+rm -f "$KRUN_DEB"
+
 # Mount boot firmware so kernel postinst hooks can update it
 mkdir -p /boot/firmware
 mount /dev/vda1 /boot/firmware
@@ -310,6 +322,8 @@ cat > /etc/docker/daemon.json << EOF
     }
 }
 EOF
+
+spr-krun-runtime-configure --no-reload || exit 1
 
 
 # remove script

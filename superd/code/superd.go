@@ -808,15 +808,87 @@ func getRepoName(gitURL string) string {
 	return repoName
 }
 
+const (
+	pluginRuntimeDefault = "default"
+	pluginRuntimeKVM     = "kvm"
+)
+
+func normalizePluginRuntime(runtime string) (string, error) {
+	runtime = strings.ToLower(strings.TrimSpace(runtime))
+	if runtime == "" {
+		return pluginRuntimeDefault, nil
+	}
+	switch runtime {
+	case pluginRuntimeDefault, pluginRuntimeKVM:
+		return runtime, nil
+	default:
+		return "", fmt.Errorf("unsupported plugin runtime %q", runtime)
+	}
+}
+
 func configureUserPlugin(repoName string) ([]byte, error) {
-	pluginConfigPath := filepath.Join("/super", "plugins", "user", repoName, "plugin.json")
+	if repoName == "" || filepath.Base(repoName) != repoName || repoName == "." {
+		return []byte{}, fmt.Errorf("invalid user plugin repository name %q", repoName)
+	}
+
+	pluginRelativeDir := filepath.Join("plugins", "user", repoName)
+	pluginConfigPath := filepath.Join("/super", pluginRelativeDir, "plugin.json")
 	if _, err := os.Stat(pluginConfigPath); os.IsNotExist(err) {
 		return []byte{}, fmt.Errorf("could not find user plugin config %s", pluginConfigPath)
 	}
 
 	data, err := os.ReadFile(pluginConfigPath)
+	if err != nil {
+		return nil, err
+	}
 
-	return data, err
+	var manifest struct {
+		Runtime string
+	}
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return nil, fmt.Errorf("invalid user plugin config %s: %w", pluginConfigPath, err)
+	}
+
+	runtime, err := normalizePluginRuntime(manifest.Runtime)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user plugin config %s: %w", pluginConfigPath, err)
+	}
+	composeName := "docker-compose.yml"
+	if runtime == pluginRuntimeKVM {
+		composeName = "docker-compose-kvm.yml"
+	}
+	composeRelativePath := filepath.Join(pluginRelativeDir, composeName)
+	composePath := filepath.Join("/super", composeRelativePath)
+	info, err := os.Stat(composePath)
+	if err != nil {
+		return nil, fmt.Errorf("could not find user plugin compose file %s: %w", composePath, err)
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("user plugin compose file is not regular: %s", composePath)
+	}
+
+	var config map[string]interface{}
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("invalid user plugin config %s: %w", pluginConfigPath, err)
+	}
+	config["Runtime"] = runtime
+	config["ComposeFilePath"] = filepath.ToSlash(composeRelativePath)
+	return json.Marshal(config)
+}
+
+func getUserPluginConfig(w http.ResponseWriter, r *http.Request) {
+	repoName := getRepoName(r.URL.Query().Get("git_url"))
+	if repoName == "" {
+		http.Error(w, "invalid user plugin git URL", http.StatusBadRequest)
+		return
+	}
+	data, err := configureUserPlugin(repoName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
 }
 
 func logRequest(handler http.Handler) http.Handler {
@@ -1388,6 +1460,7 @@ func main() {
 	unix_plugin_router.HandleFunc("/remove", removeUserContainer).Methods("PUT")
 	unix_plugin_router.HandleFunc("/build", build).Methods("PUT")
 	unix_plugin_router.HandleFunc("/user_plugin_exists", userPluginExists).Methods("GET")
+	unix_plugin_router.HandleFunc("/get_plugin_config", getUserPluginConfig).Methods("PUT")
 
 	unix_plugin_router.HandleFunc("/ghcr_auth", ghcr_auth).Methods("PUT")
 	unix_plugin_router.HandleFunc("/update_git", update_git).Methods("PUT")

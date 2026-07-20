@@ -112,6 +112,7 @@ type DeviceStyle struct {
 
 type DeviceEntry struct {
 	Name              string
+	Type              string `json:",omitempty"`
 	MAC               string
 	WGPubKey          string
 	VLANTag           string
@@ -129,6 +130,8 @@ type DeviceEntry struct {
 	DeleteExpiration  bool
 	DeviceDisabled    bool //tbd deprecate this in favor of only using the policy name.
 }
+
+const DeviceTypeContainer = "Container"
 
 var ValidPolicyStrings = []string{"wan", "lan", "dns", "api", "lan_upstream", "noapi", "guestonly", "disabled", "quarantine", "dns:family"}
 

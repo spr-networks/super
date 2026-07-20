@@ -42,8 +42,16 @@ const pluginNetworkReconcileInterval = time.Minute * 5
 
 type NetworkCapabilities struct {
 	Interface string
+	DeviceMAC string
 	Policies  []string
 	Groups    []string
+}
+
+func (p NetworkCapabilities) Matches(q NetworkCapabilities) bool {
+	return p.Interface == q.Interface &&
+		p.DeviceMAC == q.DeviceMAC &&
+		slices.Compare(p.Policies, q.Policies) == 0 &&
+		slices.Compare(p.Groups, q.Groups) == 0
 }
 
 type PluginConfig struct {
@@ -61,6 +69,7 @@ type PluginConfig struct {
 	InstallTokenPath    string
 	ScopedPaths         []string
 	NetworkCapabilities NetworkCapabilities
+	Runtime             string
 }
 
 func (p PluginConfig) MatchesData(q PluginConfig) bool {
@@ -77,14 +86,13 @@ func (p PluginConfig) MatchesData(q PluginConfig) bool {
 		p.Icon == q.Icon &&
 		p.InstallTokenPath == q.InstallTokenPath &&
 		slices.Compare(p.ScopedPaths, q.ScopedPaths) == 0 &&
-		p.NetworkCapabilities.Interface == q.NetworkCapabilities.Interface &&
-		slices.Compare(p.NetworkCapabilities.Policies, q.NetworkCapabilities.Policies) == 0 &&
-		slices.Compare(p.NetworkCapabilities.Groups, q.NetworkCapabilities.Groups) == 0
+		p.NetworkCapabilities.Matches(q.NetworkCapabilities) &&
+		p.Runtime == q.Runtime
 }
 
 var gPlusExtensionDefaults = []PluginConfig{
-	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", false, false, true, "", "", []string{}, NetworkCapabilities{}},
-	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", false, false, false, "", "", []string{}, NetworkCapabilities{}},
+	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", false, false, true, "", "", []string{}, NetworkCapabilities{}, ""},
+	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", false, false, false, "", "", []string{}, NetworkCapabilities{}, ""},
 }
 
 var gPluginTemplates = []PluginConfig{
@@ -417,11 +425,17 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 			if !found {
 				config.Plugins = append(config.Plugins, plugin)
 			} else {
+				networkCapabilitiesChanged := !currentPlugin.NetworkCapabilities.Matches(plugin.NetworkCapabilities)
+				if networkCapabilitiesChanged {
+					removePluginNetworkCapabilities(currentPlugin)
+				}
 				if plugin.Enabled == false {
 					//plugin is no longer enabled, send stop
 					stopExtension(oldComposeFilePath)
 					// Remove network capabilities firewall rules
-					removePluginNetworkCapabilities(config.Plugins[idx])
+					if !networkCapabilitiesChanged {
+						removePluginNetworkCapabilities(currentPlugin)
+					}
 
 					//wireguard is built-in (no compose); bring its interface down
 					if name == "wireguard" {
@@ -513,8 +527,13 @@ func restartPlugin(name string) {
 		//in case caller does not check.
 		if entry.Name == name && entry.Enabled == true {
 			if entry.ComposeFilePath != "" {
-				callSuperdRestart(entry.ComposeFilePath, "")
-				applyPluginNetworkCapabilitiesRetry(entry)
+				started := runPluginStartWithNetworkPrepared(entry, func() bool {
+					callSuperdRestart(entry.ComposeFilePath, "")
+					return true
+				})
+				if started {
+					applyPluginNetworkCapabilitiesRetry(entry)
+				}
 			}
 		}
 	}
@@ -539,7 +558,12 @@ func enablePlugin(name string) bool {
 			if entry.Name == name {
 				config.Plugins[i].Enabled = true
 				if entry.ComposeFilePath != "" {
-					ret = startExtension(entry.ComposeFilePath)
+					ret = runPluginStartWithNetworkPrepared(entry, func() bool {
+						return startExtension(entry.ComposeFilePath)
+					})
+					if ret {
+						applyPluginNetworkCapabilitiesRetry(entry)
+					}
 				}
 				break
 			}
@@ -803,6 +827,32 @@ func startExtension(composeFilePath string) bool {
 	return true
 }
 
+func preparePluginNetworkCapabilities(plugin PluginConfig) error {
+	capabilities := plugin.NetworkCapabilities
+	if capabilities.Interface == "" ||
+		len(capabilities.Policies) == 0 ||
+		capabilities.DeviceMAC == "" {
+		return nil
+	}
+	return applyPluginNetworkCapabilities(plugin)
+}
+
+func runPluginStartWithNetworkPreparer(
+	plugin PluginConfig,
+	prepare func(PluginConfig) error,
+	start func() bool,
+) bool {
+	if err := prepare(plugin); err != nil {
+		fmt.Printf("Warning: Refusing to start plugin %s before its device network is authorized: %v\n", plugin.Name, err)
+		return false
+	}
+	return start()
+}
+
+func runPluginStartWithNetworkPrepared(plugin PluginConfig, start func() bool) bool {
+	return runPluginStartWithNetworkPreparer(plugin, preparePluginNetworkCapabilities, start)
+}
+
 func applyPluginNetworkCapabilitiesRetry(plugin PluginConfig) {
 	go func() {
 		var err error
@@ -856,10 +906,121 @@ func checkCurrentPluginNetworkRules(rules []CustomInterfaceRule, desired CustomI
 	return hasCurrent, stale
 }
 
+func pluginDeviceMAC(plugin PluginConfig) (string, error) {
+	mac := trimLower(plugin.NetworkCapabilities.DeviceMAC)
+	if !isValidMAC(mac) {
+		return "", fmt.Errorf("invalid device MAC for plugin %s", plugin.Name)
+	}
+
+	hw, err := net.ParseMAC(mac)
+	if err != nil || len(hw) != 6 || hw[0]&1 != 0 {
+		return "", fmt.Errorf("device MAC for plugin %s must be a six-octet unicast address", plugin.Name)
+	}
+	mac = hw.String()
+	if mac == "00:00:00:00:00:00" {
+		return "", fmt.Errorf("device MAC for plugin %s must not be the zero address", plugin.Name)
+	}
+
+	return mac, nil
+}
+
+func newPluginDevice(plugin PluginConfig, mac string) DeviceEntry {
+	return DeviceEntry{
+		Name:       plugin.Name,
+		Type:       DeviceTypeContainer,
+		MAC:        mac,
+		DeviceTags: []string{},
+	}
+}
+
+func applyPluginDeviceNetworkCapabilities(plugin PluginConfig) error {
+	if !isValidIface(plugin.NetworkCapabilities.Interface) ||
+		len(plugin.NetworkCapabilities.Interface) >= 16 {
+		return fmt.Errorf("invalid device interface for plugin %s", plugin.Name)
+	}
+
+	mac, err := pluginDeviceMAC(plugin)
+	if err != nil {
+		return err
+	}
+
+	policies := normalizeStringSlice(plugin.NetworkCapabilities.Policies)
+	for _, policy := range policies {
+		if !slices.Contains(ValidPolicyStrings, policy) {
+			return fmt.Errorf("invalid device policy %q for plugin %s", policy, plugin.Name)
+		}
+	}
+	groups := normalizeStringSlice(plugin.NetworkCapabilities.Groups)
+
+	FWmtx.Lock()
+	err = GetElementFromMapComplex(
+		"inet", "filter", "dhcp_access",
+		[]string{plugin.NetworkCapabilities.Interface, mac},
+	)
+	if err != nil {
+		err = AddElementToMapComplex(
+			"inet", "filter", "dhcp_access",
+			[]string{plugin.NetworkCapabilities.Interface, mac},
+			"accept",
+		)
+	}
+	if err == nil {
+		PluginDeviceLinks[mac] = plugin.NetworkCapabilities.Interface
+	}
+	FWmtx.Unlock()
+	if err != nil {
+		return fmt.Errorf("authorize DHCP for plugin %s: %w", plugin.Name, err)
+	}
+
+	Groupsmtx.Lock()
+	defer Groupsmtx.Unlock()
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+
+	devices := getDevicesJson()
+	if devices == nil {
+		devices = map[string]DeviceEntry{}
+	}
+	dev, exists := devices[mac]
+	if !exists {
+		dev = newPluginDevice(plugin, mac)
+	}
+	deviceChanged := !exists ||
+		slices.Compare(dev.Policies, policies) != 0 ||
+		slices.Compare(dev.Groups, groups) != 0
+	if dev.Name == "" {
+		dev.Name = plugin.Name
+		deviceChanged = true
+	}
+	if dev.MAC != mac {
+		dev.MAC = mac
+		deviceChanged = true
+	}
+	dev.Policies = policies
+	dev.Groups = groups
+	addGroupsIfMissing(getGroupsJson(), dev.Groups)
+	if deviceChanged {
+		devices[mac] = dev
+		saveDevicesJson(devices)
+
+		if exists {
+			SprbusPublish("device:update", scrubDevice(dev))
+		} else {
+			SprbusPublish("device:save", scrubDevice(dev))
+		}
+	}
+
+	return nil
+}
+
 func applyPluginNetworkCapabilities(plugin PluginConfig) error {
 	// Only apply if NetworkCapabilities are defined
 	if plugin.NetworkCapabilities.Interface == "" || len(plugin.NetworkCapabilities.Policies) == 0 {
 		return nil
+	}
+
+	if plugin.NetworkCapabilities.DeviceMAC != "" {
+		return applyPluginDeviceNetworkCapabilities(plugin)
 	}
 
 	// Get container IP for this plugin
@@ -919,6 +1080,28 @@ func removePluginNetworkCapabilities(plugin PluginConfig) error {
 	// Only remove if NetworkCapabilities are defined
 	if plugin.NetworkCapabilities.Interface == "" || len(plugin.NetworkCapabilities.Policies) == 0 {
 		return nil
+	}
+
+	if plugin.NetworkCapabilities.DeviceMAC != "" {
+		mac, err := pluginDeviceMAC(plugin)
+		if err != nil {
+			return err
+		}
+
+		FWmtx.Lock()
+		defer FWmtx.Unlock()
+		delete(RecentDHCPIface, mac)
+		delete(PluginDeviceLinks, mac)
+		if GetElementFromMapComplex(
+			"inet", "filter", "dhcp_access",
+			[]string{plugin.NetworkCapabilities.Interface, mac},
+		) != nil {
+			return nil
+		}
+		return DeleteElementFromMapComplex(
+			"inet", "filter", "dhcp_access",
+			[]string{plugin.NetworkCapabilities.Interface, mac},
+		)
 	}
 
 	// We need to get the actual rule to delete it properly
@@ -1106,10 +1289,13 @@ func startPlusExt(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			if !startExtension(entry.ComposeFilePath) {
+			if !runPluginStartWithNetworkPrepared(entry, func() bool {
+				return startExtension(entry.ComposeFilePath)
+			}) {
 				http.Error(w, "Failed to start service", 400)
 				return
 			}
+			applyPluginNetworkCapabilitiesRetry(entry)
 			return
 		}
 	}
@@ -1150,6 +1336,10 @@ func updatePluginContainer(w http.ResponseWriter, r *http.Request) {
 
 	if !found || plugin.ComposeFilePath == "" {
 		http.Error(w, "Not found", 404)
+		return
+	}
+	if err := preparePluginNetworkCapabilities(plugin); err != nil {
+		http.Error(w, "Failed to authorize plugin network: "+err.Error(), 500)
 		return
 	}
 
@@ -1279,44 +1469,29 @@ func startExtensionServices() error {
 
 	for _, entry := range config.Plugins {
 		if entry.ComposeFilePath != "" && entry.Enabled == true {
+			started := runPluginStartWithNetworkPrepared(entry, func() bool {
+				if PlusEnabled() && entry.Plus == true {
+					if !updateExtension(entry.ComposeFilePath) {
+						fmt.Println("Could not update Extension at " + entry.ComposeFilePath)
+						return false
+					}
 
-			if PlusEnabled() && entry.Plus == true {
-				//only plus extensions update on start for now
-				if !updateExtension(entry.ComposeFilePath) {
-					fmt.Println("Could not update Extension at " + entry.ComposeFilePath)
-					failed = append(failed, entry.Name)
-					continue
-				}
-
-				//if it is pfw we restart for fw rules to refresh after api
-				if entry.Name == "PFW" {
-					if !restartExtension(entry.ComposeFilePath) {
-						//try a start
-						if !startExtension(entry.ComposeFilePath) {
-							fmt.Println("Could not start Extension at " + entry.ComposeFilePath)
-							failed = append(failed, entry.Name)
-							continue
+					if entry.Name == "PFW" {
+						if !restartExtension(entry.ComposeFilePath) {
+							return startExtension(entry.ComposeFilePath)
 						}
-					}
-				} else {
-					if !startExtension(entry.ComposeFilePath) {
-						fmt.Println("Could not start Extension at " + entry.ComposeFilePath)
-						failed = append(failed, entry.Name)
-						continue
+						return true
 					}
 				}
-
-			} else {
-				if !startExtension(entry.ComposeFilePath) {
-					fmt.Println("Could not start Extension at " + entry.ComposeFilePath)
-					failed = append(failed, entry.Name)
-					continue
-				}
+				return startExtension(entry.ComposeFilePath)
+			})
+			if !started {
+				fmt.Println("Could not start Extension at " + entry.ComposeFilePath)
+				failed = append(failed, entry.Name)
+				continue
 			}
 
-			// Apply network capabilities after plugin is started
 			applyPluginNetworkCapabilitiesRetry(entry)
-
 		}
 	}
 

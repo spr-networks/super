@@ -1,0 +1,75 @@
+From: SPR Networks <support@supernetworks.org>
+Subject: [PATCH] krun: add SPR UDS-vsock mapping and disable passt ingress
+
+SPR plugins may need virtio-net, but their host API must not be exposed on an
+IP socket. Add opt-in krun.vsock_path and krun.vsock_port annotations which
+ask libkrun to listen on a host Unix socket and deliver connections to a guest
+vsock listener. The socket is host-initiated (listen=true).
+
+The generic crun krun handler also starts passt with all TCP and UDP
+host-to-guest forwarding enabled. The dedicated SPR runtime needs only
+guest-initiated networking, so disable both forwarding directions.
+---
+ src/libcrun/handlers/krun.c | 29 ++++++++++++++++++++++++++---
+ 1 file changed, 26 insertions(+), 3 deletions(-)
+
+diff --git a/src/libcrun/handlers/krun.c b/src/libcrun/handlers/krun.c
+index c9990ff..f28bce2 100644
+--- a/src/libcrun/handlers/krun.c
++++ b/src/libcrun/handlers/krun.c
+@@ -256,7 +256,9 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+   runtime_spec_schema_config_schema *def = container->container_def;
+   int32_t (*krun_set_vm_config) (uint32_t ctx_id, uint8_t num_vcpus, uint32_t ram_mib);
+   int32_t (*krun_add_net_unixstream) (uint32_t ctx_id, const char *c_path, int fd, uint8_t *const c_mac, uint32_t features, uint32_t flags);
+-  int cpus, ram_mib, gpu_flags, nested_virt, ret;
++  int32_t (*krun_add_vsock_port2) (uint32_t ctx_id, uint32_t port, const char *c_filepath, bool listen);
++  const char *vsock_path;
++  int cpus, ram_mib, gpu_flags, nested_virt, vsock_port, ret;
+   cpu_set_t set;
+ 
+   cpus = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.cpus", "cpus");
+@@ -334,6 +336,27 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+       if (UNLIKELY (ret < 0))
+         return crun_make_error (err, -ret, "could not set krun net configuration");
+     }
++
++  vsock_path = find_annotation (container, "krun.vsock_path");
++  vsock_port = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.vsock_port", "vsock_port");
++  if (vsock_path != NULL || vsock_port >= 0)
++    {
++      if (vsock_path == NULL || vsock_path[0] != '/')
++        return crun_make_error (err, EINVAL, "krun.vsock_path must be an absolute path");
++      if (vsock_port <= 0)
++        return crun_make_error (err, EINVAL, "krun.vsock_port must be a positive integer");
++
++      if (unlink (vsock_path) < 0 && errno != ENOENT)
++        return crun_make_error (err, errno, "remove stale krun vsock UNIX socket `%s`", vsock_path);
++
++      krun_add_vsock_port2 = dlsym (handle, "krun_add_vsock_port2");
++      if (krun_add_vsock_port2 == NULL)
++        return crun_make_error (err, 0, "could not find symbol `krun_add_vsock_port2` in the krun library");
++
++      ret = krun_add_vsock_port2 (ctx_id, (uint32_t) vsock_port, vsock_path, true);
++      if (UNLIKELY (ret < 0))
++        return crun_make_error (err, -ret, "could not configure krun vsock UNIX socket `%s`", vsock_path);
++    }
+ 
+   if (kconf->config_tree != NULL)
+     {
+@@ -591,12 +614,12 @@ libkrun_start_passt (void *cookie, libcrun_container_t *container)
+   argv_idx = 0;
+   passt_argv[argv_idx++] = (char *) "passt";
+   passt_argv[argv_idx++] = (char *) "-t";
+-  passt_argv[argv_idx++] = (char *) "all";
++  passt_argv[argv_idx++] = (char *) "none";
+ 
+   if (! kconf->has_awsnitro)
+     {
+       passt_argv[argv_idx++] = (char *) "-u";
+-      passt_argv[argv_idx++] = (char *) "all";
++      passt_argv[argv_idx++] = (char *) "none";
+       passt_argv[argv_idx++] = (char *) "--no-dhcp-dns";
+     }
+ 
+-- 
+2.47.3

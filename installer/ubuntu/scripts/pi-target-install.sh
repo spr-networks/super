@@ -61,6 +61,18 @@ dpkg --configure -a
 apt -y upgrade --no-download
 apt -y install --no-download --no-install-recommends nftables wireless-regdb ethtool nano iw cloud-guest-utils fdisk tmux conntrack jq inotify-tools tcpdump iperf3 systemd-timesyncd
 systemctl enable systemd-timesyncd 2>/dev/null || true
+
+# Install the same versioned host runtime package published with this image.
+mapfile -t KRUN_DEBS < <(find /var/cache/apt/archives -maxdepth 1 -name 'spr-krun-runtime_*_arm64.deb' -print)
+if [ "${#KRUN_DEBS[@]}" -ne 1 ]; then
+  echo "FATAL: expected one SPR krun runtime package; found ${#KRUN_DEBS[@]}" >&2
+  exit 1
+fi
+KRUN_DEB=${KRUN_DEBS[0]}
+dpkg --unpack "$KRUN_DEB" || exit 1
+apt-get -y --fix-broken --no-download --no-install-recommends install || exit 1
+rm -f "$KRUN_DEB"
+
 # install docker and buildx
 apt -y install --no-download --no-install-recommends r8125-dkms linux-headers-raspi
 
@@ -249,6 +261,8 @@ cat > /etc/docker/daemon.json << EOF
     }
 }
 EOF
+
+spr-krun-runtime-configure --no-reload || exit 1
 
 
 # remove script

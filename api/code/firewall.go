@@ -2608,8 +2608,26 @@ func getWireguardClient() http.Client {
 var RecentDHCPWG = map[string]int64{}
 var RecentDHCPIface = map[string]string{}
 
+var PluginDeviceLinks = map[string]string{}
+
+func isAuthorizedPluginDeviceLink(
+	mac string,
+	iface string,
+	recentDHCPIfaces map[string]string,
+	pluginDeviceLinks map[string]string,
+) bool {
+	if pluginDeviceLinks[mac] != iface || recentDHCPIfaces[mac] != iface {
+		return false
+	}
+	_, err := net.InterfaceByName(iface)
+	return err == nil
+}
+
 func notifyFirewallDHCP(device DeviceEntry, iface string) {
 	addLanInterface(iface)
+
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
 
 	if device.MAC != "" {
 		RecentDHCPIface[device.MAC] = iface
@@ -2621,9 +2639,6 @@ func notifyFirewallDHCP(device DeviceEntry, iface string) {
 
 	// for wireguard clients only below
 	cur_time := time.Now().Unix()
-
-	FWmtx.Lock()
-	defer FWmtx.Unlock()
 
 	RecentDHCPWG[device.WGPubKey] = cur_time
 }
@@ -3296,11 +3311,21 @@ func dynamicRouteLoop() {
 			//for plugins to have network state information
 			newIfaceMap := map[string]string{}
 
+			recentDHCPIfaces := map[string]string{}
+			pluginDeviceLinks := map[string]string{}
 			FWmtx.Lock()
-
+			for mac, iface := range RecentDHCPIface {
+				recentDHCPIfaces[mac] = iface
+			}
+			for mac, iface := range PluginDeviceLinks {
+				pluginDeviceLinks[mac] = iface
+				if recentDHCPIfaces[mac] == iface {
+					suggested_device[mac] = iface
+				}
+			}
 			//if a wifi device is active, place that as priority
 			for mac, iface := range wifi_peers {
-				dhcp_iface, exists := RecentDHCPIface[mac]
+				dhcp_iface, exists := recentDHCPIfaces[mac]
 				if !exists {
 					suggested_device[mac] = iface
 				} else {
@@ -3353,8 +3378,14 @@ func dynamicRouteLoop() {
 					// Verify the interface is a valid downlink
 					isValidDownlink := slices.Contains(downlinks, baseIface)
 
-					// If it's not a downlink, was not wg0, or a wlan
-					if !isValidDownlink {
+					isAuthorizedPluginLink := isAuthorizedPluginDeviceLink(
+						ident,
+						new_iface,
+						recentDHCPIfaces,
+						pluginDeviceLinks,
+					)
+
+					if !isValidDownlink && !isAuthorizedPluginLink {
 						// Interface is not valid, treat as if not found
 						exists = false
 						new_iface = ""

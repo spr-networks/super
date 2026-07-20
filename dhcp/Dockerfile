@@ -32,7 +32,7 @@ RUN set -eux; \
 ENV PATH="/usr/local/go/bin:${PATH}" GOTOOLCHAIN=local
 WORKDIR /code
 # Build CoreDHCP
-ARG COREDHCP_COMMIT=7fc806d5cb53eb17df6cae022c3bde9fe8f5946e
+ARG COREDHCP_COMMIT=7584b826d5852a72892b9227af4064cc68b1b59d
 RUN git init coredhcp \
  && git -C coredhcp remote add origin https://github.com/spr-networks/coredhcp \
  && git -C coredhcp fetch --depth 1 origin "${COREDHCP_COMMIT}" \

@@ -32,6 +32,34 @@ jobs:
       - name: Set up Qemu emulation
         run: ./installer/qemu-setup-linux.sh
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build SPR krun runtime package
+        run: |
+          docker buildx build \
+            --platform linux/arm64 \
+            --build-arg SOURCE_DATE_EPOCH=0 \
+            --output type=local,dest=dist \
+            host-packages/spr-krun-runtime
+
+      - name: Verify SPR krun runtime package
+        run: |
+          mapfile -t debs < <(find dist -maxdepth 1 -name 'spr-krun-runtime_*_arm64.deb' -print)
+          test "${#debs[@]}" -eq 1
+          deb=${debs[0]}
+          dpkg-deb --info "$deb"
+          (cd "$(dirname "$deb")" && sha256sum --check "$(basename "$deb").sha256")
+          echo "KRUN_DEB=$deb" >> "$GITHUB_ENV"
+
+      - name: Test SPR krun runtime package
+        run: ./host-packages/spr-krun-runtime/test-package.sh "$KRUN_DEB"
+
+      - name: Attest SPR krun runtime package
+        uses: actions/attest-build-provenance@v4.1.0
+        with:
+          subject-path: "${{ env.KRUN_DEB }}"
+
       # Build Ubuntu image
       #- name: Download Ubuntu base image
       #  working-directory: ./installer/ubuntu
@@ -77,5 +105,7 @@ jobs:
         run: |
           gh release create "$RELEASE_VERSION_TAG" \
             --title "Release $RELEASE_VERSION_TAG" \
-            ./installer/raspbian/data/spr-debian.img.xz
+            ./installer/raspbian/data/spr-debian.img.xz \
+            ./dist/spr-krun-runtime_*_arm64.deb \
+            ./dist/spr-krun-runtime_*_arm64.deb.sha256
 #            ./installer/ubuntu/data/spr-ubuntu.img.xz \
