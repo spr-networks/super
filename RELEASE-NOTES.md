@@ -1,6 +1,13 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.1.15
+**Features**
+- KVM support for plugins
+- Support for rustAP beta users as an alternative to hostapd
+- Reintroduce Webauthn support
+- Add iOS biometrics support
+
 ## v1.1.14
 **Fixes**
 - Fix route spam 
