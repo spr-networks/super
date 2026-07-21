@@ -24,13 +24,13 @@ for image in debian:bullseye debian:trixie; do
             dpkg --unpack "/packages/$1"
             apt-get install -y --fix-broken --no-download --no-install-recommends
 
-            /usr/libexec/spr-krun-runtime/crun --version |
+            /usr/libexec/spr-krun-runtime/krun --version |
                 grep -F "+LIBKRUN"
             jq -e \
                 ".iptables == false and
                  .runtimes.runsc.path == \"/usr/local/bin/runsc\" and
                  .runtimes.runsc.runtimeArgs[1] == \"--platform=kvm\" and
-                 .runtimes[\"spr-krun\"].path == \"/usr/libexec/spr-krun-runtime/crun\" and
+                 .runtimes[\"spr-krun\"].path == \"/usr/libexec/spr-krun-runtime/krun\" and
                  (.runtimes | keys == [\"runsc\", \"spr-krun\"])" \
                 /etc/docker/daemon.json
 

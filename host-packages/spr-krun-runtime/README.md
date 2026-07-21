@@ -7,11 +7,14 @@ The package contains:
 
 - libkrun 1.19.4 with reliable external DHCP behavior
 - libkrunfw 5.5.0 (Linux 6.12.91)
-- crun 1.28 with direct TAP and Unix-socket/virtio-vsock support
+- crun 1.28 with private plugin-network TAP bridging and
+  Unix-socket/virtio-vsock support
 - `spr-krun-runtime-configure`, which merges the `spr-krun` runtime into
   Docker's existing `daemon.json` and reloads Docker without restarting it
 
 Plugin compose files select it with `runtime: spr-krun`.
+The packaged OCI runtime is named `krun`, which makes crun select its libkrun
+handler before processing Docker's OCI command.
 
 Build instructions:
 
@@ -27,4 +30,3 @@ Install or upgrade an existing system:
 ```sh
 sudo apt-get install ./spr-krun-runtime_*_arm64.deb
 ```
-

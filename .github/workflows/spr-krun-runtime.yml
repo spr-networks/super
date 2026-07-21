@@ -1,0 +1,61 @@
+name: SPR krun Debian package
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - "host-packages/spr-krun-runtime/**"
+      - ".github/workflows/spr-krun-runtime.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  build:
+    runs-on: self-hosted
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build arm64 Debian package
+        run: |
+          docker buildx build \
+            --platform linux/arm64 \
+            --build-arg SOURCE_DATE_EPOCH=0 \
+            --output type=local,dest=dist \
+            host-packages/spr-krun-runtime
+
+      - name: Inspect package
+        run: |
+          mapfile -t debs < <(find dist -maxdepth 1 -name 'spr-krun-runtime_*_arm64.deb' -print)
+          test "${#debs[@]}" -eq 1
+          deb=${debs[0]}
+          dpkg-deb --info "$deb"
+          (cd "$(dirname "$deb")" && sha256sum --check "$(basename "$deb").sha256")
+          echo "KRUN_DEB=$deb" >> "$GITHUB_ENV"
+
+      - name: Test package on supported Debian releases
+        run: ./host-packages/spr-krun-runtime/test-package.sh "$KRUN_DEB"
+
+      - name: Attest package
+        uses: actions/attest-build-provenance@v4.1.0
+        with:
+          subject-path: "${{ env.KRUN_DEB }}"
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: spr-krun-runtime-arm64
+          path: |
+            dist/spr-krun-runtime_*_arm64.deb
+            dist/spr-krun-runtime_*_arm64.deb.sha256
+          if-no-files-found: error

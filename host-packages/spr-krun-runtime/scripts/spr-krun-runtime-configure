@@ -4,7 +4,8 @@
 set -eu
 
 DAEMON_JSON=${SPR_DOCKER_DAEMON_JSON:-/etc/docker/daemon.json}
-RUNTIME_PATH=/usr/libexec/spr-krun-runtime/crun
+RUNTIME_PATH=/usr/libexec/spr-krun-runtime/krun
+LEGACY_RUNTIME_PATH=/usr/libexec/spr-krun-runtime/crun
 MODE=install
 RELOAD=true
 
@@ -64,8 +65,9 @@ else
     if [ "$input" = /dev/null ]; then
         exit 0
     fi
-    jq --arg path "$RUNTIME_PATH" '
-        if .runtimes["spr-krun"].path == $path then
+    jq --arg path "$RUNTIME_PATH" --arg legacy "$LEGACY_RUNTIME_PATH" '
+        if .runtimes["spr-krun"].path == $path or
+           .runtimes["spr-krun"].path == $legacy then
             del(.runtimes["spr-krun"])
         else . end
     ' "$input" > "$tmp"

@@ -1,0 +1,258 @@
+From: SPR Networks <support@supernetworks.org>
+Subject: [PATCH] krun: bridge guest TAP into private plugin network
+
+Require an OCI network namespace for TAP-backed guests. Configure the guest
+TAP and bridge during OCI start, after Docker has attached the private plugin
+network, and before the guest VMM is released to run.
+---
+diff --git a/src/libcrun/container.c b/src/libcrun/container.c
+index 5fd045f4..7a1e5345 100644
+--- a/src/libcrun/container.c
++++ b/src/libcrun/container.c
+@@ -3338,6 +3338,7 @@ int
+ libcrun_container_start (libcrun_context_t *context, const char *id, libcrun_error_t *err)
+ {
+   cleanup_container libcrun_container_t *container = NULL;
++  cleanup_custom_handler_instance struct custom_handler_instance_s *custom_handler = NULL;
+   const char *state_root = context->state_root;
+   runtime_spec_schema_config_schema *def;
+   cleanup_container_status libcrun_container_status_t status = {};
+@@ -3359,6 +3360,17 @@ libcrun_container_start (libcrun_context_t *context, const char *id, libcrun_err
+   if (UNLIKELY (ret < 0))
+     return ret;
+
++  ret = libcrun_configure_handler (context->handler_manager, context, container, &custom_handler, err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++
++  if (custom_handler && custom_handler->vtable->start_container)
++    {
++      ret = custom_handler->vtable->start_container (custom_handler->cookie, context, container, status.pid, err);
++      if (UNLIKELY (ret < 0))
++        return ret;
++    }
++
+   if (context->notify_socket)
+     {
+       ret = get_notify_fd (context, container, &fd, err);
+diff --git a/src/libcrun/custom-handler.h b/src/libcrun/custom-handler.h
+index 7536191f..c4d5b4c8 100644
+--- a/src/libcrun/custom-handler.h
++++ b/src/libcrun/custom-handler.h
+@@ -43,6 +43,10 @@ struct custom_handler_s
+                               libcrun_context_t *context, libcrun_container_t *container,
+                               const char *rootfs, libcrun_error_t *err);
+
++  int (*start_container) (void *cookie, libcrun_context_t *context,
++                          libcrun_container_t *container, pid_t pid,
++                          libcrun_error_t *err);
++
+   int (*can_handle_container) (libcrun_container_t *container, libcrun_error_t *err);
+
+   int (*modify_oci_configuration) (void *cookie, libcrun_context_t *context,
+diff --git a/src/libcrun/handlers/krun.c b/src/libcrun/handlers/krun.c
+index b0d02e74..bbd65c07 100644
+--- a/src/libcrun/handlers/krun.c
++++ b/src/libcrun/handlers/krun.c
+@@ -732,20 +732,63 @@ libkrun_run_ip (char **argv, const char *operation, libcrun_error_t *err)
+   return 0;
+ }
+
+-/*
+- * Create the host TAP used as the guest's device-facing SPR interface. The
+- * dedicated runtime uses the host network namespace; CoreDHCP receives guest
+- * broadcasts directly on this TAP and assigns the guest's routed tiny subnet.
+- */
++static bool
++libkrun_has_network_namespace (runtime_spec_schema_config_schema *def)
++{
++  size_t i;
++
++  if (def->linux == NULL)
++    return false;
++
++  for (i = 0; i < def->linux->namespaces_len; i++)
++    if (strcmp (def->linux->namespaces[i]->type, "network") == 0)
++      return true;
++
++  return false;
++}
++
+ static int
+-libkrun_setup_tap (void *cookie, libcrun_container_t *container, libcrun_error_t *err)
++libkrun_prepare_tap_config (void *cookie, libcrun_container_t *container, libcrun_error_t *err)
+ {
+   struct krun_config *kconf = (struct krun_config *) cookie;
+-  const char *tap_name;
++  runtime_spec_schema_config_schema *def = container->container_def;
++  const char *tap_name, *uplink_name;
++
++  tap_name = find_annotation (container, "krun.tap_name");
++  if (tap_name == NULL)
++    return 0;
++  uplink_name = find_annotation (container, "krun.net_uplink");
++
++  if (! libkrun_has_network_namespace (def))
++    return crun_make_error (err, EINVAL, "krun TAP networking requires a private OCI network namespace");
++  if (! libkrun_valid_ifname (tap_name) || ! libkrun_valid_ifname (uplink_name))
++    return crun_make_error (err, EINVAL, "invalid krun TAP or uplink interface name");
++  if (strcmp (tap_name, uplink_name) == 0 || strcmp (tap_name, "lo") == 0 || strcmp (tap_name, "krunbr0") == 0)
++    return crun_make_error (err, EINVAL, "krun TAP, uplink, and bridge interface names must be distinct");
++
++  kconf->use_tap = true;
++  return 0;
++}
++
++static int
++libkrun_setup_tap (libcrun_container_t *container, libcrun_error_t *err)
++{
++  const char *tap_name, *uplink_name;
+   char *delete_tap[] = { (char *) "ip", (char *) "tuntap", (char *) "del", (char *) "dev", NULL, (char *) "mode", (char *) "tap", NULL };
+   char *add_tap[] = { (char *) "ip", (char *) "tuntap", (char *) "add", (char *) "dev", NULL, (char *) "mode", (char *) "tap", NULL };
+   char *tag_tap[] = { (char *) "ip", (char *) "link", (char *) "set", (char *) "dev", NULL, (char *) "alias", (char *) "spr-krun-runtime", NULL };
++  char *add_bridge[] = { (char *) "ip", (char *) "link", (char *) "add", (char *) "name", (char *) "krunbr0", (char *) "type", (char *) "bridge", NULL };
++  char *delete_bridge[] = { (char *) "ip", (char *) "link", (char *) "del", (char *) "dev", (char *) "krunbr0", (char *) "type", (char *) "bridge", NULL };
++  char *tag_bridge[] = { (char *) "ip", (char *) "link", (char *) "set", (char *) "dev", (char *) "krunbr0", (char *) "alias", (char *) "spr-krun-runtime", NULL };
++  char *attach_tap[] = { (char *) "ip", (char *) "link", (char *) "set", (char *) "dev", NULL, (char *) "master", (char *) "krunbr0", NULL };
++  char *attach_uplink[] = { (char *) "ip", (char *) "link", (char *) "set", (char *) "dev", NULL, (char *) "master", (char *) "krunbr0", NULL };
++  char *flush_addr[] = { (char *) "ip", (char *) "addr", (char *) "flush", (char *) "dev", NULL, NULL };
++  char *flush_addr6[] = { (char *) "ip", (char *) "-6", (char *) "addr", (char *) "flush", (char *) "dev", NULL, NULL };
++  char *flush_route[] = { (char *) "ip", (char *) "route", (char *) "flush", (char *) "dev", NULL, NULL };
++  char *flush_route6[] = { (char *) "ip", (char *) "-6", (char *) "route", (char *) "flush", (char *) "dev", NULL, NULL };
+   char *up_tap[] = { (char *) "ip", (char *) "link", (char *) "set", (char *) "dev", NULL, (char *) "up", NULL };
++  char *up_uplink[] = { (char *) "ip", (char *) "link", (char *) "set", (char *) "dev", NULL, (char *) "up", NULL };
++  char *up_bridge[] = { (char *) "ip", (char *) "link", (char *) "set", (char *) "dev", (char *) "krunbr0", (char *) "up", NULL };
+   char ifalias_path[sizeof ("/sys/class/net//ifalias") + IFNAMSIZ];
+   char ifalias[64];
+   ssize_t ifalias_len;
+@@ -755,16 +798,29 @@ libkrun_setup_tap (void *cookie, libcrun_container_t *container, libcrun_error_t
+   tap_name = find_annotation (container, "krun.tap_name");
+   if (tap_name == NULL)
+     return 0;
++  uplink_name = find_annotation (container, "krun.net_uplink");
+
+-  if (! libkrun_valid_ifname (tap_name))
+-    return crun_make_error (err, EINVAL, "invalid krun TAP interface name");
+-
+-  kconf->use_tap = true;
++  if (if_nametoindex (uplink_name) == 0)
++    return crun_make_error (err, ENODEV, "krun network uplink `%s` does not exist", uplink_name);
+
+   delete_tap[4] = (char *) tap_name;
+   add_tap[4] = (char *) tap_name;
+   tag_tap[4] = (char *) tap_name;
++  attach_tap[4] = (char *) tap_name;
++  attach_uplink[4] = (char *) uplink_name;
++  flush_addr[4] = (char *) uplink_name;
++  flush_addr6[5] = (char *) uplink_name;
++  flush_route[4] = (char *) uplink_name;
++  flush_route6[5] = (char *) uplink_name;
+   up_tap[4] = (char *) tap_name;
++  up_uplink[4] = (char *) uplink_name;
++
++  if (if_nametoindex ("krunbr0") != 0)
++    {
++      ret = libkrun_run_ip (delete_bridge, "remove stale krun bridge", err);
++      if (UNLIKELY (ret < 0))
++        return ret;
++    }
+
+   /* A killed runtime can leave its persistent TAP behind. Reclaim only an
+    * interface carrying our ownership marker; never delete an arbitrary host
+@@ -802,7 +858,76 @@ libkrun_setup_tap (void *cookie, libcrun_container_t *container, libcrun_error_t
+   if (UNLIKELY (ret < 0))
+     return ret;
+
+-  return libkrun_run_ip (up_tap, "bring up krun TAP", err);
++  ret = libkrun_run_ip (add_bridge, "create krun bridge", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  ret = libkrun_run_ip (tag_bridge, "mark krun bridge ownership", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  ret = libkrun_run_ip (attach_tap, "attach krun TAP to bridge", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  ret = libkrun_run_ip (attach_uplink, "attach plugin uplink to bridge", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  ret = libkrun_run_ip (flush_addr, "remove IPv4 from plugin uplink", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  ret = libkrun_run_ip (flush_addr6, "remove IPv6 from plugin uplink", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  ret = libkrun_run_ip (flush_route, "remove IPv4 routes from plugin uplink", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  ret = libkrun_run_ip (flush_route6, "remove IPv6 routes from plugin uplink", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  ret = libkrun_run_ip (up_tap, "bring up krun TAP", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  ret = libkrun_run_ip (up_uplink, "bring up plugin uplink", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  return libkrun_run_ip (up_bridge, "bring up krun bridge", err);
++}
++
++static int
++libkrun_start_container (void *cookie arg_unused, libcrun_context_t *context arg_unused,
++                         libcrun_container_t *container, pid_t pid, libcrun_error_t *err)
++{
++  cleanup_close int current_netns = -1;
++  cleanup_close int target_netns = -1;
++  char target_netns_path[64];
++  int ret;
++
++  if (find_annotation (container, "krun.tap_name") == NULL)
++    return 0;
++
++  current_netns = open ("/proc/self/ns/net", O_RDONLY | O_CLOEXEC);
++  if (UNLIKELY (current_netns < 0))
++    return crun_make_error (err, errno, "open current network namespace");
++
++  ret = snprintf (target_netns_path, sizeof (target_netns_path), "/proc/%d/ns/net", pid);
++  if (UNLIKELY (ret < 0 || (size_t) ret >= sizeof (target_netns_path)))
++    return crun_make_error (err, EINVAL, "construct krun network namespace path");
++
++  target_netns = open (target_netns_path, O_RDONLY | O_CLOEXEC);
++  if (UNLIKELY (target_netns < 0))
++    return crun_make_error (err, errno, "open krun network namespace");
++
++  ret = setns (target_netns, CLONE_NEWNET);
++  if (UNLIKELY (ret < 0))
++    return crun_make_error (err, errno, "enter krun network namespace");
++
++  ret = libkrun_setup_tap (container, err);
++  if (UNLIKELY (setns (current_netns, CLONE_NEWNET) < 0))
++    {
++      if (ret < 0)
++        crun_error_release (err);
++      return crun_make_error (err, errno, "restore runtime network namespace");
++    }
++
++  return ret;
+ }
+
+ /* libkrun_create_kvm_device: explicitly adds kvm device.  */
+@@ -870,7 +995,7 @@ libkrun_configure_container (void *cookie, enum handler_configure_phase phase,
+   if (phase != HANDLER_CONFIGURE_AFTER_MOUNTS)
+     return 0;
+
+-  ret = libkrun_setup_tap (cookie, container, err);
++  ret = libkrun_prepare_tap_config (cookie, container, err);
+   if (UNLIKELY (ret < 0))
+     return ret;
+
+@@ -1186,6 +1311,7 @@ struct custom_handler_s handler_libkrun = {
+   .unload = libkrun_unload,
+   .run_func = libkrun_exec,
+   .configure_container = libkrun_configure_container,
++  .start_container = libkrun_start_container,
+   .modify_oci_configuration = libkrun_modify_oci_configuration,
+   .close_fds = libkrun_close_fds,
+ };
+--
+2.47.3

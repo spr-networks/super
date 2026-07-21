@@ -77,6 +77,10 @@ git -C "$CRUN_DIR" apply --check \
     "$SCRIPT_DIR/patches/crun/0002-direct-spr-tap.patch"
 git -C "$CRUN_DIR" apply \
     "$SCRIPT_DIR/patches/crun/0002-direct-spr-tap.patch"
+git -C "$CRUN_DIR" apply --check \
+    "$SCRIPT_DIR/patches/crun/0003-private-plugin-network.patch"
+git -C "$CRUN_DIR" apply \
+    "$SCRIPT_DIR/patches/crun/0003-private-plugin-network.patch"
 
 (
     cd "$CRUN_DIR"
@@ -95,7 +99,7 @@ install -d -m 0755 \
     "$PACKAGE_ROOT/usr/share/doc/spr-krun-runtime"
 
 install -m 0755 "$CRUN_DIR/crun" \
-    "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/crun"
+    "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/krun"
 cp -a "$SDK_DIR/usr/local/lib64"/libkrun.so* "$PRIVATE_LIBDIR/"
 cp -a "$BUILD_DIR/libkrunfw/lib64"/libkrunfw.so* "$PRIVATE_LIBDIR/"
 
@@ -103,15 +107,17 @@ nm -D --defined-only "$PRIVATE_LIBDIR/libkrun.so.${LIBKRUN_VERSION}" |
     grep ' krun_add_net_tap$' >/dev/null
 nm -D --defined-only "$PRIVATE_LIBDIR/libkrun.so.${LIBKRUN_VERSION}" |
     grep ' krun_add_vsock_port2$' >/dev/null
-strings "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/crun" |
+strings "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/krun" |
     grep 'krun.tap_name' >/dev/null
-strings "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/crun" |
+strings "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/krun" |
+    grep 'krun.net_uplink' >/dev/null
+strings "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/krun" |
     grep 'krun.vsock_path' >/dev/null
 
-strip --strip-unneeded "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/crun"
+strip --strip-unneeded "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/krun"
 strip --strip-unneeded "$PRIVATE_LIBDIR/libkrun.so.${LIBKRUN_VERSION}"
 patchelf --set-rpath '$ORIGIN/../../lib/spr-krun-runtime' \
-    "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/crun"
+    "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/krun"
 patchelf --set-rpath '$ORIGIN' \
     "$PRIVATE_LIBDIR/libkrun.so.${LIBKRUN_VERSION}"
 
