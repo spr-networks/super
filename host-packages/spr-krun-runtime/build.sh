@@ -43,6 +43,25 @@ download \
     "https://static.rust-lang.org/rustup/archive/${RUSTUP_VERSION}/aarch64-unknown-linux-gnu/rustup-init" \
     rustup-init \
     "$RUSTUP_SHA256"
+download \
+    "https://raw.githubusercontent.com/spr-networks/spr-debian-kernel/${SPR_KERNEL_CONFIG_COMMIT}/spr.config" \
+    spr.config \
+    "$SPR_KERNEL_CONFIG_SHA256"
+
+awk '
+    /^# .*BPF/ { network = 1 }
+    /^# .*Firmware loader/ { network = 0 }
+    network && /^CONFIG_/ {
+        sub(/=m$/, "=y")
+        print
+    }
+    /^# .*Misc/ { misc = 1; next }
+    /^# .*Disable unused/ { misc = 0 }
+    misc && /^CONFIG_(DUMMY|NET_UDP_TUNNEL|WIREGUARD)=/ {
+        sub(/=m$/, "=y")
+        print
+    }
+' spr.config > spr-network.config
 
 tar -xzf libkrun.tar.gz
 tar -xzf libkrunfw.tar.gz
@@ -74,12 +93,19 @@ make -C "$LIBKRUNFW_DIR/$LIBKRUNFW_KERNEL_VERSION" olddefconfig
 (
     cd "$LIBKRUNFW_DIR/$LIBKRUNFW_KERNEL_VERSION"
     scripts/kconfig/merge_config.sh -m .config \
+        "$BUILD_DIR/spr-network.config" \
         "$SCRIPT_DIR/kernel-net.config"
     make olddefconfig
     for option in \
         CONFIG_IP_ADVANCED_ROUTER \
         CONFIG_IP_MULTIPLE_TABLES \
         CONFIG_IPV6_MULTIPLE_TABLES \
+        CONFIG_BRIDGE_NETFILTER \
+        CONFIG_IP_SET \
+        CONFIG_NET_SCHED \
+        CONFIG_NFT_COMPAT \
+        CONFIG_NFT_MASQ \
+        CONFIG_NFT_NAT \
         CONFIG_NETFILTER_XTABLES \
         CONFIG_NETFILTER_XT_TARGET_MARK \
         CONFIG_NETFILTER_XT_TARGET_MASQUERADE \
