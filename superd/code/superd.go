@@ -856,6 +856,12 @@ type pluginRuntimeSelection struct {
 	AvailableRuntimes []string
 }
 
+type pluginRuntimeHostStatus struct {
+	Runtime string
+	Ready   bool
+	Reason  string `json:",omitempty"`
+}
+
 func normalizePluginRuntime(runtime string) (string, error) {
 	runtime = strings.ToLower(strings.TrimSpace(runtime))
 	if runtime == "" {
@@ -867,6 +873,42 @@ func normalizePluginRuntime(runtime string) (string, error) {
 	default:
 		return "", fmt.Errorf("unsupported plugin runtime %q", runtime)
 	}
+}
+
+func getPluginRuntimeHostStatus(runtime string) (pluginRuntimeHostStatus, error) {
+	runtime, err := normalizePluginRuntime(runtime)
+	if err != nil {
+		return pluginRuntimeHostStatus{}, err
+	}
+
+	status := pluginRuntimeHostStatus{Runtime: runtime, Ready: true}
+	if runtime != pluginRuntimeKVM {
+		return status, nil
+	}
+
+	var dockerInfo struct {
+		Runtimes map[string]json.RawMessage
+	}
+	if err := dockerAPIGetJSON("/info", &dockerInfo); err != nil {
+		status.Ready = false
+		status.Reason = "Could not verify whether the spr-krun Docker runtime is installed: " + err.Error()
+		return status, nil
+	}
+	if _, ok := dockerInfo.Runtimes["spr-krun"]; !ok {
+		status.Ready = false
+		status.Reason = "The spr-krun runtime is not registered with Docker on this system."
+	}
+	return status, nil
+}
+
+func pluginRuntimeStatus(w http.ResponseWriter, r *http.Request) {
+	status, err := getPluginRuntimeHostStatus(r.URL.Query().Get("runtime"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(status)
 }
 
 func pluginRuntimeComposeName(runtime string) (string, error) {
@@ -1656,6 +1698,7 @@ func main() {
 	unix_plugin_router.HandleFunc("/user_plugin_exists", userPluginExists).Methods("GET")
 	unix_plugin_router.HandleFunc("/get_plugin_config", getUserPluginConfig).Methods("PUT")
 	unix_plugin_router.HandleFunc("/switch_plugin_runtime", switchPluginRuntime).Methods("PUT")
+	unix_plugin_router.HandleFunc("/plugin_runtime_status", pluginRuntimeStatus).Methods("GET")
 
 	unix_plugin_router.HandleFunc("/ghcr_auth", ghcr_auth).Methods("PUT")
 	unix_plugin_router.HandleFunc("/update_git", update_git).Methods("PUT")

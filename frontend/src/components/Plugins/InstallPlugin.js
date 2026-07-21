@@ -1,12 +1,15 @@
-import React, { useContext, useEffect, useState, useRef } from 'react'
-import PropTypes from 'prop-types'
+import React, { useContext, useEffect, useState } from 'react'
 
 import {
+  AlertDialog,
+  AlertDialogBackdrop,
+  AlertDialogBody,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
   Button,
   ButtonText,
   FormControl,
-  FormControlHelper,
-  FormControlHelperText,
   FormControlLabel,
   FormControlLabelText,
   ButtonSpinner,
@@ -18,17 +21,17 @@ import {
   LinkText,
   Text,
   VStack,
-  View,
   useColorMode
 } from '@gluestack-ui/themed'
 
 import { AlertContext } from 'AppContext'
-import { api, pluginAPI } from 'api'
+import { api } from 'api'
 
 const InstallPlugin = ({ ...props }) => {
   const context = useContext(AlertContext)
   const [url, setUrl] = useState('')
   const [isRunning, setIsRunning] = useState(false)
+  const [pendingPlugin, setPendingPlugin] = useState(null)
 
   //should be https://github.com/spr-networks/spr-mitmproxy.git
   const validUrl = (url) => {
@@ -52,38 +55,67 @@ const InstallPlugin = ({ ...props }) => {
     return true
   }
 
-  const installPlugin = (pluginUrl) => {
-    setIsRunning(true)
-    
-    api
-      .put('/plugin/install_user_url', pluginUrl)
-      .then((res) => {
-        context.success(`Plugin installing...`)
-        setIsRunning(false)
-        // Clear the URL on success
-        setUrl('')
-        // Clear any pending installation
-        sessionStorage.removeItem('pendingPluginInstall')
-      })
-      .catch((err) => {
-        setIsRunning(false)
-        if (err.response) {
-          err.response.text().then((data) => {
-            if (data.includes('Invalid JWT')) {
-              // Store the URL for retry after OTP validation
-              sessionStorage.setItem('pendingPluginInstall', JSON.stringify({
-                url: pluginUrl,
-                timestamp: Date.now()
-              }))
-              // The OTP modal will be shown by the error handler in Admin.js
-            } else {
-              context.error(`Check Plugin URL: ${data}`)
-            }
-          })
+  const handleInstallError = (err, pluginUrl) => {
+    setIsRunning(false)
+    if (err.response) {
+      err.response.text().then((data) => {
+        if (data.includes('Invalid JWT')) {
+          sessionStorage.setItem(
+            'pendingPluginInstall',
+            JSON.stringify({ url: pluginUrl, timestamp: Date.now() })
+          )
         } else {
-          context.error(`API Error`, err)
+          context.error(`Check Plugin URL: ${data}`)
         }
       })
+    } else {
+      context.error(`API Error`, err)
+    }
+  }
+
+  const completeInstall = (plugin) => {
+    setIsRunning(true)
+    api
+      .put('/plugin/complete_install', plugin)
+      .then(() => {
+        context.success('Plugin installed')
+        setIsRunning(false)
+        setUrl('')
+        sessionStorage.removeItem('pendingPluginInstall')
+      })
+      .catch((err) => handleInstallError(err, plugin.GitURL))
+  }
+
+  const installPlugin = (pluginUrl) => {
+    setIsRunning(true)
+    api
+      .put('/plugin/download_info', pluginUrl)
+      .then((plugin) => {
+        if (plugin.Runtime === 'kvm' && plugin.RuntimeReady === false) {
+          setIsRunning(false)
+          if (plugin.FallbackRuntime && plugin.FallbackComposeFilePath) {
+            setPendingPlugin(plugin)
+          } else {
+            context.error(
+              plugin.RuntimeUnavailableReason ||
+                'This plugin requires KVM, but KVM plugin support is not ready on this system.'
+            )
+          }
+          return
+        }
+        completeInstall(plugin)
+      })
+      .catch((err) => handleInstallError(err, pluginUrl))
+  }
+
+  const installWithoutKVM = () => {
+    const plugin = {
+      ...pendingPlugin,
+      Runtime: pendingPlugin.FallbackRuntime,
+      ComposeFilePath: pendingPlugin.FallbackComposeFilePath
+    }
+    setPendingPlugin(null)
+    completeInstall(plugin)
   }
 
   const handleSubmit = () => {
@@ -205,6 +237,42 @@ const InstallPlugin = ({ ...props }) => {
           </Button>
         </FormControl>
       </HStack>
+
+      <AlertDialog
+        isOpen={pendingPlugin !== null}
+        onClose={() => setPendingPlugin(null)}
+      >
+        <AlertDialogBackdrop />
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <Heading size="md">KVM plugin support is not ready</Heading>
+          </AlertDialogHeader>
+          <AlertDialogBody>
+            <Text size="sm">
+              {pendingPlugin?.RuntimeUnavailableReason ||
+                'The spr-krun Docker runtime is not available on this system.'}
+            </Text>
+            <Text size="sm" mt="$2">
+              Install this plugin with the standard Docker runtime instead?
+            </Text>
+          </AlertDialogBody>
+          <AlertDialogFooter>
+            <HStack space="md">
+              <Button
+                size="sm"
+                action="secondary"
+                variant="outline"
+                onPress={() => setPendingPlugin(null)}
+              >
+                <ButtonText>Cancel</ButtonText>
+              </Button>
+              <Button size="sm" action="primary" onPress={installWithoutKVM}>
+                <ButtonText>Install without KVM</ButtonText>
+              </Button>
+            </HStack>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </VStack>
   )
 }

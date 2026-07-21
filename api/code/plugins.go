@@ -78,6 +78,20 @@ type PluginConfig struct {
 	AvailableRuntimes   []string
 }
 
+type PluginInstallInfo struct {
+	PluginConfig
+	RuntimeReady             bool
+	RuntimeUnavailableReason string `json:",omitempty"`
+	FallbackRuntime          string `json:",omitempty"`
+	FallbackComposeFilePath  string `json:",omitempty"`
+}
+
+type pluginRuntimeHostStatus struct {
+	Runtime string
+	Ready   bool
+	Reason  string
+}
+
 func (p PluginConfig) MatchesData(q PluginConfig) bool {
 	//compare all but Enabled.
 	return p.Name == q.Name &&
@@ -110,6 +124,61 @@ func normalizePluginRuntime(runtime string) (string, error) {
 		return "", fmt.Errorf("unsupported plugin runtime %q", runtime)
 	}
 	return runtime, nil
+}
+
+func pluginRuntimeHostStatusRequest(runtime string) (pluginRuntimeHostStatus, error) {
+	status := pluginRuntimeHostStatus{}
+	params := url.Values{"runtime": {runtime}}
+	data, statusCode, err := superdRequestMethod(http.MethodGet, "plugin_runtime_status", params, nil)
+	if err != nil {
+		return status, err
+	}
+	if statusCode != http.StatusOK {
+		return status, fmt.Errorf("superd plugin runtime status error %d: %s", statusCode, string(data))
+	}
+	if err := json.Unmarshal(data, &status); err != nil {
+		return status, err
+	}
+	return status, nil
+}
+
+func pluginInstallInfo(plugin PluginConfig) (PluginInstallInfo, error) {
+	runtime, err := normalizePluginRuntime(plugin.Runtime)
+	if err != nil {
+		return PluginInstallInfo{}, err
+	}
+	status, err := pluginRuntimeHostStatusRequest(runtime)
+	if err != nil {
+		return PluginInstallInfo{}, err
+	}
+
+	info := PluginInstallInfo{
+		PluginConfig:             plugin,
+		RuntimeReady:             status.Ready,
+		RuntimeUnavailableReason: status.Reason,
+	}
+	if !status.Ready && slices.Contains(plugin.AvailableRuntimes, pluginRuntimeDefault) {
+		info.FallbackRuntime = pluginRuntimeDefault
+		info.FallbackComposeFilePath = filepath.ToSlash(filepath.Join(
+			filepath.Dir(plugin.ComposeFilePath),
+			"docker-compose.yml",
+		))
+	}
+	return info, nil
+}
+
+func requirePluginRuntimeReady(plugin PluginConfig) error {
+	if !pluginUsesKVM(plugin) {
+		return nil
+	}
+	status, err := pluginRuntimeHostStatusRequest(pluginRuntimeKVM)
+	if err != nil {
+		return err
+	}
+	if !status.Ready {
+		return errors.New(status.Reason)
+	}
+	return nil
 }
 
 func pluginUsesKVM(plugin PluginConfig) bool {
@@ -868,8 +937,11 @@ func downloadExtension(user string, secret string, gitURL string, Plus bool, Aut
 		plugin := PluginConfig{}
 		err = json.Unmarshal(data, &plugin)
 		if err == nil {
-			//override GitURL
 			plugin.GitURL = gitURL
+			if err := requirePluginRuntimeReady(plugin); err != nil {
+				SprbusPublish("plugin:install:failure", map[string]string{"GitURL": gitURL, "Reason": err.Error()})
+				return true, false
+			}
 			return true, installUserPluginConfig(plugin)
 		} else {
 			SprbusPublish("plugin:install:failure", map[string]string{"GitURL": gitURL, "Reason": err.Error()})
@@ -2069,12 +2141,15 @@ func downloadUserPluginInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Override GitURL to match what was requested
 	plugin.GitURL = gitURL
+	info, err := pluginInstallInfo(plugin)
+	if err != nil {
+		http.Error(w, "Failed to check plugin runtime: "+err.Error(), http.StatusBadGateway)
+		return
+	}
 
-	// Return plugin info with permissions
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(plugin)
+	json.NewEncoder(w).Encode(info)
 }
 
 // Phase 2: Complete plugin installation after user confirms permissions
@@ -2089,6 +2164,11 @@ func completeUserPluginInstall(router *mux.Router, router_public *mux.Router) fu
 
 		Configmtx.Lock()
 		defer Configmtx.Unlock()
+
+		if err := requirePluginRuntimeReady(plugin); err != nil {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
 
 		// Install the plugin configuration
 		success := installUserPluginConfig(plugin)
