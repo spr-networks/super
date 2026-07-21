@@ -40,6 +40,7 @@ import (
 )
 
 var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
+var DockerSocketPath = "/var/run/docker.sock"
 var PlusAddons = "plugins/plus"
 var UserAddons = "plugins/user"
 var ComposeAllowListDefaults = []string{"docker-compose.yml", "docker-compose-test.yml", "docker-compose-virt.yml",
@@ -568,6 +569,40 @@ func docker_ps(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(string(out))
 }
 
+func docker_info(w http.ResponseWriter, r *http.Request) {
+	path, err := dockerInfoPath(r.URL.Query().Get("resource"), r.URL.Query().Get("id"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	data, err := dockerAPIGet(path)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
+}
+
+func dockerInfoPath(resource, id string) (string, error) {
+	switch resource {
+	case "containers":
+		if id != "" {
+			return "", errors.New("container id is not supported")
+		}
+		return "/containers/json?all=1", nil
+	case "networks":
+		if id != "" {
+			return "/networks/" + url.PathEscape(id), nil
+		}
+		return "/networks", nil
+	default:
+		return "", errors.New("unsupported Docker info resource")
+	}
+}
+
 func removeUserContainer(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
@@ -900,29 +935,40 @@ func logRequest(handler http.Handler) http.Handler {
 	})
 }
 
-// dockerAPIGetJSON performs a GET against the Docker Engine API over the
-// local unix socket and decodes the JSON response.
-func dockerAPIGetJSON(path string, target interface{}) error {
+func dockerAPIGet(path string) ([]byte, error) {
 	c := http.Client{
 		Timeout: 10 * time.Second,
 		Transport: &http.Transport{
 			Dial: func(network, addr string) (net.Conn, error) {
-				return net.Dial("unix", "/var/run/docker.sock")
+				return net.Dial("unix", DockerSocketPath)
 			},
 		},
 	}
+	defer c.CloseIdleConnections()
 
 	resp, err := c.Get("http://localhost" + path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("docker api %s: status %d", path, resp.StatusCode)
+		return nil, fmt.Errorf("docker api %s: status %d: %s", path, resp.StatusCode, strings.TrimSpace(string(data)))
 	}
 
-	return json.NewDecoder(resp.Body).Decode(target)
+	return data, nil
+}
+
+func dockerAPIGetJSON(path string, target interface{}) error {
+	data, err := dockerAPIGet(path)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, target)
 }
 
 type dockerConfigLabels struct {
@@ -1471,6 +1517,7 @@ func main() {
 	unix_plugin_router.HandleFunc("/remote_container_tags", remote_container_tags).Methods("POST")
 
 	unix_plugin_router.HandleFunc("/docker_ps", docker_ps).Methods("GET")
+	unix_plugin_router.HandleFunc("/docker_info", docker_info).Methods("GET")
 
 	// get/set release channel
 	unix_plugin_router.HandleFunc("/release", release_info).Methods("GET", "PUT", "DELETE")

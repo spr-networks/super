@@ -164,7 +164,6 @@ services:
       - ${PWD}/state/public/:/state/public/
       - ${PWD}/frontend/build:/ui/
       - /var/log/journal:/var/log/journal:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/apport/coredump/:/coredump/
   plugin-lookup:
     container_name: superplugin-lookup

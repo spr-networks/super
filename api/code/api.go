@@ -246,36 +246,18 @@ func getFeatures(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(reply)
 }
 
-// Helper function to make Docker API requests
-func dockerRequest(method, path string, body io.Reader) ([]byte, error) {
-	DockerSocketPath := "/var/run/docker.sock"
-
-	c := http.Client{Timeout: 60 * time.Second}
-	c.Transport = &http.Transport{
-		Dial: func(network, addr string) (net.Conn, error) {
-			return net.Dial("unix", DockerSocketPath)
-		},
+func dockerInfoRequest(resource, id string) ([]byte, error) {
+	params := url.Values{"resource": {resource}}
+	if id != "" {
+		params.Set("id", id)
 	}
-	defer c.CloseIdleConnections()
 
-	req, err := http.NewRequest(method, "http://localhost"+path, body)
+	data, statusCode, err := superdRequestMethod(http.MethodGet, "docker_info", params, nil)
 	if err != nil {
 		return nil, err
 	}
-
-	resp, err := c.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	data, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("docker API error %d: %s", resp.StatusCode, string(data))
+	if statusCode != http.StatusOK {
+		return nil, fmt.Errorf("superd Docker info error %d: %s", statusCode, string(data))
 	}
 
 	return data, nil
@@ -331,9 +313,9 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 
 		data, err = cmd.Output()
 	} else if name == "dockernetworks" {
-		data, err = dockerRequest("GET", "/v1.41/networks", nil)
+		data, err = dockerInfoRequest("networks", "")
 	} else if name == "docker" {
-		data, err = dockerRequest("GET", "/v1.41/containers/json?all=1", nil)
+		data, err = dockerInfoRequest("containers", "")
 	} else if name == "hostname" {
 		data, err = ioutil.ReadFile(HostnameConfigPath)
 		if err == nil && len(data) > 0 {

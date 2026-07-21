@@ -1142,14 +1142,14 @@ func getPluginContainerIP(interfaceName string) (string, error) {
 	// NetworkCapabilities.Interface is the Linux bridge name. Try the direct
 	// name first for explicitly named networks, then resolve project-scoped
 	// networks by their bridge driver option.
-	directData, directErr := dockerRequest("GET", "/v1.41/networks/"+url.PathEscape(interfaceName), nil)
+	directData, directErr := dockerInfoRequest("networks", interfaceName)
 	if directErr == nil {
 		if ip, err := pluginContainerIPFromNetwork(directData); err == nil {
 			return ip, nil
 		}
 	}
 
-	data, err := dockerRequest("GET", "/v1.41/networks", nil)
+	data, err := dockerInfoRequest("networks", "")
 	if err != nil {
 		return "", fmt.Errorf("inspect network %s: %v; list networks: %w", interfaceName, directErr, err)
 	}
@@ -1160,7 +1160,7 @@ func getPluginContainerIP(interfaceName string) (string, error) {
 	}
 
 	for _, networkID := range networkIDs {
-		data, err = dockerRequest("GET", "/v1.41/networks/"+url.PathEscape(networkID), nil)
+		data, err = dockerInfoRequest("networks", networkID)
 		if err != nil {
 			continue
 		}
