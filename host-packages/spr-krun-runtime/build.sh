@@ -32,9 +32,9 @@ download \
     libkrun.tar.gz \
     "$LIBKRUN_SHA256"
 download \
-    "https://github.com/libkrun/libkrunfw/releases/download/v${LIBKRUNFW_VERSION}/libkrunfw-aarch64.tgz" \
-    libkrunfw-aarch64.tgz \
-    "$LIBKRUNFW_SHA256"
+    "https://github.com/libkrun/libkrunfw/archive/${LIBKRUNFW_COMMIT}.tar.gz" \
+    libkrunfw.tar.gz \
+    "$LIBKRUNFW_SOURCE_SHA256"
 download \
     "https://github.com/containers/crun/releases/download/${CRUN_VERSION}/crun-${CRUN_VERSION}.tar.gz" \
     "crun-${CRUN_VERSION}.tar.gz" \
@@ -45,15 +45,57 @@ download \
     "$RUSTUP_SHA256"
 
 tar -xzf libkrun.tar.gz
+tar -xzf libkrunfw.tar.gz
 tar -xzf "crun-${CRUN_VERSION}.tar.gz"
-mkdir libkrunfw
-tar -C libkrunfw -xzf libkrunfw-aarch64.tgz
 
 LIBKRUN_DIR="$BUILD_DIR/libkrun-${LIBKRUN_COMMIT}"
+LIBKRUNFW_DIR="$BUILD_DIR/libkrunfw-${LIBKRUNFW_COMMIT}"
 CRUN_DIR="$BUILD_DIR/crun-${CRUN_VERSION}"
 SDK_DIR="$BUILD_DIR/sdk"
+FW_SDK_DIR="$BUILD_DIR/fw-sdk"
 PACKAGE_ROOT="$BUILD_DIR/package"
 PRIVATE_LIBDIR="$PACKAGE_ROOT/usr/lib/spr-krun-runtime"
+
+mkdir -p "$LIBKRUNFW_DIR/tarballs"
+download \
+    "https://cdn.kernel.org/pub/linux/kernel/v6.x/${LIBKRUNFW_KERNEL_VERSION}.tar.xz" \
+    "$LIBKRUNFW_DIR/tarballs/${LIBKRUNFW_KERNEL_VERSION}.tar.xz" \
+    "$LIBKRUNFW_KERNEL_SHA256"
+
+tar -C "$LIBKRUNFW_DIR" -xf \
+    "$LIBKRUNFW_DIR/tarballs/${LIBKRUNFW_KERNEL_VERSION}.tar.xz"
+while IFS= read -r kernel_patch; do
+    patch -p1 -d "$LIBKRUNFW_DIR/$LIBKRUNFW_KERNEL_VERSION" \
+        < "$kernel_patch"
+done < <(find "$LIBKRUNFW_DIR/patches" -name '0*.patch' | sort)
+cp "$LIBKRUNFW_DIR/config-libkrunfw_aarch64" \
+    "$LIBKRUNFW_DIR/$LIBKRUNFW_KERNEL_VERSION/.config"
+make -C "$LIBKRUNFW_DIR/$LIBKRUNFW_KERNEL_VERSION" olddefconfig
+(
+    cd "$LIBKRUNFW_DIR/$LIBKRUNFW_KERNEL_VERSION"
+    scripts/kconfig/merge_config.sh -m .config \
+        "$SCRIPT_DIR/kernel-net.config"
+    make olddefconfig
+    for option in \
+        CONFIG_IP_ADVANCED_ROUTER \
+        CONFIG_IP_MULTIPLE_TABLES \
+        CONFIG_IPV6_MULTIPLE_TABLES \
+        CONFIG_NETFILTER_XTABLES \
+        CONFIG_NETFILTER_XT_TARGET_MARK \
+        CONFIG_NETFILTER_XT_TARGET_MASQUERADE \
+        CONFIG_NETFILTER_XT_TARGET_TPROXY \
+        CONFIG_NETFILTER_XT_MATCH_SOCKET \
+        CONFIG_IP_NF_IPTABLES \
+        CONFIG_IP6_NF_IPTABLES \
+        CONFIG_WIREGUARD; do
+        grep -qx "$option=y" .config
+    done
+)
+(
+    cd "$LIBKRUNFW_DIR"
+    make -j"${MAKE_JOBS:-$(nproc)}"
+    make PREFIX=/usr/local DESTDIR="$FW_SDK_DIR" install
+)
 
 git -C "$LIBKRUN_DIR" apply --check \
     "$SCRIPT_DIR/patches/libkrun/0001-reliable-external-dhcp.patch"
@@ -105,7 +147,7 @@ install -d -m 0755 \
 install -m 0755 "$CRUN_DIR/crun" \
     "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/krun"
 cp -a "$SDK_DIR/usr/local/lib64"/libkrun.so* "$PRIVATE_LIBDIR/"
-cp -a "$BUILD_DIR/libkrunfw/lib64"/libkrunfw.so* "$PRIVATE_LIBDIR/"
+cp -a "$FW_SDK_DIR/usr/local/lib64"/libkrunfw.so* "$PRIVATE_LIBDIR/"
 
 nm -D --defined-only "$PRIVATE_LIBDIR/libkrun.so.${LIBKRUN_VERSION}" |
     grep ' krun_add_net_tap$' >/dev/null
