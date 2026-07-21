@@ -319,6 +319,13 @@ const PluginListItem = ({
         </VStack>
 
         <HStack space="sm" alignItems="center">
+          {(item.Runtime || '').toLowerCase() === 'kvm' ||
+          (item.ComposeFilePath || '').endsWith('/docker-compose-kvm.yml') ? (
+            <Badge variant="solid" action="info">
+              <BadgeText>KVM</BadgeText>
+            </Badge>
+          ) : null}
+
           {item.HasUI && (
             <Badge variant="solid" action="info">
               <BadgeText>Has UI</BadgeText>

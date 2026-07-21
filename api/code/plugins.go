@@ -40,6 +40,11 @@ var pluginNetworkReconcileOnce sync.Once
 
 const pluginNetworkReconcileInterval = time.Minute * 5
 
+const (
+	pluginRuntimeDefault = "default"
+	pluginRuntimeKVM     = "kvm"
+)
+
 type NetworkCapabilities struct {
 	Interface string
 	DeviceMAC string
@@ -70,6 +75,7 @@ type PluginConfig struct {
 	ScopedPaths         []string
 	NetworkCapabilities NetworkCapabilities
 	Runtime             string
+	AvailableRuntimes   []string
 }
 
 func (p PluginConfig) MatchesData(q PluginConfig) bool {
@@ -91,8 +97,38 @@ func (p PluginConfig) MatchesData(q PluginConfig) bool {
 }
 
 var gPlusExtensionDefaults = []PluginConfig{
-	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", false, false, true, "", "", []string{}, NetworkCapabilities{}, ""},
-	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", false, false, false, "", "", []string{}, NetworkCapabilities{}, ""},
+	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", false, false, true, "", "", []string{}, NetworkCapabilities{}, "", []string{}},
+	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", false, false, false, "", "", []string{}, NetworkCapabilities{}, "", []string{}},
+}
+
+func normalizePluginRuntime(runtime string) (string, error) {
+	runtime = strings.ToLower(strings.TrimSpace(runtime))
+	if runtime == "" {
+		return pluginRuntimeDefault, nil
+	}
+	if runtime != pluginRuntimeDefault && runtime != pluginRuntimeKVM {
+		return "", fmt.Errorf("unsupported plugin runtime %q", runtime)
+	}
+	return runtime, nil
+}
+
+func pluginUsesKVM(plugin PluginConfig) bool {
+	runtime, err := normalizePluginRuntime(plugin.Runtime)
+	if err == nil && runtime == pluginRuntimeKVM {
+		return true
+	}
+	return plugin.Runtime == "" && filepath.Base(plugin.ComposeFilePath) == "docker-compose-kvm.yml"
+}
+
+func pluginUsesDeviceNetwork(plugin PluginConfig) bool {
+	return pluginUsesKVM(plugin) && plugin.NetworkCapabilities.DeviceMAC != ""
+}
+
+func pluginWithRuntimeAvailability(plugin PluginConfig) PluginConfig {
+	if len(plugin.AvailableRuntimes) == 0 && pluginUsesKVM(plugin) {
+		plugin.AvailableRuntimes = []string{pluginRuntimeDefault, pluginRuntimeKVM}
+	}
+	return plugin
 }
 
 var gPluginTemplates = []PluginConfig{
@@ -278,7 +314,10 @@ func getPlugins(w http.ResponseWriter, r *http.Request) {
 	Configmtx.Lock()
 	defer Configmtx.Unlock()
 
-	ret := config.Plugins
+	ret := make([]PluginConfig, len(config.Plugins))
+	for i, plugin := range config.Plugins {
+		ret[i] = pluginWithRuntimeAvailability(plugin)
+	}
 
 	if PlusEnabled() {
 		for _, defaultPlusPlugin := range gPlusExtensionDefaults {
@@ -373,6 +412,15 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 				return
 			}
 
+			if plugin.Runtime != "" {
+				runtime, err := normalizePluginRuntime(plugin.Runtime)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				}
+				plugin.Runtime = runtime
+			}
+
 			// check if exists -- if so update, else create a new entry
 			found := false
 			idx := -1
@@ -425,15 +473,46 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 			if !found {
 				config.Plugins = append(config.Plugins, plugin)
 			} else {
+				currentRuntime, _ := normalizePluginRuntime(currentPlugin.Runtime)
+				desiredRuntime, _ := normalizePluginRuntime(plugin.Runtime)
+				runtimeChanged := currentRuntime != desiredRuntime
 				networkCapabilitiesChanged := !currentPlugin.NetworkCapabilities.Matches(plugin.NetworkCapabilities)
-				if networkCapabilitiesChanged {
+				networkStateChanged := networkCapabilitiesChanged || runtimeChanged
+				if networkStateChanged {
 					removePluginNetworkCapabilities(currentPlugin)
 				}
+
+				if runtimeChanged {
+					plugin.Runtime = desiredRuntime
+					if plugin.Enabled {
+						if err := preparePluginNetworkCapabilities(plugin); err != nil {
+							removePluginNetworkCapabilities(plugin)
+							if currentPlugin.Enabled {
+								applyPluginNetworkCapabilitiesRetry(currentPlugin)
+							}
+							http.Error(w, "Failed to authorize plugin network: "+err.Error(), http.StatusInternalServerError)
+							return
+						}
+					}
+					selection, err := switchExtensionRuntime(currentPlugin, desiredRuntime, plugin.Enabled)
+					if err != nil {
+						removePluginNetworkCapabilities(plugin)
+						if currentPlugin.Enabled {
+							applyPluginNetworkCapabilitiesRetry(currentPlugin)
+						}
+						http.Error(w, "Failed to switch plugin runtime: "+err.Error(), http.StatusInternalServerError)
+						return
+					}
+					plugin.Runtime = selection.Runtime
+					plugin.ComposeFilePath = selection.ComposeFilePath
+					plugin.AvailableRuntimes = selection.AvailableRuntimes
+				}
 				if plugin.Enabled == false {
-					//plugin is no longer enabled, send stop
-					stopExtension(oldComposeFilePath)
+					if !runtimeChanged {
+						stopExtension(oldComposeFilePath)
+					}
 					// Remove network capabilities firewall rules
-					if !networkCapabilitiesChanged {
+					if !networkStateChanged {
 						removePluginNetworkCapabilities(currentPlugin)
 					}
 
@@ -443,6 +522,9 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 					}
 				}
 				config.Plugins[idx] = plugin
+				if plugin.Enabled && networkStateChanged {
+					applyPluginNetworkCapabilitiesRetry(plugin)
+				}
 			}
 		}
 
@@ -827,11 +909,41 @@ func startExtension(composeFilePath string) bool {
 	return true
 }
 
+type pluginRuntimeSelection struct {
+	Runtime           string
+	ComposeFilePath   string
+	AvailableRuntimes []string
+}
+
+func switchExtensionRuntime(current PluginConfig, runtime string, start bool) (pluginRuntimeSelection, error) {
+	selection := pluginRuntimeSelection{}
+	params := url.Values{
+		"compose_file": {current.ComposeFilePath},
+		"runtime":      {runtime},
+		"start":        {"0"},
+		"rollback":     {"0"},
+	}
+	if start {
+		params.Set("start", "1")
+	}
+	if current.Enabled {
+		params.Set("rollback", "1")
+	}
+	data, err := superdRequest("switch_plugin_runtime", params, nil)
+	if err != nil {
+		return selection, err
+	}
+	if err := json.Unmarshal(data, &selection); err != nil {
+		return selection, err
+	}
+	return selection, nil
+}
+
 func preparePluginNetworkCapabilities(plugin PluginConfig) error {
 	capabilities := plugin.NetworkCapabilities
 	if capabilities.Interface == "" ||
 		len(capabilities.Policies) == 0 ||
-		capabilities.DeviceMAC == "" {
+		!pluginUsesDeviceNetwork(plugin) {
 		return nil
 	}
 	return applyPluginNetworkCapabilities(plugin)
@@ -1019,7 +1131,7 @@ func applyPluginNetworkCapabilities(plugin PluginConfig) error {
 		return nil
 	}
 
-	if plugin.NetworkCapabilities.DeviceMAC != "" {
+	if pluginUsesDeviceNetwork(plugin) {
 		return applyPluginDeviceNetworkCapabilities(plugin)
 	}
 
@@ -1082,7 +1194,7 @@ func removePluginNetworkCapabilities(plugin PluginConfig) error {
 		return nil
 	}
 
-	if plugin.NetworkCapabilities.DeviceMAC != "" {
+	if pluginUsesDeviceNetwork(plugin) {
 		mac, err := pluginDeviceMAC(plugin)
 		if err != nil {
 			return err

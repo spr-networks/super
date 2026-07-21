@@ -757,6 +757,17 @@ export default function MockAPI(props = null) {
         GitURL: 'github.com/spr-networks/pfw_extension',
         ComposeFilePath: 'plugins/plus/pfw_extension/docker-compose.yml'
       })
+      server.create('plugin', {
+        Name: 'spr-atlas',
+        URI: 'spr-atlas',
+        UnixPath: '/state/plugins/spr-atlas/socket',
+        Enabled: true,
+        Plus: false,
+        GitURL: 'github.com/spr-networks/spr-atlas',
+        ComposeFilePath: 'plugins/user/spr-atlas/docker-compose-kvm.yml',
+        Runtime: 'kvm',
+        AvailableRuntimes: ['default', 'kvm']
+      })
 
       server.create('forwardrule', {
         SIface: 'wlan1',

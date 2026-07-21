@@ -17,6 +17,7 @@ import {
   FormControlLabelText,
   Input,
   InputField,
+  Switch,
   VStack,
   HStack,
   Text
@@ -35,6 +36,7 @@ const EditPlugin = ({ plugin, onClose, notifyChange, ...props }) => {
   const [HasTopology, setHasTopology] = useState(plugin.HasTopology || false)
   const [InstallTokenPath, setInstallTokenPath] = useState(plugin.InstallTokenPath || '')
   const [ScopedPaths, setScopedPaths] = useState(plugin.ScopedPaths ? plugin.ScopedPaths.join(', ') : '')
+  const [Runtime, setRuntime] = useState(plugin.Runtime || 'default')
 
   useEffect(() => {
     setName(plugin.Name || '')
@@ -47,7 +49,17 @@ const EditPlugin = ({ plugin, onClose, notifyChange, ...props }) => {
     setHasTopology(plugin.HasTopology || false)
     setInstallTokenPath(plugin.InstallTokenPath || '')
     setScopedPaths(plugin.ScopedPaths ? plugin.ScopedPaths.join(', ') : '')
+    setRuntime(plugin.Runtime || 'default')
   }, [plugin])
+
+  const availableRuntimes = plugin.AvailableRuntimes || []
+  const supportsKVM =
+    availableRuntimes.includes('kvm') ||
+    plugin.Runtime === 'kvm' ||
+    (plugin.ComposeFilePath || '').endsWith('/docker-compose-kvm.yml')
+  const supportsDefault =
+    availableRuntimes.length === 0 || availableRuntimes.includes('default')
+  const canToggleKVM = supportsKVM && supportsDefault
 
   const handleChange = (name, value) => {
     if (name == 'Name') {
@@ -92,7 +104,8 @@ const EditPlugin = ({ plugin, onClose, notifyChange, ...props }) => {
       HasUI,
       HasTopology,
       InstallTokenPath,
-      ScopedPaths: scopedPathsArray
+      ScopedPaths: scopedPathsArray,
+      Runtime
     }
     
     pluginAPI
@@ -252,6 +265,30 @@ const EditPlugin = ({ plugin, onClose, notifyChange, ...props }) => {
             Comma-separated list of paths the plugin can access
           </FormControlHelperText>
         </FormControlHelper>
+      </FormControl>
+
+      <FormControl>
+        {canToggleKVM ? (
+          <>
+            <HStack alignItems="center" justifyContent="space-between">
+              <FormControlLabel>
+                <FormControlLabelText>Run in KVM</FormControlLabelText>
+              </FormControlLabel>
+              <Switch
+                value={Runtime === 'kvm'}
+                onValueChange={(enabled) =>
+                  setRuntime(enabled ? 'kvm' : 'default')
+                }
+              />
+            </HStack>
+
+            <FormControlHelper>
+              <FormControlHelperText>
+                Turning this off recreates the plugin with docker-compose.yml.
+              </FormControlHelperText>
+            </FormControlHelper>
+          </>
+        ) : null}
       </FormControl>
 
       <FormControl>

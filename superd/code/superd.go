@@ -41,6 +41,7 @@ import (
 
 var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
 var DockerSocketPath = "/var/run/docker.sock"
+var SuperRootPath = "/super"
 var PlusAddons = "plugins/plus"
 var UserAddons = "plugins/user"
 var ComposeAllowListDefaults = []string{"docker-compose.yml", "docker-compose-test.yml", "docker-compose-virt.yml",
@@ -61,6 +62,7 @@ var ReleaseVersionFile = "configs/base/release_version"
 
 var ReleaseInfoMtx sync.Mutex
 var composeCommandMtx sync.Mutex
+var composeAllowMtx sync.Mutex
 
 func getReleaseVersion() string {
 	ReleaseInfoMtx.Lock()
@@ -848,6 +850,12 @@ const (
 	pluginRuntimeKVM     = "kvm"
 )
 
+type pluginRuntimeSelection struct {
+	Runtime           string
+	ComposeFilePath   string
+	AvailableRuntimes []string
+}
+
 func normalizePluginRuntime(runtime string) (string, error) {
 	runtime = strings.ToLower(strings.TrimSpace(runtime))
 	if runtime == "" {
@@ -861,13 +869,67 @@ func normalizePluginRuntime(runtime string) (string, error) {
 	}
 }
 
+func pluginRuntimeComposeName(runtime string) (string, error) {
+	runtime, err := normalizePluginRuntime(runtime)
+	if err != nil {
+		return "", err
+	}
+	if runtime == pluginRuntimeKVM {
+		return "docker-compose-kvm.yml", nil
+	}
+	return "docker-compose.yml", nil
+}
+
+func availablePluginRuntimes(pluginRelativeDir string) []string {
+	runtimes := []string{}
+	for _, runtime := range []string{pluginRuntimeDefault, pluginRuntimeKVM} {
+		composeName, _ := pluginRuntimeComposeName(runtime)
+		info, err := os.Stat(filepath.Join(SuperRootPath, pluginRelativeDir, composeName))
+		if err == nil && info.Mode().IsRegular() {
+			runtimes = append(runtimes, runtime)
+		}
+	}
+	return runtimes
+}
+
+func resolveUserPluginRuntime(composeFilePath, runtime string) (pluginRuntimeSelection, error) {
+	selection := pluginRuntimeSelection{}
+	cleanPath := filepath.ToSlash(filepath.Clean(composeFilePath))
+	parts := strings.Split(cleanPath, "/")
+	if len(parts) != 4 || parts[0] != "plugins" || parts[1] != "user" ||
+		!regexp.MustCompile(`^[A-Za-z0-9-]+$`).MatchString(parts[2]) ||
+		(parts[3] != "docker-compose.yml" && parts[3] != "docker-compose-kvm.yml") {
+		return selection, fmt.Errorf("plugin runtime can only be changed for an installed user plugin")
+	}
+
+	runtime, err := normalizePluginRuntime(runtime)
+	if err != nil {
+		return selection, err
+	}
+	composeName, _ := pluginRuntimeComposeName(runtime)
+	pluginRelativeDir := filepath.Join(parts[0], parts[1], parts[2])
+	targetPath := filepath.ToSlash(filepath.Join(pluginRelativeDir, composeName))
+	info, err := os.Stat(filepath.Join(SuperRootPath, targetPath))
+	if err != nil {
+		return selection, fmt.Errorf("runtime %s is not available for plugin %s: %w", runtime, parts[2], err)
+	}
+	if !info.Mode().IsRegular() {
+		return selection, fmt.Errorf("runtime compose file is not regular: %s", targetPath)
+	}
+
+	selection.Runtime = runtime
+	selection.ComposeFilePath = targetPath
+	selection.AvailableRuntimes = availablePluginRuntimes(pluginRelativeDir)
+	return selection, nil
+}
+
 func configureUserPlugin(repoName string) ([]byte, error) {
 	if repoName == "" || filepath.Base(repoName) != repoName || repoName == "." {
 		return []byte{}, fmt.Errorf("invalid user plugin repository name %q", repoName)
 	}
 
 	pluginRelativeDir := filepath.Join("plugins", "user", repoName)
-	pluginConfigPath := filepath.Join("/super", pluginRelativeDir, "plugin.json")
+	pluginConfigPath := filepath.Join(SuperRootPath, pluginRelativeDir, "plugin.json")
 	if _, err := os.Stat(pluginConfigPath); os.IsNotExist(err) {
 		return []byte{}, fmt.Errorf("could not find user plugin config %s", pluginConfigPath)
 	}
@@ -888,12 +950,9 @@ func configureUserPlugin(repoName string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid user plugin config %s: %w", pluginConfigPath, err)
 	}
-	composeName := "docker-compose.yml"
-	if runtime == pluginRuntimeKVM {
-		composeName = "docker-compose-kvm.yml"
-	}
+	composeName, _ := pluginRuntimeComposeName(runtime)
 	composeRelativePath := filepath.Join(pluginRelativeDir, composeName)
-	composePath := filepath.Join("/super", composeRelativePath)
+	composePath := filepath.Join(SuperRootPath, composeRelativePath)
 	info, err := os.Stat(composePath)
 	if err != nil {
 		return nil, fmt.Errorf("could not find user plugin compose file %s: %w", composePath, err)
@@ -908,6 +967,7 @@ func configureUserPlugin(repoName string) ([]byte, error) {
 	}
 	config["Runtime"] = runtime
 	config["ComposeFilePath"] = filepath.ToSlash(composeRelativePath)
+	config["AvailableRuntimes"] = availablePluginRuntimes(pluginRelativeDir)
 	return json.Marshal(config)
 }
 
@@ -1406,6 +1466,94 @@ func reloadComposeWhitelist() {
 	}
 
 }
+
+func composePathAllowed(composeFilePath string) bool {
+	reloadComposeWhitelist()
+	for _, entry := range ComposeAllowList {
+		if entry == composeFilePath {
+			return true
+		}
+	}
+	return false
+}
+
+func allowPluginRuntimeCompose(composeFilePath string) error {
+	composeAllowMtx.Lock()
+	defer composeAllowMtx.Unlock()
+
+	paths := []string{}
+	data, err := os.ReadFile(CUSTOM_ALLOW_PATH)
+	if err == nil {
+		if err := json.Unmarshal(data, &paths); err != nil {
+			return err
+		}
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+
+	for _, entry := range paths {
+		if entry == composeFilePath {
+			return nil
+		}
+	}
+	paths = append(paths, composeFilePath)
+	sort.Strings(paths)
+	data, err = json.MarshalIndent(paths, "", " ")
+	if err != nil {
+		return err
+	}
+	tmpPath := CUSTOM_ALLOW_PATH + ".tmp"
+	if err := os.WriteFile(tmpPath, data, 0600); err != nil {
+		return err
+	}
+	if err := os.Rename(tmpPath, CUSTOM_ALLOW_PATH); err != nil {
+		os.Remove(tmpPath)
+		return err
+	}
+	reloadComposeWhitelist()
+	return nil
+}
+
+func switchPluginRuntime(w http.ResponseWriter, r *http.Request) {
+	currentCompose := filepath.ToSlash(filepath.Clean(r.URL.Query().Get("compose_file")))
+	selection, err := resolveUserPluginRuntime(currentCompose, r.URL.Query().Get("runtime"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if !composePathAllowed(currentCompose) {
+		http.Error(w, "current compose file is not authorized", http.StatusForbidden)
+		return
+	}
+	if err := allowPluginRuntimeCompose(selection.ComposeFilePath); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if currentCompose != selection.ComposeFilePath {
+		if err := composeCommand(currentCompose, "", "down", "", false); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if r.URL.Query().Get("start") != "0" {
+			if err := composeCommand(selection.ComposeFilePath, "", "up", "-d", true); err != nil {
+				if r.URL.Query().Get("rollback") != "0" {
+					rollbackErr := composeCommand(currentCompose, "", "up", "-d", true)
+					if rollbackErr != nil {
+						http.Error(w, err.Error()+"; rollback failed: "+rollbackErr.Error(), http.StatusInternalServerError)
+						return
+					}
+				}
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(selection)
+}
+
 func setup() {
 	hostSuperDir := getHostSuperDir()
 
@@ -1507,6 +1655,7 @@ func main() {
 	unix_plugin_router.HandleFunc("/build", build).Methods("PUT")
 	unix_plugin_router.HandleFunc("/user_plugin_exists", userPluginExists).Methods("GET")
 	unix_plugin_router.HandleFunc("/get_plugin_config", getUserPluginConfig).Methods("PUT")
+	unix_plugin_router.HandleFunc("/switch_plugin_runtime", switchPluginRuntime).Methods("PUT")
 
 	unix_plugin_router.HandleFunc("/ghcr_auth", ghcr_auth).Methods("PUT")
 	unix_plugin_router.HandleFunc("/update_git", update_git).Methods("PUT")
