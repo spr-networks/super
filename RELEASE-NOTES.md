@@ -7,6 +7,7 @@
 - Support for rustAP beta users as an alternative to hostapd
 - Reintroduce Webauthn support
 - Add iOS biometrics support
+- Refactor api's docker access
 
 ## v1.1.14
 **Fixes**
