@@ -81,6 +81,10 @@ git -C "$CRUN_DIR" apply --check \
     "$SCRIPT_DIR/patches/crun/0003-private-plugin-network.patch"
 git -C "$CRUN_DIR" apply \
     "$SCRIPT_DIR/patches/crun/0003-private-plugin-network.patch"
+git -C "$CRUN_DIR" apply --check \
+    "$SCRIPT_DIR/patches/crun/0004-host-unix-vsock-connect.patch"
+git -C "$CRUN_DIR" apply \
+    "$SCRIPT_DIR/patches/crun/0004-host-unix-vsock-connect.patch"
 
 (
     cd "$CRUN_DIR"
@@ -113,6 +117,8 @@ strings "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/krun" |
     grep 'krun.net_uplink' >/dev/null
 strings "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/krun" |
     grep 'krun.vsock_path' >/dev/null
+strings "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/krun" |
+    grep 'krun.vsock_connect_path' >/dev/null
 
 strip --strip-unneeded "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/krun"
 strip --strip-unneeded "$PRIVATE_LIBDIR/libkrun.so.${LIBKRUN_VERSION}"

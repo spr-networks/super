@@ -1,0 +1,53 @@
+From: SPR Networks <support@supernetworks.org>
+Subject: [PATCH] krun: add guest-to-host Unix socket mapping
+
+Add opt-in annotations for connecting a guest vsock port to an existing host
+Unix socket. This lets KVM plugins use SPR bus without exposing it through an
+IP socket.
+---
+ src/libcrun/handlers/krun.c | 23 +++++++++++++++++++++--
+ 1 file changed, 21 insertions(+), 2 deletions(-)
+
+diff --git a/src/libcrun/handlers/krun.c b/src/libcrun/handlers/krun.c
+index bbd65c0..8c51bc2 100644
+--- a/src/libcrun/handlers/krun.c
++++ b/src/libcrun/handlers/krun.c
+@@ -261,10 +261,10 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+   int32_t (*krun_add_net_unixstream) (uint32_t ctx_id, const char *c_path, int fd, uint8_t *const c_mac, uint32_t features, uint32_t flags);
+   int32_t (*krun_add_net_tap) (uint32_t ctx_id, const char *c_tap_name, uint8_t *const c_mac, uint32_t features, uint32_t flags);
+   int32_t (*krun_add_vsock_port2) (uint32_t ctx_id, uint32_t port, const char *c_filepath, bool listen);
+-  const char *vsock_path, *tap_name, *mac_string;
++  const char *vsock_path, *vsock_connect_path, *tap_name, *mac_string;
+   unsigned int mac_values[6];
+   uint8_t mac[6];
+-  int chars, cpus, ram_mib, gpu_flags, nested_virt, vsock_port, ret;
++  int chars, cpus, ram_mib, gpu_flags, nested_virt, vsock_port, vsock_connect_port, ret;
+   cpu_set_t set;
+ 
+   cpus = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.cpus", "cpus");
+@@ -393,6 +393,25 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+         return crun_make_error (err, -ret, "could not configure krun vsock UNIX socket `%s`", vsock_path);
+     }
+ 
++  vsock_connect_path = find_annotation (container, "krun.vsock_connect_path");
++  vsock_connect_port = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.vsock_connect_port", "vsock_connect_port");
++  if (vsock_connect_path != NULL || vsock_connect_port >= 0)
++    {
++      if (vsock_connect_path == NULL || vsock_connect_path[0] != '/')
++        return crun_make_error (err, EINVAL, "krun.vsock_connect_path must be an absolute path");
++      if (vsock_connect_port <= 0)
++        return crun_make_error (err, EINVAL, "krun.vsock_connect_port must be a positive integer");
++
++      if (krun_add_vsock_port2 == NULL)
++        krun_add_vsock_port2 = dlsym (handle, "krun_add_vsock_port2");
++      if (krun_add_vsock_port2 == NULL)
++        return crun_make_error (err, 0, "could not find symbol `krun_add_vsock_port2` in the krun library");
++
++      ret = krun_add_vsock_port2 (ctx_id, (uint32_t) vsock_connect_port, vsock_connect_path, false);
++      if (UNLIKELY (ret < 0))
++        return crun_make_error (err, -ret, "could not configure krun host UNIX socket `%s`", vsock_connect_path);
++    }
++
+   if (kconf->config_tree != NULL)
+     {
+       /* Try to configure an external kernel. If the configuration file doesn't
