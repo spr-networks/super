@@ -3,24 +3,76 @@ import { Text } from '@gluestack-ui/themed'
 import { Platform } from 'react-native'
 import Clipboard from '@react-native-clipboard/clipboard'
 
-export const copy = (data) => {
-  if (Platform.OS == 'web') {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(data)
-    } else {
-      var copyTextarea = document.createElement('textarea')
-      copyTextarea.style.position = 'fixed'
-      copyTextarea.style.opacity = '0'
-      copyTextarea.textContent = data
+const legacyCopyOnWeb = (data, browser) => {
+  const document = browser.document
+  const selection = browser.getSelection?.() || document?.getSelection?.()
 
-      document.body.appendChild(copyTextarea)
-      copyTextarea.select()
-      document.execCommand('copy')
-      document.body.removeChild(copyTextarea)
-    }
-  } else {
-    Clipboard.setString(data)
+  if (
+    !document?.body ||
+    !selection ||
+    typeof document.createRange !== 'function' ||
+    typeof document.execCommand !== 'function'
+  ) {
+    return false
   }
+
+  const copyElement = document.createElement('span')
+  const activeElement = document.activeElement
+  const range = document.createRange()
+  let appended = false
+
+  copyElement.textContent = data
+  copyElement.style.position = 'fixed'
+  copyElement.style.top = '0'
+  copyElement.style.clip = 'rect(0, 0, 0, 0)'
+  copyElement.style.whiteSpace = 'pre'
+  copyElement.style.userSelect = 'text'
+
+  try {
+    document.body.appendChild(copyElement)
+    appended = true
+    range.selectNodeContents(copyElement)
+    selection.removeAllRanges()
+    selection.addRange(range)
+
+    return document.execCommand('copy')
+  } catch {
+    return false
+  } finally {
+    selection.removeAllRanges()
+    if (appended) {
+      document.body.removeChild(copyElement)
+    }
+    activeElement?.focus?.()
+  }
+}
+
+export const copyOnWeb = async (data, browser = globalThis) => {
+  const text = String(data ?? '')
+  const clipboard = browser.navigator?.clipboard
+
+  if (
+    browser.isSecureContext !== false &&
+    typeof clipboard?.writeText === 'function'
+  ) {
+    try {
+      await clipboard.writeText(text)
+      return true
+    } catch {}
+  }
+
+  return legacyCopyOnWeb(text, browser)
+}
+
+export const copy = async (data) => {
+  const text = String(data ?? '')
+
+  if (Platform.OS == 'web') {
+    return copyOnWeb(text)
+  }
+
+  Clipboard.setString(text)
+  return true
 }
 
 // util functions
