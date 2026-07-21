@@ -263,6 +263,18 @@ func dockerInfoRequest(resource, id string) ([]byte, error) {
 	return data, nil
 }
 
+func virtualMachineInfoRequest() ([]byte, error) {
+	data, statusCode, err := superdRequestMethod(http.MethodGet, "virtual_machines", nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	if statusCode != http.StatusOK {
+		return nil, fmt.Errorf("superd virtual machine info error %d: %s", statusCode, string(data))
+	}
+
+	return data, nil
+}
+
 // system info: uptime, docker ps etc.
 func getInfo(w http.ResponseWriter, r *http.Request) {
 
@@ -316,6 +328,8 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 		data, err = dockerInfoRequest("networks", "")
 	} else if name == "docker" {
 		data, err = dockerInfoRequest("containers", "")
+	} else if name == "vms" {
+		data, err = virtualMachineInfoRequest()
 	} else if name == "hostname" {
 		data, err = ioutil.ReadFile(HostnameConfigPath)
 		if err == nil && len(data) > 0 {

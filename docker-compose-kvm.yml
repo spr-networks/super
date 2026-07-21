@@ -41,6 +41,7 @@ services:
     logging: *default-logging
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sys/kernel/debug:/sys/kernel/debug:ro
       - ${PWD}/state/api/:/state/api/
       - ${PWD}/state/superd/:/state/superd/
       - ${PWD}/configs/base/:/configs/base/

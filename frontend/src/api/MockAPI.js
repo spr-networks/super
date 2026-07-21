@@ -2476,6 +2476,27 @@ export default function MockAPI(props = null) {
         ]
       })
 
+      this.get('/info/vms', () => {
+        return {
+          Discovery: 'kvm-debugfs',
+          KVMAvailable: true,
+          ContainerMetadataAvailable: true,
+          VirtualMachines: [
+            {
+              ID: '12345-7',
+              PID: 12345,
+              Name: 'spr-atlas',
+              State: 'running',
+              Container: true,
+              Runtime: 'spr-krun',
+              Image: 'ghcr.io/spr-networks/spr-atlas:latest-krun',
+              CPUs: 1,
+              MemoryMiB: 128
+            }
+          ]
+        }
+      })
+
       this.put('/backup', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })

@@ -94,7 +94,7 @@ make -C "$LIBKRUNFW_DIR/$LIBKRUNFW_KERNEL_VERSION" \
     headers_install
 printf '#include <sys/syscall.h>\n' | \
     cc -I"$KERNEL_UAPI_DIR/include" -dM -E - | \
-    grep -q '^#define __NR_mount_setattr '
+    grep '^#define __NR_mount_setattr ' >/dev/null
 cp "$LIBKRUNFW_DIR/config-libkrunfw_aarch64" \
     "$LIBKRUNFW_DIR/$LIBKRUNFW_KERNEL_VERSION/.config"
 make -C "$LIBKRUNFW_DIR/$LIBKRUNFW_KERNEL_VERSION" olddefconfig

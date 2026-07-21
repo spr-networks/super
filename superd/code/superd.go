@@ -1518,6 +1518,7 @@ func main() {
 
 	unix_plugin_router.HandleFunc("/docker_ps", docker_ps).Methods("GET")
 	unix_plugin_router.HandleFunc("/docker_info", docker_info).Methods("GET")
+	unix_plugin_router.HandleFunc("/virtual_machines", virtual_machines).Methods("GET")
 
 	// get/set release channel
 	unix_plugin_router.HandleFunc("/release", release_info).Methods("GET", "PUT", "DELETE")
