@@ -72,6 +72,7 @@ LIBKRUNFW_DIR="$BUILD_DIR/libkrunfw-${LIBKRUNFW_COMMIT}"
 CRUN_DIR="$BUILD_DIR/crun-${CRUN_VERSION}"
 SDK_DIR="$BUILD_DIR/sdk"
 FW_SDK_DIR="$BUILD_DIR/fw-sdk"
+KERNEL_UAPI_DIR="$BUILD_DIR/kernel-uapi"
 PACKAGE_ROOT="$BUILD_DIR/package"
 PRIVATE_LIBDIR="$PACKAGE_ROOT/usr/lib/spr-krun-runtime"
 
@@ -87,6 +88,13 @@ while IFS= read -r kernel_patch; do
     patch -p1 -d "$LIBKRUNFW_DIR/$LIBKRUNFW_KERNEL_VERSION" \
         < "$kernel_patch"
 done < <(find "$LIBKRUNFW_DIR/patches" -name '0*.patch' | sort)
+make -C "$LIBKRUNFW_DIR/$LIBKRUNFW_KERNEL_VERSION" \
+    ARCH=arm64 \
+    INSTALL_HDR_PATH="$KERNEL_UAPI_DIR" \
+    headers_install
+printf '#include <sys/syscall.h>\n' | \
+    cc -I"$KERNEL_UAPI_DIR/include" -dM -E - | \
+    grep -q '^#define __NR_mount_setattr '
 cp "$LIBKRUNFW_DIR/config-libkrunfw_aarch64" \
     "$LIBKRUNFW_DIR/$LIBKRUNFW_KERNEL_VERSION/.config"
 make -C "$LIBKRUNFW_DIR/$LIBKRUNFW_KERNEL_VERSION" olddefconfig
@@ -157,7 +165,7 @@ git -C "$CRUN_DIR" apply \
 (
     cd "$CRUN_DIR"
     PKG_CONFIG_PATH="$SDK_DIR/usr/local/lib64/pkgconfig" \
-    CPPFLAGS="-I$SDK_DIR/usr/local/include" \
+    CPPFLAGS="-I$KERNEL_UAPI_DIR/include -I$SDK_DIR/usr/local/include" \
     LDFLAGS="-L$SDK_DIR/usr/local/lib64 -Wl,-rpath-link,$SDK_DIR/usr/local/lib64" \
         ./configure --prefix=/usr --with-libkrun
     make -j"${MAKE_JOBS:-$(nproc)}"

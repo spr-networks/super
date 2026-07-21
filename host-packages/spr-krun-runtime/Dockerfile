@@ -28,6 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     python3 \
     python3-pyelftools \
+    rsync \
     xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
