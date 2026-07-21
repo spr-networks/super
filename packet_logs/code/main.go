@@ -99,7 +99,17 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 		var dns layers.DNS
 		var dhcp layers.DHCPv4
 
-		result := PacketInfo{Prefix: *attrs.Prefix}
+		if attrs.Payload == nil {
+			if verboseLog {
+				fmt.Fprintln(os.Stderr, "nflog message has no packet payload")
+			}
+			return 0
+		}
+
+		result := PacketInfo{}
+		if attrs.Prefix != nil {
+			result.Prefix = *attrs.Prefix
+		}
 
 		// Try to use timestamp attribute, otherwise grab current time
 		if attrs.Timestamp != nil {
@@ -158,20 +168,7 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 			}
 		}
 
-		var ethd PacketEthernet
-
-		ethd.HwType = *attrs.HwType
-		if ethd.HwType == 1 {
-
-			if attrs.HwHeader != nil && len(*attrs.HwHeader) >= 12 {
-				hwHeader := *attrs.HwHeader
-				dstMAC := hwHeader[:6]
-				srcMAC := hwHeader[6:12]
-				ethd.DstMAC = fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", dstMAC[0], dstMAC[1], dstMAC[2], dstMAC[3], dstMAC[4], dstMAC[5])
-				ethd.SrcMAC = fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", srcMAC[0], srcMAC[1], srcMAC[2], srcMAC[3], srcMAC[4], srcMAC[5])
-			}
-		}
-		result.Ethernet = &ethd
+		result.Ethernet = ethernetFromAttributes(attrs)
 
 		//populate RecentDomain based on IPs
 		DNSCachemtx.RLock()
@@ -224,4 +221,23 @@ func logGroup(client *sprbus.Client, NetfilterGroup int) {
 
 	// Block till the context expires
 	<-ctx.Done()
+}
+
+func ethernetFromAttributes(attrs nflog.Attribute) *PacketEthernet {
+	if attrs.HwType == nil {
+		return nil
+	}
+
+	ethernet := &PacketEthernet{HwType: *attrs.HwType}
+	if ethernet.HwType != 1 || attrs.HwHeader == nil || len(*attrs.HwHeader) < 12 {
+		return ethernet
+	}
+
+	hwHeader := *attrs.HwHeader
+	dstMAC := hwHeader[:6]
+	srcMAC := hwHeader[6:12]
+	ethernet.DstMAC = fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", dstMAC[0], dstMAC[1], dstMAC[2], dstMAC[3], dstMAC[4], dstMAC[5])
+	ethernet.SrcMAC = fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", srcMAC[0], srcMAC[1], srcMAC[2], srcMAC[3], srcMAC[4], srcMAC[5])
+
+	return ethernet
 }
