@@ -181,15 +181,13 @@ func loadWithLockingDHCPConfig() DHCPConfig {
 }
 
 func saveDHCPConfig() {
-	file, _ := json.MarshalIndent(gDhcpConfig, "", " ")
-	err := ioutil.WriteFile(gDHCPConfigPath, file, 0600)
-	if err != nil {
+	if err := saveFileJSON(gDHCPConfigPath, gDhcpConfig); err != nil {
 		log.Fatal(err)
 	}
 
 	lanIP := getLANIP()
 
-	err = ioutil.WriteFile(gLANIPPath, []byte(lanIP), 0600)
+	err := ioutil.WriteFile(gLANIPPath, []byte(lanIP), 0600)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -169,9 +169,7 @@ func loadConfig() {
 }
 
 func saveConfigLocked() {
-	file, _ := json.MarshalIndent(config, "", " ")
-	err := ioutil.WriteFile(ApiConfigPath, file, 0600)
-	if err != nil {
+	if err := saveFileJSON(ApiConfigPath, config); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -1080,17 +1078,13 @@ func convertDevicesPublic(devices map[string]DeviceEntry) map[string]DeviceEntry
 }
 
 func savePublicDevicesJson(scrubbed_devices map[string]DeviceEntry) {
-	file, _ := json.MarshalIndent(scrubbed_devices, "", " ")
-	err := ioutil.WriteFile(DevicesPublicConfigFile, file, 0600)
-	if err != nil {
+	if err := saveFileJSON(DevicesPublicConfigFile, scrubbed_devices); err != nil {
 		log.Fatal(err)
 	}
 }
 
 func saveDevicesJson(devices map[string]DeviceEntry) {
-	file, _ := json.MarshalIndent(devices, "", " ")
-	err := ioutil.WriteFile(DevicesConfigFile, file, 0600)
-	if err != nil {
+	if err := saveFileJSON(DevicesConfigFile, devices); err != nil {
 		log.Fatal(err)
 	}
 
@@ -2906,8 +2900,8 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to hash password", 500)
 		return
 	}
-	users := fmt.Sprintf("{%q: %q}", "admin", hashedPassword)
-	err = ioutil.WriteFile(AuthUsersFile, []byte(users), 0600)
+	users := map[string]string{"admin": hashedPassword}
+	err = saveFileJSON(AuthUsersFile, users)
 	if err != nil {
 		http.Error(w, "Failed to write user auth file", 400)
 		panic(err)

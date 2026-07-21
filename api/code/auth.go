@@ -9,7 +9,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -85,22 +84,13 @@ type OTPSettings struct {
 func makeDstIfMissing(destFilePath string, srcFilePath string) {
 
 	if _, err := os.Stat(destFilePath); os.IsNotExist(err) {
-		srcFile, err := os.Open(srcFilePath)
+		data, err := os.ReadFile(srcFilePath)
 		if err != nil {
 			log.Println("[-] Auth Migration: No previous file found " + srcFilePath)
 			return
 		}
-		defer srcFile.Close()
 
-		destFile, err := os.OpenFile(destFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-		if err != nil {
-			log.Println("[-] Auth Migration: could not make destination " + destFilePath)
-			return
-		}
-		defer destFile.Close()
-
-		_, err = io.Copy(destFile, srcFile)
-		if err != nil {
+		if err := saveFileJSON(destFilePath, json.RawMessage(data)); err != nil {
 			log.Println("[-] Auth Migration: could not make destination " + destFilePath)
 			return
 		}
@@ -207,11 +197,9 @@ func migratePasswordsToHash() {
 	}
 
 	if changed {
-		newData, err := json.Marshal(users)
-		if err != nil {
-			return
+		if err := saveFileJSON(AuthUsersFile, users); err != nil {
+			log.Println("[-] Failed to save migrated password hashes:", err)
 		}
-		ioutil.WriteFile(AuthUsersFile, newData, 0600)
 	}
 }
 
@@ -528,8 +516,7 @@ func updateAuthTokens(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	file, _ := json.MarshalIndent(tokens, "", " ")
-	err = ioutil.WriteFile(AuthTokensFile, file, 0600)
+	err = saveFileJSON(AuthTokensFile, tokens)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
@@ -545,8 +532,7 @@ func updateAuthTokens(w http.ResponseWriter, r *http.Request) {
 }
 
 func otpSaveLocked(settings OTPSettings) error {
-	file, _ := json.MarshalIndent(settings, "", " ")
-	return ioutil.WriteFile(OTPSettingsFile, file, 0600)
+	return saveFileJSON(OTPSettingsFile, settings)
 }
 
 func otpLoadLocked() (OTPSettings, error) {
@@ -820,18 +806,7 @@ func saveOTPLockoutsLocked() error {
 		}
 	}
 
-	data, err := json.MarshalIndent(lockouts, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	// Write to temporary file first
-	tmpFile := OTPLockoutFile + ".tmp"
-	if err := ioutil.WriteFile(tmpFile, data, 0600); err != nil {
-		return err
-	}
-
-	return os.Rename(tmpFile, OTPLockoutFile)
+	return saveFileJSON(OTPLockoutFile, lockouts)
 }
 
 func loadOTPLockouts() error {
@@ -1179,8 +1154,7 @@ func generateOrGetToken(name string, paths []string) (Token, error) {
 	if !foundToken {
 		//add the generated token and save it to the token file
 		tokens = append(tokens, new_token)
-		file, _ := json.MarshalIndent(tokens, "", " ")
-		err = ioutil.WriteFile(AuthTokensFile, file, 0600)
+		err = saveFileJSON(AuthTokensFile, tokens)
 		if err != nil {
 			fmt.Println("failed to write tokens file", err)
 		}

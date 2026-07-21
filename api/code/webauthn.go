@@ -490,8 +490,7 @@ func webauthnLoginToken(name string) (Token, error) {
 		kept = append(kept, t)
 	}
 	kept = append(kept, newToken)
-	file, _ := json.MarshalIndent(kept, "", " ")
-	return newToken, os.WriteFile(AuthTokensFile, file, 0600)
+	return newToken, saveFileJSON(AuthTokensFile, kept)
 }
 
 func webauthnLogout(w http.ResponseWriter, r *http.Request) {
@@ -517,8 +516,7 @@ func webauthnLogout(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Not found", 404)
 		return
 	}
-	file, _ := json.MarshalIndent(kept, "", " ")
-	err = os.WriteFile(AuthTokensFile, file, 0600)
+	err = saveFileJSON(AuthTokensFile, kept)
 	Tokensmtx.Unlock()
 	if err != nil {
 		http.Error(w, err.Error(), 400)
