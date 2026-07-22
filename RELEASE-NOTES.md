@@ -1,9 +1,9 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
-## v1.1.15
+## v1.2.0
 **Features**
-- KVM support for plugins
+- krun/KVM support for plugins
 - Plugin UI is sandboxed by default now
 - Support for rustAP beta users as an alternative to hostapd
 - Reintroduce Webauthn support

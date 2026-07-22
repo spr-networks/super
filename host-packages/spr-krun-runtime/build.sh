@@ -155,6 +155,42 @@ awk '
     END { exit ! (moved > 0 && hook > moved && synced > hook) }
 ' "$CRUN_DIR/src/libcrun/container.c"
 
+# Kernel tunnel placeholders can exist in every new network namespace.  Uplink
+# discovery must identify the single Docker-style veth, not every non-loopback
+# link or a racy sysfs entry.
+grep -F 'driver_info.driver, "veth", sizeof (driver_info.driver)' \
+    "$CRUN_DIR/src/libcrun/handlers/krun.c" >/dev/null
+grep -F 'krun TAP networking requires exactly one veth uplink' \
+    "$CRUN_DIR/src/libcrun/handlers/krun.c" >/dev/null
+
+# CoreDHCP emits raw broadcast replies from 0.0.0.0:67.  The client must use
+# DHCP option 54 as the server identity and copy that identifier into REQUEST,
+# while still rejecting a mismatched nonzero UDP source.
+grep -F 'get_dhcp_server_identifier(response, len, &server_addr)' \
+    "$LIBKRUN_DIR/src/init_blob/init/dhcp.c" >/dev/null
+grep -F 'memcpy(&request.options[opt_offset], &server_addr.s_addr, 4);' \
+    "$LIBKRUN_DIR/src/init_blob/init/dhcp.c" >/dev/null
+grep -F 'from_addr.sin_addr.s_addr == INADDR_ANY ||' \
+    "$LIBKRUN_DIR/src/init_blob/init/dhcp.c" >/dev/null
+
+# libkrun's normal VMM shutdown calls _exit, so post-return crun cleanup is only
+# an error fallback. The VMM exit observer must drop the live listener first;
+# its retained O_NOFOLLOW parent fd and inode identity make unlinkat safe.
+grep -F 'libkrun_cleanup_vsock_listener (vsock_listener_path, &err)' \
+    "$CRUN_DIR/src/libcrun/handlers/krun.c" >/dev/null
+grep -F 'unlinkat (dirfd, name, 0)' \
+    "$CRUN_DIR/src/libcrun/handlers/krun.c" >/dev/null
+grep -F 'vmm.exit_observers.push(unix_vsock.clone())' \
+    "$LIBKRUN_DIR/src/vmm/src/builder.rs" >/dev/null
+grep -F 'self.proxy_map.write().unwrap().clear()' \
+    "$LIBKRUN_DIR/src/devices/src/virtio/vsock/muxer.rs" >/dev/null
+grep -F 'libc::fstatat(' \
+    "$LIBKRUN_DIR/src/devices/src/virtio/vsock/unix.rs" >/dev/null
+grep -F 'libc::unlinkat(self.parent_fd.as_raw_fd(), self.name.as_ptr(), 0)' \
+    "$LIBKRUN_DIR/src/devices/src/virtio/vsock/unix.rs" >/dev/null
+grep -F 'strcmp (name + len - 5, ".sock")' \
+    "$CRUN_DIR/src/libcrun/handlers/krun.c" >/dev/null
+
 # Pin the rlimit ABI assumption: libkrun takes a NULL-terminated string vector.
 # __typeof__(krun_set_rlimits) in the crun patch makes compilation verify the
 # function type, while these checks cover the terminator consumed by Rust.
@@ -168,7 +204,17 @@ grep -F 'memset (guest_rlimits, 0, sizeof (*guest_rlimits) * (limits_len + 1));'
 chmod 0755 rustup-init
 export RUSTUP_HOME="$BUILD_DIR/rustup"
 export CARGO_HOME="$BUILD_DIR/cargo"
-./rustup-init -y --no-modify-path --profile minimal --default-toolchain "$RUST_VERSION"
+for rustup_attempt in 1 2 3 4 5; do
+    if ./rustup-init -y --no-modify-path --profile minimal \
+        --default-toolchain "$RUST_VERSION"; then
+        break
+    fi
+    if [ "$rustup_attempt" -eq 5 ]; then
+        echo "rustup failed after $rustup_attempt attempts" >&2
+        exit 1
+    fi
+    echo "rustup attempt $rustup_attempt failed; retrying" >&2
+done
 export PATH="$CARGO_HOME/bin:$PATH"
 export RUSTUP_TOOLCHAIN="$RUST_VERSION"
 make -C "$LIBKRUN_DIR" -j"${MAKE_JOBS:-$(nproc)}" NET=1 PREFIX=/usr/local

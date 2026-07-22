@@ -56,7 +56,9 @@ for image in debian:bullseye debian:trixie; do
                  (.runtimes | keys == [\"runsc\", \"spr-krun\"])" \
                 /etc/docker/daemon.json
 
+            daemon_inode=$(stat -c %i /etc/docker/daemon.json)
             spr-krun-runtime-configure --no-reload
+            test "$(stat -c %i /etc/docker/daemon.json)" = "$daemon_inode"
             apt-get remove -y spr-krun-runtime
             jq -e \
                 ".iptables == false and

@@ -18,6 +18,7 @@ import (
 	"syscall"
 
 	yaml "go.yaml.in/yaml/v3"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -28,7 +29,18 @@ const (
 	krunManagerKeyPath   = krunPolicyRoot + "/manager.key"
 )
 
-var krunSocketNameRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*[.]sock$`)
+var krunSocketNameRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
+
+var krunListenRootAliases = map[string]string{
+	"mitmproxy":        "/state/plugins/spr-mitmproxy",
+	"spr-vaultwarden": "/state/plugins/vaultwarden",
+}
+
+var krunConnectAllowlist = map[string]map[string]struct{}{
+	"spr-tailscale": {
+		"/state/api/eventbus.sock": {},
+	},
+}
 
 type krunComposeService struct {
 	Runtime     string            `json:"runtime"`
@@ -55,10 +67,13 @@ type krunTrustedPolicy struct {
 	VsockConnectPort int    `json:"vsock_connect_port,omitempty"`
 }
 
+type krunComposeOverrideService struct {
+	Annotations map[string]string `yaml:"annotations"`
+	Volumes     []string          `yaml:"volumes,omitempty"`
+}
+
 type krunComposeOverride struct {
-	Services map[string]struct {
-		Annotations map[string]string `yaml:"annotations"`
-	} `yaml:"services"`
+	Services map[string]krunComposeOverrideService `yaml:"services"`
 }
 
 func krunPluginID(composeFile string) (string, bool) {
@@ -193,21 +208,127 @@ func parseKrunPolicyInt(annotations map[string]string, key string) (int, error) 
 	return int(value), nil
 }
 
-func assignedKrunSocketPath(pluginID, requestedPath string, listen bool) (string, error) {
+func assignedKrunSocketPath(_ string, requestedPath string, listen bool) (string, error) {
 	name := filepath.Base(requestedPath)
 	if requestedPath == "" || name == "." || name == string(filepath.Separator) || !krunSocketNameRE.MatchString(name) {
 		return "", fmt.Errorf("invalid krun socket name %q", requestedPath)
+	}
+	if !strings.HasSuffix(name, ".sock") {
+		return "", fmt.Errorf("krun socket name must end in .sock: %q", requestedPath)
 	}
 	direction := "connect"
 	if listen {
 		direction = "listen"
 	}
-	path := filepath.Join("/run/spr-krun", direction, krunPluginPrefix(pluginID)+"-"+name)
+	path := filepath.Join("/run/spr-krun", direction, name)
 	// sockaddr_un.sun_path is 108 bytes on Linux, including the trailing NUL.
 	if len(path) >= 108 {
 		return "", fmt.Errorf("assigned krun socket path is too long")
 	}
 	return path, nil
+}
+
+func krunListenRoot(pluginID string) string {
+	if root, ok := krunListenRootAliases[pluginID]; ok {
+		return root
+	}
+	return filepath.Join("/state/plugins", pluginID)
+}
+
+func authorizedKrunSocketSource(pluginID, requestedPath string, listen bool) (string, error) {
+	cleanPath := filepath.Clean(requestedPath)
+	if requestedPath != cleanPath || !filepath.IsAbs(cleanPath) {
+		return "", fmt.Errorf("krun socket path must be clean and absolute: %q", requestedPath)
+	}
+	if _, err := assignedKrunSocketPath(pluginID, cleanPath, listen); err != nil {
+		return "", err
+	}
+
+	if listen {
+		root := krunListenRoot(pluginID)
+		rel, err := filepath.Rel(root, cleanPath)
+		if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			return "", fmt.Errorf("krun listener %q is outside plugin %s state", requestedPath, pluginID)
+		}
+	} else {
+		allowed := krunConnectAllowlist[pluginID]
+		if _, ok := allowed[cleanPath]; !ok {
+			return "", fmt.Errorf("krun connector %q is not authorized for plugin %s", requestedPath, pluginID)
+		}
+	}
+
+	parent := filepath.Dir(cleanPath)
+	return strings.TrimPrefix(parent, string(filepath.Separator)), nil
+}
+
+func ensureKrunSocketSource(relativePath string) error {
+	cleanPath := filepath.Clean(relativePath)
+	if cleanPath == "." || filepath.IsAbs(cleanPath) || cleanPath == ".." || strings.HasPrefix(cleanPath, ".."+string(filepath.Separator)) {
+		return fmt.Errorf("invalid krun socket source %q", relativePath)
+	}
+
+	flags := unix.O_RDONLY | unix.O_DIRECTORY | unix.O_CLOEXEC | unix.O_NOFOLLOW
+	fd, err := unix.Open(SuperRootPath, flags, 0)
+	if err != nil {
+		return fmt.Errorf("open trusted super root: %w", err)
+	}
+	defer func() { _ = unix.Close(fd) }()
+
+	for _, component := range strings.Split(cleanPath, string(filepath.Separator)) {
+		if err := unix.Mkdirat(fd, component, 0700); err != nil && err != unix.EEXIST {
+			return fmt.Errorf("create trusted krun socket directory %s: %w", component, err)
+		}
+		next, err := unix.Openat(fd, component, flags, 0)
+		if err != nil {
+			return fmt.Errorf("open trusted krun socket directory %s: %w", component, err)
+		}
+		var stat unix.Stat_t
+		if err := unix.Fstat(next, &stat); err != nil {
+			unix.Close(next)
+			return fmt.Errorf("inspect trusted krun socket directory %s: %w", component, err)
+		}
+		if stat.Uid != 0 || stat.Mode&unix.S_IFMT != unix.S_IFDIR || stat.Mode&(unix.S_IWGRP|unix.S_IWOTH) != 0 {
+			unix.Close(next)
+			return fmt.Errorf("trusted krun socket directory %s must be root-owned and not writable by group or other", component)
+		}
+		unix.Close(fd)
+		fd = next
+	}
+	return nil
+}
+
+func prepareKrunSocketMounts(pluginID string, annotations map[string]string) ([]string, error) {
+	mounts := []string{}
+	requests := []struct {
+		annotation string
+		target     string
+		listen     bool
+		readOnly   bool
+	}{
+		{"krun.vsock_path", "/run/spr-krun/listen", true, false},
+		{"krun.vsock_connect_path", "/run/spr-krun/connect", false, true},
+	}
+
+	for _, request := range requests {
+		requestedPath, ok := annotations[request.annotation]
+		if !ok {
+			continue
+		}
+		relativeSource, err := authorizedKrunSocketSource(pluginID, requestedPath, request.listen)
+		if err != nil {
+			return nil, err
+		}
+		if err := ensureKrunSocketSource(relativeSource); err != nil {
+			return nil, err
+		}
+		hostSource := filepath.Join(getHostSuperDir(), relativeSource)
+		mount := hostSource + ":" + request.target
+		if request.readOnly {
+			mount += ":ro"
+		}
+		mounts = append(mounts, mount)
+	}
+	return mounts, nil
 }
 
 func buildKrunTrustedPolicy(pluginID, service string, annotations map[string]string) (krunTrustedPolicy, error) {
@@ -332,6 +453,10 @@ func prepareKrunComposePolicy(composeFile string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("authorize KVM plugin %s: %w", pluginID, err)
 	}
+	socketMounts, err := prepareKrunSocketMounts(pluginID, service.Annotations)
+	if err != nil {
+		return "", fmt.Errorf("authorize KVM plugin %s: %w", pluginID, err)
+	}
 
 	if err := ensurePrivateDirectory(krunPolicyDir); err != nil {
 		return "", err
@@ -349,12 +474,11 @@ func prepareKrunComposePolicy(composeFile string) (string, error) {
 		return "", err
 	}
 
-	override := krunComposeOverride{Services: map[string]struct {
-		Annotations map[string]string `yaml:"annotations"`
-	}{}}
-	overrideService := struct {
-		Annotations map[string]string `yaml:"annotations"`
-	}{Annotations: map[string]string{krunPolicyAnnotation: token}}
+	override := krunComposeOverride{Services: map[string]krunComposeOverrideService{}}
+	overrideService := krunComposeOverrideService{
+		Annotations: map[string]string{krunPolicyAnnotation: token},
+		Volumes:     socketMounts,
+	}
 	override.Services[serviceName] = overrideService
 	overridePath := filepath.Join(krunOverrideDir, token+".yml")
 	data, err := yaml.Marshal(override)
