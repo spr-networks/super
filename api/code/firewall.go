@@ -2414,8 +2414,8 @@ func hasCustomVerdict(ZoneName string, IP string, Iface string) bool {
 func hasVmapEntries(snap *MapSnapshot, devices map[string]DeviceEntry, entry DeviceEntry, Iface string) bool {
 	//check if a device has its vmap entries established
 
-	//check ethernet filter entry is present
-	if entry.MAC != "" {
+        // special case for wireguard traffic
+	if entry.MAC != "" && Iface != "wg0" {
 		if !snap.HasElement("ethernet_filter", []string{entry.RecentIP, Iface, entry.MAC}) {
 			return false
 		}
