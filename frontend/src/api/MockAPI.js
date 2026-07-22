@@ -997,9 +997,16 @@ export default function MockAPI(props = null) {
       server.create('pfwForwardRule', {
         RuleName: 'Work laptop via Cloudflare WARP',
         Client: { SrcIP: '192.168.2.129' },
+        Time: {
+          CronExpr: '',
+          Start: '',
+          End: '',
+          Days: [0, 0, 0, 0, 0, 0, 0]
+        },
         OriginalDst: { IP: '0.0.0.0/0' },
         Dst: { IP: '172.30.118.2' },
         DstInterface: 'spr-usque',
+        Protocol: '',
         Disabled: false
       })
 
