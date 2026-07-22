@@ -26,6 +26,28 @@ for image in debian:bullseye debian:trixie; do
 
             /usr/libexec/spr-krun-runtime/krun --version |
                 grep -F "+LIBKRUN"
+            test "$(stat -c "%U:%G %a" /run/spr-krun)" = "root:root 755"
+            test "$(stat -c "%U:%G %a" /run/spr-krun/connect)" = "root:root 755"
+            test "$(stat -c "%U:%G %a" /run/spr-krun/listen)" = "root:root 755"
+            test "$(stat -c "%U:%G %a" /var/lib/spr-krun)" = "root:root 700"
+            test "$(stat -c "%U:%G %a" /var/lib/spr-krun/policies)" = "root:root 700"
+            test "$(stat -c "%U:%G %a" /var/lib/spr-krun/overrides)" = "root:root 700"
+            test -f /usr/lib/tmpfiles.d/spr-krun-runtime.conf
+            grep -aqF "/run/spr-krun/connect" \
+                /usr/libexec/spr-krun-runtime/krun
+            grep -aqF "/run/spr-krun/listen" \
+                /usr/libexec/spr-krun-runtime/krun
+            grep -aqF "/var/lib/spr-krun/policies" \
+                /usr/libexec/spr-krun-runtime/krun
+            grep -aqF "run.oci.spr.krun.policy" \
+                /usr/libexec/spr-krun-runtime/krun
+            grep -aqF "krun_set_rlimits" \
+                /usr/libexec/spr-krun-runtime/krun
+            grep -aqF "RLIMIT_NOFILE" \
+                /usr/libexec/spr-krun-runtime/krun
+            ! grep -aEq \
+                "krun[.](tap_name|net_uplink|net_mac|vsock_path|vsock_connect_path)" \
+                /usr/libexec/spr-krun-runtime/krun
             jq -e \
                 ".iptables == false and
                  .runtimes.runsc.path == \"/usr/local/bin/runsc\" and

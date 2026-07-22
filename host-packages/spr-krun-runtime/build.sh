@@ -63,13 +63,15 @@ awk '
     }
 ' spr.config > spr-network.config
 
-tar -xzf libkrun.tar.gz
+SOURCE_ROOT="$BUILD_DIR/sources"
+mkdir -p "$SOURCE_ROOT/libkrun" "$SOURCE_ROOT/crun"
+tar -xzf libkrun.tar.gz -C "$SOURCE_ROOT/libkrun" --strip-components=1
 tar -xzf libkrunfw.tar.gz
-tar -xzf "crun-${CRUN_VERSION}.tar.gz"
+tar -xzf "crun-${CRUN_VERSION}.tar.gz" -C "$SOURCE_ROOT/crun" --strip-components=1
 
-LIBKRUN_DIR="$BUILD_DIR/libkrun-${LIBKRUN_COMMIT}"
+LIBKRUN_DIR="$SOURCE_ROOT/libkrun"
 LIBKRUNFW_DIR="$BUILD_DIR/libkrunfw-${LIBKRUNFW_COMMIT}"
-CRUN_DIR="$BUILD_DIR/crun-${CRUN_VERSION}"
+CRUN_DIR="$SOURCE_ROOT/crun"
 SDK_DIR="$BUILD_DIR/sdk"
 FW_SDK_DIR="$BUILD_DIR/fw-sdk"
 KERNEL_UAPI_DIR="$BUILD_DIR/kernel-uapi"
@@ -131,10 +133,9 @@ make -C "$LIBKRUNFW_DIR/$LIBKRUNFW_KERNEL_VERSION" olddefconfig
     make PREFIX=/usr/local DESTDIR="$FW_SDK_DIR" install
 )
 
-git -C "$LIBKRUN_DIR" apply --check \
-    "$SCRIPT_DIR/patches/libkrun/0001-reliable-external-dhcp.patch"
-git -C "$LIBKRUN_DIR" apply \
-    "$SCRIPT_DIR/patches/libkrun/0001-reliable-external-dhcp.patch"
+COMBINED_PATCH="$SCRIPT_DIR/patches/0001-spr-krun-runtime.patch"
+patch --dry-run --batch --forward -d "$SOURCE_ROOT" -p1 < "$COMBINED_PATCH"
+patch --batch --forward -d "$SOURCE_ROOT" -p1 < "$COMBINED_PATCH"
 
 chmod 0755 rustup-init
 export RUSTUP_HOME="$BUILD_DIR/rustup"
@@ -144,23 +145,6 @@ export PATH="$CARGO_HOME/bin:$PATH"
 export RUSTUP_TOOLCHAIN="$RUST_VERSION"
 make -C "$LIBKRUN_DIR" -j"${MAKE_JOBS:-$(nproc)}" NET=1 PREFIX=/usr/local
 make -C "$LIBKRUN_DIR" NET=1 PREFIX=/usr/local DESTDIR="$SDK_DIR" install
-
-git -C "$CRUN_DIR" apply --check \
-    "$SCRIPT_DIR/patches/crun/0001-vsock-unix-and-disable-passt-ingress.patch"
-git -C "$CRUN_DIR" apply \
-    "$SCRIPT_DIR/patches/crun/0001-vsock-unix-and-disable-passt-ingress.patch"
-git -C "$CRUN_DIR" apply --check \
-    "$SCRIPT_DIR/patches/crun/0002-direct-spr-tap.patch"
-git -C "$CRUN_DIR" apply \
-    "$SCRIPT_DIR/patches/crun/0002-direct-spr-tap.patch"
-git -C "$CRUN_DIR" apply --check \
-    "$SCRIPT_DIR/patches/crun/0003-private-plugin-network.patch"
-git -C "$CRUN_DIR" apply \
-    "$SCRIPT_DIR/patches/crun/0003-private-plugin-network.patch"
-git -C "$CRUN_DIR" apply --check \
-    "$SCRIPT_DIR/patches/crun/0004-host-unix-vsock-connect.patch"
-git -C "$CRUN_DIR" apply \
-    "$SCRIPT_DIR/patches/crun/0004-host-unix-vsock-connect.patch"
 
 (
     cd "$CRUN_DIR"
@@ -175,6 +159,7 @@ install -d -m 0755 \
     "$PACKAGE_ROOT/DEBIAN" \
     "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime" \
     "$PRIVATE_LIBDIR" \
+    "$PACKAGE_ROOT/usr/lib/tmpfiles.d" \
     "$PACKAGE_ROOT/usr/sbin" \
     "$PACKAGE_ROOT/usr/share/doc/spr-krun-runtime"
 
@@ -187,24 +172,39 @@ nm -D --defined-only "$PRIVATE_LIBDIR/libkrun.so.${LIBKRUN_VERSION}" |
     grep ' krun_add_net_tap$' >/dev/null
 nm -D --defined-only "$PRIVATE_LIBDIR/libkrun.so.${LIBKRUN_VERSION}" |
     grep ' krun_add_vsock_port2$' >/dev/null
+nm -D --defined-only "$PRIVATE_LIBDIR/libkrun.so.${LIBKRUN_VERSION}" |
+    grep ' krun_set_rlimits$' >/dev/null
 strings "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/krun" |
-    grep 'krun.tap_name' >/dev/null
+    grep 'run.oci.spr.krun.policy' >/dev/null
 strings "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/krun" |
-    grep 'krun.net_uplink' >/dev/null
+    grep 'krun_set_rlimits' >/dev/null
 strings "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/krun" |
-    grep 'krun.vsock_path' >/dev/null
+    grep 'RLIMIT_NOFILE' >/dev/null
 strings "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/krun" |
-    grep 'krun.vsock_connect_path' >/dev/null
+    grep '/var/lib/spr-krun/policies' >/dev/null
+strings "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/krun" |
+    grep '/run/spr-krun/connect' >/dev/null
+strings "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/krun" |
+    grep '/run/spr-krun/listen' >/dev/null
+if strings "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/krun" |
+    grep -Eq 'krun[.](tap_name|net_uplink|net_mac|vsock_path|vsock_connect_path)'; then
+    echo "built runtime still consumes untrusted privileged krun annotations" >&2
+    exit 1
+fi
 
 strip --strip-unneeded "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/krun"
 strip --strip-unneeded "$PRIVATE_LIBDIR/libkrun.so.${LIBKRUN_VERSION}"
+# shellcheck disable=SC2016 # $ORIGIN is an ELF loader token, not a shell variable.
 patchelf --set-rpath '$ORIGIN/../../lib/spr-krun-runtime' \
     "$PACKAGE_ROOT/usr/libexec/spr-krun-runtime/krun"
+# shellcheck disable=SC2016 # $ORIGIN is an ELF loader token, not a shell variable.
 patchelf --set-rpath '$ORIGIN' \
     "$PRIVATE_LIBDIR/libkrun.so.${LIBKRUN_VERSION}"
 
 install -m 0755 "$SCRIPT_DIR/scripts/spr-krun-runtime-configure" \
     "$PACKAGE_ROOT/usr/sbin/spr-krun-runtime-configure"
+install -m 0644 "$SCRIPT_DIR/debian/spr-krun-runtime.tmpfiles" \
+    "$PACKAGE_ROOT/usr/lib/tmpfiles.d/spr-krun-runtime.conf"
 install -m 0644 "$SCRIPT_DIR/README.md" \
     "$PACKAGE_ROOT/usr/share/doc/spr-krun-runtime/README.md"
 install -m 0644 "$SCRIPT_DIR/versions.env" \

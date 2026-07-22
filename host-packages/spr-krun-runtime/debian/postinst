@@ -2,6 +2,14 @@
 set -e
 
 if [ "$1" = "configure" ] && command -v spr-krun-runtime-configure >/dev/null 2>&1; then
+    install -d -o root -g root -m 0755 \
+        /run/spr-krun \
+        /run/spr-krun/connect \
+        /run/spr-krun/listen
+    install -d -o root -g root -m 0700 \
+        /var/lib/spr-krun \
+        /var/lib/spr-krun/policies \
+        /var/lib/spr-krun/overrides
     spr-krun-runtime-configure
 fi
 
