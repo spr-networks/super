@@ -364,6 +364,9 @@ func webauthnDeleteCredential(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "failed to save webauthn settings", 400)
 					return
 				}
+				if removed, _ := revokeWebAuthnLoginTokensLocked(); removed > 0 {
+					WSCloseAll()
+				}
 				SprbusPublish("auth:webauthn:delete", map[string]string{"username": username, "credential": name, "ip": remoteIP(r)})
 				webauthnStatusJSON(w, settings, username)
 				return
@@ -558,6 +561,27 @@ func webauthnLoginToken(name string) (Token, error) {
 	}
 	kept = append(kept, newToken)
 	return newToken, saveFileJSON(AuthTokensFile, kept)
+}
+
+func revokeWebAuthnLoginTokensLocked() (int, error) {
+	tokens := []Token{}
+	data, err := os.ReadFile(AuthTokensFile)
+	if err == nil {
+		json.Unmarshal(data, &tokens)
+	}
+	kept := []Token{}
+	removed := 0
+	for _, t := range tokens {
+		if strings.HasPrefix(t.Name, webauthnLoginTokenPrefix) {
+			removed++
+			continue
+		}
+		kept = append(kept, t)
+	}
+	if removed == 0 {
+		return 0, nil
+	}
+	return removed, saveFileJSON(AuthTokensFile, kept)
 }
 
 func webauthnLogout(w http.ResponseWriter, r *http.Request) {
