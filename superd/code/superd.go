@@ -252,6 +252,11 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		return fmt.Errorf("compose file path is not whitelisted: %s", composeFile)
 	}
 
+	krunOverride, policyErr := prepareKrunComposePolicy(composeFile)
+	if policyErr != nil {
+		return policyErr
+	}
+
 	/*
 		//upon testing this recreates service:base senselessly,
 		// causing the services to lose their network. dont do this,
@@ -284,10 +289,14 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		//docker buildkit has introduced a bug with contexts, this is a workaround.
 		add_buildctx = "BUILDCTX=" + filepath.Dir(composeFile)
 
-		args = append(args, "-f", defaultCompose, "-f", composeFile, command)
+		args = append(args, "-f", defaultCompose, "-f", composeFile)
 	} else {
-		args = append(args, "-f", composeFile, command)
+		args = append(args, "-f", composeFile)
 	}
+	if krunOverride != "" {
+		args = append(args, "-f", krunOverride)
+	}
+	args = append(args, command)
 
 	args = appendComposeCommandArgs(args, command, optional, target)
 
@@ -312,6 +321,9 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 			"-v", "/var/run/docker.sock:/var/run/docker.sock",
 			"-w", superdir,
 			"-e", "SUPERDIR="+superdir)
+		if krunOverride != "" {
+			d_args = append(d_args, "-v", krunPolicyRoot+":"+krunPolicyRoot+":ro")
+		}
 
 		if add_buildctx != "" {
 			d_args = append(d_args, "-e", add_buildctx)

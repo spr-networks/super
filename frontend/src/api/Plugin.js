@@ -1,21 +1,29 @@
 import API from './API'
 
+const pluginManagementBase = '/plugins_api'
+
 export class APIPlugin extends API {
   constructor() {
     super('')
   }
 
   list() {
-    return this.get('/plugins')
+    return this.get(`${pluginManagementBase}/`)
   }
   add(data) {
-    return this.put(`/plugins/${data.Name}`, data)
+    return this.put(
+      `${pluginManagementBase}/${encodeURIComponent(data.Name)}`,
+      data
+    )
   }
   update(data) {
     return this.add(data)
   }
   remove(data) {
-    return this.delete(`/plugins/${data.Name}`, data)
+    return this.delete(
+      `${pluginManagementBase}/${encodeURIComponent(data.Name)}`,
+      data
+    )
   }
   getPlusToken() {
     return this.get('/plusToken')
@@ -27,7 +35,14 @@ export class APIPlugin extends API {
     return this.put('/plusToken', data)
   }
   restart(name) {
-    return this.put(`/plugins/${encodeURIComponent(name)}/restart`)
+    return this.put(
+      `${pluginManagementBase}/${encodeURIComponent(name)}/restart`
+    )
+  }
+  updateContainer(name) {
+    return this.put(
+      `${pluginManagementBase}/${encodeURIComponent(name)}/update_container`
+    )
   }
   stopPlusExtension(name) {
     return this.put(`/stopPlusExtension`, name)

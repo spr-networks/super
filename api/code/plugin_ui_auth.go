@@ -100,12 +100,24 @@ func revokePluginUISession(id string) {
 func pluginForSandboxedUI(uri string) (PluginConfig, bool) {
 	Configmtx.Lock()
 	defer Configmtx.Unlock()
-	for _, plugin := range config.Plugins {
+	targetIndex := -1
+	for index, plugin := range config.Plugins {
 		if plugin.URI == uri && plugin.Enabled && plugin.HasUI && plugin.IsUISandboxed() {
-			return plugin, true
+			targetIndex = index
+			break
 		}
 	}
-	return PluginConfig{}, false
+	if targetIndex == -1 {
+		return PluginConfig{}, false
+	}
+
+	for index, plugin := range config.Plugins {
+		if index != targetIndex && plugin.Enabled && plugin.URI != "" && pluginURIsOverlap(uri, plugin.URI) {
+			return PluginConfig{}, false
+		}
+	}
+
+	return config.Plugins[targetIndex], true
 }
 
 func mintPluginUISession(w http.ResponseWriter, r *http.Request) {

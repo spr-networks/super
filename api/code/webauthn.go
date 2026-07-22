@@ -103,6 +103,29 @@ func webauthnStoreCredentialLocked(settings WebAuthnSettings, name string, crede
 	return webauthnSaveLocked(settings)
 }
 
+func webauthnUpdateCredentialLocked(settings WebAuthnSettings, name string, credential *webauthn.Credential) error {
+	if credential.Authenticator.CloneWarning {
+		log.Println("webauthn: possible cloned authenticator for user", name)
+	}
+	entry := settings.Users[name]
+	if entry == nil {
+		return fmt.Errorf("webauthn user no longer exists")
+	}
+	for idx := range entry.Credentials {
+		if bytes.Equal(entry.Credentials[idx].Credential.ID, credential.ID) {
+			updated := *credential
+			storedAuthenticator := entry.Credentials[idx].Credential.Authenticator
+			if storedAuthenticator.SignCount > updated.Authenticator.SignCount {
+				updated.Authenticator.SignCount = storedAuthenticator.SignCount
+			}
+			updated.Authenticator.CloneWarning = updated.Authenticator.CloneWarning || storedAuthenticator.CloneWarning
+			entry.Credentials[idx].Credential = updated
+			return webauthnSaveLocked(settings)
+		}
+	}
+	return fmt.Errorf("webauthn credential no longer exists")
+}
+
 func webauthnStatusJSON(w http.ResponseWriter, settings WebAuthnSettings, name string) {
 	creds := []map[string]interface{}{}
 	if entry := settings.Users[name]; entry != nil {
@@ -156,6 +179,11 @@ type webauthnSession struct {
 	client  string
 }
 
+type webauthnFinishRequest struct {
+	Session    string          `json:"session"`
+	Credential json.RawMessage `json:"credential"`
+}
+
 var (
 	webauthnSessions    = map[string]*webauthnSession{}
 	webauthnSessionsMtx sync.Mutex
@@ -174,6 +202,17 @@ func webauthnTakeSession(r *http.Request, kind, id string) *webauthnSession {
 		return nil
 	}
 	return s
+}
+
+func webauthnFinishPayload(r *http.Request) (string, []byte, error) {
+	payload := webauthnFinishRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		return "", nil, err
+	}
+	if payload.Session == "" || len(payload.Credential) == 0 || string(payload.Credential) == "null" {
+		return "", nil, fmt.Errorf("missing webauthn session or credential")
+	}
+	return payload.Session, payload.Credential, nil
 }
 
 func webauthnBeginReply(w http.ResponseWriter, r *http.Request, kind, user, name string, options interface{}, data *webauthn.SessionData) {
@@ -263,7 +302,12 @@ func webauthnRegisterBegin(w http.ResponseWriter, r *http.Request) {
 }
 
 func webauthnRegisterFinish(w http.ResponseWriter, r *http.Request) {
-	sess := webauthnTakeSession(r, "register", r.URL.Query().Get("session"))
+	sessionID, credentialJSON, err := webauthnFinishPayload(r)
+	if err != nil {
+		http.Error(w, "invalid webauthn finish request", 400)
+		return
+	}
+	sess := webauthnTakeSession(r, "register", sessionID)
 	if sess == nil {
 		http.Error(w, "invalid or expired webauthn session", 400)
 		return
@@ -272,24 +316,29 @@ func webauthnRegisterFinish(w http.ResponseWriter, r *http.Request) {
 	if wa == nil {
 		return
 	}
-	parsed, err := protocol.ParseCredentialCreationResponse(r)
+	parsed, err := protocol.ParseCredentialCreationResponseBytes(credentialJSON)
 	if err != nil {
 		http.Error(w, "webauthn registration failed", 400)
 		return
 	}
 	Tokensmtx.Lock()
-	defer Tokensmtx.Unlock()
 	settings := webauthnLoadLocked()
 	user, _ := webauthnUserLocked(settings, sess.user)
+	Tokensmtx.Unlock()
+
 	credential, err := wa.CreateCredential(user, *sess.data, parsed)
 	if err != nil {
 		http.Error(w, "webauthn registration failed", 400)
 		return
 	}
+	Tokensmtx.Lock()
+	settings = webauthnLoadLocked()
 	if webauthnStoreCredentialLocked(settings, sess.user, credential, sess.name) != nil {
+		Tokensmtx.Unlock()
 		http.Error(w, "failed to save webauthn settings", 400)
 		return
 	}
+	Tokensmtx.Unlock()
 	SprbusPublish("auth:webauthn:register", map[string]string{"username": sess.user, "credential": sess.name, "ip": remoteIP(r)})
 	webauthnStatusJSON(w, settings, sess.user)
 }
@@ -352,7 +401,12 @@ func webauthnValidateBegin(w http.ResponseWriter, r *http.Request) {
 
 func webauthnValidateFinish(w http.ResponseWriter, r *http.Request) {
 	username, _, ok := r.BasicAuth()
-	sess := webauthnTakeSession(r, "validate", r.URL.Query().Get("session"))
+	sessionID, credentialJSON, payloadErr := webauthnFinishPayload(r)
+	if payloadErr != nil {
+		http.Error(w, "invalid webauthn finish request", 400)
+		return
+	}
+	sess := webauthnTakeSession(r, "validate", sessionID)
 	if !ok || sess == nil || sess.user != username {
 		http.Error(w, "invalid or expired webauthn session", 400)
 		return
@@ -361,7 +415,7 @@ func webauthnValidateFinish(w http.ResponseWriter, r *http.Request) {
 	if wa == nil {
 		return
 	}
-	parsed, err := protocol.ParseCredentialRequestResponse(r)
+	parsed, err := protocol.ParseCredentialRequestResponseBytes(credentialJSON)
 	if err != nil {
 		http.Error(w, "webauthn validation failed", 400)
 		return
@@ -369,11 +423,15 @@ func webauthnValidateFinish(w http.ResponseWriter, r *http.Request) {
 	Tokensmtx.Lock()
 	settings := webauthnLoadLocked()
 	user, _ := webauthnUserLocked(settings, sess.user)
+	Tokensmtx.Unlock()
+
 	credential, err := wa.ValidateLogin(user, *sess.data, parsed)
 	if err == nil {
-		webauthnStoreCredentialLocked(settings, sess.user, credential, "")
+		Tokensmtx.Lock()
+		settings = webauthnLoadLocked()
+		err = webauthnUpdateCredentialLocked(settings, sess.user, credential)
+		Tokensmtx.Unlock()
 	}
-	Tokensmtx.Unlock()
 	if err != nil {
 		SprbusPublish("auth:failure", map[string]string{"reason": remoteIP(r) + ":" + "webauthn validation failed", "type": "user", "name": username, "ip": remoteIP(r)})
 		http.Error(w, "webauthn validation failed", 400)
@@ -423,7 +481,12 @@ func webauthnLoginFinish(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Too many attempts. Try again later", 429)
 		return
 	}
-	sess := webauthnTakeSession(r, "login", r.URL.Query().Get("session"))
+	sessionID, credentialJSON, payloadErr := webauthnFinishPayload(r)
+	if payloadErr != nil {
+		http.Error(w, "invalid webauthn finish request", 400)
+		return
+	}
+	sess := webauthnTakeSession(r, "login", sessionID)
 	if sess == nil {
 		http.Error(w, "invalid or expired webauthn session", 400)
 		return
@@ -432,7 +495,7 @@ func webauthnLoginFinish(w http.ResponseWriter, r *http.Request) {
 	if wa == nil {
 		return
 	}
-	parsed, err := protocol.ParseCredentialRequestResponse(r)
+	parsed, err := protocol.ParseCredentialRequestResponseBytes(credentialJSON)
 	if err != nil {
 		http.Error(w, "webauthn login failed", 401)
 		return
@@ -448,13 +511,17 @@ func webauthnLoginFinish(w http.ResponseWriter, r *http.Request) {
 		}
 		return nil, fmt.Errorf("unknown user handle")
 	}
+	Tokensmtx.Unlock()
+
 	waUser, credential, err := wa.ValidatePasskeyLogin(handler, *sess.data, parsed)
 	username := ""
 	if err == nil {
 		username = waUser.(webAuthnUser).name
-		webauthnStoreCredentialLocked(settings, username, credential, "")
+		Tokensmtx.Lock()
+		settings = webauthnLoadLocked()
+		err = webauthnUpdateCredentialLocked(settings, username, credential)
+		Tokensmtx.Unlock()
 	}
-	Tokensmtx.Unlock()
 	if err != nil {
 		authFailureRateRecord(rateKey)
 		SprbusPublish("auth:failure", map[string]string{"reason": remoteIP(r) + ":" + "webauthn login failed", "type": "user", "name": "webauthn", "ip": remoteIP(r)})

@@ -29,7 +29,7 @@ import {
 } from '@gluestack-ui/themed'
 
 import { AlertContext, AppContext } from 'AppContext'
-import { api, API } from 'api'
+import { api, pluginAPI } from 'api'
 import { themes } from 'Themes'
 
 const pluginThemePayload = (ctx) => {
@@ -281,8 +281,8 @@ const PluginFrame = ({ name }) => {
     setPendingLegacyPlugin(null)
     pluginRef.current = null
     pluginAuthRef.current = null
-    api
-      .get('/plugins')
+    pluginAPI
+      .list()
       .then(async (plugins) => {
         let plugin = plugins.find((p) => p.URI == name)
         if (!plugin) {

@@ -65,11 +65,10 @@ const usePasskey = async (path, create = false, query = '') => {
   let credential = await window.navigator.credentials[
     create ? 'create' : 'get'
   ]({ publicKey })
-  return api.request(
-    'POST',
-    `${path}?session=${begin.Session}`,
-    encodeCredential(credential)
-  )
+  return api.request('POST', path, {
+    session: begin.Session,
+    credential: encodeCredential(credential)
+  })
 }
 
 export const validatePasskey = () => usePasskey('/webauthn/validate')

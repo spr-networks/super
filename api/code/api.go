@@ -3380,10 +3380,10 @@ func main() {
 	external_router_authenticated.HandleFunc("/logs", getLogs).Methods("GET")
 
 	//plugins
-	external_router_authenticated.HandleFunc("/plugins", getPlugins).Methods("GET")
-	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins(external_router_authenticated, external_router_public)).Methods("PUT", "DELETE")
-	external_router_authenticated.HandleFunc("/plugins/{name}/restart", handleRestartPlugin).Methods("PUT")
-	external_router_authenticated.HandleFunc("/plugins/{name}/update_container", updatePluginContainer).Methods("PUT")
+	external_router_authenticated.HandleFunc("/plugins_api/", getPlugins).Methods("GET")
+	external_router_authenticated.HandleFunc("/plugins_api/{name}", updatePlugins(external_router_authenticated, external_router_public)).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/plugins_api/{name}/restart", handleRestartPlugin).Methods("PUT")
+	external_router_authenticated.HandleFunc("/plugins_api/{name}/update_container", updatePluginContainer).Methods("PUT")
 	external_router_authenticated.HandleFunc("/plugin/ui_session", mintPluginUISession).Methods("PUT")
 	external_router_authenticated.HandleFunc("/plugin/ui_session/{session}", deletePluginUISession).Methods("DELETE")
 	//TBD: API Docs

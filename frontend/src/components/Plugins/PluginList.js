@@ -39,7 +39,7 @@ import { Tooltip } from 'components/Tooltip'
 import ModalForm from 'components/ModalForm'
 import EditPlugin from 'components/Plugins/EditPlugin'
 
-import { pluginAPI, api } from 'api'
+import { pluginAPI } from 'api'
 import { alertState } from 'AppContext'
 
 const NO_POLICY = 'no attestation policy for this image'
@@ -167,8 +167,8 @@ const PluginListItem = ({
 
   const handleUpdateContainer = () => {
     setUpdating(true)
-    api
-      .put(`/plugins/${encodeURIComponent(item.Name)}/update_container`)
+    pluginAPI
+      .updateContainer(item.Name)
       .then((res) => {
         setUpdating(false)
         if (res?.Updated) {

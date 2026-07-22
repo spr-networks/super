@@ -268,6 +268,25 @@ let mockTopoNodes = [
     Style: { Icon: 'Tablet', Color: '#0891b2' }
   },
   {
+    ID: 'dev:99:99:99:99:99:99',
+    Kind: 'device',
+    Name: 'Work laptop',
+    MAC: '99:99:99:99:99:99',
+    IP: '192.168.2.129',
+    TinyNet: '192.168.2.128/30',
+    VLANTag: '4103',
+    ConnType: 'wifi',
+    Iface: 'wlan1',
+    Groups: ['warp'],
+    Policies: ['dns'],
+    Tags: [],
+    Signal: { RSSI: -58, TxRate: 480, RxRate: 360, Caps: ['HT', 'VHT', 'HE'] },
+    DHCPFirstTime: new Date(Date.now() - 12 * 24 * 3600e3).toISOString(),
+    DHCPLastTime: new Date(Date.now() - 45 * 60e3).toISOString(),
+    Online: true,
+    Style: { Icon: 'Laptop', Color: '#2563eb' }
+  },
+  {
     ID: 'plugin:tailscale',
     Kind: 'extension',
     Name: 'TAILSCALE',
@@ -313,6 +332,21 @@ let mockTopoNodes = [
     Online: true
   },
   {
+    ID: 'plugin:usque',
+    Kind: 'extension',
+    Name: 'USQUE',
+    ConnType: 'wired',
+    Online: true
+  },
+  {
+    ID: 'plugin:usque:sink:warp',
+    Kind: 'sink',
+    Name: 'Cloudflare WARP',
+    IP: '172.30.118.2',
+    Iface: 'spr-usque',
+    Online: true
+  },
+  {
     ID: 'plugin:reticulum',
     Kind: 'extension',
     Name: 'RETICULUM',
@@ -325,6 +359,13 @@ const mockTopoL1Edges = [
   { From: 'router', To: 'iface:eth0', Layer: 'l1', Kind: 'uplink' },
   { From: 'router', To: 'plugin:nebula', Layer: 'l1', Kind: 'wireguard' },
   { From: 'router', To: 'plugin:gluetun', Layer: 'l1', Kind: 'wireguard' },
+  { From: 'router', To: 'plugin:usque', Layer: 'l1', Kind: 'wired' },
+  {
+    From: 'plugin:usque',
+    To: 'plugin:usque:sink:warp',
+    Layer: 'l1',
+    Kind: 'wired'
+  },
   { From: 'router', To: 'plugin:reticulum', Layer: 'l1', Kind: 'wireguard' },
   { From: 'router', To: 'iface:wlan1', Layer: 'l1', Kind: 'wifi' },
   { From: 'router', To: 'iface:wg0', Layer: 'l1', Kind: 'wg' },
@@ -351,6 +392,13 @@ const mockTopoL1Edges = [
     Layer: 'l1',
     Kind: 'wifi',
     Metric: -66
+  },
+  {
+    From: 'dev:99:99:99:99:99:99',
+    To: 'iface:wlan1',
+    Layer: 'l1',
+    Kind: 'wifi',
+    Metric: -58
   },
   { From: 'dev:66:66:66:66:66:66', To: 'iface:eth1', Layer: 'l1', Kind: 'wired' },
   {
@@ -512,8 +560,25 @@ const mockTopoPolicyEdges = () => {
     }
   }
 
+  edges.push({
+    From: 'dev:99:99:99:99:99:99',
+    To: 'plugin:usque:sink:warp',
+    Layer: 'policy',
+    Kind: 'route'
+  })
+
   return edges
 }
+
+const mockTopoSinks = [
+  {
+    ID: 'plugin:usque:sink:warp',
+    Name: 'Cloudflare WARP',
+    Iface: 'spr-usque',
+    IP: '172.30.118.2',
+    Online: true
+  }
+]
 
 const syncMockTopoDevice = (attrs) => {
   const id = attrs.MAC || attrs.WGPubKey
@@ -927,6 +992,15 @@ export default function MockAPI(props = null) {
         Condition: '',
         Disabled: false,
         Tags: ['focus']
+      })
+
+      server.create('pfwForwardRule', {
+        RuleName: 'Work laptop via Cloudflare WARP',
+        Client: { SrcIP: '192.168.2.129' },
+        OriginalDst: { IP: '0.0.0.0/0' },
+        Dst: { IP: '172.30.118.2' },
+        DstInterface: 'spr-usque',
+        Disabled: false
       })
 
       server.create('vpnSite', {
@@ -1353,7 +1427,8 @@ export default function MockAPI(props = null) {
         return {
           GeneratedAt: new Date().toISOString(),
           Nodes: mockTopoNodes,
-          Edges: [...mockTopoL1Edges, ...mockTopoPolicyEdges()]
+          Edges: [...mockTopoL1Edges, ...mockTopoPolicyEdges()],
+          Sinks: mockTopoSinks
         }
       })
 
@@ -3243,7 +3318,7 @@ export default function MockAPI(props = null) {
       })
 
       // plugins
-      this.get('/plugins', (schema, request) => {
+      this.get('/plugins_api/', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
@@ -3251,7 +3326,7 @@ export default function MockAPI(props = null) {
         return schema.plugins.all().models
       })
 
-      this.put('/plugins/:name', (schema, request) => {
+      this.put('/plugins_api/:name', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
@@ -3267,7 +3342,7 @@ export default function MockAPI(props = null) {
         return schema.plugins.all().models
       })
 
-      this.delete('/plugins/:name', (schema, request) => {
+      this.delete('/plugins_api/:name', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }

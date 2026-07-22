@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -299,6 +300,7 @@ func scopedPathMatch(method string, pathToMatch string, paths []string) bool {
 }
 
 func scopedPathPrefixMatch(pathToMatch string, scope string) bool {
+	pathToMatch = path.Clean(pathToMatch)
 	if scope == "/" {
 		return strings.HasPrefix(pathToMatch, "/")
 	}
@@ -308,6 +310,9 @@ func scopedPathPrefixMatch(pathToMatch string, scope string) bool {
 
 func authorizedToken(r *http.Request, token string) bool {
 	if session, exists := lookupPluginUISession(token); exists {
+		if _, exists := pluginForSandboxedUI(session.PluginURI); !exists {
+			return false
+		}
 		return scopedPathMatch(r.Method, r.URL.Path, pluginUISessionScope(session.PluginURI))
 	}
 

@@ -397,6 +397,25 @@ func validatePlus(plugin PluginConfig) bool {
 
 	return true
 }
+
+var pluginURIRegexp = regexp.MustCompile(`^[A-Za-z0-9\-]+(?:/[A-Za-z0-9\-]+)*$`)
+
+func pluginURIsOverlap(first string, second string) bool {
+	return first == second || strings.HasPrefix(first, second+"/") || strings.HasPrefix(second, first+"/")
+}
+
+func pluginURIConflicts(uri string, plugins []PluginConfig, skipIndex int) bool {
+	if uri == "" {
+		return false
+	}
+	for index, plugin := range plugins {
+		if index != skipIndex && plugin.URI != "" && pluginURIsOverlap(uri, plugin.URI) {
+			return true
+		}
+	}
+	return false
+}
+
 func getPlugins(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	Configmtx.Lock()
@@ -482,7 +501,6 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 		} else {
 			// validate
 			validName := regexp.MustCompile(`^[A-Za-z0-9\-]+$`).MatchString
-			validURI := regexp.MustCompile(`^[A-Za-z0-9\/\-]+$`).MatchString
 			validUnixPath := regexp.MustCompile(`^[A-Za-z0-9\/\-\._]+$`).MatchString
 
 			if !validName(plugin.Name) {
@@ -490,7 +508,7 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 				return
 			}
 
-			if plugin.URI != "" && !validURI(plugin.URI) {
+			if plugin.URI != "" && !pluginURIRegexp.MatchString(plugin.URI) {
 				http.Error(w, "Invalid URI", 400)
 				return
 			}
@@ -523,6 +541,15 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 					oldComposeFilePath = entry.ComposeFilePath
 					break
 				}
+			}
+
+			skipIndex := -1
+			if found {
+				skipIndex = idx
+			}
+			if pluginURIConflicts(plugin.URI, config.Plugins, skipIndex) {
+				http.Error(w, "Invalid URI: overlaps another plugin URI", http.StatusBadRequest)
+				return
 			}
 
 			//make sure these are known plus
