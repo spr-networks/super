@@ -45,7 +45,7 @@ const getPluginHTML = async (plugin, theme) => {
     Authorization
   }
 
-  let pathname = `plugins/${plugin.URI}`
+  let pathname = `plugins/${plugin.URI}/`
 
   let api_url = api.getApiURL()
   let u = new URL(api_url)
