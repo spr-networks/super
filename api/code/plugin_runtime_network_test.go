@@ -78,3 +78,39 @@ func TestPluginInstallInfoOffersDefaultWhenKVMIsUnavailable(t *testing.T) {
 		t.Fatalf("FallbackComposeFilePath = %q, want %q", got, want)
 	}
 }
+
+func TestRestorePluginDHCPInterfaces(t *testing.T) {
+	const mac = "02:53:50:52:4b:12"
+	devices := map[string]DeviceEntry{
+		mac: {
+			Type:              DeviceTypeContainer,
+			DHCPLastInterface: "spr-usque",
+		},
+	}
+	links := map[string]string{mac: "spr-usque"}
+
+	restored := restorePluginDHCPInterfaces(devices, map[string]string{}, links)
+	if restored[mac] != "spr-usque" {
+		t.Fatalf("restored interface = %q, want spr-usque", restored[mac])
+	}
+
+	restored = restorePluginDHCPInterfaces(devices, map[string]string{mac: "eth1"}, links)
+	if restored[mac] != "eth1" {
+		t.Fatalf("newer interface = %q, want eth1", restored[mac])
+	}
+
+	device := devices[mac]
+	device.Type = ""
+	devices[mac] = device
+	restored = restorePluginDHCPInterfaces(devices, map[string]string{}, links)
+	if restored[mac] != "" {
+		t.Fatalf("client interface restored as %q", restored[mac])
+	}
+
+	device.Type = DeviceTypeContainer
+	devices[mac] = device
+	restored = restorePluginDHCPInterfaces(devices, map[string]string{}, map[string]string{mac: "other0"})
+	if restored[mac] != "" {
+		t.Fatalf("mismatched plugin interface restored as %q", restored[mac])
+	}
+}
