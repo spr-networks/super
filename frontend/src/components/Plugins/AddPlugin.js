@@ -32,6 +32,7 @@ const AddPlugin = (props) => {
   const [Enabled, setEnabled] = useState(true)
   const [GitURL, setGitURL] = useState('')
   const [HasUI, setHasUI] = useState(false)
+  const [SandboxedUI, setSandboxedUI] = useState(true)
   const [HasTopology, setHasTopology] = useState(false)
   const [InstallTokenPath, setInstallTokenPath] = useState('')
   const [ScopedPaths, setScopedPaths] = useState('')
@@ -77,6 +78,7 @@ const AddPlugin = (props) => {
       Enabled,
       GitURL,
       HasUI,
+      SandboxedUI,
       HasTopology,
       InstallTokenPath,
       ScopedPaths: scopedPathsArray
@@ -271,6 +273,25 @@ const AddPlugin = (props) => {
         <FormControlHelper>
           <FormControlHelperText>
             Plugin provides a user interface
+          </FormControlHelperText>
+        </FormControlHelper>
+      </FormControl>
+
+      <FormControl>
+        <Checkbox
+          value={SandboxedUI}
+          isChecked={SandboxedUI}
+          onChange={setSandboxedUI}
+        >
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>Sandbox UI</CheckboxLabel>
+        </Checkbox>
+
+        <FormControlHelper>
+          <FormControlHelperText>
+            Disable only for legacy plugin UIs that require the signed-in UI credential
           </FormControlHelperText>
         </FormControlHelper>
       </FormControl>

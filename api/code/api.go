@@ -3384,6 +3384,8 @@ func main() {
 	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins(external_router_authenticated, external_router_public)).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/plugins/{name}/restart", handleRestartPlugin).Methods("PUT")
 	external_router_authenticated.HandleFunc("/plugins/{name}/update_container", updatePluginContainer).Methods("PUT")
+	external_router_authenticated.HandleFunc("/plugin/ui_session", mintPluginUISession).Methods("PUT")
+	external_router_authenticated.HandleFunc("/plugin/ui_session/{session}", deletePluginUISession).Methods("DELETE")
 	//TBD: API Docs
 	external_router_authenticated.HandleFunc("/plugin/custom_compose_paths", applyJwtOtpCheck(modifyCustomComposePaths)).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/plugin/install_user_url", installUserPluginGitUrl(external_router_authenticated, external_router_public)).Methods("PUT")
@@ -3509,6 +3511,7 @@ func main() {
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization", "SPR-Bearer", "X-JWT-OTP"})
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
+	exposedHeaders := handlers.ExposedHeaders([]string{"X-SPR-Auth-Error", "WWW-Authenticate"})
 
 	sslPort, runSSL := os.LookupEnv("API_SSL_PORT")
 
@@ -3520,10 +3523,10 @@ func main() {
 
 		listenAddr := fmt.Sprint("0.0.0.0:", listenPort)
 
-		go http.ListenAndServeTLS(listenAddr, ApiTlsCert, ApiTlsKey, logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
+		go http.ListenAndServeTLS(listenAddr, ApiTlsCert, ApiTlsKey, logRequest(handlers.CORS(originsOk, headersOk, methodsOk, exposedHeaders)(Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
 	}
 
-	go http.ListenAndServe("0.0.0.0:80", logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
+	go http.ListenAndServe("0.0.0.0:80", logRequest(handlers.CORS(originsOk, headersOk, methodsOk, exposedHeaders)(Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
 
 	go wifidServer.Serve(unixWifidListener)
 

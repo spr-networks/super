@@ -239,6 +239,10 @@ func ExtractRequestToken(r *http.Request) string {
 }
 
 func authenticateToken(token string) (bool, string, []string) {
+	if session, exists := lookupPluginUISession(token); exists {
+		return true, "plugin-ui:" + session.PluginURI, pluginUISessionScope(session.PluginURI)
+	}
+
 	exists := false
 	name := ""
 	paths := []string{}
@@ -274,7 +278,7 @@ func scopedPathMatch(method string, pathToMatch string, paths []string) bool {
 	for _, entry := range paths {
 		parts := strings.SplitN(entry, ":", 2)
 		if len(parts) > 1 {
-			if !strings.HasPrefix(pathToMatch, parts[0]) {
+			if !scopedPathPrefixMatch(pathToMatch, parts[0]) {
 				//prefix did not match, carry on
 				continue
 			}
@@ -285,7 +289,7 @@ func scopedPathMatch(method string, pathToMatch string, paths []string) bool {
 				return method == http.MethodGet || method == http.MethodPut || method == http.MethodPost || method == http.MethodPatch || method == http.MethodDelete
 			}
 		} else {
-			if strings.HasPrefix(pathToMatch, entry) {
+			if scopedPathPrefixMatch(pathToMatch, entry) {
 				return true
 			}
 		}
@@ -294,7 +298,19 @@ func scopedPathMatch(method string, pathToMatch string, paths []string) bool {
 	return false
 }
 
+func scopedPathPrefixMatch(pathToMatch string, scope string) bool {
+	if scope == "/" {
+		return strings.HasPrefix(pathToMatch, "/")
+	}
+	scope = strings.TrimSuffix(scope, "/")
+	return pathToMatch == scope || strings.HasPrefix(pathToMatch, scope+"/")
+}
+
 func authorizedToken(r *http.Request, token string) bool {
+	if session, exists := lookupPluginUISession(token); exists {
+		return scopedPathMatch(r.Method, r.URL.Path, pluginUISessionScope(session.PluginURI))
+	}
+
 	Tokensmtx.Lock()
 	//check api tokens
 	tokens := []Token{}
@@ -422,7 +438,13 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 		if authenticatedNext.Match(r, &matchInfo) || setupMode.Match(r, &matchInfo) {
 			SprbusPublish("auth:failure", map[string]string{"reason": remoteIP(r) + ":" + reason, "type": failType, "name": tokenName + username, "ip": remoteIP(r)})
 
-			if redirect_validate {
+			if isPluginUIToken(token) {
+				if reason == "unauthorized token" {
+					writePluginUIAuthError(w, http.StatusForbidden, "insufficient_scope")
+				} else {
+					writePluginUIAuthError(w, http.StatusUnauthorized, "invalid_token")
+				}
+			} else if redirect_validate {
 				http.Redirect(w, r, "/auth/validate", 302)
 			} else {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)

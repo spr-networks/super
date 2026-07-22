@@ -68,7 +68,7 @@ type PluginConfig struct {
 	GitURL              string
 	ComposeFilePath     string
 	HasUI               bool
-	SandboxedUI         bool
+	SandboxedUI         *bool `json:",omitempty"`
 	HasTopology         bool
 	Icon                string
 	InstallTokenPath    string
@@ -76,6 +76,10 @@ type PluginConfig struct {
 	NetworkCapabilities NetworkCapabilities
 	Runtime             string
 	AvailableRuntimes   []string
+}
+
+func (p PluginConfig) IsUISandboxed() bool {
+	return p.SandboxedUI == nil || *p.SandboxedUI
 }
 
 type PluginInstallInfo struct {
@@ -101,7 +105,7 @@ func (p PluginConfig) MatchesData(q PluginConfig) bool {
 		p.GitURL == q.GitURL &&
 		p.ComposeFilePath == q.ComposeFilePath &&
 		p.HasUI == q.HasUI &&
-		p.SandboxedUI == q.SandboxedUI &&
+		p.IsUISandboxed() == q.IsUISandboxed() &&
 		p.HasTopology == q.HasTopology &&
 		p.Icon == q.Icon &&
 		p.InstallTokenPath == q.InstallTokenPath &&
@@ -111,8 +115,23 @@ func (p PluginConfig) MatchesData(q PluginConfig) bool {
 }
 
 var gPlusExtensionDefaults = []PluginConfig{
-	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", false, false, true, "", "", []string{}, NetworkCapabilities{}, "", []string{}},
-	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", false, false, false, "", "", []string{}, NetworkCapabilities{}, "", []string{}},
+	{
+		Name:            "PFW",
+		URI:             "pfw",
+		UnixPath:        "/state/plugins/pfw/socket",
+		Plus:            true,
+		GitURL:          PfwGitURL,
+		ComposeFilePath: "plugins/plus/pfw_extension/docker-compose.yml",
+		HasTopology:     true,
+	},
+	{
+		Name:            "MESH",
+		URI:             "mesh",
+		UnixPath:        MeshdSocketPath,
+		Plus:            true,
+		GitURL:          MeshGitURL,
+		ComposeFilePath: "plugins/plus/mesh_extension/docker-compose.yml",
+	},
 }
 
 func normalizePluginRuntime(runtime string) (string, error) {
@@ -2275,6 +2294,7 @@ func WebSocketPluginHandler(config PluginConfig) func(http.ResponseWriter, *http
 		var upgrader = websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
+			CheckOrigin:     websocketRequestOriginAllowed,
 		}
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {

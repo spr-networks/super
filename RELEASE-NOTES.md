@@ -4,6 +4,7 @@
 ## v1.1.15
 **Features**
 - KVM support for plugins
+- Plugin UI is sandboxed by default now
 - Support for rustAP beta users as an alternative to hostapd
 - Reintroduce Webauthn support
 - Add iOS biometrics support

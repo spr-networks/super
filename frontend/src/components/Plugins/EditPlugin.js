@@ -33,6 +33,7 @@ const EditPlugin = ({ plugin, onClose, notifyChange, ...props }) => {
   const [Enabled, setEnabled] = useState(plugin.Enabled || false)
   const [GitURL, setGitURL] = useState(plugin.GitURL || '')
   const [HasUI, setHasUI] = useState(plugin.HasUI || false)
+  const [SandboxedUI, setSandboxedUI] = useState(plugin.SandboxedUI !== false)
   const [HasTopology, setHasTopology] = useState(plugin.HasTopology || false)
   const [InstallTokenPath, setInstallTokenPath] = useState(plugin.InstallTokenPath || '')
   const [ScopedPaths, setScopedPaths] = useState(plugin.ScopedPaths ? plugin.ScopedPaths.join(', ') : '')
@@ -46,6 +47,7 @@ const EditPlugin = ({ plugin, onClose, notifyChange, ...props }) => {
     setEnabled(plugin.Enabled || false)
     setGitURL(plugin.GitURL || '')
     setHasUI(plugin.HasUI || false)
+    setSandboxedUI(plugin.SandboxedUI !== false)
     setHasTopology(plugin.HasTopology || false)
     setInstallTokenPath(plugin.InstallTokenPath || '')
     setScopedPaths(plugin.ScopedPaths ? plugin.ScopedPaths.join(', ') : '')
@@ -102,6 +104,7 @@ const EditPlugin = ({ plugin, onClose, notifyChange, ...props }) => {
       Enabled,
       GitURL,
       HasUI,
+      SandboxedUI,
       HasTopology,
       InstallTokenPath,
       ScopedPaths: scopedPathsArray,
@@ -325,6 +328,25 @@ const EditPlugin = ({ plugin, onClose, notifyChange, ...props }) => {
         <FormControlHelper>
           <FormControlHelperText>
             Plugin provides a user interface
+          </FormControlHelperText>
+        </FormControlHelper>
+      </FormControl>
+
+      <FormControl>
+        <Checkbox
+          value={SandboxedUI}
+          isChecked={SandboxedUI}
+          onChange={setSandboxedUI}
+        >
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>Sandbox UI</CheckboxLabel>
+        </Checkbox>
+
+        <FormControlHelper>
+          <FormControlHelperText>
+            Disable only for legacy plugin UIs that require the signed-in UI credential
           </FormControlHelperText>
         </FormControlHelper>
       </FormControl>

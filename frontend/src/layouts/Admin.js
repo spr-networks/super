@@ -335,8 +335,7 @@ const AdminLayout = ({
           name: p.Name,
           path: `custom_plugin/${encodeURIComponent(p.URI)}/`,
           icon: pluginMenuIcon(p.Icon),
-          Component: CustomPluginView,
-          isSandboxed: p.SandboxedUI
+          Component: CustomPluginView
         }))
 
         //rebuild the group so menu entries track HasUI/Enabled changes

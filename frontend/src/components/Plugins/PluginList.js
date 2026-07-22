@@ -332,6 +332,12 @@ const PluginListItem = ({
             </Badge>
           )}
 
+          {item.HasUI && item.SandboxedUI === false && (
+            <Badge variant="solid" action="warning">
+              <BadgeText>Unsandboxed UI</BadgeText>
+            </Badge>
+          )}
+
           {item.Plus && (
             <Badge variant="solid" action="warning">
               <BadgeText>PLUS</BadgeText>

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -27,6 +28,20 @@ var wsGeneration uint64
 var wsPendingConnections = make(chan struct{}, 32)
 
 var WSNotify = make(chan *WSMessage, 100)
+
+func websocketRequestOriginAllowed(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+
+	parsed, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+
+	return parsed.Host != "" && strings.EqualFold(parsed.Host, r.Host)
+}
 
 type WSMessage struct {
 	Type         string
@@ -255,7 +270,7 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request, wildcard bool) {
 	var upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
-		// nil CheckOrigin uses Gorilla's Origin host == request Host policy.
+		CheckOrigin:     websocketRequestOriginAllowed,
 	}
 
 	c, err := upgrader.Upgrade(w, r, nil)
