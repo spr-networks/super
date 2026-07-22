@@ -15,9 +15,12 @@ describe('passkey finish request', () => {
       }
     }
     const get = jest.fn().mockResolvedValue(credential)
-    Object.defineProperty(window.navigator, 'credentials', {
+    Object.defineProperty(window, 'navigator', {
       configurable: true,
-      value: { get }
+      value: {
+        ...window.navigator,
+        credentials: { get }
+      }
     })
     api.put = jest.fn().mockResolvedValue({
       Session: 'secret-session',
