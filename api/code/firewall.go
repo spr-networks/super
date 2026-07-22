@@ -2623,6 +2623,28 @@ func isAuthorizedPluginDeviceLink(
 	return err == nil
 }
 
+func restorePluginDHCPInterfaces(
+	devices map[string]DeviceEntry,
+	recentDHCPIfaces map[string]string,
+	pluginDeviceLinks map[string]string,
+) map[string]string {
+	restored := make(map[string]string, len(recentDHCPIfaces)+len(pluginDeviceLinks))
+	for mac, iface := range recentDHCPIfaces {
+		restored[mac] = iface
+	}
+	for mac, iface := range pluginDeviceLinks {
+		if restored[mac] != "" {
+			continue
+		}
+		device, exists := devices[mac]
+		if !exists || device.Type != DeviceTypeContainer || device.DHCPLastInterface != iface {
+			continue
+		}
+		restored[mac] = iface
+	}
+	return restored
+}
+
 func notifyFirewallDHCP(device DeviceEntry, iface string) {
 	addLanInterface(iface)
 
@@ -3319,6 +3341,9 @@ func dynamicRouteLoop() {
 			}
 			for mac, iface := range PluginDeviceLinks {
 				pluginDeviceLinks[mac] = iface
+			}
+			recentDHCPIfaces = restorePluginDHCPInterfaces(devices, recentDHCPIfaces, pluginDeviceLinks)
+			for mac, iface := range pluginDeviceLinks {
 				if recentDHCPIfaces[mac] == iface {
 					suggested_device[mac] = iface
 				}
