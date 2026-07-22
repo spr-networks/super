@@ -211,6 +211,10 @@ install -m 0644 "$SCRIPT_DIR/versions.env" \
     "$PACKAGE_ROOT/usr/share/doc/spr-krun-runtime/versions.env"
 install -m 0644 "$SCRIPT_DIR/debian/copyright" \
     "$PACKAGE_ROOT/usr/share/doc/spr-krun-runtime/copyright"
+install -m 0644 "$SCRIPT_DIR/patches/crun/COPYING" \
+    "$PACKAGE_ROOT/usr/share/doc/spr-krun-runtime/COPYING.crun"
+install -m 0644 "$SCRIPT_DIR/patches/libkrun/COPYING" \
+    "$PACKAGE_ROOT/usr/share/doc/spr-krun-runtime/COPYING.libkrun"
 install -m 0755 "$SCRIPT_DIR/debian/postinst" "$PACKAGE_ROOT/DEBIAN/postinst"
 install -m 0755 "$SCRIPT_DIR/debian/prerm" "$PACKAGE_ROOT/DEBIAN/prerm"
 

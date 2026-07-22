@@ -19,7 +19,3 @@ Comment:
 Files: crun
 Copyright: The crun contributors
 License: GPL-2.0-only
-
-Files: *
-Copyright: SPR Networks
-License: Apache-2.0
