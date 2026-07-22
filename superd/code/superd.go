@@ -62,6 +62,22 @@ var ReleaseVersionFile = "configs/base/release_version"
 
 var ReleaseInfoMtx sync.Mutex
 var composeCommandMtx sync.Mutex
+
+func appendComposeCommandArgs(args []string, command string, optional string, target string) []string {
+	if optional != "" {
+		args = append(args, optional)
+	}
+	if command == "up" {
+		// Pulls are performed and attested by the update path. Starting a
+		// service must never fetch a missing or previously rejected image.
+		args = append(args, "--pull", "never")
+	}
+	if target != "" {
+		args = append(args, strings.Fields(target)...)
+	}
+	return args
+}
+
 var composeAllowMtx sync.Mutex
 
 func getReleaseVersion() string {
@@ -273,13 +289,7 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		args = append(args, "-f", composeFile, command)
 	}
 
-	if optional != "" {
-		args = append(args, optional)
-	}
-
-	if target != "" {
-		args = append(args, strings.Fields(target)...)
-	}
+	args = appendComposeCommandArgs(args, command, optional, target)
 
 	cmd := "docker-compose"
 
@@ -389,7 +399,10 @@ func update(w http.ResponseWriter, r *http.Request) {
 		verified = v
 	}
 
-	composeCommand(compose, target, "pull", "", false)
+	if err := composeCommand(compose, target, "pull", "", false); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	if getReleaseChannel() == "" {
 		err := verifyPulledUpdate(compose, target, verified)

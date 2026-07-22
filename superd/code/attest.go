@@ -361,6 +361,28 @@ func verifyUpdateImages(composeFile string, target string) (map[string]string, e
 	return verified, nil
 }
 
+func removeRejectedImage(image string) error {
+	out, err := exec.Command("docker", "image", "rm", image).CombinedOutput()
+	if err == nil {
+		return nil
+	}
+	detail := strings.TrimSpace(string(out))
+	if detail != "" {
+		return fmt.Errorf("docker image rm %s: %v: %s", image, err, detail)
+	}
+	return fmt.Errorf("docker image rm %s: %v", image, err)
+}
+
+func rejectPulledImage(image string, digest string, verifyErr error) string {
+	reason := verifyErr.Error()
+	if err := removeRejectedImage(image); err != nil {
+		reason += "; cleanup failed: " + err.Error()
+	}
+	fmt.Println("[-] attest: pulled image failed verification", image, digest, reason)
+	sprbus.Publish("superd:attest:failure", map[string]string{"Image": image, "Digest": digest, "Reason": reason})
+	return reason
+}
+
 func verifyPulledUpdate(composeFile string, target string, verified map[string]string) error {
 	images, err := composeImages(composeFile, target)
 	if err != nil {
@@ -376,7 +398,8 @@ func verifyPulledUpdate(composeFile string, target string, verified map[string]s
 
 		digest, err := imageRepoDigest(image)
 		if err != nil {
-			failures = append(failures, image+": "+err.Error())
+			reason := rejectPulledImage(image, "", err)
+			failures = append(failures, image+": "+reason)
 			continue
 		}
 
@@ -396,9 +419,8 @@ func verifyPulledUpdate(composeFile string, target string, verified map[string]s
 		}
 
 		if err != nil {
-			failures = append(failures, image+": pulled digest "+digest+" failed verification: "+err.Error())
-			fmt.Println("[-] attest: pulled image failed verification", image, digest, err)
-			sprbus.Publish("superd:attest:failure", map[string]string{"Image": image, "Digest": digest, "Reason": err.Error()})
+			reason := rejectPulledImage(image, digest, err)
+			failures = append(failures, image+": pulled digest "+digest+" failed verification: "+reason)
 		}
 	}
 
