@@ -137,6 +137,34 @@ COMBINED_PATCH="$SCRIPT_DIR/patches/0001-spr-krun-runtime.patch"
 patch --dry-run --batch --forward -d "$SOURCE_ROOT" -p1 < "$COMBINED_PATCH"
 patch --batch --forward -d "$SOURCE_ROOT" -p1 < "$COMBINED_PATCH"
 
+# The create child and a later start command do not share handler memory.
+# Reject a regression that checks the zeroed start cookie before reloading the
+# root-owned policy, and ensure direct `run` invokes the same hook while its
+# child is still synchronized.
+awk '
+    /^libkrun_start_container \(/ { in_start = 1 }
+    in_start && /libkrun_read_trusted_policy/ { policy = NR }
+    in_start && /if \(! kconf->use_tap\)/ { gate = NR }
+    in_start && /^}/ { in_start = 0 }
+    END { exit ! (policy > 0 && gate > policy) }
+' "$CRUN_DIR/src/libcrun/handlers/krun.c"
+awk '
+    /libcrun_move_network_devices \(container, pid, err\)/ { in_window = 1; moved = NR }
+    in_window && /vtable->start_container/ { hook = NR }
+    in_window && /sync send own pid/ { synced = NR; in_window = 0 }
+    END { exit ! (moved > 0 && hook > moved && synced > hook) }
+' "$CRUN_DIR/src/libcrun/container.c"
+
+# Pin the rlimit ABI assumption: libkrun takes a NULL-terminated string vector.
+# __typeof__(krun_set_rlimits) in the crun patch makes compilation verify the
+# function type, while these checks cover the terminator consumed by Rust.
+grep -F 'int32_t krun_set_rlimits(uint32_t ctx_id, const char *const rlimits[]);' \
+    "$LIBKRUN_DIR/include/libkrun.h" >/dev/null
+grep -F 'if item.is_null()' \
+    "$LIBKRUN_DIR/src/libkrun/src/lib.rs" >/dev/null
+grep -F 'memset (guest_rlimits, 0, sizeof (*guest_rlimits) * (limits_len + 1));' \
+    "$CRUN_DIR/src/libcrun/handlers/krun.c" >/dev/null
+
 chmod 0755 rustup-init
 export RUSTUP_HOME="$BUILD_DIR/rustup"
 export CARGO_HOME="$BUILD_DIR/cargo"

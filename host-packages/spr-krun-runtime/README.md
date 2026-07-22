@@ -35,11 +35,7 @@ Unix/vsock endpoints are restricted as follows:
   nested paths, symlinks, and names outside the two directories are rejected.
   Each component under `/run` is opened through a directory file descriptor
   with `O_NOFOLLOW`; the check does not rely on the final component alone.
-
-In TAP mode superd assigns the TAP name and locally administered MAC from the
-plugin identity. The runtime discovers the uplink itself and requires exactly
-one non-loopback interface in the private container network namespace; no
-plugin-controlled uplink name is honored.
+- TAP support for plugin interfaces to network back into host
 
 ## Building 
 Build instructions:
