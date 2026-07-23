@@ -68,9 +68,7 @@ func appendComposeCommandArgs(args []string, command string, optional string, ta
 		args = append(args, optional)
 	}
 	if command == "up" {
-		// Pulls are performed and attested by the update path. Starting a
-		// service must never fetch a missing or previously rejected image.
-		args = append(args, "--pull", "never")
+		args = append(args, "--pull", "never", "--no-build")
 	}
 	if target != "" {
 		args = append(args, strings.Fields(target)...)
@@ -395,34 +393,38 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 	return errors.New(errString)
 }
 
-func update(w http.ResponseWriter, r *http.Request) {
-	target := r.URL.Query().Get("service")
-	compose := r.URL.Query().Get("compose_file")
-
-	//on the main release channel, verify build provenance for the images this
-	//update would pull. on failure abort before downloading anything.
+func pullVerifiedUpdate(compose string, target string) (int, error) {
 	verified := map[string]string{}
 	if getReleaseChannel() == "" {
 		v, err := verifyUpdateImages(compose, target)
 		if err != nil {
-			http.Error(w, err.Error(), 400)
-			return
+			return http.StatusBadRequest, err
 		}
 		verified = v
 	}
 
 	if err := composeCommand(compose, target, "pull", "", false); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, err
 	}
 
 	if getReleaseChannel() == "" {
 		err := verifyPulledUpdate(compose, target, verified)
 		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
+			return http.StatusInternalServerError, err
 		}
 		go verifyPulledImages(false)
+	}
+
+	return http.StatusOK, nil
+}
+
+func update(w http.ResponseWriter, r *http.Request) {
+	target := r.URL.Query().Get("service")
+	compose := r.URL.Query().Get("compose_file")
+
+	if status, err := pullVerifiedUpdate(compose, target); err != nil {
+		http.Error(w, err.Error(), status)
+		return
 	}
 }
 
@@ -523,8 +525,8 @@ func updateContainer(w http.ResponseWriter, r *http.Request) {
 
 	before := imageIDs(images)
 
-	if err := composeCommand(compose, "", "pull", "", false); err != nil {
-		http.Error(w, err.Error(), 400)
+	if status, err := pullVerifiedUpdate(compose, ""); err != nil {
+		http.Error(w, err.Error(), status)
 		return
 	}
 

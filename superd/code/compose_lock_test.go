@@ -6,9 +6,9 @@ import (
 	"time"
 )
 
-func TestAppendComposeCommandArgsDisablesPullForUp(t *testing.T) {
+func TestAppendComposeCommandArgsDisablesPullAndBuildForUp(t *testing.T) {
 	got := appendComposeCommandArgs([]string{"-f", "docker-compose.yml", "up"}, "up", "-d", "api dns")
-	want := []string{"-f", "docker-compose.yml", "up", "-d", "--pull", "never", "api", "dns"}
+	want := []string{"-f", "docker-compose.yml", "up", "-d", "--pull", "never", "--no-build", "api", "dns"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("appendComposeCommandArgs() = %v, want %v", got, want)
 	}

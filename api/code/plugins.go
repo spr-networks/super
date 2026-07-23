@@ -2330,25 +2330,44 @@ func completeUserPluginInstall(router *mux.Router, router_public *mux.Router) fu
 		}
 
 		Configmtx.Lock()
-		defer Configmtx.Unlock()
 
 		if err := requirePluginRuntimeReady(plugin); err != nil {
+			Configmtx.Unlock()
 			http.Error(w, err.Error(), http.StatusConflict)
 			return
 		}
 
-		// Install the plugin configuration
+		enableAfterPull := plugin.Enabled
+		plugin.Enabled = false
 		success := installUserPluginConfig(plugin)
 		if !success {
+			Configmtx.Unlock()
 			http.Error(w, "Failed to install plugin", 400)
 			return
 		}
 
-		// Save and update routes
+		saveConfigLocked()
+		Configmtx.Unlock()
+
+		if plugin.ComposeFilePath != "" && !updateExtension(plugin.ComposeFilePath) {
+			http.Error(w, "Failed to download and verify plugin image; plugin left disabled", http.StatusBadGateway)
+			return
+		}
+
+		Configmtx.Lock()
+		for i := range config.Plugins {
+			if config.Plugins[i].Name == plugin.Name {
+				config.Plugins[i].Enabled = enableAfterPull
+				break
+			}
+		}
 		saveConfigLocked()
 		PluginRoutes(router, router_public)
+		plugins := append([]PluginConfig(nil), config.Plugins...)
+		Configmtx.Unlock()
+
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(config.Plugins)
+		json.NewEncoder(w).Encode(plugins)
 	})
 }
 
