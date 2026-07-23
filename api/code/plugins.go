@@ -1136,6 +1136,27 @@ func checkCurrentPluginNetworkRules(rules []CustomInterfaceRule, desired CustomI
 	return hasCurrent, stale
 }
 
+func removePluginCustomInterfaceRulesLocked(pluginName string) error {
+	ruleName := "Plugin-" + pluginName
+	rules := []CustomInterfaceRule{}
+	for _, rule := range gFirewallConfig.CustomInterfaceRules {
+		if rule.RuleName == ruleName {
+			rules = append(rules, rule)
+		}
+	}
+
+	var firstErr error
+	for _, rule := range rules {
+		if err := modifyCustomInterfaceRulesImpl(rule, true); err != nil {
+			fmt.Printf("Failed to remove stale rule %s (%s): %v\n", rule.RuleName, rule.SrcIP, err)
+			if firstErr == nil {
+				firstErr = err
+			}
+		}
+	}
+	return firstErr
+}
+
 func pluginDeviceMAC(plugin PluginConfig) (string, error) {
 	mac := trimLower(plugin.NetworkCapabilities.DeviceMAC)
 	if !isValidMAC(mac) {
@@ -1196,10 +1217,11 @@ func applyPluginDeviceNetworkCapabilities(plugin PluginConfig) error {
 	}
 	if err == nil {
 		PluginDeviceLinks[mac] = plugin.NetworkCapabilities.Interface
+		err = removePluginCustomInterfaceRulesLocked(plugin.Name)
 	}
 	FWmtx.Unlock()
 	if err != nil {
-		return fmt.Errorf("authorize DHCP for plugin %s: %w", plugin.Name, err)
+		return fmt.Errorf("prepare device network for plugin %s: %w", plugin.Name, err)
 	}
 
 	Groupsmtx.Lock()
@@ -1226,9 +1248,14 @@ func applyPluginDeviceNetworkCapabilities(plugin PluginConfig) error {
 		dev.MAC = mac
 		deviceChanged = true
 	}
+	if dev.Type != DeviceTypeContainer {
+		dev.Type = DeviceTypeContainer
+		deviceChanged = true
+	}
 	dev.Policies = policies
 	dev.Groups = groups
-	addGroupsIfMissing(getGroupsJson(), dev.Groups)
+	groupConfig := getGroupsJson()
+	addGroupsIfMissing(groupConfig, dev.Groups)
 	if deviceChanged {
 		devices[mac] = dev
 		saveDevicesJson(devices)
@@ -1238,6 +1265,10 @@ func applyPluginDeviceNetworkCapabilities(plugin PluginConfig) error {
 		} else {
 			SprbusPublish("device:save", scrubDevice(dev))
 		}
+	}
+	if dev.RecentIP != "" &&
+		dev.DHCPLastInterface == plugin.NetworkCapabilities.Interface {
+		refreshDeviceGroupsAndPolicy(devices, groupConfig, dev)
 	}
 
 	return nil
@@ -1319,45 +1350,29 @@ func removePluginNetworkCapabilities(plugin PluginConfig) error {
 		}
 
 		FWmtx.Lock()
-		defer FWmtx.Unlock()
 		delete(RecentDHCPIface, mac)
 		delete(PluginDeviceLinks, mac)
 		if GetElementFromMapComplex(
 			"inet", "filter", "dhcp_access",
 			[]string{plugin.NetworkCapabilities.Interface, mac},
-		) != nil {
-			return nil
+		) == nil {
+			err = DeleteElementFromMapComplex(
+				"inet", "filter", "dhcp_access",
+				[]string{plugin.NetworkCapabilities.Interface, mac},
+			)
 		}
-		return DeleteElementFromMapComplex(
-			"inet", "filter", "dhcp_access",
-			[]string{plugin.NetworkCapabilities.Interface, mac},
-		)
+		if cleanupErr := removePluginCustomInterfaceRulesLocked(plugin.Name); err == nil {
+			err = cleanupErr
+		}
+		FWmtx.Unlock()
+		return err
 	}
 
 	// We need to get the actual rule to delete it properly
 	FWmtx.Lock()
 	defer FWmtx.Unlock()
 
-	var ruleToDelete *CustomInterfaceRule
-	ruleName := "Plugin-" + plugin.Name
-
-	// Find the rule by name
-	for _, rule := range gFirewallConfig.CustomInterfaceRules {
-		if rule.RuleName == ruleName {
-			// Make a copy of the rule
-			ruleCopy := rule
-			ruleToDelete = &ruleCopy
-			break
-		}
-	}
-
-	if ruleToDelete == nil {
-		// Rule not found, which is ok (might have been manually removed)
-		return nil
-	}
-
-	// Remove the rule using the exact rule data
-	err := modifyCustomInterfaceRulesImpl(*ruleToDelete, true) // true = delete rule
+	err := removePluginCustomInterfaceRulesLocked(plugin.Name)
 	if err != nil {
 		fmt.Printf("Failed to remove network capabilities for plugin %s: %v\n", plugin.Name, err)
 		return err

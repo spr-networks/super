@@ -85,3 +85,36 @@ func TestCheckCurrentPluginNetworkRules(t *testing.T) {
 		t.Fatalf("first stale SrcIP = %q, want %q", stale[0].SrcIP, "172.29.0.2")
 	}
 }
+
+func TestRemovePluginCustomInterfaceRulesIgnoresOtherPlugins(t *testing.T) {
+	oldRules := gFirewallConfig.CustomInterfaceRules
+	t.Cleanup(func() {
+		gFirewallConfig.CustomInterfaceRules = oldRules
+	})
+
+	gFirewallConfig.CustomInterfaceRules = []CustomInterfaceRule{
+		{
+			BaseRule:  BaseRule{RuleName: "Plugin-spr-atlas"},
+			Interface: "spr-atlas",
+			SrcIP:     "172.26.0.2",
+		},
+		{
+			BaseRule:  BaseRule{RuleName: "Plugin-spr-nebula"},
+			Interface: "spr-nebula",
+			SrcIP:     "172.23.0.2",
+		},
+	}
+
+	// An invalid matching rule fails before touching nftables. That still
+	// verifies selection is by the plugin-owned rule name.
+	gFirewallConfig.CustomInterfaceRules[0].SrcIP = "invalid"
+	if err := removePluginCustomInterfaceRulesLocked("spr-atlas"); err == nil {
+		t.Fatal("invalid matching plugin rule unexpectedly succeeded")
+	}
+	if err := removePluginCustomInterfaceRulesLocked("spr-missing"); err != nil {
+		t.Fatalf("missing plugin cleanup affected another plugin: %v", err)
+	}
+	if len(gFirewallConfig.CustomInterfaceRules) != 2 {
+		t.Fatalf("unrelated rules were modified: %#v", gFirewallConfig.CustomInterfaceRules)
+	}
+}

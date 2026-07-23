@@ -354,6 +354,19 @@ func handleDHCPResult(MAC string, IP string, Router string, Name string, Iface s
 	saveDevicesJson(devices)
 
 	notifyFirewallDHCP(val, Iface)
+	if val.Type == DeviceTypeContainer {
+		FWmtx.Lock()
+		authorized := isAuthorizedPluginDeviceLink(
+			val.MAC,
+			Iface,
+			RecentDHCPIface,
+			PluginDeviceLinks,
+		)
+		FWmtx.Unlock()
+		if authorized {
+			refreshDeviceGroupsAndPolicy(devices, getGroupsJson(), val)
+		}
+	}
 
 	if Name != "" {
 		// update local mappings file for DNS
