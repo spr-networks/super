@@ -9,23 +9,70 @@ fi
 
 DEB_DIR="$(cd -- "$(dirname -- "$DEB")" && pwd)"
 DEB_NAME="$(basename -- "$DEB")"
+BUILD_CONTEXT="$(mktemp -d)"
+TEST_IMAGES=()
+
+cleanup() {
+    if [ "${#TEST_IMAGES[@]}" -gt 0 ]; then
+        docker image rm --force "${TEST_IMAGES[@]}" >/dev/null 2>&1 || true
+    fi
+    rm -rf -- "$BUILD_CONTEXT"
+}
+trap cleanup EXIT
+
+cp -- "$DEB_DIR/$DEB_NAME" "$BUILD_CONTEXT/spr-krun-runtime.deb"
+
+KRUN_RUN_OPTIONS=(--platform linux/arm64)
+case "$(docker version --format '{{.Server.Arch}}')" in
+    arm64|aarch64)
+        ;;
+    *)
+        # crun protects against runtime binary replacement by re-executing
+        # itself from a sealed file descriptor. Cross-architecture emulators
+        # cannot reliably perform that fexecve, while a read-only root lets
+        # crun use its supported immutable-binary path.
+        KRUN_RUN_OPTIONS+=(--read-only)
+        ;;
+esac
 
 for image in debian:bullseye debian:trixie; do
-    docker run --rm --platform linux/arm64 \
-        -v "$DEB_DIR:/packages:ro" \
-        "$image" sh -euxc '
-            export DEBIAN_FRONTEND=noninteractive
-            apt-get update
-            mkdir -p /etc/docker
-            printf "%s\n" \
-                "{\"iptables\":false,\"runtimes\":{\"runsc\":{\"path\":\"/usr/local/bin/runsc\",\"runtimeArgs\":[\"--host-uds=all\",\"--platform=kvm\"]}}}" \
-                > /etc/docker/daemon.json
-            apt-get install -y --download-only --no-install-recommends "/packages/$1"
-            dpkg --unpack "/packages/$1"
-            apt-get install -y --fix-broken --no-download --no-install-recommends
+    release="${image#debian:}"
+    test_image="spr-krun-package-test:${release}-$$"
+    TEST_IMAGES+=("$test_image")
 
+    docker buildx build \
+        --load \
+        --platform linux/arm64 \
+        --build-arg "BASE_IMAGE=$image" \
+        --tag "$test_image" \
+        --file - \
+        "$BUILD_CONTEXT" <<'EOF'
+ARG BASE_IMAGE=debian:bullseye
+FROM ${BASE_IMAGE}
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+COPY spr-krun-runtime.deb /packages/spr-krun-runtime.deb
+
+RUN apt-get update \
+    && mkdir -p /etc/docker \
+    && printf '%s\n' \
+        '{"iptables":false,"runtimes":{"runsc":{"path":"/usr/local/bin/runsc","runtimeArgs":["--host-uds=all","--platform=kvm"]}}}' \
+        > /etc/docker/daemon.json \
+    && apt-get install -y --download-only --no-install-recommends \
+        /packages/spr-krun-runtime.deb \
+    && dpkg --unpack /packages/spr-krun-runtime.deb \
+    && apt-get install -y --fix-broken --no-download --no-install-recommends
+EOF
+
+    docker run --rm "${KRUN_RUN_OPTIONS[@]}" \
+        "$test_image" sh -euxc '
             /usr/libexec/spr-krun-runtime/krun --version |
                 grep -F "+LIBKRUN"
+        '
+
+    docker run --rm --platform linux/arm64 \
+        "$test_image" sh -euxc '
             test "$(stat -c "%U:%G %a" /run/spr-krun)" = "root:root 755"
             test "$(stat -c "%U:%G %a" /run/spr-krun/connect)" = "root:root 755"
             test "$(stat -c "%U:%G %a" /run/spr-krun/listen)" = "root:root 755"
@@ -65,5 +112,5 @@ for image in debian:bullseye debian:trixie; do
                  .runtimes.runsc.path == \"/usr/local/bin/runsc\" and
                  (.runtimes | keys == [\"runsc\"])" \
                 /etc/docker/daemon.json
-        ' sh "$DEB_NAME"
+        '
 done
