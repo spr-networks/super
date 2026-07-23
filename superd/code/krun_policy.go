@@ -31,19 +31,6 @@ const (
 
 var krunSocketNameRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
 
-var krunListenRootAliases = map[string]string{
-	"home_assistant_integration": "/state/plugins/home_assistant",
-	"mitmproxy":                  "/state/plugins/spr-mitmproxy",
-	"spr-opencanary":             "/state/plugins/spr-opencanary-krun",
-	"spr-vaultwarden":            "/state/plugins/vaultwarden",
-}
-
-var krunConnectAllowlist = map[string]map[string]struct{}{
-	"spr-tailscale": {
-		"/state/api/eventbus.sock": {},
-	},
-}
-
 type krunComposeService struct {
 	Runtime     string            `json:"runtime"`
 	Annotations map[string]string `json:"annotations"`
@@ -249,7 +236,7 @@ func parseKrunPolicyInt(annotations map[string]string, key string) (int, error) 
 	return int(value), nil
 }
 
-func assignedKrunSocketPath(_ string, requestedPath string, listen bool) (string, error) {
+func assignedKrunSocketPath(requestedPath string, listen bool) (string, error) {
 	name := filepath.Base(requestedPath)
 	if requestedPath == "" || name == "." || name == string(filepath.Separator) || !krunSocketNameRE.MatchString(name) {
 		return "", fmt.Errorf("invalid krun socket name %q", requestedPath)
@@ -269,33 +256,13 @@ func assignedKrunSocketPath(_ string, requestedPath string, listen bool) (string
 	return path, nil
 }
 
-func krunListenRoot(pluginID string) string {
-	if root, ok := krunListenRootAliases[pluginID]; ok {
-		return root
-	}
-	return filepath.Join("/state/plugins", pluginID)
-}
-
-func authorizedKrunSocketSource(pluginID, requestedPath string, listen bool) (string, error) {
+func authorizedKrunSocketSource(requestedPath string, listen bool) (string, error) {
 	cleanPath := filepath.Clean(requestedPath)
 	if requestedPath != cleanPath || !filepath.IsAbs(cleanPath) {
 		return "", fmt.Errorf("krun socket path must be clean and absolute: %q", requestedPath)
 	}
-	if _, err := assignedKrunSocketPath(pluginID, cleanPath, listen); err != nil {
+	if _, err := assignedKrunSocketPath(cleanPath, listen); err != nil {
 		return "", err
-	}
-
-	if listen {
-		root := krunListenRoot(pluginID)
-		rel, err := filepath.Rel(root, cleanPath)
-		if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-			return "", fmt.Errorf("krun listener %q is outside plugin %s state", requestedPath, pluginID)
-		}
-	} else {
-		allowed := krunConnectAllowlist[pluginID]
-		if _, ok := allowed[cleanPath]; !ok {
-			return "", fmt.Errorf("krun connector %q is not authorized for plugin %s", requestedPath, pluginID)
-		}
 	}
 
 	parent := filepath.Dir(cleanPath)
@@ -338,7 +305,7 @@ func ensureKrunSocketSource(relativePath string) error {
 	return nil
 }
 
-func prepareKrunSocketMounts(pluginID string, annotations map[string]string) ([]string, error) {
+func prepareKrunSocketMounts(annotations map[string]string) ([]string, error) {
 	mounts := []string{}
 	requests := []struct {
 		annotation string
@@ -355,7 +322,7 @@ func prepareKrunSocketMounts(pluginID string, annotations map[string]string) ([]
 		if !ok {
 			continue
 		}
-		relativeSource, err := authorizedKrunSocketSource(pluginID, requestedPath, request.listen)
+		relativeSource, err := authorizedKrunSocketSource(requestedPath, request.listen)
 		if err != nil {
 			return nil, err
 		}
@@ -416,7 +383,7 @@ func buildKrunTrustedPolicy(pluginID, service string, annotations map[string]str
 	}
 
 	if requested, ok := annotations["krun.vsock_path"]; ok {
-		policy.VsockPath, err = assignedKrunSocketPath(pluginID, requested, true)
+		policy.VsockPath, err = assignedKrunSocketPath(requested, true)
 		if err != nil {
 			return policy, err
 		}
@@ -429,7 +396,7 @@ func buildKrunTrustedPolicy(pluginID, service string, annotations map[string]str
 	}
 
 	if requested, ok := annotations["krun.vsock_connect_path"]; ok {
-		policy.VsockConnectPath, err = assignedKrunSocketPath(pluginID, requested, false)
+		policy.VsockConnectPath, err = assignedKrunSocketPath(requested, false)
 		if err != nil {
 			return policy, err
 		}
@@ -507,7 +474,7 @@ func prepareKrunComposePolicy(composeFile string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("authorize KVM plugin %s: %w", pluginID, err)
 	}
-	socketMounts, err := prepareKrunSocketMounts(pluginID, service.Annotations)
+	socketMounts, err := prepareKrunSocketMounts(service.Annotations)
 	if err != nil {
 		return "", fmt.Errorf("authorize KVM plugin %s: %w", pluginID, err)
 	}

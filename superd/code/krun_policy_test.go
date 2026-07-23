@@ -8,7 +8,7 @@ import (
 )
 
 func TestAssignedKrunSocketPathIsConfined(t *testing.T) {
-	first, err := assignedKrunSocketPath("plugin-a", "/var/run/docker.sock", false)
+	first, err := assignedKrunSocketPath("/var/run/docker.sock", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -18,44 +18,35 @@ func TestAssignedKrunSocketPathIsConfined(t *testing.T) {
 }
 
 func TestAssignedKrunSocketPathRequiresSocketSuffix(t *testing.T) {
-	path, err := assignedKrunSocketPath("spr-acme", "/state/plugins/spr-acme/socket.sock", true)
+	path, err := assignedKrunSocketPath("/state/plugins/spr-acme/socket.sock", true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if path != "/run/spr-krun/listen/socket.sock" {
 		t.Fatalf("unexpected assigned listener path %q", path)
 	}
-	if _, err := assignedKrunSocketPath("spr-acme", "/state/plugins/spr-acme/socket", true); err == nil {
+	if _, err := assignedKrunSocketPath("/state/plugins/spr-acme/socket", true); err == nil {
 		t.Fatal("legacy suffixless socket name was accepted")
 	}
 }
 
-func TestAuthorizedKrunSocketSourceIsPerPlugin(t *testing.T) {
-	source, err := authorizedKrunSocketSource("plugin-a", "/state/plugins/plugin-a/api/socket.sock", true)
+func TestAuthorizedKrunSocketSourceUsesTrustedComposePath(t *testing.T) {
+	source, err := authorizedKrunSocketSource("/state/plugins/plugin-a/api/socket.sock", true)
 	if err != nil || source != "state/plugins/plugin-a/api" {
 		t.Fatalf("valid listener rejected: %q %v", source, err)
 	}
-	if _, err := authorizedKrunSocketSource("plugin-a", "/state/plugins/plugin-b/socket.sock", true); err == nil {
-		t.Fatal("cross-plugin listener was authorized")
+	source, err = authorizedKrunSocketSource("/state/plugins/plugin-b/socket.sock", true)
+	if err != nil || source != "state/plugins/plugin-b" {
+		t.Fatalf("trusted compose listener rejected: %q %v", source, err)
 	}
-	if _, err := authorizedKrunSocketSource("plugin-a", "/state/api/eventbus.sock", false); err == nil {
-		t.Fatal("unlisted connector was authorized")
-	}
-	source, err = authorizedKrunSocketSource("spr-tailscale", "/state/api/eventbus.sock", false)
+	source, err = authorizedKrunSocketSource("/state/api/eventbus.sock", false)
 	if err != nil || source != "state/api" {
-		t.Fatalf("tailscale event bus rejected: %q %v", source, err)
+		t.Fatalf("trusted compose connector rejected: %q %v", source, err)
 	}
-	source, err = authorizedKrunSocketSource("spr-vaultwarden", "/state/plugins/vaultwarden/socket.sock", true)
-	if err != nil || source != "state/plugins/vaultwarden" {
-		t.Fatalf("vaultwarden state alias rejected: %q %v", source, err)
-	}
-	source, err = authorizedKrunSocketSource("mitmproxy", "/state/plugins/spr-mitmproxy/socket.sock", true)
-	if err != nil || source != "state/plugins/spr-mitmproxy" {
-		t.Fatalf("mitmproxy state alias rejected: %q %v", source, err)
-	}
-	source, err = authorizedKrunSocketSource("home_assistant_integration", "/state/plugins/home_assistant/socket.sock", true)
-	if err != nil || source != "state/plugins/home_assistant" {
-		t.Fatalf("Home Assistant state alias rejected: %q %v", source, err)
+	for _, path := range []string{"state/api/eventbus.sock", "/state/api/../api/eventbus.sock", "/state/api/eventbus"} {
+		if _, err := authorizedKrunSocketSource(path, false); err == nil {
+			t.Fatalf("invalid trusted compose path accepted: %q", path)
+		}
 	}
 }
 
