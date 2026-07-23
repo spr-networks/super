@@ -43,33 +43,6 @@ var krunConnectAllowlist = map[string]map[string]struct{}{
 	},
 }
 
-// These are the stable device identities registered by SPR for managed KVM
-// plugins. The manager assigns them instead of trusting OCI annotations, while
-// preserving the MACs used by DHCP reservations and network policy.
-var krunPluginMACAllowlist = map[string]string{
-	"home_assistant_integration": "02:53:50:52:4b:01",
-	"spr-acme":                   "02:53:50:52:4b:02",
-	"spr-algo":                   "02:53:50:52:4b:03",
-	"spr-atlas":                  "02:53:50:52:40:40",
-	"spr-dnscrypt":               "02:53:50:52:4b:05",
-	"spr-gluetun":                "02:53:50:52:4b:06",
-	"spr-headscale":              "02:53:50:52:4b:07",
-	"spr-hermes":                 "02:53:50:52:4b:15",
-	"spr-masque":                 "02:53:50:52:4b:08",
-	"spr-meshtastic":             "02:53:50:52:4b:09",
-	"spr-mitmproxy":              "02:53:50:52:4b:0a",
-	"spr-nebula":                 "02:53:50:52:4b:0b",
-	"spr-nostr":                  "02:53:50:52:4b:0c",
-	"spr-opencanary":             "02:53:50:52:4b:0d",
-	"spr-reticulum":              "02:53:50:52:4b:0e",
-	"spr-simplex":                "02:53:50:52:4b:0f",
-	"spr-tailscale":              "02:53:50:52:4b:14",
-	"spr-tor":                    "02:53:50:52:4b:10",
-	"spr-tunwg":                  "02:53:50:52:4b:11",
-	"spr-usque":                  "02:53:50:52:4b:12",
-	"spr-vaultwarden":            "02:53:50:52:4b:13",
-}
-
 type krunComposeService struct {
 	Runtime     string            `json:"runtime"`
 	Annotations map[string]string `json:"annotations"`
@@ -77,6 +50,13 @@ type krunComposeService struct {
 
 type krunComposeConfig struct {
 	Services map[string]krunComposeService `json:"services"`
+}
+
+type krunPluginManifest struct {
+	Runtime             string `json:"Runtime"`
+	NetworkCapabilities struct {
+		DeviceMAC string `json:"DeviceMAC"`
+	} `json:"NetworkCapabilities"`
 }
 
 type krunTrustedPolicy struct {
@@ -213,13 +193,42 @@ func krunPluginPrefix(pluginID string) string {
 	return hex.EncodeToString(sum[:16])
 }
 
-func krunPluginMAC(pluginID string) string {
-	if hardware, ok := krunPluginMACAllowlist[pluginID]; ok {
-		return hardware
+func normalizeKrunDeviceMAC(raw string) (string, error) {
+	hardware, err := net.ParseMAC(strings.TrimSpace(raw))
+	if err != nil || len(hardware) != 6 || hardware[0]&1 != 0 {
+		return "", fmt.Errorf("KVM plugin DeviceMAC must be a six-octet unicast MAC address")
 	}
-	sum := sha256.Sum256([]byte("spr-krun-mac-v1\x00" + pluginID))
-	hardware := net.HardwareAddr{0x02, sum[0], sum[1], sum[2], sum[3], sum[4]}
-	return hardware.String()
+	if hardware.String() == "00:00:00:00:00:00" {
+		return "", fmt.Errorf("KVM plugin DeviceMAC must not be the zero address")
+	}
+	return hardware.String(), nil
+}
+
+func readKrunPluginDeviceMAC(composeFile string) (string, error) {
+	manifestPath := filepath.Join(SuperRootPath, filepath.Dir(filepath.FromSlash(composeFile)), "plugin.json")
+	info, err := os.Lstat(manifestPath)
+	if err != nil {
+		return "", fmt.Errorf("read manager-approved KVM plugin identity: %w", err)
+	}
+	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
+		return "", fmt.Errorf("KVM plugin manifest is not a regular file: %s", manifestPath)
+	}
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		return "", fmt.Errorf("read manager-approved KVM plugin identity: %w", err)
+	}
+	manifest := krunPluginManifest{}
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return "", fmt.Errorf("parse KVM plugin manifest: %w", err)
+	}
+	if strings.ToLower(strings.TrimSpace(manifest.Runtime)) != "kvm" {
+		return "", fmt.Errorf("KVM plugin manifest must select the kvm runtime")
+	}
+	hardware, err := normalizeKrunDeviceMAC(manifest.NetworkCapabilities.DeviceMAC)
+	if err != nil {
+		return "", err
+	}
+	return hardware, nil
 }
 
 func krunPluginTap(pluginID string) string {
@@ -362,7 +371,7 @@ func prepareKrunSocketMounts(pluginID string, annotations map[string]string) ([]
 	return mounts, nil
 }
 
-func buildKrunTrustedPolicy(pluginID, service string, annotations map[string]string) (krunTrustedPolicy, error) {
+func buildKrunTrustedPolicy(pluginID, service string, annotations map[string]string, deviceMAC string) (krunTrustedPolicy, error) {
 	policy := krunTrustedPolicy{PluginID: pluginID, Service: service}
 	var err error
 	if policy.CPUs, err = parseKrunPolicyInt(annotations, "krun.cpus"); err != nil {
@@ -379,14 +388,27 @@ func buildKrunTrustedPolicy(pluginID, service string, annotations map[string]str
 	}
 
 	_, hasTap := annotations["krun.tap_name"]
-	_, hasMAC := annotations["krun.net_mac"]
+	_, hasLegacyMAC := annotations["krun.net_mac"]
 	_, hasUplink := annotations["krun.net_uplink"]
-	if hasTap || hasMAC || hasUplink {
-		if !hasTap || !hasMAC || !hasUplink {
-			return policy, fmt.Errorf("krun TAP networking request must include tap_name, net_mac, and net_uplink")
+	if hasTap || hasLegacyMAC || hasUplink {
+		if !hasTap || !hasUplink {
+			return policy, fmt.Errorf("krun TAP networking request must include tap_name and net_uplink")
+		}
+		managerMAC, err := normalizeKrunDeviceMAC(deviceMAC)
+		if err != nil {
+			return policy, err
+		}
+		if hasLegacyMAC {
+			composeMAC, err := normalizeKrunDeviceMAC(annotations["krun.net_mac"])
+			if err != nil {
+				return policy, fmt.Errorf("invalid compose krun.net_mac: %w", err)
+			}
+			if composeMAC != managerMAC {
+				return policy, fmt.Errorf("compose krun.net_mac %s does not match manager-approved DeviceMAC %s", composeMAC, managerMAC)
+			}
 		}
 		policy.TapName = krunPluginTap(pluginID)
-		policy.NetMAC = krunPluginMAC(pluginID)
+		policy.NetMAC = managerMAC
 	}
 	if requested, ok := annotations["krun.use_passt"]; ok {
 		if hasTap {
@@ -480,7 +502,14 @@ func prepareKrunComposePolicy(composeFile string) (string, error) {
 	sort.Strings(services)
 	serviceName := services[0]
 	service := config.Services[serviceName]
-	policy, err := buildKrunTrustedPolicy(pluginID, serviceName, service.Annotations)
+	deviceMAC := ""
+	if _, hasTap := service.Annotations["krun.tap_name"]; hasTap {
+		deviceMAC, err = readKrunPluginDeviceMAC(composeFile)
+		if err != nil {
+			return "", fmt.Errorf("authorize KVM plugin %s: %w", pluginID, err)
+		}
+	}
+	policy, err := buildKrunTrustedPolicy(pluginID, serviceName, service.Annotations, deviceMAC)
 	if err != nil {
 		return "", fmt.Errorf("authorize KVM plugin %s: %w", pluginID, err)
 	}
