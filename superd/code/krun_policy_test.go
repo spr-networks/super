@@ -53,12 +53,15 @@ func TestAuthorizedKrunSocketSourceIsPerPlugin(t *testing.T) {
 	if err != nil || source != "state/plugins/spr-mitmproxy" {
 		t.Fatalf("mitmproxy state alias rejected: %q %v", source, err)
 	}
+	source, err = authorizedKrunSocketSource("home_assistant_integration", "/state/plugins/home_assistant/socket.sock", true)
+	if err != nil || source != "state/plugins/home_assistant" {
+		t.Fatalf("Home Assistant state alias rejected: %q %v", source, err)
+	}
 }
 
 func TestBuildKrunTrustedPolicyReplacesPrivilegedValues(t *testing.T) {
 	annotations := map[string]string{
 		"krun.tap_name":           "host0",
-		"krun.net_mac":            "02:53:50:52:4b:21",
 		"krun.net_uplink":         "lo",
 		"krun.vsock_connect_path": "/state/api/eventbus.sock",
 		"krun.vsock_connect_port": "2048",
@@ -80,15 +83,15 @@ func TestBuildKrunTrustedPolicyReplacesPrivilegedValues(t *testing.T) {
 	}
 }
 
-func TestBuildKrunTrustedPolicyRejectsComposeMACMismatch(t *testing.T) {
+func TestBuildKrunTrustedPolicyRejectsLegacyComposeMAC(t *testing.T) {
 	annotations := map[string]string{
 		"krun.tap_name":   "kruntap0",
 		"krun.net_mac":    "02:53:50:52:4b:22",
 		"krun.net_uplink": "eth0",
 	}
-	_, err := buildKrunTrustedPolicy("plugin-a", "service-a", annotations, "02:53:50:52:4b:21")
-	if err == nil || !strings.Contains(err.Error(), "does not match manager-approved DeviceMAC") {
-		t.Fatalf("compose/manager MAC mismatch was not rejected: %v", err)
+	_, err := buildKrunTrustedPolicy("plugin-a", "service-a", annotations, "02:53:50:52:4b:22")
+	if err == nil || !strings.Contains(err.Error(), "must be declared only") {
+		t.Fatalf("legacy compose MAC was not rejected: %v", err)
 	}
 }
 

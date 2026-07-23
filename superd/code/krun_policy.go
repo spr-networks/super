@@ -32,9 +32,10 @@ const (
 var krunSocketNameRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
 
 var krunListenRootAliases = map[string]string{
-	"mitmproxy":       "/state/plugins/spr-mitmproxy",
-	"spr-opencanary":  "/state/plugins/spr-opencanary-krun",
-	"spr-vaultwarden": "/state/plugins/vaultwarden",
+	"home_assistant_integration": "/state/plugins/home_assistant",
+	"mitmproxy":                  "/state/plugins/spr-mitmproxy",
+	"spr-opencanary":             "/state/plugins/spr-opencanary-krun",
+	"spr-vaultwarden":            "/state/plugins/vaultwarden",
 }
 
 var krunConnectAllowlist = map[string]map[string]struct{}{
@@ -388,24 +389,17 @@ func buildKrunTrustedPolicy(pluginID, service string, annotations map[string]str
 	}
 
 	_, hasTap := annotations["krun.tap_name"]
-	_, hasLegacyMAC := annotations["krun.net_mac"]
 	_, hasUplink := annotations["krun.net_uplink"]
-	if hasTap || hasLegacyMAC || hasUplink {
+	if _, hasLegacyMAC := annotations["krun.net_mac"]; hasLegacyMAC {
+		return policy, fmt.Errorf("krun.net_mac must be declared only as NetworkCapabilities.DeviceMAC in plugin.json")
+	}
+	if hasTap || hasUplink {
 		if !hasTap || !hasUplink {
 			return policy, fmt.Errorf("krun TAP networking request must include tap_name and net_uplink")
 		}
 		managerMAC, err := normalizeKrunDeviceMAC(deviceMAC)
 		if err != nil {
 			return policy, err
-		}
-		if hasLegacyMAC {
-			composeMAC, err := normalizeKrunDeviceMAC(annotations["krun.net_mac"])
-			if err != nil {
-				return policy, fmt.Errorf("invalid compose krun.net_mac: %w", err)
-			}
-			if composeMAC != managerMAC {
-				return policy, fmt.Errorf("compose krun.net_mac %s does not match manager-approved DeviceMAC %s", composeMAC, managerMAC)
-			}
 		}
 		policy.TapName = krunPluginTap(pluginID)
 		policy.NetMAC = managerMAC
