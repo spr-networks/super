@@ -32,8 +32,8 @@ const (
 var krunSocketNameRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
 
 var krunListenRootAliases = map[string]string{
-	"mitmproxy":        "/state/plugins/spr-mitmproxy",
-	"spr-opencanary":   "/state/plugins/spr-opencanary-krun",
+	"mitmproxy":       "/state/plugins/spr-mitmproxy",
+	"spr-opencanary":  "/state/plugins/spr-opencanary-krun",
 	"spr-vaultwarden": "/state/plugins/vaultwarden",
 }
 
@@ -41,6 +41,33 @@ var krunConnectAllowlist = map[string]map[string]struct{}{
 	"spr-tailscale": {
 		"/state/api/eventbus.sock": {},
 	},
+}
+
+// These are the stable device identities registered by SPR for managed KVM
+// plugins. The manager assigns them instead of trusting OCI annotations, while
+// preserving the MACs used by DHCP reservations and network policy.
+var krunPluginMACAllowlist = map[string]string{
+	"home_assistant_integration": "02:53:50:52:4b:01",
+	"spr-acme":                   "02:53:50:52:4b:02",
+	"spr-algo":                   "02:53:50:52:4b:03",
+	"spr-atlas":                  "02:53:50:52:40:40",
+	"spr-dnscrypt":               "02:53:50:52:4b:05",
+	"spr-gluetun":                "02:53:50:52:4b:06",
+	"spr-headscale":              "02:53:50:52:4b:07",
+	"spr-hermes":                 "02:53:50:52:4b:15",
+	"spr-masque":                 "02:53:50:52:4b:08",
+	"spr-meshtastic":             "02:53:50:52:4b:09",
+	"spr-mitmproxy":              "02:53:50:52:4b:0a",
+	"spr-nebula":                 "02:53:50:52:4b:0b",
+	"spr-nostr":                  "02:53:50:52:4b:0c",
+	"spr-opencanary":             "02:53:50:52:4b:0d",
+	"spr-reticulum":              "02:53:50:52:4b:0e",
+	"spr-simplex":                "02:53:50:52:4b:0f",
+	"spr-tailscale":              "02:53:50:52:4b:14",
+	"spr-tor":                    "02:53:50:52:4b:10",
+	"spr-tunwg":                  "02:53:50:52:4b:11",
+	"spr-usque":                  "02:53:50:52:4b:12",
+	"spr-vaultwarden":            "02:53:50:52:4b:13",
 }
 
 type krunComposeService struct {
@@ -187,6 +214,9 @@ func krunPluginPrefix(pluginID string) string {
 }
 
 func krunPluginMAC(pluginID string) string {
+	if hardware, ok := krunPluginMACAllowlist[pluginID]; ok {
+		return hardware
+	}
 	sum := sha256.Sum256([]byte("spr-krun-mac-v1\x00" + pluginID))
 	hardware := net.HardwareAddr{0x02, sum[0], sum[1], sum[2], sum[3], sum[4]}
 	return hardware.String()
