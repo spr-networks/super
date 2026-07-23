@@ -32,6 +32,7 @@ const InstallPlugin = ({ ...props }) => {
   const [url, setUrl] = useState('')
   const [isRunning, setIsRunning] = useState(false)
   const [pendingPlugin, setPendingPlugin] = useState(null)
+  const [pendingUnsandboxedPlugin, setPendingUnsandboxedPlugin] = useState(null)
 
   //should be https://github.com/spr-networks/spr-mitmproxy.git
   const validUrl = (url) => {
@@ -86,6 +87,15 @@ const InstallPlugin = ({ ...props }) => {
       .catch((err) => handleInstallError(err, plugin.GitURL))
   }
 
+  const confirmInstall = (plugin) => {
+    if (plugin.HasUI && plugin.SandboxedUI === false) {
+      setIsRunning(false)
+      setPendingUnsandboxedPlugin(plugin)
+      return
+    }
+    completeInstall(plugin)
+  }
+
   const installPlugin = (pluginUrl) => {
     setIsRunning(true)
     api
@@ -103,7 +113,7 @@ const InstallPlugin = ({ ...props }) => {
           }
           return
         }
-        completeInstall(plugin)
+        confirmInstall(plugin)
       })
       .catch((err) => handleInstallError(err, pluginUrl))
   }
@@ -115,6 +125,12 @@ const InstallPlugin = ({ ...props }) => {
       ComposeFilePath: pendingPlugin.FallbackComposeFilePath
     }
     setPendingPlugin(null)
+    confirmInstall(plugin)
+  }
+
+  const installUnsandboxedPlugin = () => {
+    const plugin = pendingUnsandboxedPlugin
+    setPendingUnsandboxedPlugin(null)
     completeInstall(plugin)
   }
 
@@ -268,6 +284,48 @@ const InstallPlugin = ({ ...props }) => {
               </Button>
               <Button size="sm" action="primary" onPress={installWithoutKVM}>
                 <ButtonText>Install without KVM</ButtonText>
+              </Button>
+            </HStack>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        isOpen={pendingUnsandboxedPlugin !== null}
+        onClose={() => setPendingUnsandboxedPlugin(null)}
+      >
+        <AlertDialogBackdrop />
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <Heading size="md">Plugin UI has full API access</Heading>
+          </AlertDialogHeader>
+          <AlertDialogBody>
+            <Text size="sm">
+              {pendingUnsandboxedPlugin?.Name ||
+                pendingUnsandboxedPlugin?.URI}{' '}
+              has disabled UI sandboxing. Its code runs with the SPR admin
+              page&apos;s access and can make API requests with your privileges.
+            </Text>
+            <Text size="sm" mt="$2">
+              Continue only if you trust this plugin and its UI code.
+            </Text>
+          </AlertDialogBody>
+          <AlertDialogFooter>
+            <HStack space="md">
+              <Button
+                size="sm"
+                action="secondary"
+                variant="outline"
+                onPress={() => setPendingUnsandboxedPlugin(null)}
+              >
+                <ButtonText>Cancel</ButtonText>
+              </Button>
+              <Button
+                size="sm"
+                action="negative"
+                onPress={installUnsandboxedPlugin}
+              >
+                <ButtonText>Install with full API access</ButtonText>
               </Button>
             </HStack>
           </AlertDialogFooter>

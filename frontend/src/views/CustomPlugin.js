@@ -1,16 +1,10 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 
 import CustomPlugin from 'components/Plugins/CustomPlugin'
 import InstallPlugin from 'components/Plugins/InstallPlugin'
 
 import {
-  AlertDialog,
-  AlertDialogBackdrop,
-  AlertDialogBody,
-  AlertDialogContent,
-  AlertDialogFooter,
-  AlertDialogHeader,
   Button,
   ButtonText,
   FormControl,
@@ -212,13 +206,10 @@ const getPluginHTML = async (plugin, theme, pluginAuth = null) => {
 const PluginFrame = ({ name }) => {
   const context = useContext(AlertContext)
   const appContext = useContext(AppContext)
-  const navigate = useNavigate()
 
   const [srcDoc, setSrcDoc] = useState(null)
   const [isSandboxed, setIsSandboxed] = useState(true)
   const [pluginAuth, setPluginAuth] = useState(null)
-  const [pendingLegacyPlugin, setPendingLegacyPlugin] = useState(null)
-  const [approvedLegacyPlugin, setApprovedLegacyPlugin] = useState(null)
   const pluginRef = useRef(null)
   const pluginAuthRef = useRef(null)
   const refreshTimerRef = useRef(null)
@@ -272,13 +263,9 @@ const PluginFrame = ({ name }) => {
 
   useEffect(() => {
     let cancelled = false
-    if (approvedLegacyPlugin && approvedLegacyPlugin !== name) {
-      setApprovedLegacyPlugin(null)
-    }
     setSrcDoc(null)
     setIsSandboxed(true)
     setPluginAuth(null)
-    setPendingLegacyPlugin(null)
     pluginRef.current = null
     pluginAuthRef.current = null
     pluginAPI
@@ -292,10 +279,6 @@ const PluginFrame = ({ name }) => {
         const sandboxed = plugin.SandboxedUI !== false
         pluginRef.current = plugin
         setIsSandboxed(sandboxed)
-        if (!sandboxed && approvedLegacyPlugin !== plugin.URI) {
-          setPendingLegacyPlugin(plugin)
-          return
-        }
         const session = sandboxed ? await refreshSession() : null
         const html = await getPluginHTML(
           plugin,
@@ -329,60 +312,15 @@ const PluginFrame = ({ name }) => {
         api.delete(`/plugin/ui_session/${encodeURIComponent(sessionID)}`).catch(() => {})
       }
     }
-  }, [name, approvedLegacyPlugin])
+  }, [name])
 
   return (
-    <>
-      <CustomPlugin
-        srcDoc={srcDoc}
-        isSandboxed={isSandboxed}
-        pluginAuth={isSandboxed ? pluginAuth : null}
-        onAuthRequired={isSandboxed ? handleAuthRequired : null}
-      />
-      <AlertDialog
-        isOpen={pendingLegacyPlugin !== null}
-        onClose={() => navigate('/admin/home')}
-      >
-        <AlertDialogBackdrop />
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <Heading size="md">Plugin UI has full API access</Heading>
-          </AlertDialogHeader>
-          <AlertDialogBody>
-            <Text size="sm">
-              {pendingLegacyPlugin?.Name || pendingLegacyPlugin?.URI} has disabled
-              UI sandboxing. Its code runs with the SPR admin page&apos;s access
-              and can make API requests with your privileges.
-            </Text>
-            <Text size="sm" mt="$2">
-              Continue only if you trust this plugin and its UI code.
-            </Text>
-          </AlertDialogBody>
-          <AlertDialogFooter>
-            <HStack space="md">
-              <Button
-                size="sm"
-                action="secondary"
-                variant="outline"
-                onPress={() => navigate('/admin/home')}
-              >
-                <ButtonText>Leave plugin</ButtonText>
-              </Button>
-              <Button
-                size="sm"
-                action="negative"
-                onPress={() => {
-                  setApprovedLegacyPlugin(pendingLegacyPlugin?.URI || null)
-                  setPendingLegacyPlugin(null)
-                }}
-              >
-                <ButtonText>Continue with API access</ButtonText>
-              </Button>
-            </HStack>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+    <CustomPlugin
+      srcDoc={srcDoc}
+      isSandboxed={isSandboxed}
+      pluginAuth={isSandboxed ? pluginAuth : null}
+      onAuthRequired={isSandboxed ? handleAuthRequired : null}
+    />
   )
 }
 
