@@ -162,14 +162,17 @@ func resetInterface(interfaces []InterfaceConfig, name string, prev_type string,
 
 		removeUplinkEntry(name, true)
 
+		//restart asynchronously: resetInterface runs with Interfacesmtx held,
+		//while restartPlugin takes Configmtx and plugin start re-enters
+		//Interfacesmtx (isAPVlan), which would deadlock on lock order.
 		if prev_subtype == "wifi" {
 			//wifi was disabled, notify it
 			insertWpaConfigAndSave(interfaces, WPAIface{})
-			restartPlugin("WIFIUPLINK")
+			go restartPlugin("WIFIUPLINK")
 		} else if prev_subtype == "pppup" {
 			//ppp was disabled, notify it
 			insertPPPConfigAndSave(interfaces, PPPIface{})
-			restartPlugin("PPP")
+			go restartPlugin("PPP")
 		}
 	} else if prev_type == "AP" {
 		//previously was an AP. getEnabledAPInterfaces() will no longer return this
@@ -589,6 +592,21 @@ func updateLinkVlanTrunk(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	changed, err := setLinkVlanTrunkConfig(iface, state == "enable")
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if changed {
+		//refreshVlanTrunk takes Devicesmtx; run it after Interfacesmtx is
+		//released, since device refresh paths acquire Interfacesmtx while
+		//holding Devicesmtx and the reverse order would deadlock.
+		refreshVlanTrunk(iface, state == "enable")
+	}
+}
+
+func setLinkVlanTrunkConfig(iface string, enable bool) (bool, error) {
 	Interfacesmtx.Lock()
 	defer Interfacesmtx.Unlock()
 	interfaces := loadInterfacesConfigLocked()
@@ -600,11 +618,10 @@ func updateLinkVlanTrunk(w http.ResponseWriter, r *http.Request) {
 		if ifconfig.Name == iface {
 			found = true
 			if ifconfig.Type == "AP" || ifconfig.Type == "Uplink" {
-				http.Error(w, "Iface has wrong type for vlan trunk", 400)
-				return
+				return false, fmt.Errorf("Iface has wrong type for vlan trunk")
 			}
 
-			if state == "enable" {
+			if enable {
 				interfaces[i].Subtype = "VLAN-Trunk"
 				interfaces[i].Enabled = true
 			} else {
@@ -615,7 +632,7 @@ func updateLinkVlanTrunk(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !found {
-		if state == "enable" {
+		if enable {
 			ifconfig := InterfaceConfig{}
 			ifconfig.Name = iface
 			ifconfig.Type = "Downlink"
@@ -624,8 +641,7 @@ func updateLinkVlanTrunk(w http.ResponseWriter, r *http.Request) {
 			interfaces = append(interfaces, ifconfig)
 			changed = true
 		} else {
-			http.Error(w, "Iface not found", 400)
-			return
+			return false, fmt.Errorf("Iface not found")
 		}
 	}
 
@@ -633,13 +649,11 @@ func updateLinkVlanTrunk(w http.ResponseWriter, r *http.Request) {
 		err := writeInterfacesConfigLocked(interfaces)
 		if err != nil {
 			log.Println(err)
-			http.Error(w, err.Error(), 400)
-			return
+			return false, err
 		}
-
-		refreshVlanTrunk(iface, state == "enable")
 	}
 
+	return changed, nil
 }
 
 func getVLANInterfaces(parent string) ([]net.Interface, error) {
