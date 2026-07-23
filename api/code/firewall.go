@@ -1165,9 +1165,7 @@ func deleteEndpoint(e Endpoint) error {
 		return fmt.Errorf("Domain not implemented yet for %s", e.RuleName)
 	}
 
-	Devicesmtx.Lock()
-	devices := getDevicesJson()
-	Devicesmtx.Unlock()
+	devices := readDevicesSnapshot()
 
 	for _, d := range devices {
 		if d.RecentIP == "" {
@@ -1292,9 +1290,7 @@ func applyNoAPI(device DeviceEntry) {
 }
 
 func applyBuiltinTagFirewallRules() {
-	Devicesmtx.Lock()
-	devices := getDevicesJson()
-	Devicesmtx.Unlock()
+	devices := readDevicesSnapshot()
 
 	for _, device := range devices {
 		applyEndpointRules(device)
@@ -3627,9 +3623,7 @@ func initFirewallRules() {
 
 	refreshInterfaceOverrides()
 
-	Devicesmtx.Lock()
-	devices := getDevicesJson()
-	Devicesmtx.Unlock()
+	devices := readDevicesSnapshot()
 	refreshVLANTrunks(devices)
 
 	refreshDownlinks()

@@ -1182,6 +1182,20 @@ func getDevicesJson() map[string]DeviceEntry {
 	return devices
 }
 
+// devices.json is saved to atomically so we can read lock free
+func readDevicesSnapshot() map[string]DeviceEntry {
+	devices := map[string]DeviceEntry{}
+	data, err := ioutil.ReadFile(DevicesConfigFile)
+	if err != nil {
+		return devices
+	}
+	if err := json.Unmarshal(data, &devices); err != nil {
+		log.Println("failed to parse devices config", err)
+		return map[string]DeviceEntry{}
+	}
+	return devices
+}
+
 func getDevices(w http.ResponseWriter, r *http.Request) {
 	Devicesmtx.Lock()
 	defer Devicesmtx.Unlock()
