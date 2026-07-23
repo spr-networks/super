@@ -725,6 +725,26 @@ export default function MockAPI(props = null) {
         }
       })
 
+      server.create('device', {
+        Name: 'spr-atlas',
+        Type: 'Container',
+        MAC: '02:53:50:52:4b:21',
+        RecentIP: '192.168.2.110',
+        DHCPFirstTime: new Date(Date.now() - 30 * 60e3).toISOString(),
+        DHCPLastTime: new Date(Date.now() - 2 * 60e3).toISOString(),
+        PSKEntry: {
+          Type: 'None',
+          Psk: null
+        },
+        Policies: [],
+        Groups: [],
+        DeviceTags: [],
+        Style: {
+          Icon: 'Server',
+          Color: 'cyan'
+        }
+      })
+
       let devs = ['phone', 'laptop', 'tv', 'desktop', 'iphone', 'android']
 
       for (let i = 3; i < devs.length + 3; i++) {
