@@ -28,6 +28,8 @@ import { PolicyItem, GroupItem, TagItem } from 'components/TagItem'
 const ContainerInterfaceRulesList = (props) => {
   let list = props.list || []
   let title = props.title || `ContainerInterfaceRulesList:`
+  const allowAdd = props.allowAdd !== false
+  const allowDelete = props.allowDelete !== false
 
   let refModal = useRef(null)
   let refEditModal = useRef(null)
@@ -96,24 +98,26 @@ const ContainerInterfaceRulesList = (props) => {
         title={title}
         description="Manage network access policy for custom interfaces"
       >
-        <ModalForm
-          title={`Add Custom Interface Rule`}
-          triggerText="Add Custom Interface Rule"
-          triggerProps={{
-            sx: {
-              '@base': { display: 'none' },
-              '@md': { display: list.length ? 'flex' : 'flex' }
-            }
-          }}
-          modalRef={refModal}
-        >
-          <AddContainerInterfaceRule
-            notifyChange={notifyChange}
-            appContext={appContext}
-            interfaceList={interfaceList}
-            netBlocks={netBlocks}
-          />
-        </ModalForm>
+        {allowAdd ? (
+          <ModalForm
+            title={`Add Custom Interface Rule`}
+            triggerText="Add Custom Interface Rule"
+            triggerProps={{
+              sx: {
+                '@base': { display: 'none' },
+                '@md': { display: list.length ? 'flex' : 'flex' }
+              }
+            }}
+            modalRef={refModal}
+          >
+            <AddContainerInterfaceRule
+              notifyChange={notifyChange}
+              appContext={appContext}
+              interfaceList={interfaceList}
+              netBlocks={netBlocks}
+            />
+          </ModalForm>
+        ) : null}
       </ListHeader>
 
       <ModalForm title={`Edit Custom Interface Rule`} modalRef={refEditModal}>
@@ -187,15 +191,17 @@ const ContainerInterfaceRulesList = (props) => {
             >
               <ButtonIcon as={EditIcon} />
             </Button>
-            <Button
-              alignSelf="center"
-              size="sm"
-              action="negative"
-              variant="link"
-              onPress={() => deleteListItem(item)}
-            >
-              <ButtonIcon as={TrashIcon} color="$red700" />
-            </Button>
+            {allowDelete ? (
+              <Button
+                alignSelf="center"
+                size="sm"
+                action="negative"
+                variant="link"
+                onPress={() => deleteListItem(item)}
+              >
+                <ButtonIcon as={TrashIcon} color="$red700" />
+              </Button>
+            ) : null}
           </ListItem>
         )}
         keyExtractor={(item) => `${list.indexOf(item)}-ciface`}
@@ -208,20 +214,22 @@ const ContainerInterfaceRulesList = (props) => {
           p="$4"
           flexWrap="wrap"
         >
-          Control access for custom docker networks
+          {props.emptyText || 'Control access for custom docker networks'}
         </Text>
       ) : null}
 
-      <Button
-        sx={{ '@md': { display: list.length ? 'none' : 'none' } }}
-        action="primary"
-        variant="solid"
-        rounded="$none"
-        onPress={() => refModal.current()}
-      >
-        <ButtonText>Add Interface Rule</ButtonText>
-        <ButtonIcon as={AddIcon} />
-      </Button>
+      {allowAdd ? (
+        <Button
+          sx={{ '@md': { display: list.length ? 'none' : 'none' } }}
+          action="primary"
+          variant="solid"
+          rounded="$none"
+          onPress={() => refModal.current()}
+        >
+          <ButtonText>Add Interface Rule</ButtonText>
+          <ButtonIcon as={AddIcon} />
+        </Button>
+      ) : null}
     </VStack>
   )
 }

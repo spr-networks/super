@@ -675,6 +675,7 @@ export default function MockAPI(props = null) {
       blockrule: Model,
       forwardblockrule: Model,
       serviceport: Model,
+      custominterfacerule: Model,
       token: Model,
       backup: Model,
       pfwBlockRule: Model,
@@ -730,6 +731,7 @@ export default function MockAPI(props = null) {
         Type: 'Container',
         MAC: '02:53:50:52:4b:21',
         RecentIP: '192.168.2.110',
+        DHCPLastInterface: 'spr-atlas',
         DHCPFirstTime: new Date(Date.now() - 30 * 60e3).toISOString(),
         DHCPLastTime: new Date(Date.now() - 2 * 60e3).toISOString(),
         PSKEntry: {
@@ -743,6 +745,18 @@ export default function MockAPI(props = null) {
           Icon: 'Server',
           Color: 'cyan'
         }
+      })
+
+      server.create('custominterfacerule', {
+        RuleName: 'Plugin-spr-atlas',
+        Description: '',
+        Disabled: false,
+        Interface: 'spr-atlas',
+        SrcIP: '192.168.2.110',
+        RouteDst: '',
+        Policies: ['wan', 'dns'],
+        Groups: [],
+        Tags: []
       })
 
       let devs = ['phone', 'laptop', 'tv', 'desktop', 'iphone', 'android']
@@ -3888,8 +3902,27 @@ export default function MockAPI(props = null) {
           ForwardingRules: schema.forwardrules.all().models,
           BlockRules: schema.blockrules.all().models,
           ForwardingBlockRules: schema.forwardblockrules.all().models,
-          ServicePorts: schema.serviceports.all().models
+          ServicePorts: schema.serviceports.all().models,
+          CustomInterfaceRules: schema.custominterfacerules.all().models
         }
+      })
+
+      this.put('/firewall/custom_interface', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        return schema.custominterfacerules.create(attrs)
+      })
+
+      this.delete('/firewall/custom_interface', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        return schema.custominterfacerules.where(attrs).destroy()
       })
 
       this.put('/firewall/forward', (schema, request) => {
