@@ -2537,8 +2537,12 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 						log.Println("nft delete failed", err)
 					}
 				} else {
+					key := []string{entry.ipv4, entry.ifname}
+					if name == "fwd_iface_wan" {
+						key = []string{entry.ifname, entry.ipv4}
+					}
 					err := DeleteElementFromMapComplex("inet", "filter", name,
-						[]string{entry.ipv4, entry.ifname})
+						key)
 					if err != nil {
 						log.Println("nft delete failed", err)
 						return

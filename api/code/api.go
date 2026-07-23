@@ -2062,7 +2062,7 @@ func equalStringSlice(a []string, b []string) bool {
 }
 
 var (
-	builtin_maps = []string{"internet_access", "dns_access", "lan_access", "ethernet_filter"}
+	builtin_maps = []string{"internet_access", "dns_access", "lan_access", "ethernet_filter", "fwd_iface_wan"}
 
 	ignore_groups = []string{"isolated", "lan", "wan", "dns", "api"}
 )
@@ -2192,6 +2192,8 @@ func getNFTVerdictMap(map_name string) []verdictEntry {
 							// type ifname . ether_addr : verdict (no IP)
 							entry := verdictEntry{"", first, second}
 							existing = append(existing, entry)
+						} else if map_name == "fwd_iface_wan" {
+							existing = append(existing, verdictEntry{second, first, ""})
 						} else {
 							// for _dst_access
 							// type ipv4_addr . ifname : verdict (no MAC)

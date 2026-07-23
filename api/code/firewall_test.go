@@ -2246,6 +2246,10 @@ func TestFlushVmapsRemovesEntries(t *testing.T) {
 		[]string{ip, iface, mac}, "return"); err != nil {
 		t.Fatalf("add ethernet_filter: %v", err)
 	}
+	if err := AddElementToMapComplex("inet", "filter", "fwd_iface_wan",
+		[]string{iface, ip}, "accept"); err != nil {
+		t.Fatalf("add fwd_iface_wan: %v", err)
+	}
 
 	if GetElementFromMapComplex("inet", "filter", "internet_access", []string{ip, iface}) != nil {
 		t.Fatal("internet_access entry not present after add")
@@ -2253,14 +2257,20 @@ func TestFlushVmapsRemovesEntries(t *testing.T) {
 	if GetElementFromMapComplex("inet", "filter", "ethernet_filter", []string{ip, iface, mac}) != nil {
 		t.Fatal("ethernet_filter entry not present after add")
 	}
+	if GetElementFromMapComplex("inet", "filter", "fwd_iface_wan", []string{iface, ip}) != nil {
+		t.Fatal("fwd_iface_wan entry not present after add")
+	}
 
-	flushVmaps(ip, mac, iface, []string{"internet_access", "ethernet_filter"}, true, false, nil)
+	flushVmaps(ip, mac, iface, []string{"internet_access", "ethernet_filter", "fwd_iface_wan"}, true, false, nil)
 
 	if err := GetElementFromMapComplex("inet", "filter", "internet_access", []string{ip, iface}); err == nil {
 		t.Error("internet_access entry still present after flushVmaps")
 	}
 	if err := GetElementFromMapComplex("inet", "filter", "ethernet_filter", []string{ip, iface, mac}); err == nil {
 		t.Error("ethernet_filter entry still present after flushVmaps")
+	}
+	if err := GetElementFromMapComplex("inet", "filter", "fwd_iface_wan", []string{iface, ip}); err == nil {
+		t.Error("fwd_iface_wan entry still present after flushVmaps")
 	}
 }
 
