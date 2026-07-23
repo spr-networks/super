@@ -34,6 +34,7 @@ import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
 import AuthValidate from 'views/AuthValidate'
 import SystemInfoTabView from 'views/SystemInfoTabView'
+import FeatureFlags from 'views/System/FeatureFlags'
 import LinkConfigurationTabView from 'views/LinkConfigurationTabView'
 
 import AlertsTabView from 'views/AlertsTabView'
@@ -58,6 +59,7 @@ import {
   EarthLockIcon,
   EyeIcon,
   FlameIcon,
+  FlagIcon,
   GaugeIcon,
   HammerIcon,
   HomeIcon,
@@ -372,6 +374,14 @@ const routes = [
         name: 'Plugins',
         icon: PuzzleIcon,
         component: Plugins,
+        hideSimple: true,
+        layout: 'admin'
+      },
+      {
+        path: 'feature_flags',
+        name: 'Feature Flags',
+        icon: FlagIcon,
+        component: FeatureFlags,
         hideSimple: true,
         layout: 'admin'
       },

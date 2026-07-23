@@ -58,6 +58,8 @@ let mockPersonasState = {
 }
 
 let mockTrafficInsightsConfig = { Enabled: true, RetentionDays: 7 }
+let mockFeatureFlags = []
+const mockSupportedFeatureFlags = ['rustap', 'webllm']
 
 let mockGeoBlockConfig = {
   Enabled: false,
@@ -2536,6 +2538,27 @@ export default function MockAPI(props = null) {
 
       this.get('/features', () => {
         return ['dns', 'wifi', 'ppp', 'wireguard']
+      })
+
+      this.get('/featureFlags', () => {
+        return mockFeatureFlags
+      })
+
+      this.put('/featureFlags', (schema, request) => {
+        const requested = JSON.parse(request.requestBody)
+        if (
+          !Array.isArray(requested) ||
+          requested.some(
+            (flag) => !mockSupportedFeatureFlags.includes(flag)
+          )
+        ) {
+          return new Response(400, {}, { error: 'unsupported feature flag' })
+        }
+
+        mockFeatureFlags = mockSupportedFeatureFlags.filter((flag) =>
+          requested.includes(flag)
+        )
+        return mockFeatureFlags
       })
 
       this.get('/version', () => {

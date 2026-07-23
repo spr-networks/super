@@ -83,6 +83,7 @@ type MulticastSettings struct {
 type APIConfig struct {
 	InfluxDB        InfluxConfig
 	Plugins         []PluginConfig
+	FeatureFlags    []string
 	PlusToken       string
 	AutoUpdate      bool //unused
 	CheckUpdates    bool
@@ -244,6 +245,64 @@ func getFeatures(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reply)
+}
+
+var supportedFeatureFlags = []string{"rustap", "webllm"}
+
+func normalizeFeatureFlags(flags []string) ([]string, error) {
+	selected := make(map[string]bool, len(flags))
+	for _, flag := range flags {
+		if !slices.Contains(supportedFeatureFlags, flag) {
+			return nil, fmt.Errorf("unsupported feature flag %q", flag)
+		}
+		selected[flag] = true
+	}
+
+	normalized := make([]string, 0, len(selected))
+	for _, flag := range supportedFeatureFlags {
+		if selected[flag] {
+			normalized = append(normalized, flag)
+		}
+	}
+	return normalized, nil
+}
+
+func featureFlags(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		return
+	}
+
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == http.MethodGet {
+		flags := append([]string{}, config.FeatureFlags...)
+		_ = json.NewEncoder(w).Encode(flags)
+		return
+	}
+
+	var requested []string
+	if err := json.NewDecoder(r.Body).Decode(&requested); err != nil {
+		http.Error(w, "failed to deserialize feature flags", http.StatusBadRequest)
+		return
+	}
+
+	normalized, err := normalizeFeatureFlags(requested)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	previous := config.FeatureFlags
+	config.FeatureFlags = normalized
+	if err := saveFileJSON(ApiConfigPath, config); err != nil {
+		config.FeatureFlags = previous
+		http.Error(w, "failed to save feature flags", http.StatusInternalServerError)
+		return
+	}
+
+	_ = json.NewEncoder(w).Encode(config.FeatureFlags)
 }
 
 func dockerInfoRequest(resource, id string) ([]byte, error) {
@@ -3291,6 +3350,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/attestStatus", attestStatus).Methods("GET", "PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/pluginAttest", pluginAttest).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/features", getFeatures).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/featureFlags", featureFlags).Methods("GET", "PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/autoupdate", autoUpdate).Methods("GET", "PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/checkupdates", checkUpdates).Methods("GET", "PUT", "DELETE")
 
