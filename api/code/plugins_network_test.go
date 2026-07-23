@@ -105,8 +105,6 @@ func TestRemovePluginCustomInterfaceRulesIgnoresOtherPlugins(t *testing.T) {
 		},
 	}
 
-	// An invalid matching rule fails before touching nftables. That still
-	// verifies selection is by the plugin-owned rule name.
 	gFirewallConfig.CustomInterfaceRules[0].SrcIP = "invalid"
 	if err := removePluginCustomInterfaceRulesLocked("spr-atlas"); err == nil {
 		t.Fatal("invalid matching plugin rule unexpectedly succeeded")

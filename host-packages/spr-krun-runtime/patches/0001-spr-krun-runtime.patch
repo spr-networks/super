@@ -310,7 +310,7 @@ index 6e249a9..8fd17b1 100644
    ret = read_all_fd (fd, "krun configuration file", &config, NULL, err);
    if (UNLIKELY (ret < 0))
      return ret;
-@@ -207,59 +369,219 @@ libkrun_read_vm_config (struct krun_config *kconf, int rootfsfd, const char *roo
+@@ -207,59 +369,156 @@ libkrun_read_vm_config (struct krun_config *kconf, int rootfsfd, const char *roo
    return 0;
  }
 
@@ -458,85 +458,22 @@ index 6e249a9..8fd17b1 100644
 +    }
 +
 +  if (listen)
-+    return crun_make_error (err, EEXIST, "krun vsock UNIX socket `%s` already exists", path);
++    {
++      if (! S_ISSOCK (socket_st.st_mode) || socket_st.st_uid != 0)
++        return crun_make_error (err, EPERM, "refusing to replace non-root or non-socket krun listener `%s`", path);
++      if (unlinkat (dirfd, name, 0) < 0)
++        {
++          if (errno == ENOENT)
++            return 0;
++          return crun_make_error (err, errno, "remove prior krun listener `%s`", path);
++        }
++      return 0;
++    }
 +
 +  if (! S_ISSOCK (socket_st.st_mode) || socket_st.st_uid != 0)
 +    return crun_make_error (err, EPERM, "krun vsock endpoint `%s` must be a root-owned UNIX socket", path);
 +
 +  return 0;
-+}
-+
-+/* Remove only the listener created for this VM.  Reopen every directory
-+ * component without following symlinks and refuse to remove an entry that is
-+ * no longer a root-owned socket. */
-+static int
-+libkrun_cleanup_vsock_listener (const char *path, libcrun_error_t *err)
-+{
-+  cleanup_close int runfd = -1;
-+  cleanup_close int rootfd = -1;
-+  cleanup_close int dirfd = -1;
-+  struct stat run_st;
-+  struct stat root_st;
-+  struct stat dir_st;
-+  struct stat socket_st;
-+  const char *prefix = SPR_KRUN_LISTEN_DIR "/";
-+  const char *name;
-+
-+  if (path == NULL)
-+    return 0;
-+  if (strncmp (path, prefix, strlen (prefix)) != 0)
-+    return crun_make_error (err, EINVAL, "krun listener path escaped `%s` during cleanup", SPR_KRUN_LISTEN_DIR);
-+
-+  name = path + strlen (prefix);
-+  if (! libkrun_valid_socket_name (name) || strchr (name, '/') != NULL)
-+    return crun_make_error (err, EINVAL, "invalid krun listener name `%s` during cleanup", name);
-+
-+  runfd = open (SPR_KRUN_RUN_DIR, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
-+  if (UNLIKELY (runfd < 0))
-+    return crun_make_error (err, errno, "open trusted runtime directory during krun listener cleanup");
-+  if (fstat (runfd, &run_st) < 0)
-+    return crun_make_error (err, errno, "inspect trusted runtime directory during krun listener cleanup");
-+  if (! S_ISDIR (run_st.st_mode) || run_st.st_uid != 0 || (run_st.st_mode & (S_IWGRP | S_IWOTH)) != 0)
-+    return crun_make_error (err, EPERM, "trusted runtime directory changed during krun listener cleanup");
-+
-+  rootfd = openat (runfd, "spr-krun", O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
-+  if (UNLIKELY (rootfd < 0))
-+    return crun_make_error (err, errno, "open trusted krun socket root during listener cleanup");
-+  if (fstat (rootfd, &root_st) < 0)
-+    return crun_make_error (err, errno, "inspect trusted krun socket root during listener cleanup");
-+  if (! S_ISDIR (root_st.st_mode) || root_st.st_uid != 0 || (root_st.st_mode & (S_IWGRP | S_IWOTH)) != 0)
-+    return crun_make_error (err, EPERM, "trusted krun socket root changed during listener cleanup");
-+
-+  dirfd = openat (rootfd, "listen", O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
-+  if (UNLIKELY (dirfd < 0))
-+    return crun_make_error (err, errno, "open trusted krun listener directory during cleanup");
-+  if (fstat (dirfd, &dir_st) < 0)
-+    return crun_make_error (err, errno, "inspect trusted krun listener directory during cleanup");
-+  if (! S_ISDIR (dir_st.st_mode) || dir_st.st_uid != 0 || (dir_st.st_mode & (S_IWGRP | S_IWOTH)) != 0)
-+    return crun_make_error (err, EPERM, "trusted krun listener directory changed during cleanup");
-+
-+  if (fstatat (dirfd, name, &socket_st, AT_SYMLINK_NOFOLLOW) < 0)
-+    {
-+      if (errno == ENOENT)
-+        return 0;
-+      return crun_make_error (err, errno, "inspect krun listener `%s` during cleanup", path);
-+    }
-+  if (! S_ISSOCK (socket_st.st_mode) || socket_st.st_uid != 0)
-+    return crun_make_error (err, EPERM, "refusing to remove changed krun listener `%s`", path);
-+  if (unlinkat (dirfd, name, 0) < 0)
-+    return crun_make_error (err, errno, "remove krun listener `%s`", path);
-+
-+  return 0;
-+}
-+
-+static void
-+libkrun_cleanup_vsock_listener_warning (const char *path)
-+{
-+  libcrun_error_t cleanup_err;
-+  libcrun_error_t *cleanup_errp = &cleanup_err;
-+
-+  if (libkrun_cleanup_vsock_listener (path, &cleanup_err) < 0)
-+    libcrun_error_write_warning_and_release (NULL, &cleanup_errp);
 +}
 +
  static int
@@ -559,7 +496,7 @@ index 6e249a9..8fd17b1 100644
    if (cpus <= 0)
      {
        CPU_ZERO (&set);
-@@ -269,7 +591,7 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+@@ -269,7 +528,7 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
          cpus = 1;
      }
 
@@ -568,7 +505,7 @@ index 6e249a9..8fd17b1 100644
    if (ram_mib <= LIBKRUN_MINIMUM_RAM_MIB)
      {
        if (def && def->linux && def->linux->resources && def->linux->resources->memory
-@@ -288,7 +610,7 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+@@ -288,7 +547,7 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
    if (UNLIKELY (ret < 0))
      return crun_make_error (err, -ret, "could not set krun vm configuration");
 
@@ -577,7 +514,7 @@ index 6e249a9..8fd17b1 100644
    if (gpu_flags > 0)
      {
        if (access ("/dev/dri", F_OK) != 0)
-@@ -302,7 +624,7 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+@@ -302,7 +561,7 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
          return crun_make_error (err, -ret, "could not enable virtio gpu");
      }
 
@@ -586,7 +523,7 @@ index 6e249a9..8fd17b1 100644
    if (nested_virt > 0)
      {
        int32_t (*krun_check_nested_virt) (void);
-@@ -334,6 +656,74 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+@@ -334,6 +593,74 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
        if (UNLIKELY (ret < 0))
          return crun_make_error (err, -ret, "could not set krun net configuration");
      }
@@ -661,7 +598,7 @@ index 6e249a9..8fd17b1 100644
 
    if (kconf->config_tree != NULL)
      {
-@@ -350,7 +740,7 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+@@ -350,7 +677,7 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
  }
 
  static int
@@ -670,7 +607,7 @@ index 6e249a9..8fd17b1 100644
  {
    int ret, sev_indicated = 0, awsnitro_indicated = 0;
    struct krun_config *kconf = (struct krun_config *) cookie;
-@@ -361,11 +751,8 @@ libkrun_configure_flavor (void *cookie, json_object *config_tree, libcrun_contai
+@@ -361,11 +688,8 @@ libkrun_configure_flavor (void *cookie, json_object *config_tree, libcrun_contai
    close_handles[0] = NULL;
    close_handles[1] = NULL;
 
@@ -683,7 +620,7 @@ index 6e249a9..8fd17b1 100644
        val_flavor = json_object_object_get (config_tree, "flavor");
        if (val_flavor != NULL && json_object_is_type (val_flavor, json_type_string))
          flavor = json_object_get_string (val_flavor);
-@@ -377,10 +764,6 @@ libkrun_configure_flavor (void *cookie, json_object *config_tree, libcrun_contai
+@@ -377,10 +701,6 @@ libkrun_configure_flavor (void *cookie, json_object *config_tree, libcrun_contai
        awsnitro_indicated |= strcmp (flavor, KRUN_FLAVOR_AWS_NITRO) == 0;
      }
 
@@ -694,14 +631,11 @@ index 6e249a9..8fd17b1 100644
    if (sev_indicated)
      {
        if (kconf->handle_sev == NULL)
-@@ -442,10 +825,12 @@ libkrun_exec (void *cookie, libcrun_container_t *container, const char *pathname
+@@ -442,10 +762,10 @@ libkrun_exec (void *cookie, libcrun_container_t *container, const char *pathname
                              const char *const argv[], const char *const envp[]);
    struct krun_config *kconf = (struct krun_config *) cookie;
    void *handle;
--  int32_t ctx_id, ret;
-+  cleanup_free char *vsock_listener_path = NULL;
-+  const char *configured_vsock_path;
-+  int32_t cleanup_ret, ctx_id, ret;
+   int32_t ctx_id, ret;
    libcrun_error_t err;
 
 -  ret = libkrun_configure_flavor (cookie, kconf->config_tree, container, &err);
@@ -709,20 +643,15 @@ index 6e249a9..8fd17b1 100644
    if (UNLIKELY (ret < 0))
      {
        int errcode = crun_error_get_errno (&err);
-@@ -544,18 +929,43 @@ libkrun_exec (void *cookie, libcrun_container_t *container, const char *pathname
+@@ -544,18 +864,29 @@ libkrun_exec (void *cookie, libcrun_container_t *container, const char *pathname
          error (EXIT_FAILURE, -ret, "could not set enclave execution arguments");
      }
 
-+  configured_vsock_path = libkrun_string_configuration (kconf->config_tree, "vsock_path");
-+  if (configured_vsock_path != NULL)
-+    vsock_listener_path = xstrdup (configured_vsock_path);
-+
    ret = libkrun_configure_vm (ctx_id, handle, kconf, container, &err);
    if (UNLIKELY (ret))
      {
        int errcode = crun_error_get_errno (&err);
        libcrun_error_t *tmp_err = &err;
-+      libkrun_cleanup_vsock_listener_warning (vsock_listener_path);
        libcrun_error_write_warning_and_release (NULL, &tmp_err);
        error (EXIT_FAILURE, errcode, "could not configure krun vm");
      }
@@ -732,7 +661,6 @@ index 6e249a9..8fd17b1 100644
 +    {
 +      int errcode = crun_error_get_errno (&err);
 +      libcrun_error_t *tmp_err = &err;
-+      libkrun_cleanup_vsock_listener_warning (vsock_listener_path);
 +      libcrun_error_write_warning_and_release (NULL, &tmp_err);
 +      error (EXIT_FAILURE, errcode, "could not configure krun guest rlimits");
 +    }
@@ -742,18 +670,10 @@ index 6e249a9..8fd17b1 100644
 +  kconf->config_tree = NULL;
 
    ret = krun_start_enter (ctx_id);
-+  cleanup_ret = libkrun_cleanup_vsock_listener (vsock_listener_path, &err);
-+  if (UNLIKELY (cleanup_ret < 0))
-+    {
-+      int errcode = crun_error_get_errno (&err);
-+      libcrun_error_t *tmp_err = &err;
-+      libcrun_error_write_warning_and_release (NULL, &tmp_err);
-+      error (EXIT_FAILURE, errcode, "could not clean up krun listener");
-+    }
    if (UNLIKELY (ret < 0))
      error (EXIT_FAILURE, -ret, "could not start krun");
 
-@@ -563,7 +973,7 @@ libkrun_exec (void *cookie, libcrun_container_t *container, const char *pathname
+@@ -563,7 +894,7 @@ libkrun_exec (void *cookie, libcrun_container_t *container, const char *pathname
  }
 
  static int
@@ -762,7 +682,7 @@ index 6e249a9..8fd17b1 100644
  {
    struct krun_config *kconf = (struct krun_config *) cookie;
    pid_t pid;
-@@ -575,9 +985,16 @@ libkrun_start_passt (void *cookie, libcrun_container_t *container)
+@@ -575,9 +906,16 @@ libkrun_start_passt (void *cookie, libcrun_container_t *container)
    int null;
    int ret;
 
@@ -781,7 +701,7 @@ index 6e249a9..8fd17b1 100644
    else
      return 0;
 
-@@ -589,12 +1006,12 @@ libkrun_start_passt (void *cookie, libcrun_container_t *container)
+@@ -589,12 +927,12 @@ libkrun_start_passt (void *cookie, libcrun_container_t *container)
    argv_idx = 0;
    passt_argv[argv_idx++] = (char *) "passt";
    passt_argv[argv_idx++] = (char *) "-t";
@@ -796,7 +716,7 @@ index 6e249a9..8fd17b1 100644
        passt_argv[argv_idx++] = (char *) "--no-dhcp-dns";
      }
 
-@@ -634,6 +1051,358 @@ libkrun_start_passt (void *cookie, libcrun_container_t *container)
+@@ -634,6 +972,358 @@ libkrun_start_passt (void *cookie, libcrun_container_t *container)
    return 0;
  }
 
@@ -1155,7 +1075,7 @@ index 6e249a9..8fd17b1 100644
  /* libkrun_create_kvm_device: explicitly adds kvm device.  */
  static int
  libkrun_configure_container (void *cookie, enum handler_configure_phase phase,
-@@ -691,7 +1460,7 @@ libkrun_configure_container (void *cookie, enum handler_configure_phase phase,
+@@ -691,7 +1381,7 @@ libkrun_configure_container (void *cookie, enum handler_configure_phase phase,
        if (UNLIKELY (ret < 0))
          return ret;
 
@@ -1164,7 +1084,7 @@ index 6e249a9..8fd17b1 100644
        if (UNLIKELY (ret < 0))
          return ret;
      }
-@@ -699,7 +1468,11 @@ libkrun_configure_container (void *cookie, enum handler_configure_phase phase,
+@@ -699,7 +1389,11 @@ libkrun_configure_container (void *cookie, enum handler_configure_phase phase,
    if (phase != HANDLER_CONFIGURE_AFTER_MOUNTS)
      return 0;
 
@@ -1177,7 +1097,7 @@ index 6e249a9..8fd17b1 100644
    if (UNLIKELY (ret < 0))
      return crun_make_error (err, errno, "start passt");
 
-@@ -856,6 +1629,8 @@ libkrun_unload (void *cookie, libcrun_error_t *err)
+@@ -856,6 +1550,8 @@ libkrun_unload (void *cookie, libcrun_error_t *err)
    struct krun_config *kconf = (struct krun_config *) cookie;
    if (kconf != NULL)
      {
@@ -1186,7 +1106,7 @@ index 6e249a9..8fd17b1 100644
        if (kconf->handle != NULL)
          {
            r = dlclose (kconf->handle);
-@@ -1011,6 +1786,7 @@ struct custom_handler_s handler_libkrun = {
+@@ -1011,6 +1707,7 @@ struct custom_handler_s handler_libkrun = {
    .unload = libkrun_unload,
    .run_func = libkrun_exec,
    .configure_container = libkrun_configure_container,

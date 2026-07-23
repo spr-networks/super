@@ -364,7 +364,7 @@ func handleDHCPResult(MAC string, IP string, Router string, Name string, Iface s
 		)
 		FWmtx.Unlock()
 		if authorized {
-			refreshDeviceGroupsAndPolicy(devices, getGroupsJson(), val)
+			go reconcilePluginNetworkCapabilitiesForDevice(val.MAC)
 		}
 	}
 

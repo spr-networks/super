@@ -1064,7 +1064,7 @@ func preparePluginNetworkCapabilities(plugin PluginConfig) error {
 		!pluginUsesDeviceNetwork(plugin) {
 		return nil
 	}
-	return applyPluginNetworkCapabilities(plugin)
+	return preparePluginDeviceNetworkCapabilities(plugin)
 }
 
 func runPluginStartWithNetworkPreparer(
@@ -1116,7 +1116,28 @@ func reconcilePluginNetworkCapabilities() {
 		if !plugin.Enabled {
 			continue
 		}
-		_ = applyPluginNetworkCapabilities(plugin)
+		if err := applyPluginNetworkCapabilities(plugin); err != nil {
+			log.Printf("Failed to reconcile network capabilities for plugin %s: %v", plugin.Name, err)
+		}
+	}
+}
+
+func reconcilePluginNetworkCapabilitiesForDevice(mac string) {
+	Configmtx.Lock()
+	plugins := append([]PluginConfig(nil), config.Plugins...)
+	Configmtx.Unlock()
+
+	for _, plugin := range plugins {
+		if !plugin.Enabled || !pluginUsesDeviceNetwork(plugin) {
+			continue
+		}
+		pluginMAC, err := pluginDeviceMAC(plugin)
+		if err != nil || pluginMAC != mac {
+			continue
+		}
+		if err := applyPluginNetworkCapabilities(plugin); err != nil {
+			log.Printf("Failed to reconcile network capabilities for plugin %s: %v", plugin.Name, err)
+		}
 	}
 }
 
@@ -1184,7 +1205,7 @@ func newPluginDevice(plugin PluginConfig, mac string) DeviceEntry {
 	}
 }
 
-func applyPluginDeviceNetworkCapabilities(plugin PluginConfig) error {
+func preparePluginDeviceNetworkCapabilities(plugin PluginConfig) error {
 	if !isValidIface(plugin.NetworkCapabilities.Interface) ||
 		len(plugin.NetworkCapabilities.Interface) >= 16 {
 		return fmt.Errorf("invalid device interface for plugin %s", plugin.Name)
@@ -1194,14 +1215,6 @@ func applyPluginDeviceNetworkCapabilities(plugin PluginConfig) error {
 	if err != nil {
 		return err
 	}
-
-	policies := normalizeStringSlice(plugin.NetworkCapabilities.Policies)
-	for _, policy := range policies {
-		if !slices.Contains(ValidPolicyStrings, policy) {
-			return fmt.Errorf("invalid device policy %q for plugin %s", policy, plugin.Name)
-		}
-	}
-	groups := normalizeStringSlice(plugin.NetworkCapabilities.Groups)
 
 	FWmtx.Lock()
 	err = GetElementFromMapComplex(
@@ -1217,11 +1230,10 @@ func applyPluginDeviceNetworkCapabilities(plugin PluginConfig) error {
 	}
 	if err == nil {
 		PluginDeviceLinks[mac] = plugin.NetworkCapabilities.Interface
-		err = removePluginCustomInterfaceRulesLocked(plugin.Name)
 	}
 	FWmtx.Unlock()
 	if err != nil {
-		return fmt.Errorf("prepare device network for plugin %s: %w", plugin.Name, err)
+		return fmt.Errorf("authorize DHCP for plugin %s: %w", plugin.Name, err)
 	}
 
 	Groupsmtx.Lock()
@@ -1237,9 +1249,9 @@ func applyPluginDeviceNetworkCapabilities(plugin PluginConfig) error {
 	if !exists {
 		dev = newPluginDevice(plugin, mac)
 	}
+	hadDevicePolicy := len(dev.Policies) != 0 || len(dev.Groups) != 0
 	deviceChanged := !exists ||
-		slices.Compare(dev.Policies, policies) != 0 ||
-		slices.Compare(dev.Groups, groups) != 0
+		hadDevicePolicy
 	if dev.Name == "" {
 		dev.Name = plugin.Name
 		deviceChanged = true
@@ -1252,10 +1264,9 @@ func applyPluginDeviceNetworkCapabilities(plugin PluginConfig) error {
 		dev.Type = DeviceTypeContainer
 		deviceChanged = true
 	}
-	dev.Policies = policies
-	dev.Groups = groups
+	dev.Policies = []string{}
+	dev.Groups = []string{}
 	groupConfig := getGroupsJson()
-	addGroupsIfMissing(groupConfig, dev.Groups)
 	if deviceChanged {
 		devices[mac] = dev
 		saveDevicesJson(devices)
@@ -1266,7 +1277,8 @@ func applyPluginDeviceNetworkCapabilities(plugin PluginConfig) error {
 			SprbusPublish("device:save", scrubDevice(dev))
 		}
 	}
-	if dev.RecentIP != "" &&
+	if hadDevicePolicy &&
+		dev.RecentIP != "" &&
 		dev.DHCPLastInterface == plugin.NetworkCapabilities.Interface {
 		refreshDeviceGroupsAndPolicy(devices, groupConfig, dev)
 	}
@@ -1274,37 +1286,82 @@ func applyPluginDeviceNetworkCapabilities(plugin PluginConfig) error {
 	return nil
 }
 
-func applyPluginNetworkCapabilities(plugin PluginConfig) error {
-	// Only apply if NetworkCapabilities are defined
-	if plugin.NetworkCapabilities.Interface == "" || len(plugin.NetworkCapabilities.Policies) == 0 {
-		return nil
+func pluginDeviceIPFromDevices(plugin PluginConfig, mac string, devices map[string]DeviceEntry) (string, error) {
+	dev, exists := devices[mac]
+	if !exists || dev.Type != DeviceTypeContainer {
+		return "", fmt.Errorf("waiting for DHCP lease for plugin %s", plugin.Name)
+	}
+	if dev.DHCPLastInterface != plugin.NetworkCapabilities.Interface {
+		return "", fmt.Errorf(
+			"plugin %s DHCP interface is %q, want %q",
+			plugin.Name,
+			dev.DHCPLastInterface,
+			plugin.NetworkCapabilities.Interface,
+		)
+	}
+	ip := net.ParseIP(dev.RecentIP)
+	if ip == nil || ip.To4() == nil {
+		return "", fmt.Errorf("plugin %s has no valid IPv4 DHCP lease", plugin.Name)
+	}
+	return ip.String(), nil
+}
+
+func getPluginDeviceIP(plugin PluginConfig) (string, error) {
+	mac, err := pluginDeviceMAC(plugin)
+	if err != nil {
+		return "", err
 	}
 
-	if pluginUsesDeviceNetwork(plugin) {
-		return applyPluginDeviceNetworkCapabilities(plugin)
-	}
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+	return pluginDeviceIPFromDevices(plugin, mac, getDevicesJson())
+}
 
-	// Get container IP for this plugin
-	containerIP, err := getPluginContainerIP(plugin.NetworkCapabilities.Interface)
+func ensurePluginDeviceEthernetRule(plugin PluginConfig, sourceIP string) error {
+	mac, err := pluginDeviceMAC(plugin)
 	if err != nil {
 		return err
 	}
 
-	// Create CustomInterfaceRule for the plugin container
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
+	if GetMACVerdictElement(
+		"inet",
+		"filter",
+		"ethernet_filter",
+		sourceIP,
+		plugin.NetworkCapabilities.Interface,
+		mac,
+		"return",
+	) == nil {
+		return nil
+	}
+	return AddMACVerdictElement(
+		"inet",
+		"filter",
+		"ethernet_filter",
+		sourceIP,
+		plugin.NetworkCapabilities.Interface,
+		mac,
+		"return",
+	)
+}
+
+func applyPluginCustomInterfaceRule(plugin PluginConfig, sourceIP string) error {
 	rule := CustomInterfaceRule{
 		BaseRule: BaseRule{
 			RuleName: "Plugin-" + plugin.Name,
 			Disabled: false,
 		},
 		Interface: plugin.NetworkCapabilities.Interface,
-		SrcIP:     containerIP,
-		RouteDst:  "", // Not needed for basic container access
+		SrcIP:     sourceIP,
+		RouteDst:  "",
 		Policies:  plugin.NetworkCapabilities.Policies,
 		Groups:    plugin.NetworkCapabilities.Groups,
-		Tags:      []string{}, // Not used
+		Tags:      []string{},
 	}
 
-	// Apply the rule directly via firewall function
+	ensureCustomInterfaceRuleGroups(rule.Groups)
 	FWmtx.Lock()
 	hasCurrent, stale := checkCurrentPluginNetworkRules(gFirewallConfig.CustomInterfaceRules, rule)
 	var staleErr error
@@ -1316,8 +1373,9 @@ func applyPluginNetworkCapabilities(plugin PluginConfig) error {
 			}
 		}
 	}
+	var err error
 	if !hasCurrent {
-		err = modifyCustomInterfaceRulesImpl(rule, false) // false = add rule
+		err = modifyCustomInterfaceRulesImpl(rule, false)
 	}
 	FWmtx.Unlock()
 
@@ -1337,6 +1395,32 @@ func applyPluginNetworkCapabilities(plugin PluginConfig) error {
 	return nil
 }
 
+func applyPluginNetworkCapabilities(plugin PluginConfig) error {
+	if plugin.NetworkCapabilities.Interface == "" || len(plugin.NetworkCapabilities.Policies) == 0 {
+		return nil
+	}
+
+	if pluginUsesDeviceNetwork(plugin) {
+		if err := preparePluginDeviceNetworkCapabilities(plugin); err != nil {
+			return err
+		}
+		sourceIP, err := getPluginDeviceIP(plugin)
+		if err != nil {
+			return err
+		}
+		if err := ensurePluginDeviceEthernetRule(plugin, sourceIP); err != nil {
+			return err
+		}
+		return applyPluginCustomInterfaceRule(plugin, sourceIP)
+	}
+
+	containerIP, err := getPluginContainerIP(plugin.NetworkCapabilities.Interface)
+	if err != nil {
+		return err
+	}
+	return applyPluginCustomInterfaceRule(plugin, containerIP)
+}
+
 func removePluginNetworkCapabilities(plugin PluginConfig) error {
 	// Only remove if NetworkCapabilities are defined
 	if plugin.NetworkCapabilities.Interface == "" || len(plugin.NetworkCapabilities.Policies) == 0 {
@@ -1348,6 +1432,7 @@ func removePluginNetworkCapabilities(plugin PluginConfig) error {
 		if err != nil {
 			return err
 		}
+		sourceIP, _ := getPluginDeviceIP(plugin)
 
 		FWmtx.Lock()
 		delete(RecentDHCPIface, mac)
@@ -1363,6 +1448,27 @@ func removePluginNetworkCapabilities(plugin PluginConfig) error {
 		}
 		if cleanupErr := removePluginCustomInterfaceRulesLocked(plugin.Name); err == nil {
 			err = cleanupErr
+		}
+		if sourceIP != "" && GetMACVerdictElement(
+			"inet",
+			"filter",
+			"ethernet_filter",
+			sourceIP,
+			plugin.NetworkCapabilities.Interface,
+			mac,
+			"return",
+		) == nil {
+			if cleanupErr := DeleteMACVerdictElement(
+				"inet",
+				"filter",
+				"ethernet_filter",
+				sourceIP,
+				plugin.NetworkCapabilities.Interface,
+				mac,
+				"return",
+			); err == nil {
+				err = cleanupErr
+			}
 		}
 		FWmtx.Unlock()
 		return err

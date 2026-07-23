@@ -782,9 +782,6 @@ func removeSupernetworkEntry(supernet string) {
 }
 
 func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
-	FWmtx.Lock()
-	defer FWmtx.Unlock()
-
 	crule := CustomInterfaceRule{}
 	err := json.NewDecoder(r.Body).Decode(&crule)
 	if err != nil {
@@ -793,12 +790,27 @@ func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
 	}
 
 	doDelete := r.Method == http.MethodDelete
+	if !doDelete {
+		ensureCustomInterfaceRuleGroups(crule.Groups)
+	}
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
 	err = modifyCustomInterfaceRulesImpl(crule, doDelete)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
 
+}
+
+func ensureCustomInterfaceRuleGroups(groups []string) {
+	groups = normalizeStringSlice(groups)
+	if len(groups) == 0 {
+		return
+	}
+	Groupsmtx.Lock()
+	addGroupsIfMissing(getGroupsJson(), groups)
+	Groupsmtx.Unlock()
 }
 
 func modifyCustomInterfaceRulesImpl(crule CustomInterfaceRule, doDelete bool) error {
@@ -1345,6 +1357,15 @@ func refreshDeviceGroupsAndPolicy(devices map[string]DeviceEntry, groups []Group
 	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), isAPVlan(ifname), false, nil)
 
 	device_disabled := slices.Contains(dev.Policies, "disabled") || dev.DeviceDisabled == true
+	if dev.MAC != "" {
+		if _, exists := devices[dev.MAC]; !exists {
+			return
+		}
+	} else if dev.WGPubKey != "" {
+		if _, exists := devices[dev.WGPubKey]; !exists {
+			return
+		}
+	}
 	if !device_disabled {
 		//add this MAC and IP to the ethernet filter. wg is a no-op
 		addVerdictMac(ipv4, dev.MAC, ifname, "ethernet_filter", "return")
@@ -1621,9 +1642,6 @@ func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container
 			continue
 		}
 		if action == "add" {
-			Groupsmtx.Lock()
-			addGroupsIfMissing(getGroupsJson(), []string{group})
-			Groupsmtx.Unlock()
 			addCustomVerdict(group, container_rule.SrcIP, container_rule.Interface)
 		} else {
 			found := false
@@ -1636,12 +1654,12 @@ func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container
 
 			if !found {
 				//clear rule from group.
-				err := DeleteElementFromMapComplex("inet", "filter", group+"_src_access", []string{container_rule.SrcIP, container_rule.Interface, "accept"})
+				err := DeleteElementFromMapComplex("inet", "filter", group+"_src_access", []string{container_rule.SrcIP, container_rule.Interface})
 				if err != nil {
 					log.Println("[-] Error container_interface group nft delete failed", err)
 				}
 
-				err = DeleteElementFromMapComplex("inet", "filter", group+"_dst_access", []string{container_rule.SrcIP, container_rule.Interface, "continue"})
+				err = DeleteElementFromMapComplex("inet", "filter", group+"_dst_access", []string{container_rule.SrcIP, container_rule.Interface})
 				if err != nil {
 					log.Println("[-]  Error container_interface group  nft delete failed", err)
 				}

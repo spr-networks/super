@@ -78,6 +78,10 @@ KERNEL_UAPI_DIR="$BUILD_DIR/kernel-uapi"
 PACKAGE_ROOT="$BUILD_DIR/package"
 PRIVATE_LIBDIR="$PACKAGE_ROOT/usr/lib/spr-krun-runtime"
 
+COMBINED_PATCH="$SCRIPT_DIR/patches/0001-spr-krun-runtime.patch"
+git -C "$SOURCE_ROOT" apply --check --whitespace=error-all "$COMBINED_PATCH"
+git -C "$SOURCE_ROOT" apply --whitespace=error-all "$COMBINED_PATCH"
+
 mkdir -p "$LIBKRUNFW_DIR/tarballs"
 download \
     "https://cdn.kernel.org/pub/linux/kernel/v6.x/${LIBKRUNFW_KERNEL_VERSION}.tar.xz" \
@@ -133,10 +137,6 @@ make -C "$LIBKRUNFW_DIR/$LIBKRUNFW_KERNEL_VERSION" olddefconfig
     make PREFIX=/usr/local DESTDIR="$FW_SDK_DIR" install
 )
 
-COMBINED_PATCH="$SCRIPT_DIR/patches/0001-spr-krun-runtime.patch"
-patch --dry-run --batch --forward -d "$SOURCE_ROOT" -p1 < "$COMBINED_PATCH"
-patch --batch --forward -d "$SOURCE_ROOT" -p1 < "$COMBINED_PATCH"
-
 # The create child and a later start command do not share handler memory.
 # Reject a regression that checks the zeroed start cookie before reloading the
 # root-owned policy, and ensure direct `run` invokes the same hook while its
@@ -173,13 +173,19 @@ grep -F 'memcpy(&request.options[opt_offset], &server_addr.s_addr, 4);' \
 grep -F 'from_addr.sin_addr.s_addr == INADDR_ANY ||' \
     "$LIBKRUN_DIR/src/init_blob/init/dhcp.c" >/dev/null
 
-# libkrun's normal VMM shutdown calls _exit, so post-return crun cleanup is only
-# an error fallback. The VMM exit observer must drop the live listener first;
-# its retained O_NOFOLLOW parent fd and inode identity make unlinkat safe.
-grep -F 'libkrun_cleanup_vsock_listener (vsock_listener_path, &err)' \
+# libkrun's VMM exit observer normally removes its listener using a retained
+# O_NOFOLLOW parent fd and inode identity. After an ungraceful exit, crun may
+# remove a prior entry only after the trusted-directory walk and a no-follow
+# stat prove that the exact direct child is a root-owned socket.
+grep -F 'refusing to replace non-root or non-socket krun listener' \
     "$CRUN_DIR/src/libcrun/handlers/krun.c" >/dev/null
 grep -F 'unlinkat (dirfd, name, 0)' \
     "$CRUN_DIR/src/libcrun/handlers/krun.c" >/dev/null
+if grep -F 'libkrun_cleanup_vsock_listener' \
+    "$CRUN_DIR/src/libcrun/handlers/krun.c"; then
+    echo "crun still has path-only krun listener cleanup" >&2
+    exit 1
+fi
 grep -F 'vmm.exit_observers.push(unix_vsock.clone())' \
     "$LIBKRUN_DIR/src/vmm/src/builder.rs" >/dev/null
 grep -F 'self.proxy_map.write().unwrap().clear()' \
