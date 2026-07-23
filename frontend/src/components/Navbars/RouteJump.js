@@ -22,14 +22,16 @@ import {
 
 import { SearchIcon, SlashIcon } from 'lucide-react-native'
 
-import { routes } from 'routes'
-
 import { GlobalHotKeys, HotKeys } from 'react-hotkeys'
 import { Platform } from 'react-native'
 
 const RouteJump = ({ ...props }) => {
-  const { activeSidebarItem, setActiveSidebarItem, getDevices } =
-    useContext(AppContext)
+  const {
+    activeSidebarItem,
+    setActiveSidebarItem,
+    getDevices,
+    routes = []
+  } = useContext(AppContext)
   const [isOpen, setIsOpen] = useState(false)
   const [items, setItems] = useState([])
   const [devices, setDevices] = useState([])
@@ -86,7 +88,7 @@ const RouteJump = ({ ...props }) => {
       .catch(() => {})
 
     setItems(items)
-  }, [])
+  }, [routes])
 
   const onPress = () => {
     setIsOpen(true)

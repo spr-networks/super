@@ -11,7 +11,7 @@ import {
   VStack
 } from '@gluestack-ui/themed'
 
-import { AlertContext } from 'AppContext'
+import { AlertContext, AppContext } from 'AppContext'
 import { featureFlagsAPI } from 'api'
 
 export const AVAILABLE_FEATURE_FLAGS = [
@@ -34,6 +34,7 @@ const knownFlags = (flags) =>
 
 const FeatureFlags = () => {
   const context = useContext(AlertContext)
+  const appContext = useContext(AppContext)
   const [enabledFlags, setEnabledFlags] = useState([])
   const [loading, setLoading] = useState(true)
   const [savingFlag, setSavingFlag] = useState('')
@@ -43,7 +44,9 @@ const FeatureFlags = () => {
     featureFlagsAPI
       .list()
       .then((flags) => {
-        setEnabledFlags(knownFlags(flags))
+        const enabled = knownFlags(flags)
+        setEnabledFlags(enabled)
+        appContext.setFeatureFlags?.(Array.isArray(flags) ? flags : [])
         setLoadError('')
       })
       .catch((error) => {
@@ -66,7 +69,9 @@ const FeatureFlags = () => {
     featureFlagsAPI
       .save(next)
       .then((saved) => {
-        setEnabledFlags(knownFlags(saved))
+        const enabled = knownFlags(saved)
+        setEnabledFlags(enabled)
+        appContext.setFeatureFlags?.(Array.isArray(saved) ? saved : [])
         context.success?.('Feature flags updated')
       })
       .catch((error) => {

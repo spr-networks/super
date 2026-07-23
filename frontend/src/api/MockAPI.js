@@ -14,6 +14,36 @@ import * as jsonpath from 'jsonpath'
 let server = null
 let opts = {}
 
+const MODEL_ARTIFACT_HOSTS = new Set([
+  'huggingface.co',
+  'raw.githubusercontent.com'
+])
+
+const installModelArtifactFetch = (mockServer) => {
+  if (typeof window === 'undefined' || !mockServer?.pretender) return
+
+  const nativeFetch = mockServer.pretender._nativefetch
+  const mirageFetch = window.fetch
+  if (!nativeFetch || !mirageFetch || mirageFetch.__sprModelArtifactFetch)
+    return
+
+  const artifactFetch = (input, init) => {
+    const requestURL =
+      typeof input === 'string' || input instanceof URL ? input : input?.url
+    try {
+      const hostname = new URL(requestURL, window.location.href).hostname
+      if (MODEL_ARTIFACT_HOSTS.has(hostname)) {
+        return nativeFetch.call(window, input, init)
+      }
+    } catch (error) {
+      // Let Mirage handle malformed or relative requests as it did previously.
+    }
+    return mirageFetch.call(window, input, init)
+  }
+  artifactFetch.__sprModelArtifactFetch = true
+  window.fetch = artifactFetch
+}
+
 // helper function for random and random value in array
 const r = (n) => parseInt(Math.random() * n)
 const rpick = (l) => l[parseInt(r(l.length))]
@@ -1055,6 +1085,14 @@ export default function MockAPI(props = null) {
       })
     },
     routes() {
+      // Browser-local AI models are fetched directly from their remote artifact
+      // hosts. Mirage must not turn these cross-origin requests into mock HTML.
+      this.passthrough('https://huggingface.co/**')
+      this.passthrough('https://cdn-lfs.hf.co/**')
+      this.passthrough('https://cdn-lfs-us-1.hf.co/**')
+      this.passthrough('https://cas-bridge.xethub.hf.co/**')
+      this.passthrough('https://raw.githubusercontent.com/**')
+
       // TODO hook for all
       const authOK = (request) => {
         return true //TODO
@@ -4921,5 +4959,6 @@ export default function MockAPI(props = null) {
     }
   } catch (err) {}
 
+  installModelArtifactFetch(server)
   return server
 }

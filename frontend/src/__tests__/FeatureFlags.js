@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { AlertContext } from 'AppContext'
+import { AlertContext, AppContext } from 'AppContext'
 import { fireEvent, render, screen, waitFor } from 'test-utils'
 import { featureFlagsAPI } from 'api'
 import { APIFeatureFlags } from 'api/FeatureFlags'
@@ -31,6 +31,7 @@ describe('Feature Flags settings', () => {
   })
 
   it('loads and saves the supported feature flags', async () => {
+    const setFeatureFlags = jest.fn()
     jest.spyOn(featureFlagsAPI, 'list').mockResolvedValue(['rustap'])
     jest
       .spyOn(featureFlagsAPI, 'save')
@@ -38,7 +39,9 @@ describe('Feature Flags settings', () => {
 
     render(
       <AlertContext.Provider value={alerts}>
-        <FeatureFlags />
+        <AppContext.Provider value={{ setFeatureFlags }}>
+          <FeatureFlags />
+        </AppContext.Provider>
       </AlertContext.Provider>
     )
 
@@ -46,12 +49,17 @@ describe('Feature Flags settings', () => {
     const webllm = screen.getByLabelText('Enable WebLLM')
     expect(rustap.props.value).toBe(true)
     expect(webllm.props.value).toBe(false)
+    expect(setFeatureFlags).toHaveBeenCalledWith(['rustap'])
 
     fireEvent(webllm, 'valueChange', true)
 
     await waitFor(() => {
       expect(featureFlagsAPI.save).toHaveBeenCalledWith(['rustap', 'webllm'])
     })
+    expect(setFeatureFlags).toHaveBeenLastCalledWith([
+      'rustap',
+      'webllm'
+    ])
     expect(alerts.success).toHaveBeenCalledWith('Feature flags updated')
   })
 })

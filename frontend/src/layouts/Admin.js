@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Dimensions, Platform, SafeAreaView } from 'react-native'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -19,6 +19,7 @@ import { WebSocketComponent } from 'api/WebSocket'
 import {
   api,
   deviceAPI,
+  featureFlagsAPI,
   meshAPI,
   pfwAPI,
   pluginAPI,
@@ -66,7 +67,10 @@ import DeviceInfo from 'DeviceInfo'
 
 //NOTE Slice transition for Alerts not available in gluestack-ui
 
-import { routes as allRoutes } from 'routes'
+import {
+  filterRoutesByFeatureFlags,
+  routes as allRoutes
+} from 'routes'
 import { pluginMenuIcon } from 'components/Plugins/PluginIcons'
 
 import { KeyboardAvoidingView } from '@gluestack-ui/themed'
@@ -275,10 +279,17 @@ const AdminLayout = ({
   const [isFeaturesInitialized, setIsFeaturesInitialized] = useState(false)
   const [version, setVersion] = useState('default')
   const [features, setFeatures] = useState([])
+  const [isFeatureFlagsInitialized, setIsFeatureFlagsInitialized] =
+    useState(false)
+  const [featureFlags, setFeatureFlags] = useState([])
   const [devices, setDevices] = useState([])
   const containersRef = React.useRef({})
   const [groups, setGroups] = useState([])
   const [routes, setRoutes] = useState(allRoutes)
+  const visibleRoutes = useMemo(
+    () => filterRoutesByFeatureFlags(routes, featureFlags),
+    [routes, featureFlags]
+  )
 
   // device context stuff
   const getDevices = (forceFetch = false) => {
@@ -414,7 +425,18 @@ const AdminLayout = ({
         setIsWifiDisabled(true)
       })
 
-    // TODO use features
+    featureFlagsAPI
+      .list()
+      .then((flags) => {
+        setFeatureFlags(Array.isArray(flags) ? flags : [])
+      })
+      .catch(() => {
+        setFeatureFlags([])
+      })
+      .finally(() => {
+        setIsFeatureFlagsInitialized(true)
+      })
+
     pfwAPI
       .config()
       .then((res) => {
@@ -722,6 +744,10 @@ const AdminLayout = ({
         isMeshNode,
         isFeaturesInitialized,
         features,
+        isFeatureFlagsInitialized,
+        featureFlags,
+        setFeatureFlags,
+        routes: visibleRoutes,
         devices,
         getDevices,
         getDevice,
@@ -828,7 +854,7 @@ const AdminLayout = ({
                   setIsSimpleMode={setIsSimpleMode}
                   theme={theme}
                   setTheme={setThemeHook}
-                  routes={routes}
+                  routes={visibleRoutes}
                 />
               </Box>
             )}
@@ -854,7 +880,7 @@ const AdminLayout = ({
                     setIsSimpleMode={setIsSimpleMode}
                     theme={theme}
                     setTheme={setThemeHook}
-                    routes={routes}
+                    routes={visibleRoutes}
                   />
                 </SafeAreaView>
               </Box>
