@@ -33,6 +33,7 @@ var krunSocketNameRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
 
 var krunListenRootAliases = map[string]string{
 	"mitmproxy":        "/state/plugins/spr-mitmproxy",
+	"spr-opencanary":   "/state/plugins/spr-opencanary-krun",
 	"spr-vaultwarden": "/state/plugins/vaultwarden",
 }
 
