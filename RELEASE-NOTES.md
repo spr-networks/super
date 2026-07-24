@@ -5,10 +5,14 @@
 **Features**
 - krun/KVM support for plugins
 - Plugin UI is sandboxed by default now
-- Support for rustAP beta users as an alternative to hostapd
+- New feature flags
 - Reintroduce Webauthn support
 - Add iOS biometrics support
 - Refactor api's docker access
+- Support for rustAP beta as an alternative to hostapd (feature flag)
+- Self-hosted WebLLM Assistant (feature flag)
+**Fixes**
+- Fixed device.json file writes and locking
 
 ## v1.1.14
 **Fixes**
