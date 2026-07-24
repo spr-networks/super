@@ -1,9 +1,26 @@
 package main
 
 import (
+	"reflect"
 	"testing"
 	"time"
 )
+
+func TestAppendComposeCommandArgsDisablesPullAndBuildForUp(t *testing.T) {
+	got := appendComposeCommandArgs([]string{"-f", "docker-compose.yml", "up"}, "up", "-d", "api dns")
+	want := []string{"-f", "docker-compose.yml", "up", "-d", "--pull", "never", "--no-build", "api", "dns"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("appendComposeCommandArgs() = %v, want %v", got, want)
+	}
+}
+
+func TestAppendComposeCommandArgsLeavesPullUnchanged(t *testing.T) {
+	got := appendComposeCommandArgs([]string{"-f", "docker-compose.yml", "pull"}, "pull", "", "api")
+	want := []string{"-f", "docker-compose.yml", "pull", "api"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("appendComposeCommandArgs() = %v, want %v", got, want)
+	}
+}
 
 func TestComposeCommandsSerialize(t *testing.T) {
 	composeCommandMtx.Lock()

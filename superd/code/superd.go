@@ -40,6 +40,8 @@ import (
 )
 
 var UNIX_PLUGIN_LISTENER = "state/plugins/superd/socket"
+var DockerSocketPath = "/var/run/docker.sock"
+var SuperRootPath = "/super"
 var PlusAddons = "plugins/plus"
 var UserAddons = "plugins/user"
 var ComposeAllowListDefaults = []string{"docker-compose.yml", "docker-compose-test.yml", "docker-compose-virt.yml",
@@ -60,6 +62,21 @@ var ReleaseVersionFile = "configs/base/release_version"
 
 var ReleaseInfoMtx sync.Mutex
 var composeCommandMtx sync.Mutex
+
+func appendComposeCommandArgs(args []string, command string, optional string, target string) []string {
+	if optional != "" {
+		args = append(args, optional)
+	}
+	if command == "up" {
+		args = append(args, "--pull", "never", "--no-build")
+	}
+	if target != "" {
+		args = append(args, strings.Fields(target)...)
+	}
+	return args
+}
+
+var composeAllowMtx sync.Mutex
 
 func getReleaseVersion() string {
 	ReleaseInfoMtx.Lock()
@@ -233,6 +250,11 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		return fmt.Errorf("compose file path is not whitelisted: %s", composeFile)
 	}
 
+	krunOverride, policyErr := prepareKrunComposePolicy(composeFile)
+	if policyErr != nil {
+		return policyErr
+	}
+
 	/*
 		//upon testing this recreates service:base senselessly,
 		// causing the services to lose their network. dont do this,
@@ -265,18 +287,16 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		//docker buildkit has introduced a bug with contexts, this is a workaround.
 		add_buildctx = "BUILDCTX=" + filepath.Dir(composeFile)
 
-		args = append(args, "-f", defaultCompose, "-f", composeFile, command)
+		args = append(args, "-f", defaultCompose, "-f", composeFile)
 	} else {
-		args = append(args, "-f", composeFile, command)
+		args = append(args, "-f", composeFile)
 	}
+	if krunOverride != "" {
+		args = append(args, "-f", krunOverride)
+	}
+	args = append(args, command)
 
-	if optional != "" {
-		args = append(args, optional)
-	}
-
-	if target != "" {
-		args = append(args, strings.Fields(target)...)
-	}
+	args = appendComposeCommandArgs(args, command, optional, target)
 
 	cmd := "docker-compose"
 
@@ -299,6 +319,9 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 			"-v", "/var/run/docker.sock:/var/run/docker.sock",
 			"-w", superdir,
 			"-e", "SUPERDIR="+superdir)
+		if krunOverride != "" {
+			d_args = append(d_args, "-v", krunPolicyRoot+":"+krunPolicyRoot+":ro")
+		}
 
 		if add_buildctx != "" {
 			d_args = append(d_args, "-e", add_buildctx)
@@ -370,31 +393,38 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 	return errors.New(errString)
 }
 
-func update(w http.ResponseWriter, r *http.Request) {
-	target := r.URL.Query().Get("service")
-	compose := r.URL.Query().Get("compose_file")
-
-	//on the main release channel, verify build provenance for the images this
-	//update would pull. on failure abort before downloading anything.
+func pullVerifiedUpdate(compose string, target string) (int, error) {
 	verified := map[string]string{}
 	if getReleaseChannel() == "" {
 		v, err := verifyUpdateImages(compose, target)
 		if err != nil {
-			http.Error(w, err.Error(), 400)
-			return
+			return http.StatusBadRequest, err
 		}
 		verified = v
 	}
 
-	composeCommand(compose, target, "pull", "", false)
+	if err := composeCommand(compose, target, "pull", "", false); err != nil {
+		return http.StatusInternalServerError, err
+	}
 
 	if getReleaseChannel() == "" {
 		err := verifyPulledUpdate(compose, target, verified)
 		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
+			return http.StatusInternalServerError, err
 		}
 		go verifyPulledImages(false)
+	}
+
+	return http.StatusOK, nil
+}
+
+func update(w http.ResponseWriter, r *http.Request) {
+	target := r.URL.Query().Get("service")
+	compose := r.URL.Query().Get("compose_file")
+
+	if status, err := pullVerifiedUpdate(compose, target); err != nil {
+		http.Error(w, err.Error(), status)
+		return
 	}
 }
 
@@ -495,8 +525,8 @@ func updateContainer(w http.ResponseWriter, r *http.Request) {
 
 	before := imageIDs(images)
 
-	if err := composeCommand(compose, "", "pull", "", false); err != nil {
-		http.Error(w, err.Error(), 400)
+	if status, err := pullVerifiedUpdate(compose, ""); err != nil {
+		http.Error(w, err.Error(), status)
 		return
 	}
 
@@ -566,6 +596,40 @@ func docker_ps(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(string(out))
+}
+
+func docker_info(w http.ResponseWriter, r *http.Request) {
+	path, err := dockerInfoPath(r.URL.Query().Get("resource"), r.URL.Query().Get("id"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	data, err := dockerAPIGet(path)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
+}
+
+func dockerInfoPath(resource, id string) (string, error) {
+	switch resource {
+	case "containers":
+		if id != "" {
+			return "", errors.New("container id is not supported")
+		}
+		return "/containers/json?all=1", nil
+	case "networks":
+		if id != "" {
+			return "/networks/" + url.PathEscape(id), nil
+		}
+		return "/networks", nil
+	default:
+		return "", errors.New("unsupported Docker info resource")
+	}
 }
 
 func removeUserContainer(w http.ResponseWriter, r *http.Request) {
@@ -808,15 +872,187 @@ func getRepoName(gitURL string) string {
 	return repoName
 }
 
+const (
+	pluginRuntimeDefault = "default"
+	pluginRuntimeKVM     = "kvm"
+)
+
+type pluginRuntimeSelection struct {
+	Runtime           string
+	ComposeFilePath   string
+	AvailableRuntimes []string
+}
+
+type pluginRuntimeHostStatus struct {
+	Runtime string
+	Ready   bool
+	Reason  string `json:",omitempty"`
+}
+
+func normalizePluginRuntime(runtime string) (string, error) {
+	runtime = strings.ToLower(strings.TrimSpace(runtime))
+	if runtime == "" {
+		return pluginRuntimeDefault, nil
+	}
+	switch runtime {
+	case pluginRuntimeDefault, pluginRuntimeKVM:
+		return runtime, nil
+	default:
+		return "", fmt.Errorf("unsupported plugin runtime %q", runtime)
+	}
+}
+
+func getPluginRuntimeHostStatus(runtime string) (pluginRuntimeHostStatus, error) {
+	runtime, err := normalizePluginRuntime(runtime)
+	if err != nil {
+		return pluginRuntimeHostStatus{}, err
+	}
+
+	status := pluginRuntimeHostStatus{Runtime: runtime, Ready: true}
+	if runtime != pluginRuntimeKVM {
+		return status, nil
+	}
+
+	var dockerInfo struct {
+		Runtimes map[string]json.RawMessage
+	}
+	if err := dockerAPIGetJSON("/info", &dockerInfo); err != nil {
+		status.Ready = false
+		status.Reason = "Could not verify whether the spr-krun Docker runtime is installed: " + err.Error()
+		return status, nil
+	}
+	if _, ok := dockerInfo.Runtimes["spr-krun"]; !ok {
+		status.Ready = false
+		status.Reason = "The spr-krun runtime is not registered with Docker on this system."
+	}
+	return status, nil
+}
+
+func pluginRuntimeStatus(w http.ResponseWriter, r *http.Request) {
+	status, err := getPluginRuntimeHostStatus(r.URL.Query().Get("runtime"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(status)
+}
+
+func pluginRuntimeComposeName(runtime string) (string, error) {
+	runtime, err := normalizePluginRuntime(runtime)
+	if err != nil {
+		return "", err
+	}
+	if runtime == pluginRuntimeKVM {
+		return "docker-compose-kvm.yml", nil
+	}
+	return "docker-compose.yml", nil
+}
+
+func availablePluginRuntimes(pluginRelativeDir string) []string {
+	runtimes := []string{}
+	for _, runtime := range []string{pluginRuntimeDefault, pluginRuntimeKVM} {
+		composeName, _ := pluginRuntimeComposeName(runtime)
+		info, err := os.Stat(filepath.Join(SuperRootPath, pluginRelativeDir, composeName))
+		if err == nil && info.Mode().IsRegular() {
+			runtimes = append(runtimes, runtime)
+		}
+	}
+	return runtimes
+}
+
+func resolveUserPluginRuntime(composeFilePath, runtime string) (pluginRuntimeSelection, error) {
+	selection := pluginRuntimeSelection{}
+	cleanPath := filepath.ToSlash(filepath.Clean(composeFilePath))
+	parts := strings.Split(cleanPath, "/")
+	if len(parts) != 4 || parts[0] != "plugins" || parts[1] != "user" ||
+		!regexp.MustCompile(`^[A-Za-z0-9-]+$`).MatchString(parts[2]) ||
+		(parts[3] != "docker-compose.yml" && parts[3] != "docker-compose-kvm.yml") {
+		return selection, fmt.Errorf("plugin runtime can only be changed for an installed user plugin")
+	}
+
+	runtime, err := normalizePluginRuntime(runtime)
+	if err != nil {
+		return selection, err
+	}
+	composeName, _ := pluginRuntimeComposeName(runtime)
+	pluginRelativeDir := filepath.Join(parts[0], parts[1], parts[2])
+	targetPath := filepath.ToSlash(filepath.Join(pluginRelativeDir, composeName))
+	info, err := os.Stat(filepath.Join(SuperRootPath, targetPath))
+	if err != nil {
+		return selection, fmt.Errorf("runtime %s is not available for plugin %s: %w", runtime, parts[2], err)
+	}
+	if !info.Mode().IsRegular() {
+		return selection, fmt.Errorf("runtime compose file is not regular: %s", targetPath)
+	}
+
+	selection.Runtime = runtime
+	selection.ComposeFilePath = targetPath
+	selection.AvailableRuntimes = availablePluginRuntimes(pluginRelativeDir)
+	return selection, nil
+}
+
 func configureUserPlugin(repoName string) ([]byte, error) {
-	pluginConfigPath := filepath.Join("/super", "plugins", "user", repoName, "plugin.json")
+	if repoName == "" || filepath.Base(repoName) != repoName || repoName == "." {
+		return []byte{}, fmt.Errorf("invalid user plugin repository name %q", repoName)
+	}
+
+	pluginRelativeDir := filepath.Join("plugins", "user", repoName)
+	pluginConfigPath := filepath.Join(SuperRootPath, pluginRelativeDir, "plugin.json")
 	if _, err := os.Stat(pluginConfigPath); os.IsNotExist(err) {
 		return []byte{}, fmt.Errorf("could not find user plugin config %s", pluginConfigPath)
 	}
 
 	data, err := os.ReadFile(pluginConfigPath)
+	if err != nil {
+		return nil, err
+	}
 
-	return data, err
+	var manifest struct {
+		Runtime string
+	}
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return nil, fmt.Errorf("invalid user plugin config %s: %w", pluginConfigPath, err)
+	}
+
+	runtime, err := normalizePluginRuntime(manifest.Runtime)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user plugin config %s: %w", pluginConfigPath, err)
+	}
+	composeName, _ := pluginRuntimeComposeName(runtime)
+	composeRelativePath := filepath.Join(pluginRelativeDir, composeName)
+	composePath := filepath.Join(SuperRootPath, composeRelativePath)
+	info, err := os.Stat(composePath)
+	if err != nil {
+		return nil, fmt.Errorf("could not find user plugin compose file %s: %w", composePath, err)
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("user plugin compose file is not regular: %s", composePath)
+	}
+
+	var config map[string]interface{}
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("invalid user plugin config %s: %w", pluginConfigPath, err)
+	}
+	config["Runtime"] = runtime
+	config["ComposeFilePath"] = filepath.ToSlash(composeRelativePath)
+	config["AvailableRuntimes"] = availablePluginRuntimes(pluginRelativeDir)
+	return json.Marshal(config)
+}
+
+func getUserPluginConfig(w http.ResponseWriter, r *http.Request) {
+	repoName := getRepoName(r.URL.Query().Get("git_url"))
+	if repoName == "" {
+		http.Error(w, "invalid user plugin git URL", http.StatusBadRequest)
+		return
+	}
+	data, err := configureUserPlugin(repoName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
 }
 
 func logRequest(handler http.Handler) http.Handler {
@@ -828,29 +1064,40 @@ func logRequest(handler http.Handler) http.Handler {
 	})
 }
 
-// dockerAPIGetJSON performs a GET against the Docker Engine API over the
-// local unix socket and decodes the JSON response.
-func dockerAPIGetJSON(path string, target interface{}) error {
+func dockerAPIGet(path string) ([]byte, error) {
 	c := http.Client{
 		Timeout: 10 * time.Second,
 		Transport: &http.Transport{
 			Dial: func(network, addr string) (net.Conn, error) {
-				return net.Dial("unix", "/var/run/docker.sock")
+				return net.Dial("unix", DockerSocketPath)
 			},
 		},
 	}
+	defer c.CloseIdleConnections()
 
 	resp, err := c.Get("http://localhost" + path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("docker api %s: status %d", path, resp.StatusCode)
+		return nil, fmt.Errorf("docker api %s: status %d: %s", path, resp.StatusCode, strings.TrimSpace(string(data)))
 	}
 
-	return json.NewDecoder(resp.Body).Decode(target)
+	return data, nil
+}
+
+func dockerAPIGetJSON(path string, target interface{}) error {
+	data, err := dockerAPIGet(path)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, target)
 }
 
 type dockerConfigLabels struct {
@@ -1288,6 +1535,94 @@ func reloadComposeWhitelist() {
 	}
 
 }
+
+func composePathAllowed(composeFilePath string) bool {
+	reloadComposeWhitelist()
+	for _, entry := range ComposeAllowList {
+		if entry == composeFilePath {
+			return true
+		}
+	}
+	return false
+}
+
+func allowPluginRuntimeCompose(composeFilePath string) error {
+	composeAllowMtx.Lock()
+	defer composeAllowMtx.Unlock()
+
+	paths := []string{}
+	data, err := os.ReadFile(CUSTOM_ALLOW_PATH)
+	if err == nil {
+		if err := json.Unmarshal(data, &paths); err != nil {
+			return err
+		}
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+
+	for _, entry := range paths {
+		if entry == composeFilePath {
+			return nil
+		}
+	}
+	paths = append(paths, composeFilePath)
+	sort.Strings(paths)
+	data, err = json.MarshalIndent(paths, "", " ")
+	if err != nil {
+		return err
+	}
+	tmpPath := CUSTOM_ALLOW_PATH + ".tmp"
+	if err := os.WriteFile(tmpPath, data, 0600); err != nil {
+		return err
+	}
+	if err := os.Rename(tmpPath, CUSTOM_ALLOW_PATH); err != nil {
+		os.Remove(tmpPath)
+		return err
+	}
+	reloadComposeWhitelist()
+	return nil
+}
+
+func switchPluginRuntime(w http.ResponseWriter, r *http.Request) {
+	currentCompose := filepath.ToSlash(filepath.Clean(r.URL.Query().Get("compose_file")))
+	selection, err := resolveUserPluginRuntime(currentCompose, r.URL.Query().Get("runtime"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if !composePathAllowed(currentCompose) {
+		http.Error(w, "current compose file is not authorized", http.StatusForbidden)
+		return
+	}
+	if err := allowPluginRuntimeCompose(selection.ComposeFilePath); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if currentCompose != selection.ComposeFilePath {
+		if err := composeCommand(currentCompose, "", "down", "", false); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if r.URL.Query().Get("start") != "0" {
+			if err := composeCommand(selection.ComposeFilePath, "", "up", "-d", true); err != nil {
+				if r.URL.Query().Get("rollback") != "0" {
+					rollbackErr := composeCommand(currentCompose, "", "up", "-d", true)
+					if rollbackErr != nil {
+						http.Error(w, err.Error()+"; rollback failed: "+rollbackErr.Error(), http.StatusInternalServerError)
+						return
+					}
+				}
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(selection)
+}
+
 func setup() {
 	hostSuperDir := getHostSuperDir()
 
@@ -1388,6 +1723,9 @@ func main() {
 	unix_plugin_router.HandleFunc("/remove", removeUserContainer).Methods("PUT")
 	unix_plugin_router.HandleFunc("/build", build).Methods("PUT")
 	unix_plugin_router.HandleFunc("/user_plugin_exists", userPluginExists).Methods("GET")
+	unix_plugin_router.HandleFunc("/get_plugin_config", getUserPluginConfig).Methods("PUT")
+	unix_plugin_router.HandleFunc("/switch_plugin_runtime", switchPluginRuntime).Methods("PUT")
+	unix_plugin_router.HandleFunc("/plugin_runtime_status", pluginRuntimeStatus).Methods("GET")
 
 	unix_plugin_router.HandleFunc("/ghcr_auth", ghcr_auth).Methods("PUT")
 	unix_plugin_router.HandleFunc("/update_git", update_git).Methods("PUT")
@@ -1398,6 +1736,8 @@ func main() {
 	unix_plugin_router.HandleFunc("/remote_container_tags", remote_container_tags).Methods("POST")
 
 	unix_plugin_router.HandleFunc("/docker_ps", docker_ps).Methods("GET")
+	unix_plugin_router.HandleFunc("/docker_info", docker_info).Methods("GET")
+	unix_plugin_router.HandleFunc("/virtual_machines", virtual_machines).Methods("GET")
 
 	// get/set release channel
 	unix_plugin_router.HandleFunc("/release", release_info).Methods("GET", "PUT", "DELETE")

@@ -1,8 +1,8 @@
-import React from 'react'
-import { Platform } from 'react-native'
-import Clipboard from '@react-native-clipboard/clipboard'
+import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 import QRCode from 'react-qr-code'
+
+import { copy } from 'utils'
 
 import {
   Box,
@@ -19,6 +19,8 @@ import {
 import { FileIcon } from 'lucide-react-native'
 
 const WireguardConfig = (props) => {
+  const [copyStatus, setCopyStatus] = useState('idle')
+
   if (!props.config) {
     return <></>
   }
@@ -45,27 +47,16 @@ const WireguardConfig = (props) => {
 
   let config = configFromJSON(props.config)
 
-  // if web requires secure context
-  const showClipboard = true //Platform.OS !== 'web' || navigator.clipboard
-  const copy = (data) => {
-    if (Platform.OS == 'web') {
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(data)
-      } else {
-        var copyTextarea = document.createElement('textarea')
-        copyTextarea.style.position = 'fixed'
-        copyTextarea.style.opacity = '0'
-        copyTextarea.textContent = data
-
-        document.body.appendChild(copyTextarea)
-        copyTextarea.select()
-        document.execCommand('copy')
-        document.body.removeChild(copyTextarea)
-      }
-    } else {
-      Clipboard.setString(data)
-    }
+  const copyConfig = async () => {
+    const copied = await copy(config)
+    setCopyStatus(copied ? 'copied' : 'failed')
   }
+
+  const copyLabel = {
+    copied: 'Copied',
+    failed: 'Copy failed',
+    idle: 'Copy'
+  }[copyStatus]
 
   const saveFile = (data) => {
     let filename = 'peer.conf',
@@ -109,10 +100,9 @@ const WireguardConfig = (props) => {
           action="primary"
           variant="outline"
           size="sm"
-          onPress={() => copy(config)}
-          display={showClipboard ? 'flex' : 'none'}
+          onPress={copyConfig}
         >
-          <ButtonText>Copy</ButtonText>
+          <ButtonText>{copyLabel}</ButtonText>
           <ButtonIcon as={CopyIcon} ml="$1" />
         </Button>
 

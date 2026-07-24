@@ -17,6 +17,7 @@ import {
   FormControlLabelText,
   Input,
   InputField,
+  Switch,
   VStack,
   HStack,
   Text
@@ -32,9 +33,11 @@ const EditPlugin = ({ plugin, onClose, notifyChange, ...props }) => {
   const [Enabled, setEnabled] = useState(plugin.Enabled || false)
   const [GitURL, setGitURL] = useState(plugin.GitURL || '')
   const [HasUI, setHasUI] = useState(plugin.HasUI || false)
+  const [SandboxedUI, setSandboxedUI] = useState(plugin.SandboxedUI !== false)
   const [HasTopology, setHasTopology] = useState(plugin.HasTopology || false)
   const [InstallTokenPath, setInstallTokenPath] = useState(plugin.InstallTokenPath || '')
   const [ScopedPaths, setScopedPaths] = useState(plugin.ScopedPaths ? plugin.ScopedPaths.join(', ') : '')
+  const [Runtime, setRuntime] = useState(plugin.Runtime || 'default')
 
   useEffect(() => {
     setName(plugin.Name || '')
@@ -44,10 +47,21 @@ const EditPlugin = ({ plugin, onClose, notifyChange, ...props }) => {
     setEnabled(plugin.Enabled || false)
     setGitURL(plugin.GitURL || '')
     setHasUI(plugin.HasUI || false)
+    setSandboxedUI(plugin.SandboxedUI !== false)
     setHasTopology(plugin.HasTopology || false)
     setInstallTokenPath(plugin.InstallTokenPath || '')
     setScopedPaths(plugin.ScopedPaths ? plugin.ScopedPaths.join(', ') : '')
+    setRuntime(plugin.Runtime || 'default')
   }, [plugin])
+
+  const availableRuntimes = plugin.AvailableRuntimes || []
+  const supportsKVM =
+    availableRuntimes.includes('kvm') ||
+    plugin.Runtime === 'kvm' ||
+    (plugin.ComposeFilePath || '').endsWith('/docker-compose-kvm.yml')
+  const supportsDefault =
+    availableRuntimes.length === 0 || availableRuntimes.includes('default')
+  const canToggleKVM = supportsKVM && supportsDefault
 
   const handleChange = (name, value) => {
     if (name == 'Name') {
@@ -90,9 +104,11 @@ const EditPlugin = ({ plugin, onClose, notifyChange, ...props }) => {
       Enabled,
       GitURL,
       HasUI,
+      SandboxedUI,
       HasTopology,
       InstallTokenPath,
-      ScopedPaths: scopedPathsArray
+      ScopedPaths: scopedPathsArray,
+      Runtime
     }
     
     pluginAPI
@@ -255,6 +271,30 @@ const EditPlugin = ({ plugin, onClose, notifyChange, ...props }) => {
       </FormControl>
 
       <FormControl>
+        {canToggleKVM ? (
+          <>
+            <HStack alignItems="center" justifyContent="space-between">
+              <FormControlLabel>
+                <FormControlLabelText>Run in KVM</FormControlLabelText>
+              </FormControlLabel>
+              <Switch
+                value={Runtime === 'kvm'}
+                onValueChange={(enabled) =>
+                  setRuntime(enabled ? 'kvm' : 'default')
+                }
+              />
+            </HStack>
+
+            <FormControlHelper>
+              <FormControlHelperText>
+                Turning this off recreates the plugin with docker-compose.yml.
+              </FormControlHelperText>
+            </FormControlHelper>
+          </>
+        ) : null}
+      </FormControl>
+
+      <FormControl>
         <Checkbox
           value={Enabled}
           isChecked={Enabled}
@@ -288,6 +328,25 @@ const EditPlugin = ({ plugin, onClose, notifyChange, ...props }) => {
         <FormControlHelper>
           <FormControlHelperText>
             Plugin provides a user interface
+          </FormControlHelperText>
+        </FormControlHelper>
+      </FormControl>
+
+      <FormControl>
+        <Checkbox
+          value={SandboxedUI}
+          isChecked={SandboxedUI}
+          onChange={setSandboxedUI}
+        >
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>Sandbox UI</CheckboxLabel>
+        </Checkbox>
+
+        <FormControlHelper>
+          <FormControlHelperText>
+            Disable only for legacy plugin UIs that require the signed-in UI credential
           </FormControlHelperText>
         </FormControlHelper>
       </FormControl>

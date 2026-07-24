@@ -1,10 +1,18 @@
 import React, { useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { saveLogin, testLogin, setApiURL, getApiHostname, isMockAPI } from 'api'
+import {
+  saveLogin,
+  saveTokenLogin,
+  testLogin,
+  setApiURL,
+  getApiHostname,
+  isMockAPI,
+  api
+} from 'api'
+import { isPasskeySupported, loginPasskey } from 'api/Passkey'
+import { getBiometryType, saveSecureLogin, loadSecureLogin } from 'api/SecureStore'
 import { useNavigate } from 'react-router-dom'
-
-import { api } from 'api'
 
 import {
   Box,
@@ -40,18 +48,24 @@ const Login = (props) => {
   const [protocol, setProtocol] = useState('http:') //for iOS, TODO show msg if http & have https + cert install
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [loggedIn, setLoggedin] = useState(false)
   const [errors, setErrors] = React.useState({})
+  const [biometryType, setBiometryType] = useState(null)
+  const [secureLogin, setSecureLogin] = useState(false)
 
   const doLogin = (username, password) => {
     testLogin(username, password, async (success) => {
       if (success) {
-        await saveLogin(username, password, hostname, protocol)
-        setLoggedin(true)
+        let secure = Platform.OS != 'web' && biometryType
+        if (secure)
+          secure = await saveSecureLogin({ username, password, hostname, protocol })
+            .then(() => true).catch(() => false)
+
+        await saveLogin(username, password, hostname, protocol, secure)
         setErrors({})
         navigate('/admin/home')
       } else {
         if (
+          Platform.OS !== 'web' &&
           hostname.length &&
           !hostname.match(/^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)|(spr\.local)$/)
         ) {
@@ -61,6 +75,38 @@ const Login = (props) => {
         }
       }
     })
+  }
+
+  const handleBiometricUnlock = async () => {
+    //user cancel or biometry failure throws
+    let creds = await loadSecureLogin().catch(() => null)
+    if (!creds) {
+      return
+    }
+
+    if (creds.hostname)
+      setApiURL(`${creds.protocol || protocol}//${creds.hostname}/`)
+
+    testLogin(creds.username, creds.password, async (success) => {
+      if (success) {
+        await saveLogin(creds.username, creds.password, creds.hostname, creds.protocol, true)
+        setErrors({})
+        navigate('/admin/home')
+      } else {
+        setErrors({ login: true })
+      }
+    })
+  }
+
+  const handlePasskeyLogin = async () => {
+    try {
+      let res = await loginPasskey()
+      await saveTokenLogin(res.Name || 'admin', res.Token, hostname, protocol)
+      setErrors({})
+      navigate('/admin/home')
+    } catch (err) {
+      setErrors({ login: true })
+    }
   }
 
   const handleLogin = () => {
@@ -84,6 +130,8 @@ const Login = (props) => {
     //NOTE useLocation dont have .protocol
     if (Platform.OS == 'web') {
       setProtocol(window?.location?.protocol == 'https:' ? 'https:' : 'http:')
+    } else {
+      getBiometryType().then(setBiometryType)
     }
 
     api
@@ -107,9 +155,11 @@ const Login = (props) => {
     AsyncStorage.getItem('user').then((login) => {
       login = JSON.parse(login)
 
+      if (login?.secure) setSecureLogin(true)
+
       if (login?.username) {
         setUsername(login.username)
-        setPassword(login.password)
+        setPassword(login.password || '')
 
         //hostname, protocol only for mobile
         if (Platform.OS != 'web') {
@@ -242,6 +292,26 @@ const Login = (props) => {
         >
           <ButtonText>Login</ButtonText>
         </Button>
+        {isPasskeySupported() ? (
+          <Button
+            rounded="$full"
+            variant="outline"
+            action="secondary"
+            onPress={handlePasskeyLogin}
+          >
+            <ButtonText>Sign in with Passkey</ButtonText>
+          </Button>
+        ) : null}
+        {Platform.OS != 'web' && secureLogin && biometryType ? (
+          <Button
+            rounded="$full"
+            variant="outline"
+            action="secondary"
+            onPress={handleBiometricUnlock}
+          >
+            <ButtonText>Unlock Secure Login</ButtonText>
+          </Button>
+        ) : null}
       </VStack>
 
       <VStack flex={1} display={Platform.OS != 'web' ? 'flex' : 'none'}>

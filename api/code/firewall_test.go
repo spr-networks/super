@@ -2160,6 +2160,35 @@ func TestMapSnapshotMatchesLive(t *testing.T) {
 	}
 }
 
+// A device may retain its MAC identity while also connecting through
+// WireGuard. Since wg0 has no Ethernet header, addVerdictMac deliberately does
+// not create an ethernet_filter entry for it. The route health check must not
+// require an entry that can never exist, or dynamicRouteLoop will rebuild the
+// same healthy WireGuard route every second.
+func TestHasVmapEntriesSkipsEthernetVerdictForWireGuard(t *testing.T) {
+	entry := DeviceEntry{
+		MAC:      "aa:bb:cc:dd:ee:ff",
+		WGPubKey: "test-wireguard-public-key",
+		RecentIP: "10.168.0.6",
+		Groups:   []string{},
+		Policies: []string{"wan", "dns", "lan"},
+	}
+	devices := map[string]DeviceEntry{entry.MAC: entry}
+	snap := &MapSnapshot{
+		maps: map[string]map[string]struct{}{
+			"ethernet_filter": {},
+		},
+		entries: map[string][]verdictEntry{},
+	}
+
+	if !hasVmapEntries(snap, devices, entry, "wg0") {
+		t.Fatal("WireGuard route should not require an ethernet_filter entry")
+	}
+	if hasVmapEntries(snap, devices, entry, "eth0") {
+		t.Fatal("Ethernet route with a MAC should still require an ethernet_filter entry")
+	}
+}
+
 // A disabled device whose ethernet_filter entry is on a different interface
 // than the route loop's computed new_iface must still be flushed. The old
 // gate checked HasElement at new_iface and missed the stale-iface entry, so it
@@ -2217,6 +2246,10 @@ func TestFlushVmapsRemovesEntries(t *testing.T) {
 		[]string{ip, iface, mac}, "return"); err != nil {
 		t.Fatalf("add ethernet_filter: %v", err)
 	}
+	if err := AddElementToMapComplex("inet", "filter", "fwd_iface_wan",
+		[]string{iface, ip}, "accept"); err != nil {
+		t.Fatalf("add fwd_iface_wan: %v", err)
+	}
 
 	if GetElementFromMapComplex("inet", "filter", "internet_access", []string{ip, iface}) != nil {
 		t.Fatal("internet_access entry not present after add")
@@ -2224,14 +2257,20 @@ func TestFlushVmapsRemovesEntries(t *testing.T) {
 	if GetElementFromMapComplex("inet", "filter", "ethernet_filter", []string{ip, iface, mac}) != nil {
 		t.Fatal("ethernet_filter entry not present after add")
 	}
+	if GetElementFromMapComplex("inet", "filter", "fwd_iface_wan", []string{iface, ip}) != nil {
+		t.Fatal("fwd_iface_wan entry not present after add")
+	}
 
-	flushVmaps(ip, mac, iface, []string{"internet_access", "ethernet_filter"}, true, false, nil)
+	flushVmaps(ip, mac, iface, []string{"internet_access", "ethernet_filter", "fwd_iface_wan"}, true, false, nil)
 
 	if err := GetElementFromMapComplex("inet", "filter", "internet_access", []string{ip, iface}); err == nil {
 		t.Error("internet_access entry still present after flushVmaps")
 	}
 	if err := GetElementFromMapComplex("inet", "filter", "ethernet_filter", []string{ip, iface, mac}); err == nil {
 		t.Error("ethernet_filter entry still present after flushVmaps")
+	}
+	if err := GetElementFromMapComplex("inet", "filter", "fwd_iface_wan", []string{iface, ip}); err == nil {
+		t.Error("fwd_iface_wan entry still present after flushVmaps")
 	}
 }
 

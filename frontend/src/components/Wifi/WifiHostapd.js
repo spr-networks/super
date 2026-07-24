@@ -114,6 +114,8 @@ const WifiHostapd = (props) => {
   const [iwMap, setIwMap] = useState({})
 
   const [failsafeErrors, setFailsafeErrors] = useState('FAIL')
+  const isRustap = config.backend === 'rustap'
+  const interfaceConfigured = config.interface || config.iface
 
   //make sure to update commitConfig when updating these
   const canEditString = [
@@ -121,7 +123,9 @@ const WifiHostapd = (props) => {
     'country_code',
     'vht_capab',
     'ht_capab',
-    'hw_mode'
+    'hw_mode',
+    'country',
+    'phy'
   ]
   const canEditInt = [
     'ieee80211ax',
@@ -137,6 +141,7 @@ const WifiHostapd = (props) => {
   const canEdit = canEditInt.concat(canEditString)
 
   const updateCapabilitiesTooltips = () => {
+    if (isRustap) return
     //update the tooltips for vht_capab, ht_capab
 
     let ht_capab, vht_capab
@@ -214,7 +219,7 @@ const WifiHostapd = (props) => {
   }
 
   useEffect(() => {
-    if (iwMap && iwMap[iface] && config.interface && iface != '') {
+    if (iwMap && iwMap[iface] && interfaceConfigured && iface != '') {
       updateCapabilitiesTooltips()
     }
   }, [iws, config, iface])
@@ -251,13 +256,22 @@ const WifiHostapd = (props) => {
       .config(iface)
       .then((conf) => {
         // Initialize RSSI fields if they don't exist
-        if (conf.rssi_reject_assoc_rssi === undefined) {
+        if (
+          conf.backend !== 'rustap' &&
+          conf.rssi_reject_assoc_rssi === undefined
+        ) {
           conf.rssi_reject_assoc_rssi = 0
         }
-        if (conf.rssi_reject_assoc_timeout === undefined) {
+        if (
+          conf.backend !== 'rustap' &&
+          conf.rssi_reject_assoc_timeout === undefined
+        ) {
           conf.rssi_reject_assoc_timeout = 30
         }
-        if (conf.rssi_ignore_probe_request === undefined) {
+        if (
+          conf.backend !== 'rustap' &&
+          conf.rssi_ignore_probe_request === undefined
+        ) {
           conf.rssi_ignore_probe_request = 0
         }
         setConfig(sortConf(conf))
@@ -285,6 +299,17 @@ const WifiHostapd = (props) => {
   }
 
   const pushConfig = (inconfig) => {
+    if (inconfig.backend === 'rustap' || isRustap) {
+      const data = {
+        ssid: inconfig.ssid,
+        country: inconfig.country,
+        phy: inconfig.phy
+      }
+      wifiAPI.updateConfig(iface, data).then((curConfig) => {
+        setConfig(sortConf(curConfig))
+      })
+      return
+    }
     let data = {
       Ssid: inconfig.ssid,
       Channel: parseInt(inconfig.channel),
@@ -317,6 +342,17 @@ const WifiHostapd = (props) => {
   }
 
   const commitConfig = () => {
+    if (isRustap) {
+      const data = {
+        ssid: config.ssid,
+        country: config.country,
+        phy: config.phy
+      }
+      wifiAPI.updateConfig(iface, data).then((curConfig) => {
+        setConfig(sortConf(curConfig))
+      })
+      return
+    }
     let data = {
       Ssid: config.ssid,
       Channel: parseInt(config.channel),
@@ -429,6 +465,18 @@ const WifiHostapd = (props) => {
 
   // when selected and click save in channel form
   const updateChannels = (wifiParameters) => {
+    if (isRustap) {
+      wifiAPI
+        .updateConfig(iface, wifiParameters)
+        .then((updatedConfig) => {
+          setConfig(sortConf(updatedConfig))
+          context.success(`${iface} RustAP config updated`)
+        })
+        .catch((error) => {
+          context.error('API Failure: ' + error.message)
+        })
+      return
+    }
     let updateChannelInfo = (params) => {
       let data = { ...params, ...wifiParameters }
 
@@ -632,7 +680,7 @@ const WifiHostapd = (props) => {
         ))}
       </VStack>
 
-      {config.interface && interfaceEnabled === true ? (
+      {interfaceConfigured && interfaceEnabled === true ? (
         <WifiChannelParameters
           iface={iface}
           iws={iws}
@@ -653,36 +701,42 @@ const WifiHostapd = (props) => {
         sx={{ '@md': { flexDirection: 'row' } }}
       >
         <Heading size="sm" alignSelf="center">
-          Advanced HostAP Config {iface}
+          Advanced {isRustap ? 'RustAP' : 'HostAP'} Config {iface}
         </Heading>
         {/*interfaceMenu*/}
         <VStack space="md" sx={{ '@md': { flexDirection: 'row' } }}>
-          <Button
-            size="sm"
-            action="secondary"
-            variant="solid"
-            onPress={updateCapabilities}
-          >
-            <ButtonText>Update All HT/VHT Capabilities</ButtonText>
-          </Button>
-          <Button
-            size="sm"
-            action="secondary"
-            variant="solid"
-            onPress={disableInterface}
-          >
-            <ButtonText>
-              {Platform.OS == 'web' ? 'Disable Radio Interface' : 'Disable'}
-            </ButtonText>
-          </Button>
-          <Button
-            size="sm"
-            action="secondary"
-            variant="solid"
-            onPress={resetInterfaceConfig}
-          >
-            <ButtonText>Reset Config</ButtonText>
-          </Button>
+          {!isRustap ? (
+            <>
+              <Button
+                size="sm"
+                action="secondary"
+                variant="solid"
+                onPress={updateCapabilities}
+              >
+                <ButtonText>Update All HT/VHT Capabilities</ButtonText>
+              </Button>
+              <Button
+                size="sm"
+                action="secondary"
+                variant="solid"
+                onPress={disableInterface}
+              >
+                <ButtonText>
+                  {Platform.OS == 'web'
+                    ? 'Disable Radio Interface'
+                    : 'Disable'}
+                </ButtonText>
+              </Button>
+              <Button
+                size="sm"
+                action="secondary"
+                variant="solid"
+                onPress={resetInterfaceConfig}
+              >
+                <ButtonText>Reset Config</ButtonText>
+              </Button>
+            </>
+          ) : null}
         </VStack>
       </VStack>
 
@@ -694,7 +748,7 @@ const WifiHostapd = (props) => {
         p="$4"
       >
         <VStack space="md">
-          {config.interface && interfaceEnabled == true ? (
+          {interfaceConfigured && interfaceEnabled == true ? (
             Object.keys(config).map((label) => (
               <HStack
                 key={label}
@@ -755,7 +809,11 @@ const WifiHostapd = (props) => {
                     </Input>
                   )
                 ) : (
-                  <Text flex={2}>{config[label]}</Text>
+                  <Text flex={2}>
+                    {typeof config[label] === 'object'
+                      ? JSON.stringify(config[label])
+                      : String(config[label])}
+                  </Text>
                 )}
               </HStack>
             ))

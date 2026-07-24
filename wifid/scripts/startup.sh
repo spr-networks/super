@@ -17,6 +17,10 @@ is_valid_ifname() {
 
 /scripts/update_iface_names.sh
 
+if [ -f /configs/wifi/enable_rust ]; then
+  exec /scripts/startup-rust.sh
+fi
+
 # Private control plane for validated hostapd operations requested by the API.
 # It owns BSS transition command construction so raw hostapd commands are never
 # exposed over the external API.

@@ -1,0 +1,6 @@
+d /run/spr-krun 0755 root root -
+d /run/spr-krun/connect 0755 root root -
+d /run/spr-krun/listen 0755 root root -
+d /var/lib/spr-krun 0700 root root -
+d /var/lib/spr-krun/policies 0700 root root -
+d /var/lib/spr-krun/overrides 0700 root root -

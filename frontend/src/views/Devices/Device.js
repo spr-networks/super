@@ -1,14 +1,19 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useParams } from 'react-router-dom'
-import { ScrollView } from '@gluestack-ui/themed'
+import { Box, ScrollView, Text } from '@gluestack-ui/themed'
 import EditDevice from 'components/Devices/EditDevice'
 import { AppContext, AlertContext } from 'AppContext'
 
 import useSwipe from 'components/useSwipe'
 import { deviceAPI, blockAPI } from 'api'
 
-import { ListHeader } from 'components/List'
+import {
+  deviceValues,
+  findDeviceByIdentity,
+  isContainerDevice,
+  normalizeDeviceForUI
+} from 'views/Devices/deviceTypes'
 
 //import AddDevice from 'components/Devices/AddDevice'
 
@@ -21,16 +26,31 @@ const DeviceView = () => {
   const [groups, setGroups] = useState([])
   const [policies, setPolicies] = useState([])
   const [tags, setTags] = useState([])
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     let { id } = params
-    deviceAPI.list().then((devs) => {
-      let dev = devs[id] || null
-      if (dev) {
+    setDevice(null)
+    setLoadError('')
+
+    deviceAPI
+      .list()
+      .then((devs) => {
+        const devices = deviceValues(devs)
+        const foundDevice = findDeviceByIdentity(devs, id)
+        const dev = foundDevice
+          ? normalizeDeviceForUI(foundDevice)
+          : null
+
+        if (!dev) {
+          setLoadError(`Device ${id} was not found`)
+          return
+        }
+
         setDevice(dev)
 
         // set device oui if avail
-        if (dev.MAC) {
+        if (dev.MAC && !isContainerDevice(dev)) {
           deviceAPI
             .oui(dev.MAC)
             .then((oui) => {
@@ -38,48 +58,36 @@ const DeviceView = () => {
             })
             .catch((err) => {})
         }
-      }
 
-      setGroups([
-        ...new Set(
-          Object.values(devs)
-            .map((device) => device.Groups)
-            .flat()
-        )
-      ])
+        setGroups([...new Set(devices.flatMap((device) => device.Groups || []))])
 
-      setPolicies([
-        ...new Set(
-          Object.values(devs)
-            .map((device) => device.Policies)
-            .flat()
-        )
-      ])
+        setPolicies([
+          ...new Set(devices.flatMap((device) => device.Policies || []))
+        ])
 
-      let tags = [
-        ...new Set(
-          Object.values(devs)
-            .map((device) => device.DeviceTags)
-            .flat()
-        )
-      ]
-      setTags(tags)
+        let tags = [
+          ...new Set(devices.flatMap((device) => device.DeviceTags || []))
+        ]
+        setTags(tags)
 
-      //NOTE fetch all tags - dnsblock tags separate
-      blockAPI
-        .blocklists()
-        .then((res) => {
-          let tagsBlock = [
-            ...new Set([].concat(...res.map((l) => l.Tags)).filter((t) => t))
-          ]
+        //NOTE fetch all tags - dnsblock tags separate
+        blockAPI
+          .blocklists()
+          .then((res) => {
+            let tagsBlock = [
+              ...new Set([].concat(...res.map((l) => l.Tags)).filter((t) => t))
+            ]
 
-          if (tagsBlock) {
-            setTags([...tags, ...tagsBlock])
-          }
-        })
-        .catch((err) => {})
-    })
-  }, [params])
+            if (tagsBlock) {
+              setTags([...tags, ...tagsBlock])
+            }
+          })
+          .catch((err) => {})
+      })
+      .catch((err) => {
+        setLoadError(`Failed to load device ${id}`)
+      })
+  }, [params.id])
 
   const refreshDevice = (showNotification = true) => {
     appContext.getDevices(true) // force update
@@ -104,6 +112,11 @@ const DeviceView = () => {
       }}
       {...swipeHandlers}
     >
+      {loadError ? (
+        <Box p="$4">
+          <Text color="$error600">{loadError}</Text>
+        </Box>
+      ) : null}
       {device ? (
         <EditDevice
           key={device.MAC || device.WGPubKey}

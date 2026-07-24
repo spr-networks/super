@@ -3,3 +3,4 @@ state/
 .github_creds
 .spr-setup-done
 node_modules
+/dist/

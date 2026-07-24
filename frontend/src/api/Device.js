@@ -10,7 +10,7 @@ export class APIDevice extends API {
   }
 
   getDevice(identity) {
-    return this.get(`/device?identity=${identity}`)
+    return this.get(`/device?identity=${encodeURIComponent(identity)}`)
   }
 
   update(id, data) {

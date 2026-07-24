@@ -5,6 +5,8 @@ export {
   api,
   testLogin,
   saveLogin,
+  saveTokenLogin,
+  clearLogin,
   getApiURL,
   setApiURL,
   isMockAPI,
@@ -37,3 +39,4 @@ export { themeAPI } from './Theme'
 export { topologyAPI } from './Topology'
 export { parentalAPI } from './ParentalControls'
 export { wanAPI } from './Wan'
+export { featureFlagsAPI } from './FeatureFlags'

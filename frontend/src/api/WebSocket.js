@@ -1,7 +1,8 @@
 import { useContext, useEffect, useState, useRef } from 'react'
 
-import { getApiHostname, getWsURL } from './API'
+import { api, getApiHostname, getWsURL } from './API'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { Base64 } from 'utils'
 import { deviceAPI } from './Device'
 import { eventTemplate } from 'components/Alerts/AlertUtil'
 
@@ -191,28 +192,23 @@ const WebSocketComponent = ({ confirm, notify, ...props }) => {
 
     const wsCurrent = ws.current
 
-    AsyncStorage.getItem('user').then((login) => {
-      let userData = JSON.parse(login || '{}')
-
-      wsCurrent.addEventListener('open', (event) => {
-        if (!userData?.username || !userData?.password) {
-          return
-        }
-
-        AsyncStorage.getItem('jwt-otp').then((string) => {
-          let jwt = JSON.parse(string)
-          if (jwt) {
-            wsCurrent.send(
-              userData['username'] + ':' + userData['password'] + ':' + jwt.jwt
-            )
-          } else {
-            wsCurrent.send(userData['username'] + ':' + userData['password'])
-          }
-        })
-      })
-
-      wsCurrent.addEventListener('message', handleWebSocketEvent)
+    wsCurrent.addEventListener('open', async () => {
+      let auth = await api.getAuthHeaders().catch(() => null)
+      if (auth?.startsWith('Basic ')) {
+        auth = Base64.atob(auth.slice(6))
+        let string = await AsyncStorage.getItem('jwt-otp')
+        let jwt = JSON.parse(string)
+        if (jwt?.jwt) auth += ':' + jwt.jwt
+      } else if (auth?.startsWith('Bearer ')) {
+        auth = auth.slice(7)
+      } else {
+        wsCurrent.close()
+        return
+      }
+      wsCurrent.send(auth)
     })
+
+    wsCurrent.addEventListener('message', handleWebSocketEvent)
 
     return () => {
       wsCurrent?.close()

@@ -181,15 +181,13 @@ func loadWithLockingDHCPConfig() DHCPConfig {
 }
 
 func saveDHCPConfig() {
-	file, _ := json.MarshalIndent(gDhcpConfig, "", " ")
-	err := ioutil.WriteFile(gDHCPConfigPath, file, 0600)
-	if err != nil {
+	if err := saveFileJSON(gDHCPConfigPath, gDhcpConfig); err != nil {
 		log.Fatal(err)
 	}
 
 	lanIP := getLANIP()
 
-	err = ioutil.WriteFile(gLANIPPath, []byte(lanIP), 0600)
+	err := ioutil.WriteFile(gLANIPPath, []byte(lanIP), 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -356,6 +354,19 @@ func handleDHCPResult(MAC string, IP string, Router string, Name string, Iface s
 	saveDevicesJson(devices)
 
 	notifyFirewallDHCP(val, Iface)
+	if val.Type == DeviceTypeContainer {
+		FWmtx.Lock()
+		authorized := isAuthorizedPluginDeviceLink(
+			val.MAC,
+			Iface,
+			RecentDHCPIface,
+			PluginDeviceLinks,
+		)
+		FWmtx.Unlock()
+		if authorized {
+			go reconcilePluginNetworkCapabilitiesForDevice(val.MAC)
+		}
+	}
 
 	if Name != "" {
 		// update local mappings file for DNS

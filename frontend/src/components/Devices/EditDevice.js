@@ -10,6 +10,7 @@ import ModalConfirm from 'components/ModalConfirm'
 
 import { format as timeAgo } from 'timeago.js'
 import DeviceExpiry from './DeviceExpiry'
+import ContainerAccessRule from './ContainerAccessRule'
 
 import {
   Box,
@@ -70,21 +71,24 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   const context = useContext(AlertContext)
   const appContext = useContext(AppContext)
   const isSimpleMode = appContext.isSimpleMode
+  const isContainer = device.Type === 'Container'
 
   const [editing, setEditing] = useState(false)
-  const [name, setName] = useState(device.Name)
-  const [rawIP, setRawIP] = useState(device.RecentIP)
-  const [psk, setPSK] = useState(device.PSKEntry.Psk)
-  const [pskType, setPSKType] = useState(device.PSKEntry.Type)
-  const [customDNS, setCustomDNS] = useState(device.DNSCustom)
+  const [name, setName] = useState(device.Name || '')
+  const [rawIP, setRawIP] = useState(device.RecentIP || '')
+  const [psk, setPSK] = useState(device.PSKEntry?.Psk || '')
+  const [pskType, setPSKType] = useState(device.PSKEntry?.Type || '')
+  const [customDNS, setCustomDNS] = useState(device.DNSCustom || '')
   const [showPassword, setShowPassword] = useState(false)
-  const [ip, setIP] = useState(device.RecentIP)
-  const [vlantag, setVlanTag] = useState(device.VLANTag)
-  const [policies, setPolicies] = useState(device.Policies?.sort() || [])
-  const [groups, setGroups] = useState(device.Groups.sort())
-  const [tags, setTags] = useState(device.DeviceTags.sort())
+  const [ip, setIP] = useState(device.RecentIP || '')
+  const [vlantag, setVlanTag] = useState(device.VLANTag || '')
+  const [policies, setPolicies] = useState([...(device.Policies || [])].sort())
+  const [groups, setGroups] = useState([...(device.Groups || [])].sort())
+  const [tags, setTags] = useState([...(device.DeviceTags || [])].sort())
   const [color, setColor] = useState(device.Style?.Color || 'blueGray')
-  const [icon, setIcon] = useState(device.Style?.Icon || 'Laptop')
+  const [icon, setIcon] = useState(
+    device.Style?.Icon || (device.Type === 'Container' ? 'Server' : 'Laptop')
+  )
   const [classification, setClassification] = useState(device.classification)
   const [fingerprint, setFingerprint] = useState(null)
   const [expiration, setExpiration] = useState(
@@ -139,7 +143,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         setIcon('Android')
       } else if (name.match(/phone/i)) {
         setIcon('Mobile')
-      } else {
+      } else if (device.Type !== 'Container') {
         setIcon('Laptop')
       }
     }
@@ -557,7 +561,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   }
 
   let protocolAuth = { sae: 'WPA3', wpa2: 'WPA2' }
-  let wifi_type = protocolAuth[device.PSKEntry.Type] || 'N/A'
+  let wifi_type = protocolAuth[device.PSKEntry?.Type] || 'N/A'
 
   const isMeshNode = async () => {
     if (appContext.isPlusDisabled) {
@@ -729,7 +733,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
       deviceAPI
         .getDevice(identity)
         .then((device) => {
-          setPSK(device.PSKEntry.Psk)
+          setPSK(device.PSKEntry?.Psk || '')
           setShowPassword(!showPassword)
         })
         .catch((err) => {
@@ -772,25 +776,27 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         ) : null}
       </FormControl>
 
-      <ClassificationPanel
-        classification={classification}
-        fingerprint={fingerprint}
-        deviceGroups={groups}
-        devicePolicies={policies}
-        onApply={applyClassification}
-        onCorrection={correctClassification}
-        onReset={resetClassification}
-        onCustom={() => {
-          setModalType('Category')
-          setShowModal(true)
-        }}
-        onBrand={() => {
-          setModalType('Brand')
-          setShowModal(true)
-        }}
-        onShare={shareClassification}
-        onCreateRule={createRuleFromDevice}
-      />
+      {!isContainer ? (
+        <ClassificationPanel
+          classification={classification}
+          fingerprint={fingerprint}
+          deviceGroups={groups}
+          devicePolicies={policies}
+          onApply={applyClassification}
+          onCorrection={correctClassification}
+          onReset={resetClassification}
+          onCustom={() => {
+            setModalType('Category')
+            setShowModal(true)
+          }}
+          onBrand={() => {
+            setModalType('Brand')
+            setShowModal(true)
+          }}
+          onShare={shareClassification}
+          onCreateRule={createRuleFromDevice}
+        />
+      ) : null}
 
       <FormControl display={isSimpleMode ? 'none' : 'flex'}>
         <Tooltip
@@ -930,89 +936,95 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         </FormControl>
       </HStack>
 
-      <FormControl flex={4} sx={{ maxWidth: '$3/4' }}>
-        <FormControlLabel>
-          <FormControlLabelText>Policies</FormControlLabelText>
-        </FormControlLabel>
-
-        <CheckboxGroup
-          value={policies}
-          accessibilityLabel="Set Device Policies"
-          onChange={(values) => handlePolicies(values)}
-          py="$1"
-        >
-          <HStack flex={1} space="md" w="$full" flexWrap="wrap">
-            {defaultPolicies.map((policy) =>
-              policyTips[policy] !== null ? (
-                <Tooltip
-                  h={undefined}
-                  placement="bottom"
-                  trigger={(triggerProps) => {
-                    return (
-                      <Box {...triggerProps}>
-                        <Checkbox value={policy} colorScheme="primary">
-                          <CheckboxIndicator mr="$2">
-                            <CheckboxIcon />
-                          </CheckboxIndicator>
-                          <CheckboxLabel>{policyName[policy]}</CheckboxLabel>
-                        </Checkbox>
-                      </Box>
-                    )
-                  }}
-                >
-                  <TooltipContent>
-                    <TooltipText>{policyTips[policy]}</TooltipText>
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                <Checkbox value={policy} colorScheme="primary">
-                  <CheckboxIndicator mr="$2">
-                    <CheckboxIcon />
-                  </CheckboxIndicator>
-                  <CheckboxLabel>{policy}</CheckboxLabel>
-                </Checkbox>
-              )
-            )}
-          </HStack>
-        </CheckboxGroup>
-
-        <FormControlHelper>
-          <FormControlHelperText>
-            Assign device policies for network access
-          </FormControlHelperText>
-        </FormControlHelper>
-      </FormControl>
-
-      <VStack space="lg" sx={{ '@md': { flexDirection: 'row' } }}>
-        <FormControl>
+      {isContainer ? (
+        <ContainerAccessRule device={device} />
+      ) : (
+        <FormControl flex={4} sx={{ maxWidth: '$3/4' }}>
           <FormControlLabel>
-            <FormControlLabelText>Groups</FormControlLabelText>
+            <FormControlLabelText>Policies</FormControlLabelText>
           </FormControlLabel>
-          <HStack flexWrap="wrap" w="$full" space="md">
-            <HStack
-              space="md"
-              flexWrap="wrap"
-              alignItems="center"
-              display={groups?.length ? 'flex' : 'none'}
-            >
-              {groups.map((group) => (
-                <GroupItem key={group} name={group} size="sm" />
-              ))}
-            </HStack>
 
-            <GroupMenu
-              items={[...new Set(defaultGroups.concat(groups))]}
-              selectedKeys={groups}
-              onSelectionChange={handleGroups}
-            />
-          </HStack>
+          <CheckboxGroup
+            value={policies}
+            accessibilityLabel="Set Device Policies"
+            onChange={(values) => handlePolicies(values)}
+            py="$1"
+          >
+            <HStack flex={1} space="md" w="$full" flexWrap="wrap">
+              {defaultPolicies.map((policy) =>
+                policyTips[policy] !== null ? (
+                  <Tooltip
+                    h={undefined}
+                    placement="bottom"
+                    trigger={(triggerProps) => {
+                      return (
+                        <Box {...triggerProps}>
+                          <Checkbox value={policy} colorScheme="primary">
+                            <CheckboxIndicator mr="$2">
+                              <CheckboxIcon />
+                            </CheckboxIndicator>
+                            <CheckboxLabel>{policyName[policy]}</CheckboxLabel>
+                          </Checkbox>
+                        </Box>
+                      )
+                    }}
+                  >
+                    <TooltipContent>
+                      <TooltipText>{policyTips[policy]}</TooltipText>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <Checkbox value={policy} colorScheme="primary">
+                    <CheckboxIndicator mr="$2">
+                      <CheckboxIcon />
+                    </CheckboxIndicator>
+                    <CheckboxLabel>{policy}</CheckboxLabel>
+                  </Checkbox>
+                )
+              )}
+            </HStack>
+          </CheckboxGroup>
 
           <FormControlHelper>
             <FormControlHelperText>
-              Assign to network access group
+              Assign device policies for network access
             </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
+      )}
+
+      <VStack space="lg" sx={{ '@md': { flexDirection: 'row' } }}>
+        {!isContainer ? (
+          <FormControl>
+            <FormControlLabel>
+              <FormControlLabelText>Groups</FormControlLabelText>
+            </FormControlLabel>
+            <HStack flexWrap="wrap" w="$full" space="md">
+              <HStack
+                space="md"
+                flexWrap="wrap"
+                alignItems="center"
+                display={groups?.length ? 'flex' : 'none'}
+              >
+                {groups.map((group) => (
+                  <GroupItem key={group} name={group} size="sm" />
+                ))}
+              </HStack>
+
+              <GroupMenu
+                items={[...new Set(defaultGroups.concat(groups))]}
+                selectedKeys={groups}
+                onSelectionChange={handleGroups}
+              />
+            </HStack>
+
+            <FormControlHelper>
+              <FormControlHelperText>
+                Assign to network access group
+              </FormControlHelperText>
+            </FormControlHelper>
+          </FormControl>
+        ) : null}
 
         <FormControl>
           <FormControlLabel>

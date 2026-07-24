@@ -170,7 +170,7 @@ const Device = React.memo(({ device, notifyChange, showMenu, isSelected, onSelec
   const navigate = useNavigate()
 
   let protocolAuth = { sae: 'WPA3', wpa2: 'WPA2' }
-  let wifi_type = protocolAuth[device.PSKEntry.Type] || 'Wired'
+  let wifi_type = protocolAuth[device.PSKEntry?.Type] || 'Wired'
 
   //for guest networks theres no psk set yet.
   if (device.LastIface?.includes(".ap")) wifi_type = 'Guest WiFi'
@@ -378,7 +378,10 @@ const Device = React.memo(({ device, notifyChange, showMenu, isSelected, onSelec
             sx={{ '@md': { flexDirection: 'row', gap: '$4', flex: 1 } }}
           >
             <DeviceIcon
-              icon={device.Style?.Icon || 'Laptop'}
+              icon={
+                device.Style?.Icon ||
+                (device.Type === 'Container' ? 'Server' : 'Laptop')
+              }
               color={device.Style?.Color}
               isConnected={device.isConnected}
               isAssociatedOnly={device.isAssociatedOnly}

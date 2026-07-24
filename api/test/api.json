@@ -5,6 +5,7 @@
   "Bucket": "",
   "Token": ""
  },
+ "FeatureFlags": [],
  "Plugins": [
   {
    "Name": "dns-block-extension",

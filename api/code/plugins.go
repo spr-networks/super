@@ -40,10 +40,23 @@ var pluginNetworkReconcileOnce sync.Once
 
 const pluginNetworkReconcileInterval = time.Minute * 5
 
+const (
+	pluginRuntimeDefault = "default"
+	pluginRuntimeKVM     = "kvm"
+)
+
 type NetworkCapabilities struct {
 	Interface string
+	DeviceMAC string
 	Policies  []string
 	Groups    []string
+}
+
+func (p NetworkCapabilities) Matches(q NetworkCapabilities) bool {
+	return p.Interface == q.Interface &&
+		p.DeviceMAC == q.DeviceMAC &&
+		slices.Compare(p.Policies, q.Policies) == 0 &&
+		slices.Compare(p.Groups, q.Groups) == 0
 }
 
 type PluginConfig struct {
@@ -55,12 +68,32 @@ type PluginConfig struct {
 	GitURL              string
 	ComposeFilePath     string
 	HasUI               bool
-	SandboxedUI         bool
+	SandboxedUI         *bool `json:",omitempty"`
 	HasTopology         bool
 	Icon                string
 	InstallTokenPath    string
 	ScopedPaths         []string
 	NetworkCapabilities NetworkCapabilities
+	Runtime             string
+	AvailableRuntimes   []string
+}
+
+func (p PluginConfig) IsUISandboxed() bool {
+	return p.SandboxedUI == nil || *p.SandboxedUI
+}
+
+type PluginInstallInfo struct {
+	PluginConfig
+	RuntimeReady             bool
+	RuntimeUnavailableReason string `json:",omitempty"`
+	FallbackRuntime          string `json:",omitempty"`
+	FallbackComposeFilePath  string `json:",omitempty"`
+}
+
+type pluginRuntimeHostStatus struct {
+	Runtime string
+	Ready   bool
+	Reason  string
 }
 
 func (p PluginConfig) MatchesData(q PluginConfig) bool {
@@ -72,19 +105,118 @@ func (p PluginConfig) MatchesData(q PluginConfig) bool {
 		p.GitURL == q.GitURL &&
 		p.ComposeFilePath == q.ComposeFilePath &&
 		p.HasUI == q.HasUI &&
-		p.SandboxedUI == q.SandboxedUI &&
+		p.IsUISandboxed() == q.IsUISandboxed() &&
 		p.HasTopology == q.HasTopology &&
 		p.Icon == q.Icon &&
 		p.InstallTokenPath == q.InstallTokenPath &&
 		slices.Compare(p.ScopedPaths, q.ScopedPaths) == 0 &&
-		p.NetworkCapabilities.Interface == q.NetworkCapabilities.Interface &&
-		slices.Compare(p.NetworkCapabilities.Policies, q.NetworkCapabilities.Policies) == 0 &&
-		slices.Compare(p.NetworkCapabilities.Groups, q.NetworkCapabilities.Groups) == 0
+		p.NetworkCapabilities.Matches(q.NetworkCapabilities) &&
+		p.Runtime == q.Runtime
 }
 
 var gPlusExtensionDefaults = []PluginConfig{
-	{"PFW", "pfw", "/state/plugins/pfw/socket", false, true, PfwGitURL, "plugins/plus/pfw_extension/docker-compose.yml", false, false, true, "", "", []string{}, NetworkCapabilities{}},
-	{"MESH", "mesh", MeshdSocketPath, false, true, MeshGitURL, "plugins/plus/mesh_extension/docker-compose.yml", false, false, false, "", "", []string{}, NetworkCapabilities{}},
+	{
+		Name:            "PFW",
+		URI:             "pfw",
+		UnixPath:        "/state/plugins/pfw/socket",
+		Plus:            true,
+		GitURL:          PfwGitURL,
+		ComposeFilePath: "plugins/plus/pfw_extension/docker-compose.yml",
+		HasTopology:     true,
+	},
+	{
+		Name:            "MESH",
+		URI:             "mesh",
+		UnixPath:        MeshdSocketPath,
+		Plus:            true,
+		GitURL:          MeshGitURL,
+		ComposeFilePath: "plugins/plus/mesh_extension/docker-compose.yml",
+	},
+}
+
+func normalizePluginRuntime(runtime string) (string, error) {
+	runtime = strings.ToLower(strings.TrimSpace(runtime))
+	if runtime == "" {
+		return pluginRuntimeDefault, nil
+	}
+	if runtime != pluginRuntimeDefault && runtime != pluginRuntimeKVM {
+		return "", fmt.Errorf("unsupported plugin runtime %q", runtime)
+	}
+	return runtime, nil
+}
+
+func pluginRuntimeHostStatusRequest(runtime string) (pluginRuntimeHostStatus, error) {
+	status := pluginRuntimeHostStatus{}
+	params := url.Values{"runtime": {runtime}}
+	data, statusCode, err := superdRequestMethod(http.MethodGet, "plugin_runtime_status", params, nil)
+	if err != nil {
+		return status, err
+	}
+	if statusCode != http.StatusOK {
+		return status, fmt.Errorf("superd plugin runtime status error %d: %s", statusCode, string(data))
+	}
+	if err := json.Unmarshal(data, &status); err != nil {
+		return status, err
+	}
+	return status, nil
+}
+
+func pluginInstallInfo(plugin PluginConfig) (PluginInstallInfo, error) {
+	runtime, err := normalizePluginRuntime(plugin.Runtime)
+	if err != nil {
+		return PluginInstallInfo{}, err
+	}
+	status, err := pluginRuntimeHostStatusRequest(runtime)
+	if err != nil {
+		return PluginInstallInfo{}, err
+	}
+
+	info := PluginInstallInfo{
+		PluginConfig:             plugin,
+		RuntimeReady:             status.Ready,
+		RuntimeUnavailableReason: status.Reason,
+	}
+	if !status.Ready && slices.Contains(plugin.AvailableRuntimes, pluginRuntimeDefault) {
+		info.FallbackRuntime = pluginRuntimeDefault
+		info.FallbackComposeFilePath = filepath.ToSlash(filepath.Join(
+			filepath.Dir(plugin.ComposeFilePath),
+			"docker-compose.yml",
+		))
+	}
+	return info, nil
+}
+
+func requirePluginRuntimeReady(plugin PluginConfig) error {
+	if !pluginUsesKVM(plugin) {
+		return nil
+	}
+	status, err := pluginRuntimeHostStatusRequest(pluginRuntimeKVM)
+	if err != nil {
+		return err
+	}
+	if !status.Ready {
+		return errors.New(status.Reason)
+	}
+	return nil
+}
+
+func pluginUsesKVM(plugin PluginConfig) bool {
+	runtime, err := normalizePluginRuntime(plugin.Runtime)
+	if err == nil && runtime == pluginRuntimeKVM {
+		return true
+	}
+	return plugin.Runtime == "" && filepath.Base(plugin.ComposeFilePath) == "docker-compose-kvm.yml"
+}
+
+func pluginUsesDeviceNetwork(plugin PluginConfig) bool {
+	return pluginUsesKVM(plugin) && plugin.NetworkCapabilities.DeviceMAC != ""
+}
+
+func pluginWithRuntimeAvailability(plugin PluginConfig) PluginConfig {
+	if len(plugin.AvailableRuntimes) == 0 && pluginUsesKVM(plugin) {
+		plugin.AvailableRuntimes = []string{pluginRuntimeDefault, pluginRuntimeKVM}
+	}
+	return plugin
 }
 
 var gPluginTemplates = []PluginConfig{
@@ -265,12 +397,34 @@ func validatePlus(plugin PluginConfig) bool {
 
 	return true
 }
+
+var pluginURIRegexp = regexp.MustCompile(`^[A-Za-z0-9\-]+(?:/[A-Za-z0-9\-]+)*$`)
+
+func pluginURIsOverlap(first string, second string) bool {
+	return first == second || strings.HasPrefix(first, second+"/") || strings.HasPrefix(second, first+"/")
+}
+
+func pluginURIConflicts(uri string, plugins []PluginConfig, skipIndex int) bool {
+	if uri == "" {
+		return false
+	}
+	for index, plugin := range plugins {
+		if index != skipIndex && plugin.URI != "" && pluginURIsOverlap(uri, plugin.URI) {
+			return true
+		}
+	}
+	return false
+}
+
 func getPlugins(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	Configmtx.Lock()
 	defer Configmtx.Unlock()
 
-	ret := config.Plugins
+	ret := make([]PluginConfig, len(config.Plugins))
+	for i, plugin := range config.Plugins {
+		ret[i] = pluginWithRuntimeAvailability(plugin)
+	}
 
 	if PlusEnabled() {
 		for _, defaultPlusPlugin := range gPlusExtensionDefaults {
@@ -347,7 +501,6 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 		} else {
 			// validate
 			validName := regexp.MustCompile(`^[A-Za-z0-9\-]+$`).MatchString
-			validURI := regexp.MustCompile(`^[A-Za-z0-9\/\-]+$`).MatchString
 			validUnixPath := regexp.MustCompile(`^[A-Za-z0-9\/\-\._]+$`).MatchString
 
 			if !validName(plugin.Name) {
@@ -355,7 +508,7 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 				return
 			}
 
-			if plugin.URI != "" && !validURI(plugin.URI) {
+			if plugin.URI != "" && !pluginURIRegexp.MatchString(plugin.URI) {
 				http.Error(w, "Invalid URI", 400)
 				return
 			}
@@ -363,6 +516,15 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 			if plugin.UnixPath != "" && !validUnixPath(plugin.UnixPath) {
 				http.Error(w, "Invalid UnixPath", 400)
 				return
+			}
+
+			if plugin.Runtime != "" {
+				runtime, err := normalizePluginRuntime(plugin.Runtime)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				}
+				plugin.Runtime = runtime
 			}
 
 			// check if exists -- if so update, else create a new entry
@@ -379,6 +541,15 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 					oldComposeFilePath = entry.ComposeFilePath
 					break
 				}
+			}
+
+			skipIndex := -1
+			if found {
+				skipIndex = idx
+			}
+			if pluginURIConflicts(plugin.URI, config.Plugins, skipIndex) {
+				http.Error(w, "Invalid URI: overlaps another plugin URI", http.StatusBadRequest)
+				return
 			}
 
 			//make sure these are known plus
@@ -417,11 +588,48 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 			if !found {
 				config.Plugins = append(config.Plugins, plugin)
 			} else {
+				currentRuntime, _ := normalizePluginRuntime(currentPlugin.Runtime)
+				desiredRuntime, _ := normalizePluginRuntime(plugin.Runtime)
+				runtimeChanged := currentRuntime != desiredRuntime
+				networkCapabilitiesChanged := !currentPlugin.NetworkCapabilities.Matches(plugin.NetworkCapabilities)
+				networkStateChanged := networkCapabilitiesChanged || runtimeChanged
+				if networkStateChanged {
+					removePluginNetworkCapabilities(currentPlugin)
+				}
+
+				if runtimeChanged {
+					plugin.Runtime = desiredRuntime
+					if plugin.Enabled {
+						if err := preparePluginNetworkCapabilities(plugin); err != nil {
+							removePluginNetworkCapabilities(plugin)
+							if currentPlugin.Enabled {
+								applyPluginNetworkCapabilitiesRetry(currentPlugin)
+							}
+							http.Error(w, "Failed to authorize plugin network: "+err.Error(), http.StatusInternalServerError)
+							return
+						}
+					}
+					selection, err := switchExtensionRuntime(currentPlugin, desiredRuntime, plugin.Enabled)
+					if err != nil {
+						removePluginNetworkCapabilities(plugin)
+						if currentPlugin.Enabled {
+							applyPluginNetworkCapabilitiesRetry(currentPlugin)
+						}
+						http.Error(w, "Failed to switch plugin runtime: "+err.Error(), http.StatusInternalServerError)
+						return
+					}
+					plugin.Runtime = selection.Runtime
+					plugin.ComposeFilePath = selection.ComposeFilePath
+					plugin.AvailableRuntimes = selection.AvailableRuntimes
+				}
 				if plugin.Enabled == false {
-					//plugin is no longer enabled, send stop
-					stopExtension(oldComposeFilePath)
+					if !runtimeChanged {
+						stopExtension(oldComposeFilePath)
+					}
 					// Remove network capabilities firewall rules
-					removePluginNetworkCapabilities(config.Plugins[idx])
+					if !networkStateChanged {
+						removePluginNetworkCapabilities(currentPlugin)
+					}
 
 					//wireguard is built-in (no compose); bring its interface down
 					if name == "wireguard" {
@@ -429,6 +637,9 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 					}
 				}
 				config.Plugins[idx] = plugin
+				if plugin.Enabled && networkStateChanged {
+					applyPluginNetworkCapabilitiesRetry(plugin)
+				}
 			}
 		}
 
@@ -513,8 +724,13 @@ func restartPlugin(name string) {
 		//in case caller does not check.
 		if entry.Name == name && entry.Enabled == true {
 			if entry.ComposeFilePath != "" {
-				callSuperdRestart(entry.ComposeFilePath, "")
-				applyPluginNetworkCapabilitiesRetry(entry)
+				started := runPluginStartWithNetworkPrepared(entry, func() bool {
+					callSuperdRestart(entry.ComposeFilePath, "")
+					return true
+				})
+				if started {
+					applyPluginNetworkCapabilitiesRetry(entry)
+				}
 			}
 		}
 	}
@@ -539,7 +755,12 @@ func enablePlugin(name string) bool {
 			if entry.Name == name {
 				config.Plugins[i].Enabled = true
 				if entry.ComposeFilePath != "" {
-					ret = startExtension(entry.ComposeFilePath)
+					ret = runPluginStartWithNetworkPrepared(entry, func() bool {
+						return startExtension(entry.ComposeFilePath)
+					})
+					if ret {
+						applyPluginNetworkCapabilitiesRetry(entry)
+					}
 				}
 				break
 			}
@@ -762,8 +983,11 @@ func downloadExtension(user string, secret string, gitURL string, Plus bool, Aut
 		plugin := PluginConfig{}
 		err = json.Unmarshal(data, &plugin)
 		if err == nil {
-			//override GitURL
 			plugin.GitURL = gitURL
+			if err := requirePluginRuntimeReady(plugin); err != nil {
+				SprbusPublish("plugin:install:failure", map[string]string{"GitURL": gitURL, "Reason": err.Error()})
+				return true, false
+			}
 			return true, installUserPluginConfig(plugin)
 		} else {
 			SprbusPublish("plugin:install:failure", map[string]string{"GitURL": gitURL, "Reason": err.Error()})
@@ -803,6 +1027,62 @@ func startExtension(composeFilePath string) bool {
 	return true
 }
 
+type pluginRuntimeSelection struct {
+	Runtime           string
+	ComposeFilePath   string
+	AvailableRuntimes []string
+}
+
+func switchExtensionRuntime(current PluginConfig, runtime string, start bool) (pluginRuntimeSelection, error) {
+	selection := pluginRuntimeSelection{}
+	params := url.Values{
+		"compose_file": {current.ComposeFilePath},
+		"runtime":      {runtime},
+		"start":        {"0"},
+		"rollback":     {"0"},
+	}
+	if start {
+		params.Set("start", "1")
+	}
+	if current.Enabled {
+		params.Set("rollback", "1")
+	}
+	data, err := superdRequest("switch_plugin_runtime", params, nil)
+	if err != nil {
+		return selection, err
+	}
+	if err := json.Unmarshal(data, &selection); err != nil {
+		return selection, err
+	}
+	return selection, nil
+}
+
+func preparePluginNetworkCapabilities(plugin PluginConfig) error {
+	capabilities := plugin.NetworkCapabilities
+	if capabilities.Interface == "" ||
+		len(capabilities.Policies) == 0 ||
+		!pluginUsesDeviceNetwork(plugin) {
+		return nil
+	}
+	return preparePluginDeviceNetworkCapabilities(plugin)
+}
+
+func runPluginStartWithNetworkPreparer(
+	plugin PluginConfig,
+	prepare func(PluginConfig) error,
+	start func() bool,
+) bool {
+	if err := prepare(plugin); err != nil {
+		fmt.Printf("Warning: Refusing to start plugin %s before its device network is authorized: %v\n", plugin.Name, err)
+		return false
+	}
+	return start()
+}
+
+func runPluginStartWithNetworkPrepared(plugin PluginConfig, start func() bool) bool {
+	return runPluginStartWithNetworkPreparer(plugin, preparePluginNetworkCapabilities, start)
+}
+
 func applyPluginNetworkCapabilitiesRetry(plugin PluginConfig) {
 	go func() {
 		var err error
@@ -836,7 +1116,28 @@ func reconcilePluginNetworkCapabilities() {
 		if !plugin.Enabled {
 			continue
 		}
-		_ = applyPluginNetworkCapabilities(plugin)
+		if err := applyPluginNetworkCapabilities(plugin); err != nil {
+			log.Printf("Failed to reconcile network capabilities for plugin %s: %v", plugin.Name, err)
+		}
+	}
+}
+
+func reconcilePluginNetworkCapabilitiesForDevice(mac string) {
+	Configmtx.Lock()
+	plugins := append([]PluginConfig(nil), config.Plugins...)
+	Configmtx.Unlock()
+
+	for _, plugin := range plugins {
+		if !plugin.Enabled || !pluginUsesDeviceNetwork(plugin) {
+			continue
+		}
+		pluginMAC, err := pluginDeviceMAC(plugin)
+		if err != nil || pluginMAC != mac {
+			continue
+		}
+		if err := applyPluginNetworkCapabilities(plugin); err != nil {
+			log.Printf("Failed to reconcile network capabilities for plugin %s: %v", plugin.Name, err)
+		}
 	}
 }
 
@@ -856,33 +1157,211 @@ func checkCurrentPluginNetworkRules(rules []CustomInterfaceRule, desired CustomI
 	return hasCurrent, stale
 }
 
-func applyPluginNetworkCapabilities(plugin PluginConfig) error {
-	// Only apply if NetworkCapabilities are defined
-	if plugin.NetworkCapabilities.Interface == "" || len(plugin.NetworkCapabilities.Policies) == 0 {
-		return nil
+func removePluginCustomInterfaceRulesLocked(pluginName string) error {
+	ruleName := "Plugin-" + pluginName
+	rules := []CustomInterfaceRule{}
+	for _, rule := range gFirewallConfig.CustomInterfaceRules {
+		if rule.RuleName == ruleName {
+			rules = append(rules, rule)
+		}
 	}
 
-	// Get container IP for this plugin
-	containerIP, err := getPluginContainerIP(plugin.NetworkCapabilities.Interface)
+	var firstErr error
+	for _, rule := range rules {
+		if err := modifyCustomInterfaceRulesImpl(rule, true); err != nil {
+			fmt.Printf("Failed to remove stale rule %s (%s): %v\n", rule.RuleName, rule.SrcIP, err)
+			if firstErr == nil {
+				firstErr = err
+			}
+		}
+	}
+	return firstErr
+}
+
+func pluginDeviceMAC(plugin PluginConfig) (string, error) {
+	mac := trimLower(plugin.NetworkCapabilities.DeviceMAC)
+	if !isValidMAC(mac) {
+		return "", fmt.Errorf("invalid device MAC for plugin %s", plugin.Name)
+	}
+
+	hw, err := net.ParseMAC(mac)
+	if err != nil || len(hw) != 6 || hw[0]&1 != 0 {
+		return "", fmt.Errorf("device MAC for plugin %s must be a six-octet unicast address", plugin.Name)
+	}
+	mac = hw.String()
+	if mac == "00:00:00:00:00:00" {
+		return "", fmt.Errorf("device MAC for plugin %s must not be the zero address", plugin.Name)
+	}
+
+	return mac, nil
+}
+
+func newPluginDevice(plugin PluginConfig, mac string) DeviceEntry {
+	return DeviceEntry{
+		Name:       plugin.Name,
+		Type:       DeviceTypeContainer,
+		MAC:        mac,
+		DeviceTags: []string{},
+	}
+}
+
+func preparePluginDeviceNetworkCapabilities(plugin PluginConfig) error {
+	if !isValidIface(plugin.NetworkCapabilities.Interface) ||
+		len(plugin.NetworkCapabilities.Interface) >= 16 {
+		return fmt.Errorf("invalid device interface for plugin %s", plugin.Name)
+	}
+
+	mac, err := pluginDeviceMAC(plugin)
 	if err != nil {
 		return err
 	}
 
-	// Create CustomInterfaceRule for the plugin container
+	FWmtx.Lock()
+	err = GetElementFromMapComplex(
+		"inet", "filter", "dhcp_access",
+		[]string{plugin.NetworkCapabilities.Interface, mac},
+	)
+	if err != nil {
+		err = AddElementToMapComplex(
+			"inet", "filter", "dhcp_access",
+			[]string{plugin.NetworkCapabilities.Interface, mac},
+			"accept",
+		)
+	}
+	if err == nil {
+		PluginDeviceLinks[mac] = plugin.NetworkCapabilities.Interface
+	}
+	FWmtx.Unlock()
+	if err != nil {
+		return fmt.Errorf("authorize DHCP for plugin %s: %w", plugin.Name, err)
+	}
+
+	Groupsmtx.Lock()
+	defer Groupsmtx.Unlock()
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+
+	devices := getDevicesJson()
+	if devices == nil {
+		devices = map[string]DeviceEntry{}
+	}
+	dev, exists := devices[mac]
+	if !exists {
+		dev = newPluginDevice(plugin, mac)
+	}
+	hadDevicePolicy := len(dev.Policies) != 0 || len(dev.Groups) != 0
+	deviceChanged := !exists ||
+		hadDevicePolicy
+	if dev.Name == "" {
+		dev.Name = plugin.Name
+		deviceChanged = true
+	}
+	if dev.MAC != mac {
+		dev.MAC = mac
+		deviceChanged = true
+	}
+	if dev.Type != DeviceTypeContainer {
+		dev.Type = DeviceTypeContainer
+		deviceChanged = true
+	}
+	dev.Policies = []string{}
+	dev.Groups = []string{}
+	groupConfig := getGroupsJson()
+	if deviceChanged {
+		devices[mac] = dev
+		saveDevicesJson(devices)
+
+		if exists {
+			SprbusPublish("device:update", scrubDevice(dev))
+		} else {
+			SprbusPublish("device:save", scrubDevice(dev))
+		}
+	}
+	if hadDevicePolicy &&
+		dev.RecentIP != "" &&
+		dev.DHCPLastInterface == plugin.NetworkCapabilities.Interface {
+		refreshDeviceGroupsAndPolicy(devices, groupConfig, dev)
+	}
+
+	return nil
+}
+
+func pluginDeviceIPFromDevices(plugin PluginConfig, mac string, devices map[string]DeviceEntry) (string, error) {
+	dev, exists := devices[mac]
+	if !exists || dev.Type != DeviceTypeContainer {
+		return "", fmt.Errorf("waiting for DHCP lease for plugin %s", plugin.Name)
+	}
+	if dev.DHCPLastInterface != plugin.NetworkCapabilities.Interface {
+		return "", fmt.Errorf(
+			"plugin %s DHCP interface is %q, want %q",
+			plugin.Name,
+			dev.DHCPLastInterface,
+			plugin.NetworkCapabilities.Interface,
+		)
+	}
+	ip := net.ParseIP(dev.RecentIP)
+	if ip == nil || ip.To4() == nil {
+		return "", fmt.Errorf("plugin %s has no valid IPv4 DHCP lease", plugin.Name)
+	}
+	return ip.String(), nil
+}
+
+func getPluginDeviceIP(plugin PluginConfig) (string, error) {
+	mac, err := pluginDeviceMAC(plugin)
+	if err != nil {
+		return "", err
+	}
+
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+	return pluginDeviceIPFromDevices(plugin, mac, getDevicesJson())
+}
+
+func ensurePluginDeviceEthernetRule(plugin PluginConfig, sourceIP string) error {
+	mac, err := pluginDeviceMAC(plugin)
+	if err != nil {
+		return err
+	}
+
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
+	if GetMACVerdictElement(
+		"inet",
+		"filter",
+		"ethernet_filter",
+		sourceIP,
+		plugin.NetworkCapabilities.Interface,
+		mac,
+		"return",
+	) == nil {
+		return nil
+	}
+	return AddMACVerdictElement(
+		"inet",
+		"filter",
+		"ethernet_filter",
+		sourceIP,
+		plugin.NetworkCapabilities.Interface,
+		mac,
+		"return",
+	)
+}
+
+func applyPluginCustomInterfaceRule(plugin PluginConfig, sourceIP string) error {
 	rule := CustomInterfaceRule{
 		BaseRule: BaseRule{
 			RuleName: "Plugin-" + plugin.Name,
 			Disabled: false,
 		},
 		Interface: plugin.NetworkCapabilities.Interface,
-		SrcIP:     containerIP,
-		RouteDst:  "", // Not needed for basic container access
+		SrcIP:     sourceIP,
+		RouteDst:  "",
 		Policies:  plugin.NetworkCapabilities.Policies,
 		Groups:    plugin.NetworkCapabilities.Groups,
-		Tags:      []string{}, // Not used
+		Tags:      []string{},
 	}
 
-	// Apply the rule directly via firewall function
+	ensureCustomInterfaceRuleGroups(rule.Groups)
 	FWmtx.Lock()
 	hasCurrent, stale := checkCurrentPluginNetworkRules(gFirewallConfig.CustomInterfaceRules, rule)
 	var staleErr error
@@ -894,8 +1373,9 @@ func applyPluginNetworkCapabilities(plugin PluginConfig) error {
 			}
 		}
 	}
+	var err error
 	if !hasCurrent {
-		err = modifyCustomInterfaceRulesImpl(rule, false) // false = add rule
+		err = modifyCustomInterfaceRulesImpl(rule, false)
 	}
 	FWmtx.Unlock()
 
@@ -915,36 +1395,90 @@ func applyPluginNetworkCapabilities(plugin PluginConfig) error {
 	return nil
 }
 
+func applyPluginNetworkCapabilities(plugin PluginConfig) error {
+	if plugin.NetworkCapabilities.Interface == "" || len(plugin.NetworkCapabilities.Policies) == 0 {
+		return nil
+	}
+
+	if pluginUsesDeviceNetwork(plugin) {
+		if err := preparePluginDeviceNetworkCapabilities(plugin); err != nil {
+			return err
+		}
+		sourceIP, err := getPluginDeviceIP(plugin)
+		if err != nil {
+			return err
+		}
+		if err := ensurePluginDeviceEthernetRule(plugin, sourceIP); err != nil {
+			return err
+		}
+		return applyPluginCustomInterfaceRule(plugin, sourceIP)
+	}
+
+	containerIP, err := getPluginContainerIP(plugin.NetworkCapabilities.Interface)
+	if err != nil {
+		return err
+	}
+	return applyPluginCustomInterfaceRule(plugin, containerIP)
+}
+
 func removePluginNetworkCapabilities(plugin PluginConfig) error {
 	// Only remove if NetworkCapabilities are defined
 	if plugin.NetworkCapabilities.Interface == "" || len(plugin.NetworkCapabilities.Policies) == 0 {
 		return nil
 	}
 
+	if pluginUsesDeviceNetwork(plugin) {
+		mac, err := pluginDeviceMAC(plugin)
+		if err != nil {
+			return err
+		}
+		sourceIP, _ := getPluginDeviceIP(plugin)
+
+		FWmtx.Lock()
+		delete(RecentDHCPIface, mac)
+		delete(PluginDeviceLinks, mac)
+		if GetElementFromMapComplex(
+			"inet", "filter", "dhcp_access",
+			[]string{plugin.NetworkCapabilities.Interface, mac},
+		) == nil {
+			err = DeleteElementFromMapComplex(
+				"inet", "filter", "dhcp_access",
+				[]string{plugin.NetworkCapabilities.Interface, mac},
+			)
+		}
+		if cleanupErr := removePluginCustomInterfaceRulesLocked(plugin.Name); err == nil {
+			err = cleanupErr
+		}
+		if sourceIP != "" && GetMACVerdictElement(
+			"inet",
+			"filter",
+			"ethernet_filter",
+			sourceIP,
+			plugin.NetworkCapabilities.Interface,
+			mac,
+			"return",
+		) == nil {
+			if cleanupErr := DeleteMACVerdictElement(
+				"inet",
+				"filter",
+				"ethernet_filter",
+				sourceIP,
+				plugin.NetworkCapabilities.Interface,
+				mac,
+				"return",
+			); err == nil {
+				err = cleanupErr
+			}
+		}
+		FWmtx.Unlock()
+		return err
+	}
+
 	// We need to get the actual rule to delete it properly
 	FWmtx.Lock()
 	defer FWmtx.Unlock()
 
-	var ruleToDelete *CustomInterfaceRule
-	ruleName := "Plugin-" + plugin.Name
-
-	// Find the rule by name
-	for _, rule := range gFirewallConfig.CustomInterfaceRules {
-		if rule.RuleName == ruleName {
-			// Make a copy of the rule
-			ruleCopy := rule
-			ruleToDelete = &ruleCopy
-			break
-		}
-	}
-
-	if ruleToDelete == nil {
-		// Rule not found, which is ok (might have been manually removed)
-		return nil
-	}
-
-	// Remove the rule using the exact rule data
-	err := modifyCustomInterfaceRulesImpl(*ruleToDelete, true) // true = delete rule
+	err := removePluginCustomInterfaceRulesLocked(plugin.Name)
 	if err != nil {
 		fmt.Printf("Failed to remove network capabilities for plugin %s: %v\n", plugin.Name, err)
 		return err
@@ -959,14 +1493,14 @@ func getPluginContainerIP(interfaceName string) (string, error) {
 	// NetworkCapabilities.Interface is the Linux bridge name. Try the direct
 	// name first for explicitly named networks, then resolve project-scoped
 	// networks by their bridge driver option.
-	directData, directErr := dockerRequest("GET", "/v1.41/networks/"+url.PathEscape(interfaceName), nil)
+	directData, directErr := dockerInfoRequest("networks", interfaceName)
 	if directErr == nil {
 		if ip, err := pluginContainerIPFromNetwork(directData); err == nil {
 			return ip, nil
 		}
 	}
 
-	data, err := dockerRequest("GET", "/v1.41/networks", nil)
+	data, err := dockerInfoRequest("networks", "")
 	if err != nil {
 		return "", fmt.Errorf("inspect network %s: %v; list networks: %w", interfaceName, directErr, err)
 	}
@@ -977,7 +1511,7 @@ func getPluginContainerIP(interfaceName string) (string, error) {
 	}
 
 	for _, networkID := range networkIDs {
-		data, err = dockerRequest("GET", "/v1.41/networks/"+url.PathEscape(networkID), nil)
+		data, err = dockerInfoRequest("networks", networkID)
 		if err != nil {
 			continue
 		}
@@ -1106,10 +1640,13 @@ func startPlusExt(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			if !startExtension(entry.ComposeFilePath) {
+			if !runPluginStartWithNetworkPrepared(entry, func() bool {
+				return startExtension(entry.ComposeFilePath)
+			}) {
 				http.Error(w, "Failed to start service", 400)
 				return
 			}
+			applyPluginNetworkCapabilitiesRetry(entry)
 			return
 		}
 	}
@@ -1150,6 +1687,10 @@ func updatePluginContainer(w http.ResponseWriter, r *http.Request) {
 
 	if !found || plugin.ComposeFilePath == "" {
 		http.Error(w, "Not found", 404)
+		return
+	}
+	if err := preparePluginNetworkCapabilities(plugin); err != nil {
+		http.Error(w, "Failed to authorize plugin network: "+err.Error(), 500)
 		return
 	}
 
@@ -1279,44 +1820,29 @@ func startExtensionServices() error {
 
 	for _, entry := range config.Plugins {
 		if entry.ComposeFilePath != "" && entry.Enabled == true {
+			started := runPluginStartWithNetworkPrepared(entry, func() bool {
+				if PlusEnabled() && entry.Plus == true {
+					if !updateExtension(entry.ComposeFilePath) {
+						fmt.Println("Could not update Extension at " + entry.ComposeFilePath)
+						return false
+					}
 
-			if PlusEnabled() && entry.Plus == true {
-				//only plus extensions update on start for now
-				if !updateExtension(entry.ComposeFilePath) {
-					fmt.Println("Could not update Extension at " + entry.ComposeFilePath)
-					failed = append(failed, entry.Name)
-					continue
-				}
-
-				//if it is pfw we restart for fw rules to refresh after api
-				if entry.Name == "PFW" {
-					if !restartExtension(entry.ComposeFilePath) {
-						//try a start
-						if !startExtension(entry.ComposeFilePath) {
-							fmt.Println("Could not start Extension at " + entry.ComposeFilePath)
-							failed = append(failed, entry.Name)
-							continue
+					if entry.Name == "PFW" {
+						if !restartExtension(entry.ComposeFilePath) {
+							return startExtension(entry.ComposeFilePath)
 						}
-					}
-				} else {
-					if !startExtension(entry.ComposeFilePath) {
-						fmt.Println("Could not start Extension at " + entry.ComposeFilePath)
-						failed = append(failed, entry.Name)
-						continue
+						return true
 					}
 				}
-
-			} else {
-				if !startExtension(entry.ComposeFilePath) {
-					fmt.Println("Could not start Extension at " + entry.ComposeFilePath)
-					failed = append(failed, entry.Name)
-					continue
-				}
+				return startExtension(entry.ComposeFilePath)
+			})
+			if !started {
+				fmt.Println("Could not start Extension at " + entry.ComposeFilePath)
+				failed = append(failed, entry.Name)
+				continue
 			}
 
-			// Apply network capabilities after plugin is started
 			applyPluginNetworkCapabilitiesRetry(entry)
-
 		}
 	}
 
@@ -1782,12 +2308,15 @@ func downloadUserPluginInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Override GitURL to match what was requested
 	plugin.GitURL = gitURL
+	info, err := pluginInstallInfo(plugin)
+	if err != nil {
+		http.Error(w, "Failed to check plugin runtime: "+err.Error(), http.StatusBadGateway)
+		return
+	}
 
-	// Return plugin info with permissions
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(plugin)
+	json.NewEncoder(w).Encode(info)
 }
 
 // Phase 2: Complete plugin installation after user confirms permissions
@@ -1801,20 +2330,44 @@ func completeUserPluginInstall(router *mux.Router, router_public *mux.Router) fu
 		}
 
 		Configmtx.Lock()
-		defer Configmtx.Unlock()
 
-		// Install the plugin configuration
+		if err := requirePluginRuntimeReady(plugin); err != nil {
+			Configmtx.Unlock()
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+
+		enableAfterPull := plugin.Enabled
+		plugin.Enabled = false
 		success := installUserPluginConfig(plugin)
 		if !success {
+			Configmtx.Unlock()
 			http.Error(w, "Failed to install plugin", 400)
 			return
 		}
 
-		// Save and update routes
+		saveConfigLocked()
+		Configmtx.Unlock()
+
+		if plugin.ComposeFilePath != "" && !updateExtension(plugin.ComposeFilePath) {
+			http.Error(w, "Failed to download and verify plugin image; plugin left disabled", http.StatusBadGateway)
+			return
+		}
+
+		Configmtx.Lock()
+		for i := range config.Plugins {
+			if config.Plugins[i].Name == plugin.Name {
+				config.Plugins[i].Enabled = enableAfterPull
+				break
+			}
+		}
 		saveConfigLocked()
 		PluginRoutes(router, router_public)
+		plugins := append([]PluginConfig(nil), config.Plugins...)
+		Configmtx.Unlock()
+
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(config.Plugins)
+		json.NewEncoder(w).Encode(plugins)
 	})
 }
 
@@ -1908,7 +2461,7 @@ func WebSocketPluginHandler(config PluginConfig) func(http.ResponseWriter, *http
 		var upgrader = websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
-			CheckOrigin:     func(r *http.Request) bool { return true },
+			CheckOrigin:     websocketRequestOriginAllowed,
 		}
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {

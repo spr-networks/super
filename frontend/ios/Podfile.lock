@@ -439,6 +439,8 @@ PODS:
     - React-Core
   - RNDeviceInfo (15.0.2):
     - React-Core
+  - RNKeychain (8.2.0):
+    - React-Core
   - RNSVG (13.4.0):
     - React-Core
   - SocketRocket (0.6.1)
@@ -492,6 +494,7 @@ DEPENDENCIES:
   - "RNCClipboard (from `../node_modules/@react-native-clipboard/clipboard`)"
   - "RNCPushNotificationIOS (from `../node_modules/@react-native-community/push-notification-ios`)"
   - RNDeviceInfo (from `../node_modules/react-native-device-info`)
+  - RNKeychain (from `../node_modules/react-native-keychain`)
   - RNSVG (from `../node_modules/react-native-svg`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
@@ -592,6 +595,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-community/push-notification-ios"
   RNDeviceInfo:
     :path: "../node_modules/react-native-device-info"
+  RNKeychain:
+    :path: "../node_modules/react-native-keychain"
   RNSVG:
     :path: "../node_modules/react-native-svg"
   Yoga:
@@ -645,6 +650,7 @@ SPEC CHECKSUMS:
   RNCClipboard: f6679d470d0da2bce2a37b0af7b9e0bf369ecda5
   RNCPushNotificationIOS: 85957a0534fd1309b4c028ccbe5b1baf9ab5cf57
   RNDeviceInfo: 4c852998208b60dc192ae3529e5867817719ad1e
+  RNKeychain: bbe2f6d5cc008920324acb49ef86ccc03d3b38e4
   RNSVG: 6ebe31273563567f36f6a871b989bca09cd3827b
   SocketRocket: f32cd54efbe0f095c4d7594881e52619cfe80b17
   Yoga: d0003f849d2b5224c072cef6568b540d8bb15cd3

@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [ -f /configs/wifi_uplink/enable_rust ]; then
+  exec /scripts/startup-rust.sh
+fi
+
 mkdir -p /state/wifi_uplink
 rm -f /state/wifi_uplink/status.*
 

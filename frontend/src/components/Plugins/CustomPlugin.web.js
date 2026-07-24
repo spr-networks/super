@@ -42,9 +42,34 @@ const CustomPlugin = ({ ...props }) => {
     ref.current.contentWindow.postMessage(JSON.stringify(themeMessage), '*')
   }
 
+  const postAuth = (auth = props.pluginAuth, requestId = null) => {
+    if (!ref.current?.contentWindow || !auth?.token) {
+      return
+    }
+    ref.current.contentWindow.postMessage(
+      JSON.stringify({
+        type: 'spr:auth',
+        token: auth.token,
+        expiresAt: auth.expiresAt,
+        protocolVersion: auth.protocolVersion,
+        requestId
+      }),
+      '*'
+    )
+  }
+
+  const postBootstrap = () => {
+    postTheme()
+    postAuth()
+  }
+
   useEffect(() => {
     postTheme()
   }, [payload.colorMode, payload.theme, JSON.stringify(payload.colors)])
+
+  useEffect(() => {
+    postAuth()
+  }, [props.pluginAuth])
 
   useEffect(() => {
     const onMessage = (event) => {
@@ -60,21 +85,38 @@ const CustomPlugin = ({ ...props }) => {
         }
       }
       if (data && data.type === 'spr:ready') {
-        postTheme()
+        postBootstrap()
+      } else if (
+        data &&
+        data.type === 'spr:auth-required' &&
+        data.protocolVersion === 1 &&
+        typeof props.onAuthRequired === 'function'
+      ) {
+        Promise.resolve(props.onAuthRequired())
+          .then((auth) => {
+            postAuth(auth, data.requestId || null)
+          })
+          .catch(() => {})
       }
     }
     window.addEventListener('message', onMessage, false)
     return () => window.removeEventListener('message', onMessage, false)
-  }, [payload.colorMode, payload.theme, JSON.stringify(payload.colors)])
+  }, [
+    payload.colorMode,
+    payload.theme,
+    JSON.stringify(payload.colors),
+    props.pluginAuth,
+    props.onAuthRequired
+  ])
 
   const iframeProps = {
     src,
     srcDoc,
     ref,
-    onLoad: postTheme,
+    onLoad: postBootstrap,
     style: { borderWidth: 0, height: '100vh' }
   }
-  if (props.isSandboxed === true) {
+  if (props.isSandboxed !== false) {
     iframeProps.sandbox = 'allow-scripts'
   }
   return React.createElement('iframe', iframeProps)
@@ -82,7 +124,14 @@ const CustomPlugin = ({ ...props }) => {
 
 CustomPlugin.propTypes = {
   src: PropTypes.string,
-  srcDoc: PropTypes.string
+  srcDoc: PropTypes.string,
+  isSandboxed: PropTypes.bool,
+  pluginAuth: PropTypes.shape({
+    token: PropTypes.string.isRequired,
+    expiresAt: PropTypes.number.isRequired,
+    protocolVersion: PropTypes.number.isRequired
+  }),
+  onAuthRequired: PropTypes.func
 }
 
 export default CustomPlugin

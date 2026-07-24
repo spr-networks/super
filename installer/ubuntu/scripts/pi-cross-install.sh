@@ -40,6 +40,15 @@ apty update
 apty -y upgrade --no-install-recommends --download-only
 apty -y install --download-only --no-install-recommends linux-firmware
 apty -y install --download-only --no-install-recommends nftables wireless-regdb ethtool git nano iw cloud-guest-utils fdisk tmux conntrack jq inotify-tools tcpdump iperf3 systemd-timesyncd
+mapfile -t KRUN_DEBS < <(find /mnt/fs/var/cache/apt/archives -maxdepth 1 -name 'spr-krun-runtime_*_arm64.deb' -print)
+if [ "${#KRUN_DEBS[@]}" -ne 1 ]; then
+  echo "expected one SPR krun runtime package; found ${#KRUN_DEBS[@]}" >&2
+  exit 1
+fi
+apty -y install --download-only --no-install-recommends "${KRUN_DEBS[0]}" || {
+  echo "failed to cache SPR krun runtime dependencies" >&2
+  exit 1
+}
 # install docker and buildx
 apty -y install --download-only --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 

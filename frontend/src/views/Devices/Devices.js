@@ -28,6 +28,7 @@ import DeviceList from 'components/Devices/DeviceList'
 import { Select } from 'components/Select'
 import { strToDate } from 'utils'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { filterDevicesForPane } from 'views/Devices/deviceTypes'
 
 //import ActionSheet from 'components/ActionSheet'
 import { FilterIcon, XIcon, TagIcon, UsersIcon } from 'lucide-react-native'
@@ -126,7 +127,7 @@ const isNewDevice = (d) => {
 const isUnclassifiedDevice = (d) =>
   !d.classification?.Category || d.classification.Category == 'unknown'
 
-const Devices = (props) => {
+const Devices = ({ showContainers = false }) => {
   const context = useContext(AlertContext)
   const appContext = useContext(AppContext)
   const navigate = useNavigate()
@@ -215,13 +216,16 @@ const Devices = (props) => {
           (err) => {}
         )
 
-        let macs = devices.filter((d) => d.MAC.includes(':')).map((d) => d.MAC)
+        const paneDevices = filterDevicesForPane(devices, showContainers)
+        let macs = paneDevices
+          .filter((d) => d.MAC.includes(':'))
+          .map((d) => d.MAC)
 
-        setList(devices.sort(sortDevices))
+        setList(paneDevices.sort(sortDevices))
 
         setTags([
           ...new Set(
-            devices
+            paneDevices
               .map((d) => d.DeviceTags)
               .filter((t) => t.length)
               .flat()
@@ -230,14 +234,14 @@ const Devices = (props) => {
 
         setGroups([
           ...new Set(
-            devices
+            paneDevices
               .map((d) => d.Groups)
               .filter((t) => t.length)
               .flat()
           )
         ])
 
-        if (macs && macs.length > 0) {
+        if (!showContainers && macs && macs.length > 0) {
           // set device oui if avail
           deviceAPI
             .ouis(macs)
@@ -257,25 +261,27 @@ const Devices = (props) => {
             .catch((err) => {})
         }
 
-        classifyAPI
-          .list()
-          .then((classifications) => {
-            let byMAC = {}
-            for (let entry of classifications) {
-              byMAC[entry.MAC?.toLowerCase()] = entry
-            }
+        if (!showContainers) {
+          classifyAPI
+            .list()
+            .then((classifications) => {
+              let byMAC = {}
+              for (let entry of classifications) {
+                byMAC[entry.MAC?.toLowerCase()] = entry
+              }
 
-            setList((prev) =>
-              prev.map((d) => {
-                let classification = byMAC[d.MAC?.toLowerCase()]
-                return classification ? { ...d, classification } : d
-              })
-            )
-          })
-          .catch((err) => {})
+              setList((prev) =>
+                prev.map((d) => {
+                  let classification = byMAC[d.MAC?.toLowerCase()]
+                  return classification ? { ...d, classification } : d
+                })
+              )
+            })
+            .catch((err) => {})
+        }
 
         // TODO check wg status for virt
-        if (!appContext.isWifiDisabled) {
+        if (!showContainers && !appContext.isWifiDisabled) {
           //for each interface
           wifiAPI.interfaces('AP').then((interfaces) => {
               interfaces.forEach((iface) => {
@@ -370,7 +376,13 @@ const Devices = (props) => {
       .catch((err) => {
         context.error('API Failure', err)
       })
-  }, [sortDevices, sortBy, appContext.isWifiDisabled, warnUnknown])
+  }, [
+    sortDevices,
+    sortBy,
+    appContext.isWifiDisabled,
+    warnUnknown,
+    showContainers
+  ])
 
   const handleRedirect = () => {
     if (appContext.isWifiDisabled) {
@@ -489,16 +501,18 @@ const Devices = (props) => {
             ))}
           </Select>
 
-          <Button
-            action="primary"
-            size="sm"
-            onPress={handleRedirect}
-            display="none"
-            sx={{ '@md': { display: 'flex' } }}
-          >
-            <ButtonText>Add Device</ButtonText>
-            <ButtonIcon as={AddIcon} ml="$1" />
-          </Button>
+          {!showContainers ? (
+            <Button
+              action="primary"
+              size="sm"
+              onPress={handleRedirect}
+              display="none"
+              sx={{ '@md': { display: 'flex' } }}
+            >
+              <ButtonText>Add Device</ButtonText>
+              <ButtonIcon as={AddIcon} ml="$1" />
+            </Button>
+          ) : null}
         </HStack>
 
         {/*
@@ -535,22 +549,26 @@ const Devices = (props) => {
           }}
         >
           <Text color="$muted500" p="$4">
-            There are no devices configured yet
+            {showContainers
+              ? 'There are no managed containers configured yet'
+              : 'There are no devices configured yet'}
           </Text>
         </View>
       ) : null}
 
-      <Fab
-        renderInPortal={false}
-        shadow={2}
-        size="sm"
-        onPress={handleRedirect}
-        bg="$primary500"
-        {...(Platform.OS === 'web' && { position: 'fixed' })}
-      >
-        <FabIcon as={AddIcon} mr="$1" />
-        <FabLabel>Add Device</FabLabel>
-      </Fab>
+      {!showContainers ? (
+        <Fab
+          renderInPortal={false}
+          shadow={2}
+          size="sm"
+          onPress={handleRedirect}
+          bg="$primary500"
+          {...(Platform.OS === 'web' && { position: 'fixed' })}
+        >
+          <FabIcon as={AddIcon} mr="$1" />
+          <FabLabel>Add Device</FabLabel>
+        </Fab>
+      ) : null}
     </View>
   )
 }

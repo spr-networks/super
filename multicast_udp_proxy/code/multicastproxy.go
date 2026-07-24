@@ -65,6 +65,7 @@ type MulticastSettings struct {
 
 type DeviceEntry struct {
 	Name     string
+	Type     string `json:",omitempty"`
 	MAC      string
 	WGPubKey string
 	VLANTag  string

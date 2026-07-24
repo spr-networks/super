@@ -782,9 +782,6 @@ func removeSupernetworkEntry(supernet string) {
 }
 
 func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
-	FWmtx.Lock()
-	defer FWmtx.Unlock()
-
 	crule := CustomInterfaceRule{}
 	err := json.NewDecoder(r.Body).Decode(&crule)
 	if err != nil {
@@ -793,12 +790,27 @@ func modifyCustomInterfaceRules(w http.ResponseWriter, r *http.Request) {
 	}
 
 	doDelete := r.Method == http.MethodDelete
+	if !doDelete {
+		ensureCustomInterfaceRuleGroups(crule.Groups)
+	}
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
 	err = modifyCustomInterfaceRulesImpl(crule, doDelete)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
 
+}
+
+func ensureCustomInterfaceRuleGroups(groups []string) {
+	groups = normalizeStringSlice(groups)
+	if len(groups) == 0 {
+		return
+	}
+	Groupsmtx.Lock()
+	addGroupsIfMissing(getGroupsJson(), groups)
+	Groupsmtx.Unlock()
 }
 
 func modifyCustomInterfaceRulesImpl(crule CustomInterfaceRule, doDelete bool) error {
@@ -1153,9 +1165,7 @@ func deleteEndpoint(e Endpoint) error {
 		return fmt.Errorf("Domain not implemented yet for %s", e.RuleName)
 	}
 
-	Devicesmtx.Lock()
-	devices := getDevicesJson()
-	Devicesmtx.Unlock()
+	devices := readDevicesSnapshot()
 
 	for _, d := range devices {
 		if d.RecentIP == "" {
@@ -1280,9 +1290,7 @@ func applyNoAPI(device DeviceEntry) {
 }
 
 func applyBuiltinTagFirewallRules() {
-	Devicesmtx.Lock()
-	devices := getDevicesJson()
-	Devicesmtx.Unlock()
+	devices := readDevicesSnapshot()
 
 	for _, device := range devices {
 		applyEndpointRules(device)
@@ -1345,6 +1353,15 @@ func refreshDeviceGroupsAndPolicy(devices map[string]DeviceEntry, groups []Group
 	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), isAPVlan(ifname), false, nil)
 
 	device_disabled := slices.Contains(dev.Policies, "disabled") || dev.DeviceDisabled == true
+	if dev.MAC != "" {
+		if _, exists := devices[dev.MAC]; !exists {
+			return
+		}
+	} else if dev.WGPubKey != "" {
+		if _, exists := devices[dev.WGPubKey]; !exists {
+			return
+		}
+	}
 	if !device_disabled {
 		//add this MAC and IP to the ethernet filter. wg is a no-op
 		addVerdictMac(ipv4, dev.MAC, ifname, "ethernet_filter", "return")
@@ -1621,9 +1638,6 @@ func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container
 			continue
 		}
 		if action == "add" {
-			Groupsmtx.Lock()
-			addGroupsIfMissing(getGroupsJson(), []string{group})
-			Groupsmtx.Unlock()
 			addCustomVerdict(group, container_rule.SrcIP, container_rule.Interface)
 		} else {
 			found := false
@@ -1636,12 +1650,12 @@ func applyCustomInterfaceRule(current_rules_all []CustomInterfaceRule, container
 
 			if !found {
 				//clear rule from group.
-				err := DeleteElementFromMapComplex("inet", "filter", group+"_src_access", []string{container_rule.SrcIP, container_rule.Interface, "accept"})
+				err := DeleteElementFromMapComplex("inet", "filter", group+"_src_access", []string{container_rule.SrcIP, container_rule.Interface})
 				if err != nil {
 					log.Println("[-] Error container_interface group nft delete failed", err)
 				}
 
-				err = DeleteElementFromMapComplex("inet", "filter", group+"_dst_access", []string{container_rule.SrcIP, container_rule.Interface, "continue"})
+				err = DeleteElementFromMapComplex("inet", "filter", group+"_dst_access", []string{container_rule.SrcIP, container_rule.Interface})
 				if err != nil {
 					log.Println("[-]  Error container_interface group  nft delete failed", err)
 				}
@@ -2414,8 +2428,8 @@ func hasCustomVerdict(ZoneName string, IP string, Iface string) bool {
 func hasVmapEntries(snap *MapSnapshot, devices map[string]DeviceEntry, entry DeviceEntry, Iface string) bool {
 	//check if a device has its vmap entries established
 
-	//check ethernet filter entry is present
-	if entry.MAC != "" {
+        // special case for wireguard traffic
+	if entry.MAC != "" && Iface != "wg0" {
 		if !snap.HasElement("ethernet_filter", []string{entry.RecentIP, Iface, entry.MAC}) {
 			return false
 		}
@@ -2519,8 +2533,12 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 						log.Println("nft delete failed", err)
 					}
 				} else {
+					key := []string{entry.ipv4, entry.ifname}
+					if name == "fwd_iface_wan" {
+						key = []string{entry.ifname, entry.ipv4}
+					}
 					err := DeleteElementFromMapComplex("inet", "filter", name,
-						[]string{entry.ipv4, entry.ifname})
+						key)
 					if err != nil {
 						log.Println("nft delete failed", err)
 						return
@@ -2608,8 +2626,48 @@ func getWireguardClient() http.Client {
 var RecentDHCPWG = map[string]int64{}
 var RecentDHCPIface = map[string]string{}
 
+var PluginDeviceLinks = map[string]string{}
+
+func isAuthorizedPluginDeviceLink(
+	mac string,
+	iface string,
+	recentDHCPIfaces map[string]string,
+	pluginDeviceLinks map[string]string,
+) bool {
+	if pluginDeviceLinks[mac] != iface || recentDHCPIfaces[mac] != iface {
+		return false
+	}
+	_, err := net.InterfaceByName(iface)
+	return err == nil
+}
+
+func restorePluginDHCPInterfaces(
+	devices map[string]DeviceEntry,
+	recentDHCPIfaces map[string]string,
+	pluginDeviceLinks map[string]string,
+) map[string]string {
+	restored := make(map[string]string, len(recentDHCPIfaces)+len(pluginDeviceLinks))
+	for mac, iface := range recentDHCPIfaces {
+		restored[mac] = iface
+	}
+	for mac, iface := range pluginDeviceLinks {
+		if restored[mac] != "" {
+			continue
+		}
+		device, exists := devices[mac]
+		if !exists || device.Type != DeviceTypeContainer || device.DHCPLastInterface != iface {
+			continue
+		}
+		restored[mac] = iface
+	}
+	return restored
+}
+
 func notifyFirewallDHCP(device DeviceEntry, iface string) {
 	addLanInterface(iface)
+
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
 
 	if device.MAC != "" {
 		RecentDHCPIface[device.MAC] = iface
@@ -2621,9 +2679,6 @@ func notifyFirewallDHCP(device DeviceEntry, iface string) {
 
 	// for wireguard clients only below
 	cur_time := time.Now().Unix()
-
-	FWmtx.Lock()
-	defer FWmtx.Unlock()
 
 	RecentDHCPWG[device.WGPubKey] = cur_time
 }
@@ -3296,11 +3351,24 @@ func dynamicRouteLoop() {
 			//for plugins to have network state information
 			newIfaceMap := map[string]string{}
 
+			recentDHCPIfaces := map[string]string{}
+			pluginDeviceLinks := map[string]string{}
 			FWmtx.Lock()
-
+			for mac, iface := range RecentDHCPIface {
+				recentDHCPIfaces[mac] = iface
+			}
+			for mac, iface := range PluginDeviceLinks {
+				pluginDeviceLinks[mac] = iface
+			}
+			recentDHCPIfaces = restorePluginDHCPInterfaces(devices, recentDHCPIfaces, pluginDeviceLinks)
+			for mac, iface := range pluginDeviceLinks {
+				if recentDHCPIfaces[mac] == iface {
+					suggested_device[mac] = iface
+				}
+			}
 			//if a wifi device is active, place that as priority
 			for mac, iface := range wifi_peers {
-				dhcp_iface, exists := RecentDHCPIface[mac]
+				dhcp_iface, exists := recentDHCPIfaces[mac]
 				if !exists {
 					suggested_device[mac] = iface
 				} else {
@@ -3353,8 +3421,14 @@ func dynamicRouteLoop() {
 					// Verify the interface is a valid downlink
 					isValidDownlink := slices.Contains(downlinks, baseIface)
 
-					// If it's not a downlink, was not wg0, or a wlan
-					if !isValidDownlink {
+					isAuthorizedPluginLink := isAuthorizedPluginDeviceLink(
+						ident,
+						new_iface,
+						recentDHCPIfaces,
+						pluginDeviceLinks,
+					)
+
+					if !isValidDownlink && !isAuthorizedPluginLink {
 						// Interface is not valid, treat as if not found
 						exists = false
 						new_iface = ""
@@ -3549,9 +3623,7 @@ func initFirewallRules() {
 
 	refreshInterfaceOverrides()
 
-	Devicesmtx.Lock()
-	devices := getDevicesJson()
-	Devicesmtx.Unlock()
+	devices := readDevicesSnapshot()
 	refreshVLANTrunks(devices)
 
 	refreshDownlinks()

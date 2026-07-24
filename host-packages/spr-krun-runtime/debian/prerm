@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    remove|deconfigure)
+        if command -v spr-krun-runtime-configure >/dev/null 2>&1; then
+            spr-krun-runtime-configure --remove
+        fi
+        ;;
+esac
+
+exit 0

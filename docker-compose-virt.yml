@@ -42,6 +42,8 @@ services:
     logging: *default-logging
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/spr-krun:/var/lib/spr-krun
+      - /sys/kernel/debug:/sys/kernel/debug:ro
       - ${PWD}/configs/base/:/configs/base/
       - ${PWD}/state/api/:/state/api/
       - ${PWD}/state/superd/:/state/superd/
@@ -164,7 +166,6 @@ services:
       - ${PWD}/state/public/:/state/public/
       - ${PWD}/frontend/build:/ui/
       - /var/log/journal:/var/log/journal:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/apport/coredump/:/coredump/
   plugin-lookup:
     container_name: superplugin-lookup

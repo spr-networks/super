@@ -1,7 +1,8 @@
+import React from 'react'
 import { Platform } from 'react-native'
 
 import AddDevice from 'views/Devices/AddDevice'
-import {WifiConnect} from 'views/Devices/ConnectDevice'
+import { WifiConnect } from 'views/Devices/ConnectDevice'
 import Devices from 'views/Devices/Devices'
 import DevicesTabView from 'views/Devices/DevicesTabView'
 import Device from 'views/Devices/Device'
@@ -34,7 +35,9 @@ import Plugins from 'views/Plugins'
 import AuthSettings from 'views/AuthSettings'
 import AuthValidate from 'views/AuthValidate'
 import SystemInfoTabView from 'views/SystemInfoTabView'
+import FeatureFlags from 'views/System/FeatureFlags'
 import LinkConfigurationTabView from 'views/LinkConfigurationTabView'
+import FeatureFlagRoute from 'components/FeatureFlagRoute'
 
 import AlertsTabView from 'views/AlertsTabView'
 
@@ -58,12 +61,14 @@ import {
   EarthLockIcon,
   EyeIcon,
   FlameIcon,
+  FlagIcon,
   GaugeIcon,
   HammerIcon,
   HomeIcon,
   KeyIcon,
   LaptopIcon,
   ListTreeIcon,
+  MessageCircleIcon,
   NetworkIcon,
   PuzzleIcon,
   Repeat2,
@@ -82,6 +87,7 @@ import {
   WifiIcon
 } from 'lucide-react-native'
 import CustomPlugin from 'views/CustomPlugin'
+import Assistant from 'views/Assistant/Assistant'
 
 //import { BrandIcons } from 'IconUtils'
 
@@ -98,6 +104,15 @@ const routes = [
     icon: LaptopIcon,
     path: 'devices',
     component: DevicesTabView,
+    layout: 'admin'
+  },
+  {
+    path: 'assistant',
+    name: 'AI Assistant',
+    icon: MessageCircleIcon,
+    component: Assistant,
+    featureFlag: 'webllm',
+    hidden: Platform.OS !== 'web',
     layout: 'admin'
   },
   {
@@ -376,6 +391,14 @@ const routes = [
         layout: 'admin'
       },
       {
+        path: 'feature_flags',
+        name: 'Feature Flags',
+        icon: FlagIcon,
+        component: FeatureFlags,
+        hideSimple: true,
+        layout: 'admin'
+      },
+      {
         layout: 'admin',
         path: 'custom_plugin/:name',
         redirect: true,
@@ -416,7 +439,16 @@ const getRoutes = (routes, layout = 'admin') => {
       }
 
       if (prop.layout && prop.layout.includes(layout)) {
-        return { path: prop.path, element: prop.component }
+        const Component = prop.component
+        const element = prop.featureFlag
+          ? () => (
+              <FeatureFlagRoute
+                flag={prop.featureFlag}
+                component={Component}
+              />
+            )
+          : Component
+        return { path: prop.path, element }
       } else {
         return null
       }
@@ -425,9 +457,29 @@ const getRoutes = (routes, layout = 'admin') => {
     .flat()
 }
 
+const filterRoutesByFeatureFlags = (routes, enabledFlags = []) =>
+  routes
+    .filter(
+      (route) =>
+        !route.featureFlag || enabledFlags.includes(route.featureFlag)
+    )
+    .map((route) =>
+      route.views
+        ? {
+            ...route,
+            views: filterRoutesByFeatureFlags(route.views, enabledFlags)
+          }
+        : route
+    )
+
 const routesAuth = getRoutes(routes, 'auth')
 const routesAdmin = getRoutes(routes, 'admin')
 
-export { routes, routesAuth, routesAdmin }
+export {
+  filterRoutesByFeatureFlags,
+  routes,
+  routesAuth,
+  routesAdmin
+}
 
 export default routes

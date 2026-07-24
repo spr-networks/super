@@ -12,6 +12,12 @@ cp ./data/spr.clean.img ./data/spr.img
 
 ./scripts/resize.sh
 
+mapfile -t KRUN_DEBS < <(find ../../dist -maxdepth 1 -name 'spr-krun-runtime_*_arm64.deb' -print)
+if [ "${#KRUN_DEBS[@]}" -ne 1 ]; then
+  echo "expected exactly one dist/spr-krun-runtime_*_arm64.deb; found ${#KRUN_DEBS[@]}" >&2
+  exit 1
+fi
+
 # Fetch Debian arm64 kernel+initrd for the QEMU build phase.
 # RPiOS kernel lacks virtio_blk; the Debian generic arm64 kernel has it.
 # Done in a throwaway container so the RPiOS image is never touched.
@@ -23,7 +29,7 @@ DOCKER_DEFAULT_PLATFORM=linux/arm64 docker run --rm \
 # Run cross-install and QEMU in a single container so the loop device
 # created by mount.sh is released in the same kernel context before QEMU
 # opens the image.  spr-pi-builder already has qemu-system-aarch64.
-docker run --privileged -v /dev:/dev -v $PWD/data:/data -v $PWD/scripts:/scripts/ -v $PWD/firmware:/firmware/ spr-pi-builder bash -c '
+docker run --privileged -v /dev:/dev -v "$PWD/data:/data" -v "$PWD/scripts:/scripts/" -v "$PWD/firmware:/firmware/" -v "$PWD/../../dist:/packages:ro" spr-pi-builder bash -c '
   set -e
   /scripts/go-pi.sh
   qemu-system-aarch64 -machine virt -cpu cortex-a72 -smp 2 -m 1G -no-reboot \

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/hmac"
 	"crypto/pbkdf2"
 	crand "crypto/rand"
 	"crypto/sha256"
@@ -8,10 +9,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -33,18 +34,26 @@ var Tokensmtx sync.Mutex
 
 // OTP rate limiting
 type OTPAttempt struct {
-	Count       int
-	LastAttempt time.Time
-	LockedUntil time.Time
+	Count           int
+	LastAttempt     time.Time
+	LockedUntil     time.Time
+	FailedPasswords map[[sha256.Size]byte]struct{} `json:"-"`
+	LastPassword    [sha256.Size]byte              `json:"-"`
+	HasLastPassword bool                           `json:"-"`
 }
 
 var otpAttempts = make(map[string]*OTPAttempt)
 var otpAttemptsMtx sync.Mutex
+var passwordFingerprintKey [sha256.Size]byte
 
 const (
-	maxOTPAttempts     = 5                // Maximum attempts before lockout
-	otpLockoutDuration = 15 * time.Minute // Lockout duration
-	otpAttemptWindow   = 1 * time.Minute  // Time window for rate limiting
+	maxOTPAttempts        = 5                // Maximum attempts before lockout
+	otpLockoutDuration    = 15 * time.Minute // Lockout duration
+	otpAttemptWindow      = 1 * time.Minute  // Time window for rate limiting
+	passwordMaxAttempts   = 10
+	passwordRetryDelay    = 5 * time.Minute
+	passwordAttemptWindow = 15 * time.Minute
+	passwordRatePrefix    = "login:password:"
 )
 
 type Token struct {
@@ -76,22 +85,13 @@ type OTPSettings struct {
 func makeDstIfMissing(destFilePath string, srcFilePath string) {
 
 	if _, err := os.Stat(destFilePath); os.IsNotExist(err) {
-		srcFile, err := os.Open(srcFilePath)
+		data, err := os.ReadFile(srcFilePath)
 		if err != nil {
 			log.Println("[-] Auth Migration: No previous file found " + srcFilePath)
 			return
 		}
-		defer srcFile.Close()
 
-		destFile, err := os.OpenFile(destFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-		if err != nil {
-			log.Println("[-] Auth Migration: could not make destination " + destFilePath)
-			return
-		}
-		defer destFile.Close()
-
-		_, err = io.Copy(destFile, srcFile)
-		if err != nil {
+		if err := saveFileJSON(destFilePath, json.RawMessage(data)); err != nil {
 			log.Println("[-] Auth Migration: could not make destination " + destFilePath)
 			return
 		}
@@ -198,11 +198,9 @@ func migratePasswordsToHash() {
 	}
 
 	if changed {
-		newData, err := json.Marshal(users)
-		if err != nil {
-			return
+		if err := saveFileJSON(AuthUsersFile, users); err != nil {
+			log.Println("[-] Failed to save migrated password hashes:", err)
 		}
-		ioutil.WriteFile(AuthUsersFile, newData, 0600)
 	}
 }
 
@@ -242,6 +240,10 @@ func ExtractRequestToken(r *http.Request) string {
 }
 
 func authenticateToken(token string) (bool, string, []string) {
+	if session, exists := lookupPluginUISession(token); exists {
+		return true, "plugin-ui:" + session.PluginURI, pluginUISessionScope(session.PluginURI)
+	}
+
 	exists := false
 	name := ""
 	paths := []string{}
@@ -275,23 +277,20 @@ func authenticateToken(token string) (bool, string, []string) {
 
 func scopedPathMatch(method string, pathToMatch string, paths []string) bool {
 	for _, entry := range paths {
-		parts := strings.Split(entry, ":")
+		parts := strings.SplitN(entry, ":", 2)
 		if len(parts) > 1 {
-			if !strings.HasPrefix(pathToMatch, parts[0]) {
+			if !scopedPathPrefixMatch(pathToMatch, parts[0]) {
 				//prefix did not match, carry on
 				continue
 			}
-			if parts[1] == "r" && method == http.MethodGet {
-				return true
-			} else if parts[1] == "r" {
-				//wrong method. skip
-				continue
+			switch parts[1] {
+			case "r":
+				return method == http.MethodGet
+			case "rw":
+				return method == http.MethodGet || method == http.MethodPut || method == http.MethodPost || method == http.MethodPatch || method == http.MethodDelete
 			}
-			//this falls through into failure.
-			// :r is the only one that is valid right now
-			// so we can ignore the others
 		} else {
-			if strings.HasPrefix(pathToMatch, entry) {
+			if scopedPathPrefixMatch(pathToMatch, entry) {
 				return true
 			}
 		}
@@ -300,7 +299,23 @@ func scopedPathMatch(method string, pathToMatch string, paths []string) bool {
 	return false
 }
 
+func scopedPathPrefixMatch(pathToMatch string, scope string) bool {
+	pathToMatch = path.Clean(pathToMatch)
+	if scope == "/" {
+		return strings.HasPrefix(pathToMatch, "/")
+	}
+	scope = strings.TrimSuffix(scope, "/")
+	return pathToMatch == scope || strings.HasPrefix(pathToMatch, scope+"/")
+}
+
 func authorizedToken(r *http.Request, token string) bool {
+	if session, exists := lookupPluginUISession(token); exists {
+		if _, exists := pluginForSandboxedUI(session.PluginURI); !exists {
+			return false
+		}
+		return scopedPathMatch(r.Method, r.URL.Path, pluginUISessionScope(session.PluginURI))
+	}
+
 	Tokensmtx.Lock()
 	//check api tokens
 	tokens := []Token{}
@@ -392,7 +407,13 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 		username, password, ok := r.BasicAuth()
 		if ok {
 			failType = "user"
-			if authenticateUser(username, password) {
+			rateKey := authRateKey("password", r)
+			if authFailureRateLimited(rateKey) {
+				w.Header().Set("Retry-After", strconv.Itoa(int(passwordRetryDelay/time.Second)))
+				http.Error(w, "Too many password attempts. Retry shortly.", http.StatusTooManyRequests)
+				return
+			} else if authenticateUser(username, password) {
+				authFailureRateClear(rateKey)
 				//check if all user requests should have a JWT check, if so, use it.
 				if shouldCheckOTPJWT(r, username) && !hasValidJwtOtpHeader(username, r) {
 					reason = "invalid or missing JWT OTP"
@@ -404,6 +425,7 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 					return
 				}
 			} else {
+				authPasswordFailureRateRecord(rateKey, username, password)
 				reason = "bad password"
 			}
 		} else {
@@ -421,7 +443,13 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 		if authenticatedNext.Match(r, &matchInfo) || setupMode.Match(r, &matchInfo) {
 			SprbusPublish("auth:failure", map[string]string{"reason": remoteIP(r) + ":" + reason, "type": failType, "name": tokenName + username, "ip": remoteIP(r)})
 
-			if redirect_validate {
+			if isPluginUIToken(token) {
+				if reason == "unauthorized token" {
+					writePluginUIAuthError(w, http.StatusForbidden, "insufficient_scope")
+				} else {
+					writePluginUIAuthError(w, http.StatusUnauthorized, "invalid_token")
+				}
+			} else if redirect_validate {
 				http.Redirect(w, r, "/auth/validate", 302)
 			} else {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -515,11 +543,15 @@ func updateAuthTokens(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	file, _ := json.MarshalIndent(tokens, "", " ")
-	err = ioutil.WriteFile(AuthTokensFile, file, 0600)
+	err = saveFileJSON(AuthTokensFile, tokens)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
+	}
+
+	if r.Method == http.MethodDelete {
+		//close any websockets authenticated by a deleted token
+		WSCloseAll()
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -527,8 +559,7 @@ func updateAuthTokens(w http.ResponseWriter, r *http.Request) {
 }
 
 func otpSaveLocked(settings OTPSettings) error {
-	file, _ := json.MarshalIndent(settings, "", " ")
-	return ioutil.WriteFile(OTPSettingsFile, file, 0600)
+	return saveFileJSON(OTPSettingsFile, settings)
 }
 
 func otpLoadLocked() (OTPSettings, error) {
@@ -797,23 +828,12 @@ func saveOTPLockoutsLocked() error {
 	now := time.Now()
 
 	for user, attempt := range otpAttempts {
-		if now.Before(attempt.LockedUntil) {
+		if !strings.HasPrefix(user, passwordRatePrefix) && now.Before(attempt.LockedUntil) {
 			lockouts[user] = attempt
 		}
 	}
 
-	data, err := json.MarshalIndent(lockouts, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	// Write to temporary file first
-	tmpFile := OTPLockoutFile + ".tmp"
-	if err := ioutil.WriteFile(tmpFile, data, 0600); err != nil {
-		return err
-	}
-
-	return os.Rename(tmpFile, OTPLockoutFile)
+	return saveFileJSON(OTPLockoutFile, lockouts)
 }
 
 func loadOTPLockouts() error {
@@ -849,6 +869,9 @@ func loadOTPLockouts() error {
 	// Validate and merge loaded lockouts
 	now := time.Now()
 	for user, attempt := range lockouts {
+		if strings.HasPrefix(user, passwordRatePrefix) {
+			continue
+		}
 		// Validate the attempt data
 		if attempt == nil {
 			continue
@@ -867,14 +890,106 @@ func cleanupOTPAttemptsLocked() {
 	// Must be called with otpAttemptsMtx already locked
 	now := time.Now()
 	for user, attempt := range otpAttempts {
+		attemptWindow := otpAttemptWindow
+		if strings.HasPrefix(user, passwordRatePrefix) {
+			attemptWindow = passwordAttemptWindow
+		}
 		// Remove entries that are no longer locked and haven't been used recently
-		if now.After(attempt.LockedUntil) && time.Since(attempt.LastAttempt) > otpAttemptWindow {
+		if now.After(attempt.LockedUntil) && time.Since(attempt.LastAttempt) > attemptWindow {
 			delete(otpAttempts, user)
 		}
 	}
 }
 
+func authRateKey(mechanism string, r *http.Request) string {
+	return "login:" + mechanism + ":" + clientIP(r)
+}
+
+func authFailureRateLimited(key string) bool {
+	otpAttemptsMtx.Lock()
+	defer otpAttemptsMtx.Unlock()
+
+	attempt := otpAttempts[key]
+	return attempt != nil && time.Now().Before(attempt.LockedUntil)
+}
+
+func authFailureRateRecord(key string) {
+	authFailureRateRecordFingerprint(key, nil)
+}
+
+func authPasswordFailureRateRecord(key, username, password string) {
+	mac := hmac.New(sha256.New, passwordFingerprintKey[:])
+	mac.Write([]byte(username))
+	mac.Write([]byte{0})
+	mac.Write([]byte(password))
+	var fingerprint [sha256.Size]byte
+	copy(fingerprint[:], mac.Sum(nil))
+	authFailureRateRecordFingerprint(key, &fingerprint)
+}
+
+func authFailureRateRecordFingerprint(key string, fingerprint *[sha256.Size]byte) {
+	otpAttemptsMtx.Lock()
+	defer otpAttemptsMtx.Unlock()
+
+	cleanupOTPAttemptsLocked()
+
+	maxAttempts, retryDelay, attemptWindow := maxOTPAttempts, otpLockoutDuration, otpAttemptWindow
+	passwordAttempt := strings.HasPrefix(key, passwordRatePrefix)
+	if passwordAttempt {
+		maxAttempts, retryDelay, attemptWindow = passwordMaxAttempts, passwordRetryDelay, passwordAttemptWindow
+	}
+
+	attempt := otpAttempts[key]
+	if attempt == nil {
+		attempt = new(OTPAttempt)
+		otpAttempts[key] = attempt
+	}
+
+	if time.Since(attempt.LastAttempt) > attemptWindow {
+		attempt.Count = 0
+		attempt.FailedPasswords = nil
+		attempt.HasLastPassword = false
+	}
+
+	if fingerprint != nil {
+		if attempt.HasLastPassword && attempt.LastPassword == *fingerprint {
+			return
+		}
+		attempt.LastPassword, attempt.HasLastPassword = *fingerprint, true
+		if attempt.FailedPasswords == nil {
+			attempt.FailedPasswords = make(map[[sha256.Size]byte]struct{})
+		} else if _, duplicate := attempt.FailedPasswords[*fingerprint]; duplicate {
+			return
+		}
+		if len(attempt.FailedPasswords) < passwordMaxAttempts {
+			attempt.FailedPasswords[*fingerprint] = struct{}{}
+		}
+	}
+
+	attempt.Count++
+	attempt.LastAttempt = time.Now()
+
+	if attempt.Count >= maxAttempts {
+		attempt.LockedUntil = time.Now().Add(retryDelay)
+		if !passwordAttempt {
+			if err := saveOTPLockoutsLocked(); err != nil {
+				log.Printf("Error saving OTP lockouts: %v", err)
+			}
+		}
+		log.Printf("auth rate limit exceeded for %s", key)
+	}
+}
+
+func authFailureRateClear(key string) {
+	otpAttemptsMtx.Lock()
+	defer otpAttemptsMtx.Unlock()
+	delete(otpAttempts, key)
+}
+
 func initAuth() {
+	if _, err := crand.Read(passwordFingerprintKey[:]); err != nil {
+		log.Fatal("failed to initialize password rate limiter: ", err)
+	}
 	migratePasswordsToHash()
 	initJwtOtpSecret()
 	loadOTPLockouts()
@@ -895,9 +1010,19 @@ func generateOTPToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(gJwtOtpSecret) != 32 {
-		http.Error(w, "JWT OTP Setup Failed", 400)
+	tokenString, err := signJwtOtpToken(user)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
 		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tokenString)
+}
+
+func signJwtOtpToken(user string) (string, error) {
+	if len(gJwtOtpSecret) != 32 {
+		return "", fmt.Errorf("JWT OTP Setup Failed")
 	}
 
 	claims := &jwt.RegisteredClaims{
@@ -907,14 +1032,7 @@ func generateOTPToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(gJwtOtpSecret))
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tokenString)
+	return token.SignedString([]byte(gJwtOtpSecret))
 }
 
 func hasValidJwtOtpHeader(username string, r *http.Request) bool {
@@ -976,9 +1094,45 @@ func applyJwtOtpCheck(handler http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+func applyPasswordAuthCheck(handler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		username, _, ok := r.BasicAuth()
+		if !ok || username != "admin" {
+			http.Error(w, "Password authentication required", http.StatusUnauthorized)
+			return
+		}
+		handler(w, r)
+	}
+}
+
+func applyFactorManagementCheck(handler http.HandlerFunc) http.HandlerFunc {
+	return applyPasswordAuthCheck(func(w http.ResponseWriter, r *http.Request) {
+		username, _, _ := r.BasicAuth()
+		if secondFactorConfigured(username) && !hasValidJwtOtpHeader(username, r) {
+			http.Error(w, "Second-factor authentication required", http.StatusUnauthorized)
+			return
+		}
+		handler(w, r)
+	})
+}
+
+func secondFactorConfigured(username string) bool {
+	Tokensmtx.Lock()
+	defer Tokensmtx.Unlock()
+
+	settings, _ := otpLoadLocked()
+	for _, entry := range settings.OTPUsers {
+		if entry.Name == username && entry.Confirmed {
+			return true
+		}
+	}
+	entry := webauthnLoadLocked().Users[username]
+	return entry != nil && len(entry.Credentials) != 0
+}
+
 func shouldCheckOTPJWT(r *http.Request, username string) bool {
 
-	if r.URL.Path == "/otp_validate" {
+	if r.URL.Path == "/otp_validate" || r.URL.Path == "/webauthn/validate" {
 		return false
 	}
 
@@ -1027,8 +1181,7 @@ func generateOrGetToken(name string, paths []string) (Token, error) {
 	if !foundToken {
 		//add the generated token and save it to the token file
 		tokens = append(tokens, new_token)
-		file, _ := json.MarshalIndent(tokens, "", " ")
-		err = ioutil.WriteFile(AuthTokensFile, file, 0600)
+		err = saveFileJSON(AuthTokensFile, tokens)
 		if err != nil {
 			fmt.Println("failed to write tokens file", err)
 		}

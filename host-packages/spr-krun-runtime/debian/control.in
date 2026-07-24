@@ -1,0 +1,13 @@
+Package: spr-krun-runtime
+Version: @VERSION@
+Section: admin
+Priority: optional
+Architecture: arm64
+Maintainer: SPR Networks <support@supernetworks.org>
+Depends: libc6, libgcc-s1, libcap2, libjson-c5, libseccomp2, libsystemd0, iproute2, jq
+Recommends: docker-ce | docker.io
+Description: SPR KVM runtime for isolated plugins
+ Patched libkrun and crun runtime used by SPR plugins that need a full Linux
+ kernel. It bridges guest TAP networking into private Docker plugin networks
+ and provides Unix-socket to virtio-vsock IPC without exposing plugin APIs over
+ TCP or UDP.

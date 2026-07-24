@@ -4,11 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
-)
-import (
+	"time"
+
 	"github.com/gorilla/websocket"
+)
+
+const (
+	wsAuthTimeout        = 10 * time.Second
+	wsAuthMaxMessageSize = 8 * 1024
 )
 
 type WSClient struct {
@@ -18,8 +24,24 @@ type WSClient struct {
 
 var WSClients []*WSClient
 var WSMtx sync.Mutex
+var wsGeneration uint64
+var wsPendingConnections = make(chan struct{}, 32)
 
 var WSNotify = make(chan *WSMessage, 100)
+
+func websocketRequestOriginAllowed(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+
+	parsed, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+
+	return parsed.Host != "" && strings.EqualFold(parsed.Host, r.Host)
+}
 
 type WSMessage struct {
 	Type         string
@@ -77,6 +99,18 @@ func WSHasWildcardListenerUnlocked() bool {
 	return false
 }
 
+func WSRemoveClients(remove map[*WSClient]bool) {
+	WSMtx.Lock()
+	defer WSMtx.Unlock()
+	kept := WSClients[:0]
+	for _, client := range WSClients {
+		if !remove[client] {
+			kept = append(kept, client)
+		}
+	}
+	WSClients = kept
+}
+
 type apnsJob struct {
 	msgType string
 	data    string
@@ -102,10 +136,12 @@ func WSRunBroadcast() {
 		}
 
 		WSMtx.Lock()
-		//use a tmp array to keep track of active clients to keep
-		tmp := WSClients[:0]
-		for _, client := range WSClients {
+		clients := append([]*WSClient(nil), WSClients...)
+		WSMtx.Unlock()
 
+		failed := map[*WSClient]bool{}
+		delivered := 0
+		for _, client := range clients {
 			if message.WildcardAll {
 				//dont send wildcard messages to clients that are not listening to them.
 				if !client.WildcardListener {
@@ -113,20 +149,21 @@ func WSRunBroadcast() {
 				}
 			}
 
-			err := client.WriteMessage(websocket.TextMessage, bytes)
-			if err == nil {
-				//keep client around
-				tmp = append(tmp, client)
+			_ = client.SetWriteDeadline(time.Now().Add(5 * time.Second))
+			if err := client.WriteMessage(websocket.TextMessage, bytes); err != nil {
+				failed[client] = true
+				_ = client.Close()
+				continue
 			}
+			delivered++
 		}
-		//swap tmp and WSClients
-		WSClients = tmp
-		clients_len := len(WSClients)
-		WSMtx.Unlock()
+		if len(failed) > 0 {
+			WSRemoveClients(failed)
+		}
 
 		//if no WS clients got data sent, then run APNS instead
 		// if it was not a wildcardall message
-		if clients_len == 0 && !message.WildcardAll {
+		if delivered == 0 && !message.WildcardAll {
 			select {
 			case apnsQueue <- apnsJob{message.Type, message.Data}:
 			default:
@@ -142,8 +179,23 @@ func WSRunNotify() {
 	go apnsWorker()
 }
 
+func WSCloseAll() {
+	WSMtx.Lock()
+	clients := WSClients
+	WSClients = nil
+	wsGeneration++
+	WSMtx.Unlock()
+	for _, client := range clients {
+		_ = client.Close()
+	}
+}
+
 func authWebsocket(r *http.Request, c *websocket.Conn, OtpOff bool) bool {
 	//wait for authentication information
+	c.SetReadLimit(wsAuthMaxMessageSize)
+	deadline := time.Now().Add(wsAuthTimeout)
+	_ = c.SetReadDeadline(deadline)
+	_ = c.SetWriteDeadline(deadline)
 	mt, msg, err := c.ReadMessage()
 	if err != nil {
 		fmt.Println("Invalid auth packet")
@@ -158,21 +210,30 @@ func authWebsocket(r *http.Request, c *websocket.Conn, OtpOff bool) bool {
 	}
 
 	msgs := string(msg)
-	if strings.Index(msgs, ":") != -1 {
+	if strings.Contains(msgs, ":") {
+		rateKey := authRateKey("password", r)
+		if authFailureRateLimited(rateKey) {
+			_ = c.WriteMessage(websocket.TextMessage, []byte("Authentication failure"))
+			_ = c.Close()
+			return false
+		}
 		pieces := strings.SplitN(msgs, ":", 3)
 		if len(pieces) > 1 && authenticateUser(pieces[0], pieces[1]) {
 			if !OtpOff && shouldCheckOTPJWT(r, pieces[0]) {
 				if len(pieces) != 3 || !validateJwt(pieces[0], pieces[2]) {
 					//tell WS it a JWT was needed
-					c.WriteMessage(websocket.TextMessage, []byte("Invalid JWT OTP"))
-					c.Close()
+					_ = c.WriteMessage(websocket.TextMessage, []byte("Invalid JWT OTP"))
+					_ = c.Close()
 					return false
 				}
 			}
-			c.WriteMessage(websocket.TextMessage, []byte("success"))
+			authFailureRateClear(rateKey)
+			_ = c.SetWriteDeadline(time.Time{})
+			_ = c.WriteMessage(websocket.TextMessage, []byte("success"))
 			SprbusPublish("auth:success", map[string]string{"type": "user", "name": pieces[0], "reason": remoteIP(r) + ":" + "websocket", "ip": remoteIP(r)})
 			return true
 		} else {
+			authPasswordFailureRateRecord(rateKey, pieces[0], pieces[1])
 			SprbusPublish("auth:failure", map[string]string{"type": "user", "name": pieces[0], "reason": remoteIP(r) + ":" + "bad credentails on websocket", "ip": remoteIP(r)})
 		}
 	} else {
@@ -183,7 +244,8 @@ func authWebsocket(r *http.Request, c *websocket.Conn, OtpOff bool) bool {
 				//scoped tokens get rejected for WS
 				SprbusPublish("auth:failure", map[string]string{"type": "token", "name": tokenName, "reason": remoteIP(r) + ":" + "unsupported scopes on websocket", "ip": remoteIP(r)})
 			} else {
-				c.WriteMessage(websocket.TextMessage, []byte("success"))
+				_ = c.SetWriteDeadline(time.Time{})
+				_ = c.WriteMessage(websocket.TextMessage, []byte("success"))
 				SprbusPublish("auth:success", map[string]string{"type": "token", "name": tokenName, "reason": remoteIP(r) + ":" + "websocket", "ip": remoteIP(r)})
 				return true
 			}
@@ -191,18 +253,24 @@ func authWebsocket(r *http.Request, c *websocket.Conn, OtpOff bool) bool {
 			SprbusPublish("auth:failure", map[string]string{"type": "token", "name": tokenName, "reason": remoteIP(r) + ":" + "unknown token", "ip": remoteIP(r)})
 		}
 	}
-	c.WriteMessage(websocket.TextMessage, []byte("Authentication failure"))
-	c.Close()
+	_ = c.WriteMessage(websocket.TextMessage, []byte("Authentication failure"))
+	_ = c.Close()
 	return false
 }
 
 func handleWebsocket(w http.ResponseWriter, r *http.Request, wildcard bool) {
+	select {
+	case wsPendingConnections <- struct{}{}:
+		defer func() { <-wsPendingConnections }()
+	default:
+		http.Error(w, "too many pending websocket connections", http.StatusTooManyRequests)
+		return
+	}
 
 	var upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
-		//the API does not use cookie authentication -- this does not weaken security
-		CheckOrigin: func(r *http.Request) bool { return true },
+		CheckOrigin:     websocketRequestOriginAllowed,
 	}
 
 	c, err := upgrader.Upgrade(w, r, nil)
@@ -210,18 +278,18 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request, wildcard bool) {
 		return
 	}
 
-	if authWebsocket(r, c, false) == true {
+	WSMtx.Lock()
+	generation := wsGeneration
+	WSMtx.Unlock()
+	if authWebsocket(r, c, false) {
 		WSMtx.Lock()
-
-		newClient := &WSClient{
-			Conn:             c,
-			WildcardListener: wildcard,
+		if generation == wsGeneration {
+			WSClients = append(WSClients, &WSClient{c, wildcard})
+		} else {
+			_ = c.Close()
 		}
-
-		WSClients = append(WSClients, newClient)
 		WSMtx.Unlock()
 	}
-
 }
 
 func webSocket(w http.ResponseWriter, r *http.Request) {

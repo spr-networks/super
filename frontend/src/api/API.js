@@ -47,6 +47,9 @@ export const getApiURL = () => {
   }
 
   if (REACT_APP_API) {
+    if (Platform.OS == 'web' && process.env.NODE_ENV == 'development') {
+      return document.location.origin + '/__spr_api/'
+    }
     try {
       let url = new URL(REACT_APP_API)
       return url.toString()
@@ -146,13 +149,18 @@ class API {
 
     let login = await AsyncStorage.getItem('user')
     let user = JSON.parse(login)
-    //this.authHeaders =
-    return user && user.authdata ? 'Basic ' + user.authdata : null
+    if (user && user.token) {
+      gAuthHeaders = 'Bearer ' + user.token
+    } else if (user && user.authdata) {
+      gAuthHeaders = 'Basic ' + user.authdata
+    }
+
+    return gAuthHeaders
   }
 
   setAuthHeaders(username = '', password = '') {
     this.authHeaders = 'Basic ' + Base64.btoa(username + ':' + password)
-    saveLogin(username, password)
+    gAuthHeaders = this.authHeaders
   }
 
   setAuthTokenHeaders(token = '') {
@@ -170,8 +178,8 @@ class API {
     }
 
     //instances cache authHeaders; re-sync from the login credentials so a
-    //re-login or router switch does not replay stale credentials until restart
-    if (this.remoteURL == '' && gAuthHeaders) {
+    //re-login, logout or router switch does not replay stale credentials
+    if (this.remoteURL == '') {
       this.authHeaders = gAuthHeaders
     }
 
@@ -343,11 +351,32 @@ export const testLogin = (username, password, callback) => {
     })
 }
 
+export const clearLogin = () => {
+  gAuthHeaders = null
+  setJWTOTPHeader('')
+  return AsyncStorage.removeItem('user')
+}
+
+export const saveTokenLogin = (
+  username,
+  token,
+  hostname = null,
+  protocol = null
+) => {
+  gAuthHeaders = 'Bearer ' + token
+  setJWTOTPHeader('')
+  return AsyncStorage.setItem(
+    'user',
+    JSON.stringify({ token, username, hostname, protocol })
+  )
+}
+
 export const saveLogin = (
   username,
   password,
   hostname = null,
-  protocol = null
+  protocol = null,
+  secure = false
 ) => {
   gAuthHeaders = 'Basic ' + Base64.btoa(username + ':' + password)
 
@@ -356,14 +385,8 @@ export const saveLogin = (
 
   let authdata = Base64.btoa(username + ':' + password)
 
-  return AsyncStorage.setItem(
-    'user',
-    JSON.stringify({
-      authdata,
-      username,
-      password,
-      hostname,
-      protocol
-    })
-  )
+  let user = { username, hostname, protocol, secure }
+  if (!secure) Object.assign(user, { authdata, password })
+
+  return AsyncStorage.setItem('user', JSON.stringify(user))
 }

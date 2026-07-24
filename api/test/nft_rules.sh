@@ -665,6 +665,11 @@ table inet mangle {
     flags interval, timeout;
   }
 
+  map geo_route {
+    type ipv4_addr : verdict;
+    flags interval;
+  }
+
   # see description above. duplicated since nftables doesnt have cross-table sets
   set supernetworks {
     type ipv4_addr;
@@ -685,6 +690,7 @@ table inet mangle {
     counter ip saddr . ip daddr . tcp dport vmap @site_forward_tcp_port_mangle
     counter ip saddr . ip daddr . udp dport vmap @site_forward_udp_port_mangle
 
+    iifname != "lo" iifname != "site*" iifname != @uplink_interfaces ip daddr != @supernetworks counter ip daddr vmap @geo_route
 
     # then go to load balancing if applied
     jump OUTBOUND_UPLINK

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
 import { authAPI, setJWTOTPHeader } from 'api'
+import { isPasskeySupported, validatePasskey } from 'api/Passkey'
 
 import {
   AlertCircleIcon,
@@ -56,6 +57,19 @@ const OTPValidate = ({ onSuccess, onSetup, isLogin, ...props }) => {
     otp(code)
   }
 
+  const handleClickPasskey = () => {
+    validatePasskey()
+      .then((res) => {
+        setJWTOTPHeader(res)
+        setErrors({})
+
+        onSuccess()
+      })
+      .catch(() => {
+        setErrors({ validate: 'Passkey validation failed' })
+      })
+  }
+
   useEffect(() => {
     if (!isLogin) {
       authAPI
@@ -108,6 +122,17 @@ const OTPValidate = ({ onSuccess, onSetup, isLogin, ...props }) => {
           <ButtonText>Verify OTP Code</ButtonText>
         </Button>
       </FormControl>
+      {isPasskeySupported() ? (
+        <FormControl>
+          <Button
+            action="secondary"
+            variant="outline"
+            onPress={handleClickPasskey}
+          >
+            <ButtonText>Use Passkey Instead</ButtonText>
+          </Button>
+        </FormControl>
+      ) : null}
     </VStack>
   )
 }

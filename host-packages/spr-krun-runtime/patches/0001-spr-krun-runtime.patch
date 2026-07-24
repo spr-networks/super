@@ -1,0 +1,1592 @@
+diff --git a/crun/src/libcrun/container.c b/crun/src/libcrun/container.c
+index 5fd045f..7ff460f 100644
+--- a/crun/src/libcrun/container.c
++++ b/crun/src/libcrun/container.c
+@@ -2908,6 +2908,19 @@ libcrun_container_run_internal (libcrun_container_t *container, libcrun_context_
+   if (UNLIKELY (ret < 0))
+     goto fail;
+
++  /* `run` has no later start command.  Invoke the handler while the child is
++     still blocked on the sync socket, after its network namespace exists and
++     any OCI-configured network devices have been moved into it.  The
++     create+start path invokes the same hook from libcrun_container_start.  */
++  if (context->fifo_exec_wait_fd < 0 && container_args.custom_handler
++      && container_args.custom_handler->vtable->start_container)
++    {
++      ret = container_args.custom_handler->vtable->start_container (container_args.custom_handler->cookie,
++                                                                     context, container, pid, err);
++      if (UNLIKELY (ret < 0))
++        goto fail;
++    }
++
+   /* sync send own pid.  */
+   ret = TEMP_FAILURE_RETRY (write (sync_socket, &pid, sizeof (pid)));
+   if (UNLIKELY (ret != sizeof (pid)))
+@@ -3338,6 +3351,7 @@ int
+ libcrun_container_start (libcrun_context_t *context, const char *id, libcrun_error_t *err)
+ {
+   cleanup_container libcrun_container_t *container = NULL;
++  cleanup_custom_handler_instance struct custom_handler_instance_s *custom_handler = NULL;
+   const char *state_root = context->state_root;
+   runtime_spec_schema_config_schema *def;
+   cleanup_container_status libcrun_container_status_t status = {};
+@@ -3359,6 +3373,17 @@ libcrun_container_start (libcrun_context_t *context, const char *id, libcrun_err
+   if (UNLIKELY (ret < 0))
+     return ret;
+
++  ret = libcrun_configure_handler (context->handler_manager, context, container, &custom_handler, err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++
++  if (custom_handler && custom_handler->vtable->start_container)
++    {
++      ret = custom_handler->vtable->start_container (custom_handler->cookie, context, container, status.pid, err);
++      if (UNLIKELY (ret < 0))
++        return ret;
++    }
++
+   if (context->notify_socket)
+     {
+       ret = get_notify_fd (context, container, &fd, err);
+diff --git a/crun/src/libcrun/custom-handler.h b/crun/src/libcrun/custom-handler.h
+index 7536191..c4d5b4c 100644
+--- a/crun/src/libcrun/custom-handler.h
++++ b/crun/src/libcrun/custom-handler.h
+@@ -43,6 +43,10 @@ struct custom_handler_s
+                               libcrun_context_t *context, libcrun_container_t *container,
+                               const char *rootfs, libcrun_error_t *err);
+
++  int (*start_container) (void *cookie, libcrun_context_t *context,
++                          libcrun_container_t *container, pid_t pid,
++                          libcrun_error_t *err);
++
+   int (*can_handle_container) (libcrun_container_t *container, libcrun_error_t *err);
+
+   int (*modify_oci_configuration) (void *cookie, libcrun_context_t *context,
+diff --git a/crun/src/libcrun/handlers/krun.c b/crun/src/libcrun/handlers/krun.c
+index 6e249a9..8fd17b1 100644
+--- a/crun/src/libcrun/handlers/krun.c
++++ b/crun/src/libcrun/handlers/krun.c
+@@ -25,11 +25,19 @@
+ #include <unistd.h>
+ #include <sys/stat.h>
+ #include <sys/socket.h>
++#include <sys/resource.h>
+ #include <errno.h>
+ #include <sys/param.h>
+ #include <sys/types.h>
+ #include <sys/sysmacros.h>
+ #include <fcntl.h>
++#include <ctype.h>
++#include <limits.h>
++#include <linux/ethtool.h>
++#include <linux/sockios.h>
++#include <net/if.h>
++#include <sys/ioctl.h>
++#include <sys/un.h>
+ #include <sched.h>
+ #include <ocispec/runtime_spec_schema_config_schema.h>
+
+@@ -58,6 +66,18 @@
+ /* The minimum amount of RAM for a viable microVM is 128 MB. */
+ #define LIBKRUN_MINIMUM_RAM_MIB 128
+
++/* Only sockets deliberately placed in this root-owned directory may cross
++ * the guest/host isolation boundary. */
++#define SPR_KRUN_RUN_DIR "/run"
++#define SPR_KRUN_SOCKET_ROOT SPR_KRUN_RUN_DIR "/spr-krun"
++#define SPR_KRUN_LISTEN_DIR SPR_KRUN_SOCKET_ROOT "/listen"
++#define SPR_KRUN_CONNECT_DIR SPR_KRUN_SOCKET_ROOT "/connect"
++#define SPR_KRUN_POLICY_ANNOTATION "run.oci.spr.krun.policy"
++#define SPR_KRUN_VAR_DIR "/var"
++#define SPR_KRUN_VAR_LIB_DIR SPR_KRUN_VAR_DIR "/lib"
++#define SPR_KRUN_POLICY_ROOT SPR_KRUN_VAR_LIB_DIR "/spr-krun"
++#define SPR_KRUN_POLICY_DIR SPR_KRUN_POLICY_ROOT "/policies"
++
+ /* crun dumps the container configuration into this file, which will be read by
+  * libkrun to set up the environment for the workload inside the microVM.
+  */
+@@ -68,12 +88,6 @@
+  */
+ #define KRUN_SEV_FILE "/krun-sev.json"
+
+-/* This file contains configuration parameters for the microVM. crun needs to
+- * read and parse it, using the information obtained from it to configure
+- * libkrun as required.
+- */
+-#define KRUN_VM_FILE "/.krun_vm.json"
+-
+ #define KRUN_FLAVOR_AWS_NITRO "aws-nitro"
+ #define KRUN_FLAVOR_SEV "sev"
+
+@@ -96,6 +110,7 @@ struct krun_config
+   json_object *config_doc;
+   json_object *config_tree;
+   bool use_passt;
++  bool use_tap;
+ };
+
+ /* libkrun handler.  */
+@@ -177,24 +192,171 @@ libkrun_enable_virtio_gpu (struct krun_config *kconf, uint32_t virgl_flags)
+ }
+
+ static int
+-libkrun_read_vm_config (struct krun_config *kconf, int rootfsfd, const char *rootfs, libcrun_error_t *err)
++libkrun_rlimit_resource (const char *name)
+ {
+-  int ret;
+-  cleanup_free char *config = NULL;
+-  cleanup_close int fd = -1;
++  struct
++  {
++    const char *name;
++    int value;
++  } resources[] = {
++    { "RLIMIT_AS", RLIMIT_AS },
++    { "RLIMIT_CORE", RLIMIT_CORE },
++    { "RLIMIT_CPU", RLIMIT_CPU },
++    { "RLIMIT_DATA", RLIMIT_DATA },
++    { "RLIMIT_FSIZE", RLIMIT_FSIZE },
++    { "RLIMIT_LOCKS", RLIMIT_LOCKS },
++    { "RLIMIT_MEMLOCK", RLIMIT_MEMLOCK },
++    { "RLIMIT_MSGQUEUE", RLIMIT_MSGQUEUE },
++    { "RLIMIT_NICE", RLIMIT_NICE },
++    { "RLIMIT_NOFILE", RLIMIT_NOFILE },
++    { "RLIMIT_NPROC", RLIMIT_NPROC },
++    { "RLIMIT_RSS", RLIMIT_RSS },
++    { "RLIMIT_RTPRIO", RLIMIT_RTPRIO },
++    { "RLIMIT_RTTIME", RLIMIT_RTTIME },
++    { "RLIMIT_SIGPENDING", RLIMIT_SIGPENDING },
++    { "RLIMIT_STACK", RLIMIT_STACK },
++    { NULL, -1 },
++  };
++
++  for (size_t i = 0; resources[i].name != NULL; i++)
++    if (strcmp (resources[i].name, name) == 0)
++      return resources[i].value;
++  return -1;
++}
+
+-  fd = safe_openat (rootfsfd, rootfs, KRUN_VM_FILE, O_RDONLY | O_CLOEXEC | O_NOFOLLOW, 0, err);
+-  if (fd < 0)
++/* libkrun's guest init receives limits through KRUN_RLIMITS; it does not
++ * parse process.rlimits from .krun_config.json. Forward the ordinary OCI
++ * process setting explicitly so Compose ulimits work inside the microVM. */
++static int
++libkrun_configure_rlimits (uint32_t ctx_id, void *handle, runtime_spec_schema_config_schema *def, libcrun_error_t *err)
++{
++  __typeof__ (krun_set_rlimits) *set_rlimits;
++  char **guest_rlimits;
++  size_t limits_len;
++  int ret = 0;
++
++  if (def == NULL || def->process == NULL || def->process->rlimits_len == 0)
++    return 0;
++
++  set_rlimits = dlsym (handle, "krun_set_rlimits");
++  if (set_rlimits == NULL)
++    return crun_make_error (err, 0, "could not find symbol `krun_set_rlimits` in the krun library");
++
++  limits_len = def->process->rlimits_len;
++  guest_rlimits = xmalloc (sizeof (*guest_rlimits) * (limits_len + 1));
++  memset (guest_rlimits, 0, sizeof (*guest_rlimits) * (limits_len + 1));
++  for (size_t i = 0; i < limits_len; i++)
+     {
+-      // The configuration file is optional, don't generate an error if it's missing.
+-      if (errno == ENOENT)
++      runtime_spec_schema_config_schema_process_rlimits_element *limit = def->process->rlimits[i];
++      if (limit == NULL || limit->type == NULL)
++        {
++          ret = crun_make_error (err, EINVAL, "invalid krun guest rlimit");
++          goto out;
++        }
++      int resource = libkrun_rlimit_resource (limit->type);
++      if (resource < 0)
+         {
+-          crun_error_release (err);
+-          return 0;
++          ret = crun_make_error (err, EINVAL, "invalid krun guest rlimit `%s`", limit->type);
++          goto out;
+         }
+-      return fd;
++      xasprintf (&guest_rlimits[i], "%d=%llu:%llu", resource,
++                 (unsigned long long) limit->soft, (unsigned long long) limit->hard);
+     }
+
++  ret = set_rlimits (ctx_id, (const char *const *) guest_rlimits);
++  if (ret < 0)
++    ret = crun_make_error (err, -ret, "could not configure krun guest rlimits");
++
++out:
++  for (size_t i = 0; i < limits_len; i++)
++    free (guest_rlimits[i]);
++  free (guest_rlimits);
++  return ret;
++}
++
++static int
++libkrun_check_trusted_directory (int fd, const char *path, mode_t forbidden_mode, libcrun_error_t *err)
++{
++  struct stat st;
++
++  if (fstat (fd, &st) < 0)
++    return crun_make_error (err, errno, "inspect trusted directory `%s`", path);
++  if (! S_ISDIR (st.st_mode) || st.st_uid != 0 || (st.st_mode & forbidden_mode) != 0)
++    return crun_make_error (err, EPERM, "`%s` is not a secure root-owned directory", path);
++  return 0;
++}
++
++static bool
++libkrun_valid_policy_token (const char *token)
++{
++  if (token == NULL || strlen (token) != 64)
++    return false;
++  for (size_t i = 0; i < 64; i++)
++    if (! ((token[i] >= '0' && token[i] <= '9') || (token[i] >= 'a' && token[i] <= 'f')))
++      return false;
++  return true;
++}
++
++/* The policy token is an untrusted bearer reference.  Privileged values live
++ * only in the referenced root-owned file; raw krun.* OCI annotations and the
++ * image-controlled /.krun_vm.json are deliberately ignored. */
++static int
++libkrun_read_trusted_policy (struct krun_config *kconf, libcrun_container_t *container, libcrun_error_t *err)
++{
++  cleanup_close int varfd = -1;
++  cleanup_close int libfd = -1;
++  cleanup_close int rootfd = -1;
++  cleanup_close int policyfd = -1;
++  cleanup_close int fd = -1;
++  cleanup_free char *filename = NULL;
++  cleanup_free char *config = NULL;
++  struct stat st;
++  const char *token;
++  int ret;
++
++  token = find_annotation (container, SPR_KRUN_POLICY_ANNOTATION);
++  if (token == NULL)
++    return 0;
++  if (! libkrun_valid_policy_token (token))
++    return crun_make_error (err, EINVAL, "invalid SPR krun policy token");
++
++  varfd = open (SPR_KRUN_VAR_DIR, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
++  if (varfd < 0)
++    return crun_make_error (err, errno, "open trusted krun policy parent");
++  ret = libkrun_check_trusted_directory (varfd, SPR_KRUN_VAR_DIR, S_IWGRP | S_IWOTH, err);
++  if (ret < 0)
++    return ret;
++
++  libfd = openat (varfd, "lib", O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
++  if (libfd < 0)
++    return crun_make_error (err, errno, "open trusted krun policy library directory");
++  ret = libkrun_check_trusted_directory (libfd, SPR_KRUN_VAR_LIB_DIR, S_IWGRP | S_IWOTH, err);
++  if (ret < 0)
++    return ret;
++
++  rootfd = openat (libfd, "spr-krun", O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
++  if (rootfd < 0)
++    return crun_make_error (err, errno, "open trusted krun policy root");
++  ret = libkrun_check_trusted_directory (rootfd, SPR_KRUN_POLICY_ROOT, S_IRWXG | S_IRWXO, err);
++  if (ret < 0)
++    return ret;
++
++  policyfd = openat (rootfd, "policies", O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
++  if (policyfd < 0)
++    return crun_make_error (err, errno, "open trusted krun policy directory");
++  ret = libkrun_check_trusted_directory (policyfd, SPR_KRUN_POLICY_DIR, S_IRWXG | S_IRWXO, err);
++  if (ret < 0)
++    return ret;
++
++  xasprintf (&filename, "%s.json", token);
++  fd = openat (policyfd, filename, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
++  if (fd < 0)
++    return crun_make_error (err, errno, "open manager-issued krun policy");
++  if (fstat (fd, &st) < 0)
++    return crun_make_error (err, errno, "inspect manager-issued krun policy");
++  if (! S_ISREG (st.st_mode) || st.st_uid != 0 || (st.st_mode & (S_IRWXG | S_IRWXO)) != 0)
++    return crun_make_error (err, EPERM, "manager-issued krun policy is not a private root-owned regular file");
++
+   ret = read_all_fd (fd, "krun configuration file", &config, NULL, err);
+   if (UNLIKELY (ret < 0))
+     return ret;
+@@ -207,59 +369,156 @@ libkrun_read_vm_config (struct krun_config *kconf, int rootfsfd, const char *roo
+   return 0;
+ }
+
+-/*
+- * Default to parsing the OCI annotations to find the specified microVM
+- * attribute. If the desired attribute is not found within the OCI annotations
+- * or the krun_vm.json file, then return a negative integer.
+- *
+- * The configuration precedence is as follows:
+- * OCI annotations -> krun_vm.json.
+- */
+ static int
+-libkrun_parse_resource_configuration (json_object *config_tree, libcrun_container_t *container, const char *annotation, const char *key)
++libkrun_parse_resource_configuration (json_object *config_tree, const char *key)
+ {
+-  char *val_str, *endptr;
++  int64_t val_int64;
+   int val = -1;
+   json_object *val_json = NULL;
+
+-  val_str = (char *) find_annotation (container, annotation);
+-  if (val_str != NULL)
+-    {
+-      errno = 0;
+-      val = (int) strtol (val_str, &endptr, 10);
+-      if (errno != 0 || endptr == val_str || *endptr != '\0')
+-        /* Annotations value is not a valid integer. */
+-        error (EXIT_FAILURE, 0, "krun annotation %s value cannot be converted to an integer", annotation);
+-
+-      if (val < 0)
+-        error (EXIT_FAILURE, 0, "krun annotation %s value must be a positive integer", annotation);
+-
+-      return val;
+-    }
+-  else if (config_tree != NULL)
++  if (config_tree != NULL)
+     {
+       val_json = json_object_object_get (config_tree, key);
+       if (val_json == NULL)
+         return val;
+       if (! json_object_is_type (val_json, json_type_int))
+-        error (EXIT_FAILURE, 0, "krun krun_vm.json %s value is not an integer", key);
++        error (EXIT_FAILURE, 0, "trusted krun policy %s value is not an integer", key);
+
+-      val = (int) json_object_get_int64 (val_json);
++      val_int64 = json_object_get_int64 (val_json);
++      if (val_int64 < 0 || val_int64 > INT_MAX)
++        error (EXIT_FAILURE, 0, "trusted krun policy %s value is outside the supported integer range", key);
++      val = (int) val_int64;
+     }
+
+   return val;
+ }
+
++static const char *
++libkrun_string_configuration (json_object *config_tree, const char *key)
++{
++  json_object *value;
++
++  if (config_tree == NULL)
++    return NULL;
++  value = json_object_object_get (config_tree, key);
++  if (value == NULL || ! json_object_is_type (value, json_type_string))
++    return NULL;
++  return json_object_get_string (value);
++}
++
++static bool
++libkrun_valid_socket_name (const char *name)
++{
++  size_t len;
++
++  if (name == NULL || ! isalnum ((unsigned char) name[0]))
++    return false;
++
++  len = strlen (name);
++  if (len < 6 || strcmp (name + len - 5, ".sock") != 0)
++    return false;
++
++  for (size_t i = 1; i < len; i++)
++    if (! isalnum ((unsigned char) name[i]) && name[i] != '_' && name[i] != '-' && name[i] != '.')
++      return false;
++
++  return true;
++}
++
++/* Validate a vsock endpoint relative to an opened, trusted directory.  The
++ * directory is the allowlist: only root can place host services in it. */
++static int
++libkrun_validate_vsock_path (const char *path, bool listen, libcrun_error_t *err)
++{
++  cleanup_close int runfd = -1;
++  cleanup_close int rootfd = -1;
++  cleanup_close int dirfd = -1;
++  struct stat run_st;
++  struct stat root_st;
++  struct stat dir_st;
++  struct stat socket_st;
++  const char *directory;
++  const char *directory_name;
++  const char *prefix;
++  const char *name;
++  int ret;
++
++  directory = listen ? SPR_KRUN_LISTEN_DIR : SPR_KRUN_CONNECT_DIR;
++  directory_name = listen ? "listen" : "connect";
++  prefix = listen ? SPR_KRUN_LISTEN_DIR "/" : SPR_KRUN_CONNECT_DIR "/";
++  if (path == NULL || strncmp (path, prefix, strlen (prefix)) != 0)
++    return crun_make_error (err, EINVAL, "krun vsock path must be a direct child of `%s`", directory);
++
++  name = path + strlen (prefix);
++  if (! libkrun_valid_socket_name (name) || strchr (name, '/') != NULL || strlen (path) >= sizeof (((struct sockaddr_un *) 0)->sun_path))
++    return crun_make_error (err, EINVAL, "invalid krun vsock socket name `%s`", name);
++
++  runfd = open (SPR_KRUN_RUN_DIR, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
++  if (UNLIKELY (runfd < 0))
++    return crun_make_error (err, errno, "open trusted runtime directory");
++  if (fstat (runfd, &run_st) < 0)
++    return crun_make_error (err, errno, "inspect trusted runtime directory");
++  if (! S_ISDIR (run_st.st_mode) || run_st.st_uid != 0 || (run_st.st_mode & (S_IWGRP | S_IWOTH)) != 0)
++    return crun_make_error (err, EPERM, "`%s` must be a root-owned directory not writable by group or other", SPR_KRUN_RUN_DIR);
++
++  rootfd = openat (runfd, "spr-krun", O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
++  if (UNLIKELY (rootfd < 0))
++    return crun_make_error (err, errno, "open trusted krun socket root");
++  if (fstat (rootfd, &root_st) < 0)
++    return crun_make_error (err, errno, "inspect trusted krun socket root");
++  if (! S_ISDIR (root_st.st_mode) || root_st.st_uid != 0 || (root_st.st_mode & (S_IWGRP | S_IWOTH)) != 0)
++    return crun_make_error (err, EPERM, "`%s` must be a root-owned directory not writable by group or other", SPR_KRUN_SOCKET_ROOT);
++
++  dirfd = openat (rootfd, directory_name, O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
++  if (UNLIKELY (dirfd < 0))
++    return crun_make_error (err, errno, "open trusted krun socket directory");
++  if (fstat (dirfd, &dir_st) < 0)
++    return crun_make_error (err, errno, "inspect trusted krun socket directory");
++  if (! S_ISDIR (dir_st.st_mode) || dir_st.st_uid != 0 || (dir_st.st_mode & (S_IWGRP | S_IWOTH)) != 0)
++    return crun_make_error (err, EPERM, "`%s` must be a root-owned directory not writable by group or other", directory);
++
++  ret = fstatat (dirfd, name, &socket_st, AT_SYMLINK_NOFOLLOW);
++  if (ret < 0)
++    {
++      if (errno == ENOENT && listen)
++        return 0;
++      return crun_make_error (err, errno, "inspect krun vsock UNIX socket `%s`", path);
++    }
++
++  if (listen)
++    {
++      if (! S_ISSOCK (socket_st.st_mode) || socket_st.st_uid != 0)
++        return crun_make_error (err, EPERM, "refusing to replace non-root or non-socket krun listener `%s`", path);
++      if (unlinkat (dirfd, name, 0) < 0)
++        {
++          if (errno == ENOENT)
++            return 0;
++          return crun_make_error (err, errno, "remove prior krun listener `%s`", path);
++        }
++      return 0;
++    }
++
++  if (! S_ISSOCK (socket_st.st_mode) || socket_st.st_uid != 0)
++    return crun_make_error (err, EPERM, "krun vsock endpoint `%s` must be a root-owned UNIX socket", path);
++
++  return 0;
++}
++
+ static int
+ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf, libcrun_container_t *container, libcrun_error_t *err)
+ {
+   runtime_spec_schema_config_schema *def = container->container_def;
+   int32_t (*krun_set_vm_config) (uint32_t ctx_id, uint8_t num_vcpus, uint32_t ram_mib);
+   int32_t (*krun_add_net_unixstream) (uint32_t ctx_id, const char *c_path, int fd, uint8_t *const c_mac, uint32_t features, uint32_t flags);
+-  int cpus, ram_mib, gpu_flags, nested_virt, ret;
++  int32_t (*krun_add_net_tap) (uint32_t ctx_id, const char *c_tap_name, uint8_t *const c_mac, uint32_t features, uint32_t flags);
++  int32_t (*krun_add_vsock_port2) (uint32_t ctx_id, uint32_t port, const char *c_filepath, bool listen);
++  const char *vsock_path, *vsock_connect_path, *tap_name, *mac_string;
++  unsigned int mac_values[6];
++  uint8_t mac[6];
++  int chars, cpus, ram_mib, gpu_flags, nested_virt, vsock_port, vsock_connect_port, ret;
+   cpu_set_t set;
+
+-  cpus = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.cpus", "cpus");
++  cpus = libkrun_parse_resource_configuration (kconf->config_tree, "cpus");
+   if (cpus <= 0)
+     {
+       CPU_ZERO (&set);
+@@ -269,7 +528,7 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+         cpus = 1;
+     }
+
+-  ram_mib = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.ram_mib", "ram_mib");
++  ram_mib = libkrun_parse_resource_configuration (kconf->config_tree, "ram_mib");
+   if (ram_mib <= LIBKRUN_MINIMUM_RAM_MIB)
+     {
+       if (def && def->linux && def->linux->resources && def->linux->resources->memory
+@@ -288,7 +547,7 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+   if (UNLIKELY (ret < 0))
+     return crun_make_error (err, -ret, "could not set krun vm configuration");
+
+-  gpu_flags = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.gpu_flags", "gpu_flags");
++  gpu_flags = libkrun_parse_resource_configuration (kconf->config_tree, "gpu_flags");
+   if (gpu_flags > 0)
+     {
+       if (access ("/dev/dri", F_OK) != 0)
+@@ -302,7 +561,7 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+         return crun_make_error (err, -ret, "could not enable virtio gpu");
+     }
+
+-  nested_virt = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.nested_virt", "nested_virt");
++  nested_virt = libkrun_parse_resource_configuration (kconf->config_tree, "nested_virt");
+   if (nested_virt > 0)
+     {
+       int32_t (*krun_check_nested_virt) (void);
+@@ -334,6 +593,74 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+       if (UNLIKELY (ret < 0))
+         return crun_make_error (err, -ret, "could not set krun net configuration");
+     }
++  else if (kconf->use_tap)
++    {
++      tap_name = libkrun_string_configuration (kconf->config_tree, "tap_name");
++      mac_string = libkrun_string_configuration (kconf->config_tree, "net_mac");
++      if (tap_name == NULL || mac_string == NULL)
++        return crun_make_error (err, EINVAL, "trusted krun TAP policy requires tap_name and net_mac");
++
++      chars = 0;
++      if (sscanf (mac_string, "%2x:%2x:%2x:%2x:%2x:%2x%n",
++                  &mac_values[0], &mac_values[1], &mac_values[2],
++                  &mac_values[3], &mac_values[4], &mac_values[5],
++                  &chars)
++              != 6
++          || mac_string[chars] != '\0')
++        return crun_make_error (err, EINVAL, "trusted krun net_mac must be a six-octet MAC address");
++
++      for (int i = 0; i < 6; i++)
++        mac[i] = (uint8_t) mac_values[i];
++      if ((mac[0] & 1) != 0)
++        return crun_make_error (err, EINVAL, "trusted krun net_mac must be a unicast MAC address");
++
++      krun_add_net_tap = dlsym (handle, "krun_add_net_tap");
++      if (krun_add_net_tap == NULL)
++        return crun_make_error (err, 0, "could not find symbol `krun_add_net_tap` in the krun library");
++
++      ret = krun_add_net_tap (ctx_id, tap_name, &mac[0], COMPAT_NET_FEATURES, NET_FLAG_DHCP_CLIENT);
++      if (UNLIKELY (ret < 0))
++        return crun_make_error (err, -ret, "could not configure krun TAP device `%s`", tap_name);
++    }
++
++  vsock_path = libkrun_string_configuration (kconf->config_tree, "vsock_path");
++  vsock_port = libkrun_parse_resource_configuration (kconf->config_tree, "vsock_port");
++  if (vsock_path != NULL || vsock_port >= 0)
++    {
++      ret = libkrun_validate_vsock_path (vsock_path, true, err);
++      if (UNLIKELY (ret < 0))
++        return ret;
++      if (vsock_port <= 0)
++        return crun_make_error (err, EINVAL, "trusted krun vsock_port must be a positive integer");
++
++      krun_add_vsock_port2 = dlsym (handle, "krun_add_vsock_port2");
++      if (krun_add_vsock_port2 == NULL)
++        return crun_make_error (err, 0, "could not find symbol `krun_add_vsock_port2` in the krun library");
++
++      ret = krun_add_vsock_port2 (ctx_id, (uint32_t) vsock_port, vsock_path, true);
++      if (UNLIKELY (ret < 0))
++        return crun_make_error (err, -ret, "could not configure krun vsock UNIX socket `%s`", vsock_path);
++    }
++
++  vsock_connect_path = libkrun_string_configuration (kconf->config_tree, "vsock_connect_path");
++  vsock_connect_port = libkrun_parse_resource_configuration (kconf->config_tree, "vsock_connect_port");
++  if (vsock_connect_path != NULL || vsock_connect_port >= 0)
++    {
++      ret = libkrun_validate_vsock_path (vsock_connect_path, false, err);
++      if (UNLIKELY (ret < 0))
++        return ret;
++      if (vsock_connect_port <= 0)
++        return crun_make_error (err, EINVAL, "trusted krun vsock_connect_port must be a positive integer");
++
++      if (krun_add_vsock_port2 == NULL)
++        krun_add_vsock_port2 = dlsym (handle, "krun_add_vsock_port2");
++      if (krun_add_vsock_port2 == NULL)
++        return crun_make_error (err, 0, "could not find symbol `krun_add_vsock_port2` in the krun library");
++
++      ret = krun_add_vsock_port2 (ctx_id, (uint32_t) vsock_connect_port, vsock_connect_path, false);
++      if (UNLIKELY (ret < 0))
++        return crun_make_error (err, -ret, "could not configure krun host UNIX socket `%s`", vsock_connect_path);
++    }
+
+   if (kconf->config_tree != NULL)
+     {
+@@ -350,7 +677,7 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+ }
+
+ static int
+-libkrun_configure_flavor (void *cookie, json_object *config_tree, libcrun_container_t *container, libcrun_error_t *err)
++libkrun_configure_flavor (void *cookie, json_object *config_tree, libcrun_error_t *err)
+ {
+   int ret, sev_indicated = 0, awsnitro_indicated = 0;
+   struct krun_config *kconf = (struct krun_config *) cookie;
+@@ -361,11 +688,8 @@ libkrun_configure_flavor (void *cookie, json_object *config_tree, libcrun_contai
+   close_handles[0] = NULL;
+   close_handles[1] = NULL;
+
+-  // Check if the user provided the krun variant through OCI annotations.
+-  flavor = find_annotation (container, "krun.variant");
+-  if (flavor == NULL && config_tree != NULL)
++  if (config_tree != NULL)
+     {
+-      // If the user doesn't specify a variant via OCI annotations, check the krun VM config to see if the "flavor" field was populated.
+       val_flavor = json_object_object_get (config_tree, "flavor");
+       if (val_flavor != NULL && json_object_is_type (val_flavor, json_type_string))
+         flavor = json_object_get_string (val_flavor);
+@@ -377,10 +701,6 @@ libkrun_configure_flavor (void *cookie, json_object *config_tree, libcrun_contai
+       awsnitro_indicated |= strcmp (flavor, KRUN_FLAVOR_AWS_NITRO) == 0;
+     }
+
+-  // To maintain backward compatibility, also use the SEV flavor if the
+-  // KRUN_SEV_FILE was found.
+-  sev_indicated |= access (KRUN_SEV_FILE, F_OK) == 0;
+-
+   if (sev_indicated)
+     {
+       if (kconf->handle_sev == NULL)
+@@ -442,10 +762,10 @@ libkrun_exec (void *cookie, libcrun_container_t *container, const char *pathname
+                             const char *const argv[], const char *const envp[]);
+   struct krun_config *kconf = (struct krun_config *) cookie;
+   void *handle;
+   int32_t ctx_id, ret;
+   libcrun_error_t err;
+
+-  ret = libkrun_configure_flavor (cookie, kconf->config_tree, container, &err);
++  ret = libkrun_configure_flavor (cookie, kconf->config_tree, &err);
+   if (UNLIKELY (ret < 0))
+     {
+       int errcode = crun_error_get_errno (&err);
+@@ -544,18 +864,29 @@ libkrun_exec (void *cookie, libcrun_container_t *container, const char *pathname
+         error (EXIT_FAILURE, -ret, "could not set enclave execution arguments");
+     }
+
+   ret = libkrun_configure_vm (ctx_id, handle, kconf, container, &err);
+   if (UNLIKELY (ret))
+     {
+       int errcode = crun_error_get_errno (&err);
+       libcrun_error_t *tmp_err = &err;
+       libcrun_error_write_warning_and_release (NULL, &tmp_err);
+       error (EXIT_FAILURE, errcode, "could not configure krun vm");
+     }
+
++  ret = libkrun_configure_rlimits (ctx_id, handle, def, &err);
++  if (UNLIKELY (ret < 0))
++    {
++      int errcode = crun_error_get_errno (&err);
++      libcrun_error_t *tmp_err = &err;
++      libcrun_error_write_warning_and_release (NULL, &tmp_err);
++      error (EXIT_FAILURE, errcode, "could not configure krun guest rlimits");
++    }
++
+   json_object_put (kconf->config_doc);
++  kconf->config_doc = NULL;
++  kconf->config_tree = NULL;
+
+   ret = krun_start_enter (ctx_id);
+   if (UNLIKELY (ret < 0))
+     error (EXIT_FAILURE, -ret, "could not start krun");
+
+@@ -563,7 +894,7 @@ libkrun_exec (void *cookie, libcrun_container_t *container, const char *pathname
+ }
+
+ static int
+-libkrun_start_passt (void *cookie, libcrun_container_t *container)
++libkrun_start_passt (void *cookie)
+ {
+   struct krun_config *kconf = (struct krun_config *) cookie;
+   pid_t pid;
+@@ -575,9 +906,16 @@ libkrun_start_passt (void *cookie, libcrun_container_t *container)
+   int null;
+   int ret;
+
+-  use_passt = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.use_passt", "use_passt");
++  use_passt = libkrun_parse_resource_configuration (kconf->config_tree, "use_passt");
+   if (use_passt > 0)
+-    kconf->use_passt = 1;
++    {
++      if (kconf->use_tap)
++        {
++          errno = EINVAL;
++          return -1;
++        }
++      kconf->use_passt = 1;
++    }
+   else
+     return 0;
+
+@@ -589,12 +927,12 @@ libkrun_start_passt (void *cookie, libcrun_container_t *container)
+   argv_idx = 0;
+   passt_argv[argv_idx++] = (char *) "passt";
+   passt_argv[argv_idx++] = (char *) "-t";
+-  passt_argv[argv_idx++] = (char *) "all";
++  passt_argv[argv_idx++] = (char *) "none";
+
+   if (! kconf->has_awsnitro)
+     {
+       passt_argv[argv_idx++] = (char *) "-u";
+-      passt_argv[argv_idx++] = (char *) "all";
++      passt_argv[argv_idx++] = (char *) "none";
+       passt_argv[argv_idx++] = (char *) "--no-dhcp-dns";
+     }
+
+@@ -634,6 +972,358 @@ libkrun_start_passt (void *cookie, libcrun_container_t *container)
+   return 0;
+ }
+
++static bool
++libkrun_valid_ifname (const char *name)
++{
++  size_t len;
++
++  if (name == NULL)
++    return false;
++
++  len = strlen (name);
++  if (len == 0 || len >= IFNAMSIZ)
++    return false;
++
++  for (size_t i = 0; i < len; i++)
++    if (! isalnum ((unsigned char) name[i]) && name[i] != '_' && name[i] != '-' && name[i] != '.')
++      return false;
++
++  return true;
++}
++
++/* Docker attaches the plugin through a veth.  Query the kernel driver rather
++ * than relying on a plugin-controlled name or racy sysfs link metadata.
++ * Kernel-created tunnel placeholders (tunl0, gre0, gretap0, and friends) must
++ * not be mistaken for plugin uplinks. */
++static int
++libkrun_is_veth_interface (const struct if_nameindex *interface, bool *is_veth, libcrun_error_t *err)
++{
++  struct ethtool_drvinfo driver_info = { .cmd = ETHTOOL_GDRVINFO };
++  struct ifreq request = {};
++  cleanup_close int socket_fd = -1;
++  int ret;
++
++  *is_veth = false;
++  socket_fd = socket (AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
++  if (UNLIKELY (socket_fd < 0))
++    return crun_make_error (err, errno, "open krun uplink query socket");
++
++  strncpy (request.ifr_name, interface->if_name, sizeof (request.ifr_name) - 1);
++  request.ifr_data = (char *) &driver_info;
++  ret = ioctl (socket_fd, SIOCETHTOOL, &request);
++  if (UNLIKELY (ret < 0))
++    {
++      if (errno == EOPNOTSUPP || errno == ENOTTY || errno == EINVAL)
++        return 0;
++      return crun_make_error (err, errno, "query krun uplink driver for `%s`", interface->if_name);
++    }
++
++  *is_veth = strncmp ((const char *) driver_info.driver, "veth", sizeof (driver_info.driver)) == 0;
++  return 0;
++}
++
++/* At start time Docker has populated the private network namespace, but the
++ * krun TAP and bridge do not exist yet. Discover, rather than accept, the
++ * single Docker veth uplink so no policy or annotation can select another
++ * link. */
++static int
++libkrun_find_uplink (const char *tap_name, char **uplink_name, libcrun_error_t *err)
++{
++  struct if_nameindex *interfaces;
++  struct if_nameindex *interface;
++  bool is_veth;
++  size_t candidates = 0;
++  int ret;
++
++  *uplink_name = NULL;
++
++  interfaces = if_nameindex ();
++  if (interfaces == NULL)
++    return crun_make_error (err, errno, "enumerate krun network interfaces");
++
++  for (interface = interfaces; interface->if_index != 0 && interface->if_name != NULL; interface++)
++    {
++      if (strcmp (interface->if_name, "lo") == 0 || strcmp (interface->if_name, "krunbr0") == 0
++          || strcmp (interface->if_name, tap_name) == 0)
++        continue;
++      ret = libkrun_is_veth_interface (interface, &is_veth, err);
++      if (UNLIKELY (ret < 0))
++        {
++          if_freenameindex (interfaces);
++          free (*uplink_name);
++          *uplink_name = NULL;
++          return ret;
++        }
++      if (! is_veth)
++        continue;
++      candidates++;
++      if (candidates == 1)
++        *uplink_name = xstrdup (interface->if_name);
++    }
++  if_freenameindex (interfaces);
++
++  if (candidates != 1)
++    {
++      free (*uplink_name);
++      *uplink_name = NULL;
++      return crun_make_error (err, EINVAL,
++                              "krun TAP networking requires exactly one veth uplink (found %zu)",
++                              candidates);
++    }
++  return 0;
++}
++
++/* Return one for an existing runtime-owned interface, zero if it does not
++ * exist, and an error for an unowned or concurrently replaced interface. */
++static int
++libkrun_owned_interface (const char *name, const char *kind, libcrun_error_t *err)
++{
++  char ifalias_path[sizeof ("/sys/class/net//ifalias") + IFNAMSIZ];
++  char ifalias[64];
++  unsigned int index_before;
++  unsigned int index_after;
++  ssize_t ifalias_len;
++  cleanup_close int ifalias_fd = -1;
++  int ret;
++
++  index_before = if_nametoindex (name);
++  if (index_before == 0)
++    return 0;
++
++  ret = snprintf (ifalias_path, sizeof (ifalias_path), "/sys/class/net/%s/ifalias", name);
++  if (UNLIKELY (ret < 0 || (size_t) ret >= sizeof (ifalias_path)))
++    return crun_make_error (err, EINVAL, "could not construct krun %s ownership path", kind);
++
++  ifalias_fd = open (ifalias_path, O_RDONLY | O_CLOEXEC);
++  if (UNLIKELY (ifalias_fd < 0))
++    return crun_make_error (err, EEXIST, "%s `%s` already exists and is not owned by the SPR krun runtime", kind, name);
++
++  ifalias_len = TEMP_FAILURE_RETRY (read (ifalias_fd, ifalias, sizeof (ifalias) - 1));
++  if (UNLIKELY (ifalias_len < 0))
++    return crun_make_error (err, errno, "read krun %s ownership marker", kind);
++  while (ifalias_len > 0 && (ifalias[ifalias_len - 1] == '\n' || ifalias[ifalias_len - 1] == '\r'))
++    ifalias_len--;
++  ifalias[ifalias_len] = '\0';
++
++  index_after = if_nametoindex (name);
++  if (index_after != index_before)
++    return crun_make_error (err, EAGAIN, "krun %s `%s` changed during ownership validation", kind, name);
++  if (strcmp (ifalias, "spr-krun-runtime") != 0)
++    return crun_make_error (err, EEXIST, "%s `%s` already exists and is not owned by the SPR krun runtime", kind, name);
++
++  return 1;
++}
++
++static int
++libkrun_run_ip (char **argv, const char *operation, libcrun_error_t *err)
++{
++  int ret;
++
++  ret = run_process (argv, err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  if (UNLIKELY (ret != 0))
++    return crun_make_error (err, EINVAL, "%s failed with exit status %d", operation, ret);
++
++  return 0;
++}
++
++static bool
++libkrun_has_network_namespace (runtime_spec_schema_config_schema *def)
++{
++  size_t i;
++
++  if (def == NULL || def->linux == NULL)
++    return false;
++
++  for (i = 0; i < def->linux->namespaces_len; i++)
++    if (def->linux->namespaces[i] != NULL && def->linux->namespaces[i]->type != NULL
++        && strcmp (def->linux->namespaces[i]->type, "network") == 0)
++      return true;
++
++  return false;
++}
++
++static int
++libkrun_prepare_tap_config (void *cookie, libcrun_container_t *container, libcrun_error_t *err)
++{
++  struct krun_config *kconf = (struct krun_config *) cookie;
++  runtime_spec_schema_config_schema *def = container->container_def;
++  const char *tap_name;
++
++  tap_name = libkrun_string_configuration (kconf->config_tree, "tap_name");
++  if (tap_name == NULL)
++    return 0;
++
++  if (! libkrun_has_network_namespace (def))
++    return crun_make_error (err, EINVAL, "krun TAP networking requires a private OCI network namespace");
++  if (! libkrun_valid_ifname (tap_name) || strcmp (tap_name, "lo") == 0 || strcmp (tap_name, "krunbr0") == 0)
++    return crun_make_error (err, EINVAL, "invalid or reserved krun TAP interface name");
++
++  kconf->use_tap = true;
++  return 0;
++}
++
++static int
++libkrun_setup_tap (struct krun_config *kconf, libcrun_error_t *err)
++{
++  const char *tap_name;
++  cleanup_free char *uplink_name = NULL;
++  char *delete_tap[] = { (char *) "ip", (char *) "tuntap", (char *) "del", (char *) "dev", NULL, (char *) "mode", (char *) "tap", NULL };
++  char *add_tap[] = { (char *) "ip", (char *) "tuntap", (char *) "add", (char *) "dev", NULL, (char *) "mode", (char *) "tap", NULL };
++  char *tag_tap[] = { (char *) "ip", (char *) "link", (char *) "set", (char *) "dev", NULL, (char *) "alias", (char *) "spr-krun-runtime", NULL };
++  char *add_bridge[] = { (char *) "ip", (char *) "link", (char *) "add", (char *) "name", (char *) "krunbr0", (char *) "type", (char *) "bridge", NULL };
++  char *delete_bridge[] = { (char *) "ip", (char *) "link", (char *) "del", (char *) "dev", (char *) "krunbr0", (char *) "type", (char *) "bridge", NULL };
++  char *tag_bridge[] = { (char *) "ip", (char *) "link", (char *) "set", (char *) "dev", (char *) "krunbr0", (char *) "alias", (char *) "spr-krun-runtime", NULL };
++  char *attach_tap[] = { (char *) "ip", (char *) "link", (char *) "set", (char *) "dev", NULL, (char *) "master", (char *) "krunbr0", NULL };
++  char *attach_uplink[] = { (char *) "ip", (char *) "link", (char *) "set", (char *) "dev", NULL, (char *) "master", (char *) "krunbr0", NULL };
++  char *flush_addr[] = { (char *) "ip", (char *) "addr", (char *) "flush", (char *) "dev", NULL, NULL };
++  char *flush_addr6[] = { (char *) "ip", (char *) "-6", (char *) "addr", (char *) "flush", (char *) "dev", NULL, NULL };
++  char *flush_route[] = { (char *) "ip", (char *) "route", (char *) "flush", (char *) "dev", NULL, NULL };
++  char *flush_route6[] = { (char *) "ip", (char *) "-6", (char *) "route", (char *) "flush", (char *) "dev", NULL, NULL };
++  char *up_tap[] = { (char *) "ip", (char *) "link", (char *) "set", (char *) "dev", NULL, (char *) "up", NULL };
++  char *up_uplink[] = { (char *) "ip", (char *) "link", (char *) "set", (char *) "dev", NULL, (char *) "up", NULL };
++  char *up_bridge[] = { (char *) "ip", (char *) "link", (char *) "set", (char *) "dev", (char *) "krunbr0", (char *) "up", NULL };
++  int bridge_owned;
++  int tap_owned;
++  int ret;
++
++  tap_name = libkrun_string_configuration (kconf->config_tree, "tap_name");
++  if (tap_name == NULL)
++    return 0;
++
++  ret = libkrun_find_uplink (tap_name, &uplink_name, err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++
++  delete_tap[4] = (char *) tap_name;
++  add_tap[4] = (char *) tap_name;
++  tag_tap[4] = (char *) tap_name;
++  attach_tap[4] = (char *) tap_name;
++  attach_uplink[4] = (char *) uplink_name;
++  flush_addr[4] = (char *) uplink_name;
++  flush_addr6[5] = (char *) uplink_name;
++  flush_route[4] = (char *) uplink_name;
++  flush_route6[5] = (char *) uplink_name;
++  up_tap[4] = (char *) tap_name;
++  up_uplink[4] = (char *) uplink_name;
++
++  bridge_owned = libkrun_owned_interface ("krunbr0", "bridge", err);
++  if (UNLIKELY (bridge_owned < 0))
++    return bridge_owned;
++  tap_owned = libkrun_owned_interface (tap_name, "TAP", err);
++  if (UNLIKELY (tap_owned < 0))
++    return tap_owned;
++
++  if (bridge_owned > 0)
++    {
++      ret = libkrun_run_ip (delete_bridge, "remove stale krun bridge", err);
++      if (UNLIKELY (ret < 0))
++        return ret;
++    }
++
++  /* A killed runtime can leave its persistent TAP behind. Reclaim only an
++   * interface carrying our ownership marker; never delete an arbitrary host
++   * interface merely because a container supplied its name. */
++  if (tap_owned > 0)
++    {
++      ret = libkrun_run_ip (delete_tap, "remove stale krun TAP", err);
++      if (UNLIKELY (ret < 0))
++        return ret;
++    }
++
++  ret = libkrun_run_ip (add_tap, "create krun TAP", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++
++  ret = libkrun_run_ip (tag_tap, "mark krun TAP ownership", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++
++  ret = libkrun_run_ip (add_bridge, "create krun bridge", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  ret = libkrun_run_ip (tag_bridge, "mark krun bridge ownership", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  ret = libkrun_run_ip (attach_tap, "attach krun TAP to bridge", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  ret = libkrun_run_ip (attach_uplink, "attach plugin uplink to bridge", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  ret = libkrun_run_ip (flush_addr, "remove IPv4 from plugin uplink", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  ret = libkrun_run_ip (flush_addr6, "remove IPv6 from plugin uplink", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  ret = libkrun_run_ip (flush_route, "remove IPv4 routes from plugin uplink", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  ret = libkrun_run_ip (flush_route6, "remove IPv6 routes from plugin uplink", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  ret = libkrun_run_ip (up_tap, "bring up krun TAP", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  ret = libkrun_run_ip (up_uplink, "bring up plugin uplink", err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  return libkrun_run_ip (up_bridge, "bring up krun bridge", err);
++}
++
++static int
++libkrun_start_container (void *cookie, libcrun_context_t *context arg_unused,
++                         libcrun_container_t *container, pid_t pid, libcrun_error_t *err)
++{
++  struct krun_config *kconf = (struct krun_config *) cookie;
++  cleanup_close int current_netns = -1;
++  cleanup_close int target_netns = -1;
++  char target_netns_path[64];
++  int ret;
++
++  /* Handler state is process-local.  A separate `start` command gets a fresh
++   * cookie, so reload the root-owned policy instead of relying on state that
++   * was populated in the create child.  The direct `run` path also uses this
++   * function from the still-privileged parent. */
++  ret = libkrun_read_trusted_policy (kconf, container, err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++  ret = libkrun_prepare_tap_config (cookie, container, err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++
++  if (! kconf->use_tap)
++    return 0;
++
++  current_netns = open ("/proc/self/ns/net", O_RDONLY | O_CLOEXEC);
++  if (UNLIKELY (current_netns < 0))
++    return crun_make_error (err, errno, "open current network namespace");
++
++  ret = snprintf (target_netns_path, sizeof (target_netns_path), "/proc/%d/ns/net", pid);
++  if (UNLIKELY (ret < 0 || (size_t) ret >= sizeof (target_netns_path)))
++    return crun_make_error (err, EINVAL, "construct krun network namespace path");
++
++  target_netns = open (target_netns_path, O_RDONLY | O_CLOEXEC);
++  if (UNLIKELY (target_netns < 0))
++    return crun_make_error (err, errno, "open krun network namespace");
++
++  ret = setns (target_netns, CLONE_NEWNET);
++  if (UNLIKELY (ret < 0))
++    return crun_make_error (err, errno, "enter krun network namespace");
++
++  ret = libkrun_setup_tap (kconf, err);
++  if (UNLIKELY (setns (current_netns, CLONE_NEWNET) < 0))
++    {
++      if (ret < 0)
++        crun_error_release (err);
++      return crun_make_error (err, errno, "restore runtime network namespace");
++    }
++
++  return ret;
++}
++
+ /* libkrun_create_kvm_device: explicitly adds kvm device.  */
+ static int
+ libkrun_configure_container (void *cookie, enum handler_configure_phase phase,
+@@ -691,7 +1381,7 @@ libkrun_configure_container (void *cookie, enum handler_configure_phase phase,
+       if (UNLIKELY (ret < 0))
+         return ret;
+
+-      ret = libkrun_read_vm_config (kconf, rootfsfd, rootfs, err);
++      ret = libkrun_read_trusted_policy (kconf, container, err);
+       if (UNLIKELY (ret < 0))
+         return ret;
+     }
+@@ -699,7 +1389,11 @@ libkrun_configure_container (void *cookie, enum handler_configure_phase phase,
+   if (phase != HANDLER_CONFIGURE_AFTER_MOUNTS)
+     return 0;
+
+-  ret = libkrun_start_passt (cookie, container);
++  ret = libkrun_prepare_tap_config (cookie, container, err);
++  if (UNLIKELY (ret < 0))
++    return ret;
++
++  ret = libkrun_start_passt (cookie);
+   if (UNLIKELY (ret < 0))
+     return crun_make_error (err, errno, "start passt");
+
+@@ -856,6 +1550,8 @@ libkrun_unload (void *cookie, libcrun_error_t *err)
+   struct krun_config *kconf = (struct krun_config *) cookie;
+   if (kconf != NULL)
+     {
++      if (kconf->config_doc != NULL)
++        json_object_put (kconf->config_doc);
+       if (kconf->handle != NULL)
+         {
+           r = dlclose (kconf->handle);
+@@ -1011,6 +1707,7 @@ struct custom_handler_s handler_libkrun = {
+   .unload = libkrun_unload,
+   .run_func = libkrun_exec,
+   .configure_container = libkrun_configure_container,
++  .start_container = libkrun_start_container,
+   .modify_oci_configuration = libkrun_modify_oci_configuration,
+   .close_fds = libkrun_close_fds,
+ };
+diff --git a/libkrun/src/devices/src/virtio/vsock/device.rs b/libkrun/src/devices/src/virtio/vsock/device.rs
+index a61043b..aa57460 100644
+--- a/libkrun/src/devices/src/virtio/vsock/device.rs
++++ b/libkrun/src/devices/src/virtio/vsock/device.rs
+@@ -15,7 +15,7 @@ use vm_memory::GuestMemoryMmap;
+
+ use super::super::{
+     ActivateError, ActivateResult, DeviceQueue, DeviceState, Queue as VirtQueue, QueueConfig,
+-    VirtioDevice,
++    VirtioDevice, VmmExitObserver,
+ };
+ use super::muxer::VsockMuxer;
+ use super::packet::VsockPacket;
+@@ -277,3 +277,9 @@ impl VirtioDevice for Vsock {
+         self.device_state.is_activated()
+     }
+ }
++
++impl VmmExitObserver for Vsock {
++    fn on_vmm_exit(&mut self) {
++        self.muxer.on_vmm_exit();
++    }
++}
+diff --git a/libkrun/src/devices/src/virtio/vsock/muxer.rs b/libkrun/src/devices/src/virtio/vsock/muxer.rs
+index f4c1024..aba2749 100644
+--- a/libkrun/src/devices/src/virtio/vsock/muxer.rs
++++ b/libkrun/src/devices/src/virtio/vsock/muxer.rs
+@@ -169,6 +169,10 @@ impl VsockMuxer {
+         reaper.run();
+     }
+
++    pub(crate) fn on_vmm_exit(&mut self) {
++        self.proxy_map.write().unwrap().clear();
++    }
++
+     pub(crate) fn has_pending_rx(&self) -> bool {
+         !self.rxq.lock().unwrap().is_empty()
+     }
+diff --git a/libkrun/src/devices/src/virtio/vsock/unix.rs b/libkrun/src/devices/src/virtio/vsock/unix.rs
+index 2f51c05..a41038f 100644
+--- a/libkrun/src/devices/src/virtio/vsock/unix.rs
++++ b/libkrun/src/devices/src/virtio/vsock/unix.rs
+@@ -10,10 +10,12 @@ use nix::sys::socket::{
+     Shutdown, SockFlag, SockType, UnixAddr,
+ };
+ use std::collections::HashMap;
++use std::ffi::CString;
+ use std::num::Wrapping;
+ use std::os::fd::{FromRawFd, OwnedFd};
++use std::os::unix::ffi::OsStrExt;
+ use std::os::unix::io::{AsRawFd, RawFd};
+-use std::path::PathBuf;
++use std::path::{Component, Path, PathBuf};
+ use std::sync::{Arc, Mutex};
+
+ #[cfg(target_os = "macos")]
+@@ -619,9 +621,117 @@ impl AsRawFd for UnixProxy {
+     }
+ }
+
++struct BoundSocketPath {
++    parent_fd: OwnedFd,
++    name: CString,
++    device: libc::dev_t,
++    inode: libc::ino_t,
++    uid: libc::uid_t,
++}
++
++impl BoundSocketPath {
++    fn capture(path: &Path) -> Result<Self, Errno> {
++        if !path.is_absolute() {
++            return Err(Errno::EINVAL);
++        }
++
++        let mut components = Vec::new();
++        for component in path.components() {
++            match component {
++                Component::RootDir => {}
++                Component::Normal(name) => {
++                    components.push(CString::new(name.as_bytes()).map_err(|_| Errno::EINVAL)?)
++                }
++                _ => return Err(Errno::EINVAL),
++            }
++        }
++        let name = components.pop().ok_or(Errno::EINVAL)?;
++
++        let root = CString::new("/").unwrap();
++        let flags = libc::O_RDONLY | libc::O_DIRECTORY | libc::O_CLOEXEC | libc::O_NOFOLLOW;
++        let root_fd = unsafe { libc::open(root.as_ptr(), flags) };
++        if root_fd < 0 {
++            return Err(Errno::last());
++        }
++        let mut parent_fd = unsafe { OwnedFd::from_raw_fd(root_fd) };
++        for component in components {
++            let next_fd = unsafe { libc::openat(parent_fd.as_raw_fd(), component.as_ptr(), flags) };
++            if next_fd < 0 {
++                return Err(Errno::last());
++            }
++            parent_fd = unsafe { OwnedFd::from_raw_fd(next_fd) };
++        }
++
++        let mut stat = std::mem::MaybeUninit::<libc::stat>::uninit();
++        if unsafe {
++            libc::fstatat(
++                parent_fd.as_raw_fd(),
++                name.as_ptr(),
++                stat.as_mut_ptr(),
++                libc::AT_SYMLINK_NOFOLLOW,
++            )
++        } < 0
++        {
++            return Err(Errno::last());
++        }
++        let stat = unsafe { stat.assume_init() };
++        if stat.st_mode & libc::S_IFMT != libc::S_IFSOCK {
++            return Err(Errno::ENOTSOCK);
++        }
++
++        Ok(Self {
++            parent_fd,
++            name,
++            device: stat.st_dev,
++            inode: stat.st_ino,
++            uid: stat.st_uid,
++        })
++    }
++
++    fn remove_if_same(&self) {
++        let mut stat = std::mem::MaybeUninit::<libc::stat>::uninit();
++        if unsafe {
++            libc::fstatat(
++                self.parent_fd.as_raw_fd(),
++                self.name.as_ptr(),
++                stat.as_mut_ptr(),
++                libc::AT_SYMLINK_NOFOLLOW,
++            )
++        } < 0
++        {
++            if Errno::last() != Errno::ENOENT {
++                warn!("failed to inspect Unix listener during cleanup");
++            }
++            return;
++        }
++        let stat = unsafe { stat.assume_init() };
++        if stat.st_mode & libc::S_IFMT != libc::S_IFSOCK
++            || stat.st_dev != self.device
++            || stat.st_ino != self.inode
++            || stat.st_uid != self.uid
++        {
++            warn!("refusing to remove replaced Unix listener during cleanup");
++            return;
++        }
++
++        if unsafe { libc::unlinkat(self.parent_fd.as_raw_fd(), self.name.as_ptr(), 0) } < 0
++            && Errno::last() != Errno::ENOENT
++        {
++            warn!("failed to remove Unix listener during cleanup");
++        }
++    }
++}
++
++impl Drop for BoundSocketPath {
++    fn drop(&mut self) {
++        self.remove_if_same();
++    }
++}
++
+ pub struct UnixAcceptorProxy {
+     id: u64,
+     fd: OwnedFd,
++    _bound_path: BoundSocketPath,
+     peer_port: u32,
+ }
+
+@@ -639,9 +749,19 @@ impl UnixAcceptorProxy {
+             &UnixAddr::new(path).map_err(ProxyError::CreatingSocket)?,
+         )
+         .map_err(ProxyError::CreatingSocket)?;
+-        listen(&fd, Backlog::new(5).map_err(ProxyError::CreatingSocket)?)
+-            .map_err(ProxyError::CreatingSocket)?;
+-        Ok(UnixAcceptorProxy { id, fd, peer_port })
++        let bound_path = BoundSocketPath::capture(path).map_err(ProxyError::CreatingSocket)?;
++        let proxy = UnixAcceptorProxy {
++            id,
++            fd,
++            _bound_path: bound_path,
++            peer_port,
++        };
++        listen(
++            &proxy.fd,
++            Backlog::new(5).map_err(ProxyError::CreatingSocket)?,
++        )
++        .map_err(ProxyError::CreatingSocket)?;
++        Ok(proxy)
+     }
+ }
+
+@@ -719,3 +839,50 @@ impl AsRawFd for UnixAcceptorProxy {
+         self.fd.as_raw_fd()
+     }
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::BoundSocketPath;
++    use std::os::unix::net::UnixListener;
++    use std::path::PathBuf;
++    use std::time::{SystemTime, UNIX_EPOCH};
++
++    fn socket_path(test_name: &str) -> PathBuf {
++        let nonce = SystemTime::now()
++            .duration_since(UNIX_EPOCH)
++            .unwrap()
++            .as_nanos();
++        std::fs::canonicalize("/tmp").unwrap().join(format!(
++            "krun-{test_name}-{}-{nonce}.sock",
++            std::process::id()
++        ))
++    }
++
++    #[test]
++    fn bound_socket_path_removes_same_socket() {
++        let path = socket_path("same");
++        let listener = UnixListener::bind(&path).unwrap();
++        let bound_path = BoundSocketPath::capture(&path).unwrap();
++
++        drop(bound_path);
++        assert!(!path.exists());
++
++        drop(listener);
++    }
++
++    #[test]
++    fn bound_socket_path_preserves_replacement() {
++        let path = socket_path("replacement");
++        let original_listener = UnixListener::bind(&path).unwrap();
++        let bound_path = BoundSocketPath::capture(&path).unwrap();
++        std::fs::remove_file(&path).unwrap();
++        let replacement_listener = UnixListener::bind(&path).unwrap();
++
++        drop(bound_path);
++        assert!(path.exists());
++
++        std::fs::remove_file(&path).unwrap();
++        drop(replacement_listener);
++        drop(original_listener);
++    }
++}
+diff --git a/libkrun/src/init_blob/init/dhcp.c b/libkrun/src/init_blob/init/dhcp.c
+index 3c107e5..ff80259 100644
+--- a/libkrun/src/init_blob/init/dhcp.c
++++ b/libkrun/src/init_blob/init/dhcp.c
+@@ -17,6 +17,7 @@
+ #include <linux/rtnetlink.h>
+ #include <netinet/in.h>
+ #include <stdbool.h>
++#include <stddef.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+@@ -28,6 +29,8 @@
+ #define DHCP_BUFFER_SIZE 576
+ #define DHCP_MSG_OFFER 2
+ #define DHCP_MSG_ACK 5
++#define DHCP_RETRIES 3
++#define DHCP_TIMEOUT_SEC 2
+
+ /* Helper function to send netlink message */
+ static int nl_send(int sock, struct nlmsghdr *nlh)
+@@ -289,6 +292,76 @@ static unsigned char get_dhcp_msg_type(const unsigned char *response,
+     return 0;
+ }
+
++/* Return the DHCP server identifier (option 54), if it is present and valid.
++ * CoreDHCP sends replies from 0.0.0.0 because it writes raw broadcast packets,
++ * so the UDP source address cannot be used as the server identity. */
++static bool get_dhcp_server_identifier(const unsigned char *response,
++                                       ssize_t len,
++                                       struct in_addr *server)
++{
++    size_t p = 240;
++
++    while (p < (size_t)len) {
++        unsigned char opt = response[p];
++
++        if (opt == 0xff)
++            break;
++        if (opt == 0) {
++            p++;
++            continue;
++        }
++        if (p + 1 >= (size_t)len)
++            break;
++
++        unsigned char opt_len = response[p + 1];
++        p += 2;
++        if (p + opt_len > (size_t)len)
++            break;
++        if (opt == 54 && opt_len == sizeof(server->s_addr)) {
++            memcpy(&server->s_addr, &response[p], sizeof(server->s_addr));
++            return server->s_addr != INADDR_ANY;
++        }
++        p += opt_len;
++    }
++    return false;
++}
++
++/* Reject packets that are not replies to this client, are not from the DHCP
++ * server port, or (after an OFFER) identify a different server. CoreDHCP's
++ * raw replies use 0.0.0.0 as their IP source; when a source is present, bind
++ * it to the DHCP server identifier too. */
++static bool valid_dhcp_response(const struct dhcp_packet *request,
++                                const unsigned char *response, ssize_t len,
++                                const struct sockaddr_in *from_addr,
++                                const struct in_addr *expected_server)
++{
++    const struct dhcp_packet *reply;
++
++    if (len < (ssize_t)offsetof(struct dhcp_packet, options) ||
++        from_addr->sin_family != AF_INET ||
++        from_addr->sin_port != htons(67))
++        return false;
++
++    reply = (const struct dhcp_packet *)response;
++    if (reply->op != 2 || reply->htype != request->htype ||
++        reply->hlen != request->hlen || reply->xid != request->xid ||
++        reply->magic != request->magic ||
++        memcmp(reply->chaddr, request->chaddr, request->hlen) != 0)
++        return false;
++
++    if (expected_server != NULL) {
++        struct in_addr reply_server;
++
++        if (!get_dhcp_server_identifier(response, len, &reply_server) ||
++            reply_server.s_addr != expected_server->s_addr)
++            return false;
++        if (from_addr->sin_addr.s_addr != INADDR_ANY &&
++            from_addr->sin_addr.s_addr != expected_server->s_addr)
++            return false;
++    }
++    return true;
++}
++
+ /* Parse a DHCP ACK and configure the interface. Returns 0 or -1 on error. */
+ static int handle_dhcp_ack(int nl_sock, int iface_index,
+                            const unsigned char *response, ssize_t len)
+@@ -510,21 +583,14 @@ int do_dhcp(const char *iface)
+
+     /* Remaining bytes are padding (up to 300 bytes) */
+
+-    /* Send DHCP DISCOVER */
++    /* Configure destination and a bounded retry timeout. */
+     memset(&dest_addr, 0, sizeof(dest_addr));
+     dest_addr.sin_family = AF_INET;
+     dest_addr.sin_port = htons(67);
+     dest_addr.sin_addr.s_addr = INADDR_BROADCAST;
+
+-    if (sendto(sock, &request, sizeof(request), 0,
+-               (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0) {
+-        perror("sendto failed");
+-        goto cleanup;
+-    }
+-
+-    /* Keep IPv6-only fast: set receive timeout to 100ms */
+-    timeout.tv_sec = 0;
+-    timeout.tv_usec = 100000;
++    timeout.tv_sec = DHCP_TIMEOUT_SEC;
++    timeout.tv_usec = 0;
+     if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) <
+         0) {
+         perror("setsockopt SO_RCVTIMEO failed");
+@@ -533,9 +599,29 @@ int do_dhcp(const char *iface)
+
+     /* Get response: DHCPACK (Rapid Commit) or DHCPOFFER */
+     struct sockaddr_in from_addr;
+-    socklen_t from_len = sizeof(from_addr);
+-    ssize_t len = recvfrom(sock, response, sizeof(response), 0,
+-                           (struct sockaddr *)&from_addr, &from_len);
++    struct in_addr server_addr;
++    socklen_t from_len;
++    ssize_t len = -1;
++    for (int attempt = 0; attempt < DHCP_RETRIES; attempt++) {
++        if (sendto(sock, &request, sizeof(request), 0,
++                   (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0) {
++            perror("sendto DHCPDISCOVER failed");
++            goto cleanup;
++        }
++
++        from_len = sizeof(from_addr);
++        len = recvfrom(sock, response, sizeof(response), 0,
++                       (struct sockaddr *)&from_addr, &from_len);
++        if (len > 0 &&
++            valid_dhcp_response(&request, response, len, &from_addr, NULL) &&
++            get_dhcp_server_identifier(response, len, &server_addr) &&
++            (from_addr.sin_addr.s_addr == INADDR_ANY ||
++             from_addr.sin_addr.s_addr == server_addr.s_addr) &&
++            (get_dhcp_msg_type(response, len) == DHCP_MSG_ACK ||
++             get_dhcp_msg_type(response, len) == DHCP_MSG_OFFER))
++            break;
++        len = -1;
++    }
+
+     if (len <= 0)
+         goto done; /* No DHCP response — not an error, VM may be IPv6-only */
+@@ -572,26 +658,33 @@ int do_dhcp(const char *iface)
+         request.options[opt_offset++] = 4;
+         memcpy(&request.options[opt_offset], &offered_addr.s_addr, 4);
+         opt_offset += 4;
+-
+-        /* Option 54: Server Identifier (from_addr) */
++        /* Option 54: Server Identifier (copied from the DHCPOFFER) */
+         request.options[opt_offset++] = 54;
+         request.options[opt_offset++] = 4;
+-        memcpy(&request.options[opt_offset], &from_addr.sin_addr.s_addr, 4);
++        memcpy(&request.options[opt_offset], &server_addr.s_addr, 4);
+         opt_offset += 4;
+
+         /* Option 255: End */
+         request.options[opt_offset++] = 0xff;
+
+-        if (sendto(sock, &request, sizeof(request), 0,
+-                   (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0) {
+-            perror("sendto DHCPREQUEST failed");
+-            goto cleanup;
+-        }
+-
+-        from_len = sizeof(from_addr);
+-        len = recvfrom(sock, response, sizeof(response), 0,
+-                       (struct sockaddr *)&from_addr, &from_len);
++        len = -1;
++        for (int attempt = 0; attempt < DHCP_RETRIES; attempt++) {
++            if (sendto(sock, &request, sizeof(request), 0,
++                       (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0) {
++                perror("sendto DHCPREQUEST failed");
++                goto cleanup;
++            }
+
++            from_len = sizeof(from_addr);
++            len = recvfrom(sock, response, sizeof(response), 0,
++                           (struct sockaddr *)&from_addr, &from_len);
++            if (len > 0 &&
++                valid_dhcp_response(&request, response, len, &from_addr,
++                                    &server_addr) &&
++                get_dhcp_msg_type(response, len) == DHCP_MSG_ACK)
++                break;
++            len = -1;
++        }
+         close(sock);
+         sock = -1;
+
+@@ -600,12 +693,6 @@ int do_dhcp(const char *iface)
+             goto cleanup;
+         }
+
+-        if (get_dhcp_msg_type(response, len) != DHCP_MSG_ACK) {
+-            printf("expected DHCPACK but got message type %d\n",
+-                   get_dhcp_msg_type(response, len));
+-            goto cleanup;
+-        }
+-
+         if (handle_dhcp_ack(nl_sock, iface_index, response, len) != 0)
+             goto cleanup;
+     } else {
+diff --git a/libkrun/src/vmm/src/builder.rs b/libkrun/src/vmm/src/builder.rs
+index 1714390..a1b1b0c 100644
+--- a/libkrun/src/vmm/src/builder.rs
++++ b/libkrun/src/vmm/src/builder.rs
+@@ -2189,6 +2189,8 @@ fn attach_unixsock_vsock_device(
+         .add_subscriber(unix_vsock.clone())
+         .map_err(RegisterEvent)?;
+
++    vmm.exit_observers.push(unix_vsock.clone());
++
+     let id = String::from(unix_vsock.lock().unwrap().id());
+
+     // The device mutex mustn't be locked here otherwise it will deadlock.

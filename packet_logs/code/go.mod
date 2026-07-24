@@ -1,4 +1,4 @@
-module main
+module github.com/spr-networks/super/packet_logs
 
 go 1.25.0
 

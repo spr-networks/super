@@ -14,6 +14,36 @@ import * as jsonpath from 'jsonpath'
 let server = null
 let opts = {}
 
+const MODEL_ARTIFACT_HOSTS = new Set([
+  'huggingface.co',
+  'raw.githubusercontent.com'
+])
+
+const installModelArtifactFetch = (mockServer) => {
+  if (typeof window === 'undefined' || !mockServer?.pretender) return
+
+  const nativeFetch = mockServer.pretender._nativefetch
+  const mirageFetch = window.fetch
+  if (!nativeFetch || !mirageFetch || mirageFetch.__sprModelArtifactFetch)
+    return
+
+  const artifactFetch = (input, init) => {
+    const requestURL =
+      typeof input === 'string' || input instanceof URL ? input : input?.url
+    try {
+      const hostname = new URL(requestURL, window.location.href).hostname
+      if (MODEL_ARTIFACT_HOSTS.has(hostname)) {
+        return nativeFetch.call(window, input, init)
+      }
+    } catch (error) {
+      // Let Mirage handle malformed or relative requests as it did previously.
+    }
+    return mirageFetch.call(window, input, init)
+  }
+  artifactFetch.__sprModelArtifactFetch = true
+  window.fetch = artifactFetch
+}
+
 // helper function for random and random value in array
 const r = (n) => parseInt(Math.random() * n)
 const rpick = (l) => l[parseInt(r(l.length))]
@@ -58,6 +88,8 @@ let mockPersonasState = {
 }
 
 let mockTrafficInsightsConfig = { Enabled: true, RetentionDays: 7 }
+let mockFeatureFlags = []
+const mockSupportedFeatureFlags = ['rustap', 'webllm']
 
 let mockGeoBlockConfig = {
   Enabled: false,
@@ -268,6 +300,25 @@ let mockTopoNodes = [
     Style: { Icon: 'Tablet', Color: '#0891b2' }
   },
   {
+    ID: 'dev:99:99:99:99:99:99',
+    Kind: 'device',
+    Name: 'Work laptop',
+    MAC: '99:99:99:99:99:99',
+    IP: '192.168.2.129',
+    TinyNet: '192.168.2.128/30',
+    VLANTag: '4103',
+    ConnType: 'wifi',
+    Iface: 'wlan1',
+    Groups: ['warp'],
+    Policies: ['dns'],
+    Tags: [],
+    Signal: { RSSI: -58, TxRate: 480, RxRate: 360, Caps: ['HT', 'VHT', 'HE'] },
+    DHCPFirstTime: new Date(Date.now() - 12 * 24 * 3600e3).toISOString(),
+    DHCPLastTime: new Date(Date.now() - 45 * 60e3).toISOString(),
+    Online: true,
+    Style: { Icon: 'Laptop', Color: '#2563eb' }
+  },
+  {
     ID: 'plugin:tailscale',
     Kind: 'extension',
     Name: 'TAILSCALE',
@@ -313,6 +364,21 @@ let mockTopoNodes = [
     Online: true
   },
   {
+    ID: 'plugin:usque',
+    Kind: 'extension',
+    Name: 'USQUE',
+    ConnType: 'wired',
+    Online: true
+  },
+  {
+    ID: 'plugin:usque:sink:warp',
+    Kind: 'sink',
+    Name: 'Cloudflare WARP',
+    IP: '172.30.118.2',
+    Iface: 'spr-usque',
+    Online: true
+  },
+  {
     ID: 'plugin:reticulum',
     Kind: 'extension',
     Name: 'RETICULUM',
@@ -325,6 +391,13 @@ const mockTopoL1Edges = [
   { From: 'router', To: 'iface:eth0', Layer: 'l1', Kind: 'uplink' },
   { From: 'router', To: 'plugin:nebula', Layer: 'l1', Kind: 'wireguard' },
   { From: 'router', To: 'plugin:gluetun', Layer: 'l1', Kind: 'wireguard' },
+  { From: 'router', To: 'plugin:usque', Layer: 'l1', Kind: 'wired' },
+  {
+    From: 'plugin:usque',
+    To: 'plugin:usque:sink:warp',
+    Layer: 'l1',
+    Kind: 'wired'
+  },
   { From: 'router', To: 'plugin:reticulum', Layer: 'l1', Kind: 'wireguard' },
   { From: 'router', To: 'iface:wlan1', Layer: 'l1', Kind: 'wifi' },
   { From: 'router', To: 'iface:wg0', Layer: 'l1', Kind: 'wg' },
@@ -351,6 +424,13 @@ const mockTopoL1Edges = [
     Layer: 'l1',
     Kind: 'wifi',
     Metric: -66
+  },
+  {
+    From: 'dev:99:99:99:99:99:99',
+    To: 'iface:wlan1',
+    Layer: 'l1',
+    Kind: 'wifi',
+    Metric: -58
   },
   { From: 'dev:66:66:66:66:66:66', To: 'iface:eth1', Layer: 'l1', Kind: 'wired' },
   {
@@ -512,8 +592,25 @@ const mockTopoPolicyEdges = () => {
     }
   }
 
+  edges.push({
+    From: 'dev:99:99:99:99:99:99',
+    To: 'plugin:usque:sink:warp',
+    Layer: 'policy',
+    Kind: 'route'
+  })
+
   return edges
 }
+
+const mockTopoSinks = [
+  {
+    ID: 'plugin:usque:sink:warp',
+    Name: 'Cloudflare WARP',
+    Iface: 'spr-usque',
+    IP: '172.30.118.2',
+    Online: true
+  }
+]
 
 const syncMockTopoDevice = (attrs) => {
   const id = attrs.MAC || attrs.WGPubKey
@@ -610,6 +707,7 @@ export default function MockAPI(props = null) {
       blockrule: Model,
       forwardblockrule: Model,
       serviceport: Model,
+      custominterfacerule: Model,
       token: Model,
       backup: Model,
       pfwBlockRule: Model,
@@ -658,6 +756,39 @@ export default function MockAPI(props = null) {
           Icon: 'Laptop',
           Color: 'blueGray'
         }
+      })
+
+      server.create('device', {
+        Name: 'spr-atlas',
+        Type: 'Container',
+        MAC: '02:53:50:52:4b:21',
+        RecentIP: '192.168.2.110',
+        DHCPLastInterface: 'spr-atlas',
+        DHCPFirstTime: new Date(Date.now() - 30 * 60e3).toISOString(),
+        DHCPLastTime: new Date(Date.now() - 2 * 60e3).toISOString(),
+        PSKEntry: {
+          Type: 'None',
+          Psk: null
+        },
+        Policies: [],
+        Groups: [],
+        DeviceTags: [],
+        Style: {
+          Icon: 'Server',
+          Color: 'cyan'
+        }
+      })
+
+      server.create('custominterfacerule', {
+        RuleName: 'Plugin-spr-atlas',
+        Description: '',
+        Disabled: false,
+        Interface: 'spr-atlas',
+        SrcIP: '192.168.2.110',
+        RouteDst: '',
+        Policies: ['wan', 'dns'],
+        Groups: [],
+        Tags: []
       })
 
       let devs = ['phone', 'laptop', 'tv', 'desktop', 'iphone', 'android']
@@ -756,6 +887,17 @@ export default function MockAPI(props = null) {
         Plus: true,
         GitURL: 'github.com/spr-networks/pfw_extension',
         ComposeFilePath: 'plugins/plus/pfw_extension/docker-compose.yml'
+      })
+      server.create('plugin', {
+        Name: 'spr-atlas',
+        URI: 'spr-atlas',
+        UnixPath: '/state/plugins/spr-atlas/socket',
+        Enabled: true,
+        Plus: false,
+        GitURL: 'github.com/spr-networks/spr-atlas',
+        ComposeFilePath: 'plugins/user/spr-atlas/docker-compose-kvm.yml',
+        Runtime: 'kvm',
+        AvailableRuntimes: ['default', 'kvm']
       })
 
       server.create('forwardrule', {
@@ -918,6 +1060,22 @@ export default function MockAPI(props = null) {
         Tags: ['focus']
       })
 
+      server.create('pfwForwardRule', {
+        RuleName: 'Work laptop via Cloudflare WARP',
+        Client: { SrcIP: '192.168.2.129' },
+        Time: {
+          CronExpr: '',
+          Start: '',
+          End: '',
+          Days: [0, 0, 0, 0, 0, 0, 0]
+        },
+        OriginalDst: { IP: '0.0.0.0/0' },
+        Dst: { IP: '172.30.118.2' },
+        DstInterface: 'spr-usque',
+        Protocol: '',
+        Disabled: false
+      })
+
       server.create('vpnSite', {
         Address: '1.1.1.23',
         PeerPublicKey: 'AAAA',
@@ -927,6 +1085,14 @@ export default function MockAPI(props = null) {
       })
     },
     routes() {
+      // Browser-local AI models are fetched directly from their remote artifact
+      // hosts. Mirage must not turn these cross-origin requests into mock HTML.
+      this.passthrough('https://huggingface.co/**')
+      this.passthrough('https://cdn-lfs.hf.co/**')
+      this.passthrough('https://cdn-lfs-us-1.hf.co/**')
+      this.passthrough('https://cas-bridge.xethub.hf.co/**')
+      this.passthrough('https://raw.githubusercontent.com/**')
+
       // TODO hook for all
       const authOK = (request) => {
         return true //TODO
@@ -1342,7 +1508,8 @@ export default function MockAPI(props = null) {
         return {
           GeneratedAt: new Date().toISOString(),
           Nodes: mockTopoNodes,
-          Edges: [...mockTopoL1Edges, ...mockTopoPolicyEdges()]
+          Edges: [...mockTopoL1Edges, ...mockTopoPolicyEdges()],
+          Sinks: mockTopoSinks
         }
       })
 
@@ -2411,6 +2578,27 @@ export default function MockAPI(props = null) {
         return ['dns', 'wifi', 'ppp', 'wireguard']
       })
 
+      this.get('/featureFlags', () => {
+        return mockFeatureFlags
+      })
+
+      this.put('/featureFlags', (schema, request) => {
+        const requested = JSON.parse(request.requestBody)
+        if (
+          !Array.isArray(requested) ||
+          requested.some(
+            (flag) => !mockSupportedFeatureFlags.includes(flag)
+          )
+        ) {
+          return new Response(400, {}, { error: 'unsupported feature flag' })
+        }
+
+        mockFeatureFlags = mockSupportedFeatureFlags.filter((flag) =>
+          requested.includes(flag)
+        )
+        return mockFeatureFlags
+      })
+
       this.get('/version', () => {
         return '"1.1"'
       })
@@ -2474,6 +2662,27 @@ export default function MockAPI(props = null) {
             }
           }
         ]
+      })
+
+      this.get('/info/vms', () => {
+        return {
+          Discovery: 'kvm-debugfs',
+          KVMAvailable: true,
+          ContainerMetadataAvailable: true,
+          VirtualMachines: [
+            {
+              ID: '12345-7',
+              PID: 12345,
+              Name: 'spr-atlas',
+              State: 'running',
+              Container: true,
+              Runtime: 'spr-krun',
+              Image: 'ghcr.io/spr-networks/spr-atlas:latest-krun',
+              CPUs: 1,
+              MemoryMiB: 128
+            }
+          ]
+        }
       })
 
       this.put('/backup', (schema, request) => {
@@ -3211,7 +3420,7 @@ export default function MockAPI(props = null) {
       })
 
       // plugins
-      this.get('/plugins', (schema, request) => {
+      this.get('/plugins_api/', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
@@ -3219,7 +3428,7 @@ export default function MockAPI(props = null) {
         return schema.plugins.all().models
       })
 
-      this.put('/plugins/:name', (schema, request) => {
+      this.put('/plugins_api/:name', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
@@ -3235,7 +3444,7 @@ export default function MockAPI(props = null) {
         return schema.plugins.all().models
       })
 
-      this.delete('/plugins/:name', (schema, request) => {
+      this.delete('/plugins_api/:name', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
@@ -3754,8 +3963,27 @@ export default function MockAPI(props = null) {
           ForwardingRules: schema.forwardrules.all().models,
           BlockRules: schema.blockrules.all().models,
           ForwardingBlockRules: schema.forwardblockrules.all().models,
-          ServicePorts: schema.serviceports.all().models
+          ServicePorts: schema.serviceports.all().models,
+          CustomInterfaceRules: schema.custominterfacerules.all().models
         }
+      })
+
+      this.put('/firewall/custom_interface', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        return schema.custominterfacerules.create(attrs)
+      })
+
+      this.delete('/firewall/custom_interface', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        let attrs = JSON.parse(request.requestBody)
+        return schema.custominterfacerules.where(attrs).destroy()
       })
 
       this.put('/firewall/forward', (schema, request) => {
@@ -4731,5 +4959,6 @@ export default function MockAPI(props = null) {
     }
   } catch (err) {}
 
+  installModelArtifactFetch(server)
   return server
 }

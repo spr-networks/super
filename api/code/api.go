@@ -83,6 +83,7 @@ type MulticastSettings struct {
 type APIConfig struct {
 	InfluxDB        InfluxConfig
 	Plugins         []PluginConfig
+	FeatureFlags    []string
 	PlusToken       string
 	AutoUpdate      bool //unused
 	CheckUpdates    bool
@@ -112,6 +113,7 @@ type DeviceStyle struct {
 
 type DeviceEntry struct {
 	Name              string
+	Type              string `json:",omitempty"`
 	MAC               string
 	WGPubKey          string
 	VLANTag           string
@@ -129,6 +131,8 @@ type DeviceEntry struct {
 	DeleteExpiration  bool
 	DeviceDisabled    bool //tbd deprecate this in favor of only using the policy name.
 }
+
+const DeviceTypeContainer = "Container"
 
 var ValidPolicyStrings = []string{"wan", "lan", "dns", "api", "lan_upstream", "noapi", "guestonly", "disabled", "quarantine", "dns:family"}
 
@@ -159,6 +163,13 @@ func loadConfig() {
 		saveConfigLocked()
 	}
 
+	if markersChanged, err := setRustapFeatureMarkers(slices.Contains(config.FeatureFlags, "rustap")); err != nil {
+		log.Printf("failed to synchronize RustAP feature markers: %v", err)
+	} else if markersChanged {
+		go callSuperdRestart("", "wifid")
+		go restartPlugin("WIFIUPLINK")
+	}
+
 	//loading this will make sure devices-public.json is made
 	getDevicesJson()
 
@@ -166,9 +177,7 @@ func loadConfig() {
 }
 
 func saveConfigLocked() {
-	file, _ := json.MarshalIndent(config, "", " ")
-	err := ioutil.WriteFile(ApiConfigPath, file, 0600)
-	if err != nil {
+	if err := saveFileJSON(ApiConfigPath, config); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -245,36 +254,104 @@ func getFeatures(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(reply)
 }
 
-// Helper function to make Docker API requests
-func dockerRequest(method, path string, body io.Reader) ([]byte, error) {
-	DockerSocketPath := "/var/run/docker.sock"
+var supportedFeatureFlags = []string{"rustap", "webllm"}
 
-	c := http.Client{Timeout: 60 * time.Second}
-	c.Transport = &http.Transport{
-		Dial: func(network, addr string) (net.Conn, error) {
-			return net.Dial("unix", DockerSocketPath)
-		},
+func normalizeFeatureFlags(flags []string) ([]string, error) {
+	selected := make(map[string]bool, len(flags))
+	for _, flag := range flags {
+		if !slices.Contains(supportedFeatureFlags, flag) {
+			return nil, fmt.Errorf("unsupported feature flag %q", flag)
+		}
+		selected[flag] = true
 	}
-	defer c.CloseIdleConnections()
 
-	req, err := http.NewRequest(method, "http://localhost"+path, body)
+	normalized := make([]string, 0, len(selected))
+	for _, flag := range supportedFeatureFlags {
+		if selected[flag] {
+			normalized = append(normalized, flag)
+		}
+	}
+	return normalized, nil
+}
+
+func featureFlags(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		return
+	}
+
+	Configmtx.Lock()
+	defer Configmtx.Unlock()
+
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == http.MethodGet {
+		flags := append([]string{}, config.FeatureFlags...)
+		_ = json.NewEncoder(w).Encode(flags)
+		return
+	}
+
+	var requested []string
+	if err := json.NewDecoder(r.Body).Decode(&requested); err != nil {
+		http.Error(w, "failed to deserialize feature flags", http.StatusBadRequest)
+		return
+	}
+
+	normalized, err := normalizeFeatureFlags(requested)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	previous := config.FeatureFlags
+	config.FeatureFlags = normalized
+	if err := saveFileJSON(ApiConfigPath, config); err != nil {
+		config.FeatureFlags = previous
+		http.Error(w, "failed to save feature flags", http.StatusInternalServerError)
+		return
+	}
+
+	rustapEnabled := slices.Contains(config.FeatureFlags, "rustap")
+	rustapChanged := rustapEnabled != slices.Contains(previous, "rustap")
+	markersChanged, err := setRustapFeatureMarkers(rustapEnabled)
+	if err != nil {
+		config.FeatureFlags = previous
+		_ = saveFileJSON(ApiConfigPath, config)
+		_, _ = setRustapFeatureMarkers(slices.Contains(previous, "rustap"))
+		http.Error(w, "failed to apply RustAP feature flag", http.StatusInternalServerError)
+		return
+	}
+
+	if rustapChanged || markersChanged {
+		go callSuperdRestart("", "wifid")
+		go restartPlugin("WIFIUPLINK")
+	}
+
+	_ = json.NewEncoder(w).Encode(config.FeatureFlags)
+}
+
+func dockerInfoRequest(resource, id string) ([]byte, error) {
+	params := url.Values{"resource": {resource}}
+	if id != "" {
+		params.Set("id", id)
+	}
+
+	data, statusCode, err := superdRequestMethod(http.MethodGet, "docker_info", params, nil)
 	if err != nil {
 		return nil, err
 	}
+	if statusCode != http.StatusOK {
+		return nil, fmt.Errorf("superd Docker info error %d: %s", statusCode, string(data))
+	}
 
-	resp, err := c.Do(req)
+	return data, nil
+}
+
+func virtualMachineInfoRequest() ([]byte, error) {
+	data, statusCode, err := superdRequestMethod(http.MethodGet, "virtual_machines", nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
-
-	data, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("docker API error %d: %s", resp.StatusCode, string(data))
+	if statusCode != http.StatusOK {
+		return nil, fmt.Errorf("superd virtual machine info error %d: %s", statusCode, string(data))
 	}
 
 	return data, nil
@@ -330,9 +407,11 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 
 		data, err = cmd.Output()
 	} else if name == "dockernetworks" {
-		data, err = dockerRequest("GET", "/v1.41/networks", nil)
+		data, err = dockerInfoRequest("networks", "")
 	} else if name == "docker" {
-		data, err = dockerRequest("GET", "/v1.41/containers/json?all=1", nil)
+		data, err = dockerInfoRequest("containers", "")
+	} else if name == "vms" {
+		data, err = virtualMachineInfoRequest()
 	} else if name == "hostname" {
 		data, err = ioutil.ReadFile(HostnameConfigPath)
 		if err == nil && len(data) > 0 {
@@ -1077,17 +1156,13 @@ func convertDevicesPublic(devices map[string]DeviceEntry) map[string]DeviceEntry
 }
 
 func savePublicDevicesJson(scrubbed_devices map[string]DeviceEntry) {
-	file, _ := json.MarshalIndent(scrubbed_devices, "", " ")
-	err := ioutil.WriteFile(DevicesPublicConfigFile, file, 0600)
-	if err != nil {
+	if err := saveFileJSON(DevicesPublicConfigFile, scrubbed_devices); err != nil {
 		log.Fatal(err)
 	}
 }
 
 func saveDevicesJson(devices map[string]DeviceEntry) {
-	file, _ := json.MarshalIndent(devices, "", " ")
-	err := ioutil.WriteFile(DevicesConfigFile, file, 0600)
-	if err != nil {
+	if err := saveFileJSON(DevicesConfigFile, devices); err != nil {
 		log.Fatal(err)
 	}
 
@@ -1127,6 +1202,20 @@ func getDevicesJson() map[string]DeviceEntry {
 		}
 	}
 
+	return devices
+}
+
+// devices.json is saved to atomically so we can read lock free
+func readDevicesSnapshot() map[string]DeviceEntry {
+	devices := map[string]DeviceEntry{}
+	data, err := ioutil.ReadFile(DevicesConfigFile)
+	if err != nil {
+		return devices
+	}
+	if err := json.Unmarshal(data, &devices); err != nil {
+		log.Println("failed to parse devices config", err)
+		return map[string]DeviceEntry{}
+	}
 	return devices
 }
 
@@ -2069,7 +2158,7 @@ func equalStringSlice(a []string, b []string) bool {
 }
 
 var (
-	builtin_maps = []string{"internet_access", "dns_access", "lan_access", "ethernet_filter"}
+	builtin_maps = []string{"internet_access", "dns_access", "lan_access", "ethernet_filter", "fwd_iface_wan"}
 
 	ignore_groups = []string{"isolated", "lan", "wan", "dns", "api"}
 )
@@ -2199,6 +2288,8 @@ func getNFTVerdictMap(map_name string) []verdictEntry {
 							// type ifname . ether_addr : verdict (no IP)
 							entry := verdictEntry{"", first, second}
 							existing = append(existing, entry)
+						} else if map_name == "fwd_iface_wan" {
+							existing = append(existing, verdictEntry{second, first, ""})
 						} else {
 							// for _dst_access
 							// type ipv4_addr . ifname : verdict (no MAC)
@@ -2356,8 +2447,7 @@ func updateLocalMappings(IP string, Name string) {
 	LocalMappingsmtx.Lock()
 	defer LocalMappingsmtx.Unlock()
 
-	var localMappingsPath = TEST_PREFIX + "/state/dns/local_mappings"
-	data, err := ioutil.ReadFile(localMappingsPath)
+	data, err := ioutil.ReadFile(LocalMappingsPath)
 	if err != nil {
 		data = []byte{}
 	}
@@ -2376,7 +2466,7 @@ func updateLocalMappings(IP string, Name string) {
 		new_data += ip + " " + hostname + "\n"
 	}
 	new_data += IP + " " + entryName + "\n"
-	ioutil.WriteFile(localMappingsPath, []byte(new_data), 0600)
+	ioutil.WriteFile(LocalMappingsPath, []byte(new_data), 0600)
 }
 
 func refreshWireguardDevice(MAC string, IP string, PublicKey string, Iface string, Name string, Create bool) {
@@ -2904,8 +2994,8 @@ func setup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to hash password", 500)
 		return
 	}
-	users := fmt.Sprintf("{%q: %q}", "admin", hashedPassword)
-	err = ioutil.WriteFile(AuthUsersFile, []byte(users), 0600)
+	users := map[string]string{"admin": hashedPassword}
+	err = saveFileJSON(AuthUsersFile, users)
 	if err != nil {
 		http.Error(w, "Failed to write user auth file", 400)
 		panic(err)
@@ -3283,6 +3373,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/setup_done", finalizeSetup).Methods("PUT")
 
 	external_router_authenticated.HandleFunc("/dnsSettings", dnsSettings).Methods("GET", "PUT")
+	external_router_authenticated.HandleFunc("/dns/hostnames/{hostname}", dnsHostname).Methods("GET", "PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/multicastSettings", multicastSettings).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/customThemes", customThemes).Methods("GET", "PUT")
 
@@ -3296,6 +3387,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/attestStatus", attestStatus).Methods("GET", "PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/pluginAttest", pluginAttest).Methods("GET", "OPTIONS")
 	external_router_authenticated.HandleFunc("/features", getFeatures).Methods("GET", "OPTIONS")
+	external_router_authenticated.HandleFunc("/featureFlags", featureFlags).Methods("GET", "PUT", "OPTIONS")
 	external_router_authenticated.HandleFunc("/autoupdate", autoUpdate).Methods("GET", "PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/checkupdates", checkUpdates).Methods("GET", "PUT", "DELETE")
 
@@ -3387,10 +3479,12 @@ func main() {
 	external_router_authenticated.HandleFunc("/logs", getLogs).Methods("GET")
 
 	//plugins
-	external_router_authenticated.HandleFunc("/plugins", getPlugins).Methods("GET")
-	external_router_authenticated.HandleFunc("/plugins/{name}", updatePlugins(external_router_authenticated, external_router_public)).Methods("PUT", "DELETE")
-	external_router_authenticated.HandleFunc("/plugins/{name}/restart", handleRestartPlugin).Methods("PUT")
-	external_router_authenticated.HandleFunc("/plugins/{name}/update_container", updatePluginContainer).Methods("PUT")
+	external_router_authenticated.HandleFunc("/plugins_api/", getPlugins).Methods("GET")
+	external_router_authenticated.HandleFunc("/plugins_api/{name}", updatePlugins(external_router_authenticated, external_router_public)).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/plugins_api/{name}/restart", handleRestartPlugin).Methods("PUT")
+	external_router_authenticated.HandleFunc("/plugins_api/{name}/update_container", updatePluginContainer).Methods("PUT")
+	external_router_authenticated.HandleFunc("/plugin/ui_session", mintPluginUISession).Methods("PUT")
+	external_router_authenticated.HandleFunc("/plugin/ui_session/{session}", deletePluginUISession).Methods("DELETE")
 	//TBD: API Docs
 	external_router_authenticated.HandleFunc("/plugin/custom_compose_paths", applyJwtOtpCheck(modifyCustomComposePaths)).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/plugin/install_user_url", installUserPluginGitUrl(external_router_authenticated, external_router_public)).Methods("PUT")
@@ -3405,10 +3499,20 @@ func main() {
 	external_router_authenticated.HandleFunc("/tokens", applyJwtOtpCheck(getAuthTokens)).Methods("GET")
 	external_router_authenticated.HandleFunc("/tokens", applyJwtOtpCheck(updateAuthTokens)).Methods("PUT", "DELETE")
 
-	external_router_authenticated.HandleFunc("/otp_register", otpRegister).Methods("PUT", "DELETE")
-	external_router_authenticated.HandleFunc("/otp_validate", generateOTPToken).Methods("PUT")
+	external_router_authenticated.HandleFunc("/otp_register", applyPasswordAuthCheck(otpRegister)).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/otp_validate", applyPasswordAuthCheck(generateOTPToken)).Methods("PUT")
 	external_router_authenticated.HandleFunc("/otp_status", otpStatus).Methods("GET")
 	external_router_authenticated.HandleFunc("/otp_jwt_test", applyJwtOtpCheck(testJWTOTP)).Methods("PUT")
+
+	external_router_authenticated.HandleFunc("/webauthn/status", webauthnStatus).Methods("GET")
+	external_router_authenticated.HandleFunc("/webauthn/register", applyFactorManagementCheck(webauthnRegisterBegin)).Methods("PUT")
+	external_router_authenticated.HandleFunc("/webauthn/register", applyFactorManagementCheck(webauthnRegisterFinish)).Methods("POST")
+	external_router_authenticated.HandleFunc("/webauthn/credential", applyFactorManagementCheck(webauthnDeleteCredential)).Methods("DELETE")
+	external_router_authenticated.HandleFunc("/webauthn/validate", webauthnValidateBegin).Methods("PUT")
+	external_router_authenticated.HandleFunc("/webauthn/validate", webauthnValidateFinish).Methods("POST")
+	external_router_authenticated.HandleFunc("/logout", webauthnLogout).Methods("PUT")
+	external_router_public.HandleFunc("/webauthn/login", webauthnLoginBegin).Methods("PUT")
+	external_router_public.HandleFunc("/webauthn/login", webauthnLoginFinish).Methods("POST")
 
 	// alerts
 	external_router_authenticated.HandleFunc("/alerts", getAlertSettings).Methods("GET")
@@ -3506,6 +3610,7 @@ func main() {
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization", "SPR-Bearer", "X-JWT-OTP"})
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"})
+	exposedHeaders := handlers.ExposedHeaders([]string{"X-SPR-Auth-Error", "WWW-Authenticate"})
 
 	sslPort, runSSL := os.LookupEnv("API_SSL_PORT")
 
@@ -3517,10 +3622,10 @@ func main() {
 
 		listenAddr := fmt.Sprint("0.0.0.0:", listenPort)
 
-		go http.ListenAndServeTLS(listenAddr, ApiTlsCert, ApiTlsKey, logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
+		go http.ListenAndServeTLS(listenAddr, ApiTlsCert, ApiTlsKey, logRequest(handlers.CORS(originsOk, headersOk, methodsOk, exposedHeaders)(Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
 	}
 
-	go http.ListenAndServe("0.0.0.0:80", logRequest(handlers.CORS(originsOk, headersOk, methodsOk)(Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
+	go http.ListenAndServe("0.0.0.0:80", logRequest(handlers.CORS(originsOk, headersOk, methodsOk, exposedHeaders)(Authenticate(external_router_authenticated, external_router_public, external_router_setup))))
 
 	go wifidServer.Serve(unixWifidListener)
 
