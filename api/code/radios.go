@@ -104,11 +104,11 @@ func doReloadPSKFiles() {
 		}
 	}
 
-	err := ioutil.WriteFile(TEST_PREFIX+"/configs/wifi/sae_passwords", []byte(sae), 0600)
+	err := writeFileAtomic(TEST_PREFIX+"/configs/wifi/sae_passwords", []byte(sae), 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = ioutil.WriteFile(TEST_PREFIX+"/configs/wifi/wpa2pskfile", []byte(wpa2), 0600)
+	err = writeFileAtomic(TEST_PREFIX+"/configs/wifi/wpa2pskfile", []byte(wpa2), 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -1236,7 +1236,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	// if extra BSS is configured for the interface, enable it.
 	data = updateExtraBSS(iface, data, "")
 
-	err = ioutil.WriteFile(getHostapdConfigPath(iface), []byte(data), 0600)
+	err = writeFileAtomic(getHostapdConfigPath(iface), []byte(data), 0600)
 	if err != nil {
 		fmt.Println(err)
 		http.Error(w, err.Error(), 400)
@@ -1291,7 +1291,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	mldEnabled := newConf.Mld_ap == 1 || fmt.Sprint(conf["mld_ap"]) == "1"
 	if mldEnabled && mloChannel > 0 && mloHwMode != "" {
 		mloData := generateMloLinkConfig(conf, iface, mloChannel, mloBandwidth, mloHwMode, mloHtCapab, mloVhtCapab)
-		err = ioutil.WriteFile(mloPath, []byte(mloData), 0600)
+		err = writeFileAtomic(mloPath, []byte(mloData), 0600)
 		if err != nil {
 			fmt.Println(err)
 			http.Error(w, err.Error(), 400)
@@ -1413,7 +1413,7 @@ func UpdateHostapMACs(Iface, MAC string) {
 	}
 
 	dataString := updateExtraBSSLocked(Iface, string(data), MAC)
-	err = ioutil.WriteFile(path, []byte(dataString), 0600)
+	err = writeFileAtomic(path, []byte(dataString), 0600)
 	if err != nil {
 		log.Printf("Error writing extrabss in new hostapd conf: %v", err)
 	}
@@ -1426,7 +1426,7 @@ func UpdateHostapMACs(Iface, MAC string) {
 var hostap_template string
 
 func createHostAPTemplate() {
-	err := ioutil.WriteFile(getHostapdConfigPath("template"), []byte(hostap_template), 0600)
+	err := writeFileAtomic(getHostapdConfigPath("template"), []byte(hostap_template), 0600)
 	if err != nil {
 		fmt.Println("Error creating hostap template")
 		return
@@ -1514,7 +1514,7 @@ func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
 		if idx != -1 {
 			dataString = dataString[:idx]
 
-			err = ioutil.WriteFile(path, []byte(dataString), 0600)
+			err = writeFileAtomic(path, []byte(dataString), 0600)
 			if err != nil {
 				log.Printf("Error removing extrabss in new hostapd conf: %v", err)
 				http.Error(w, "can't write new hostapd config", http.StatusBadRequest)
@@ -1569,7 +1569,7 @@ func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
 	// if anything is configured for the interface, enable it.
 	dataString := updateExtraBSS(iface, string(data), "")
 
-	err = ioutil.WriteFile(path, []byte(dataString), 0600)
+	err = writeFileAtomic(path, []byte(dataString), 0600)
 	if err != nil {
 		log.Printf("Error writing extrabss in new hostapd conf: %v", err)
 		http.Error(w, "can't write extrabss in new hostapd config", http.StatusBadRequest)

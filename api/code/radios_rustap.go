@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -35,11 +34,33 @@ func readRustapConfig(iface string) (conf map[string]interface{}, ok bool, err e
 	if err := requireRustapJSONEOF(decoder); err != nil {
 		return nil, false, fmt.Errorf("invalid rustap.json: %w", err)
 	}
-	configured, ok := conf["iface"].(string)
-	if !ok || configured != iface {
-		return nil, false, nil
+	if configured, ok := conf["iface"].(string); ok && configured == iface {
+		return conf, true, nil
 	}
-	return conf, true, nil
+	if radios, ok := conf["radios"].([]interface{}); ok {
+		for _, raw := range radios {
+			radio, ok := raw.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			name, ok := radio["iface"].(string)
+			if !ok || name != iface {
+				continue
+			}
+			view := map[string]interface{}{}
+			for key, value := range conf {
+				if key == "radios" {
+					continue
+				}
+				view[key] = value
+			}
+			for key, value := range radio {
+				view[key] = value
+			}
+			return view, true, nil
+		}
+	}
+	return nil, false, nil
 }
 
 func requireRustapJSONEOF(decoder *json.Decoder) error {
@@ -234,37 +255,7 @@ func writeRustapConfig(conf map[string]interface{}) error {
 	}
 	data = append(data, '\n')
 
-	path := getRustapConfigPath()
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".rustap.json.*")
-	if err != nil {
-		return err
-	}
-	tmpName := tmp.Name()
-	defer os.Remove(tmpName)
-
-	if err := tmp.Chmod(0600); err != nil {
-		tmp.Close()
-		return err
-	}
-	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Sync(); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	if err := os.Rename(tmpName, path); err != nil {
-		return err
-	}
-	if dir, err := os.Open(filepath.Dir(path)); err == nil {
-		defer dir.Close()
-		_ = dir.Sync()
-	}
-	return nil
+	return writeFileAtomic(getRustapConfigPath(), data, 0600)
 }
 
 func rustapHardwareMAC(iface string) (string, error) {
@@ -537,6 +528,10 @@ func rustapUpdateConfigIfOwned(w http.ResponseWriter, r *http.Request, iface str
 	if !ok {
 		return false
 	}
+	if rustapConfigIsMultiRadio() {
+		http.Error(w, "multi-radio RustAP config must be edited by regenerating rustap.json", http.StatusBadRequest)
+		return true
+	}
 	patch, err := decodeRustapPatch(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -565,6 +560,10 @@ func rustapChannelSwitchIfOwned(w http.ResponseWriter, iface string, params Chan
 	}
 	if !ok {
 		return false
+	}
+	if rustapConfigIsMultiRadio() {
+		http.Error(w, "multi-radio RustAP config must be edited by regenerating rustap.json", http.StatusBadRequest)
+		return true
 	}
 
 	phy := "vht"
@@ -600,4 +599,257 @@ func rustapChannelSwitchIfOwned(w http.ResponseWriter, iface string, params Chan
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(calculated)
 	return true
+}
+
+func hostapdUint(conf map[string]interface{}, key string) (uint64, bool) {
+	switch typed := conf[key].(type) {
+	case uint64:
+		return typed, true
+	case int64:
+		return uint64(typed), true
+	case int:
+		return uint64(typed), true
+	case float64:
+		return uint64(typed), true
+	case json.Number:
+		integer, err := typed.Int64()
+		if err == nil {
+			return uint64(integer), true
+		}
+	case string:
+		integer, err := strconv.ParseUint(typed, 10, 64)
+		if err == nil {
+			return integer, true
+		}
+	}
+	return 0, false
+}
+
+func hostapdStr(conf map[string]interface{}, key string) string {
+	if value, ok := conf[key].(string); ok {
+		return value
+	}
+	return ""
+}
+
+func hostapdRustapBand(conf map[string]interface{}, channel int) float64 {
+	if op, ok := hostapdUint(conf, "op_class"); ok && op >= 131 && op <= 137 {
+		return 6
+	}
+	if _, ok := conf["he_6ghz_reg_power_type"]; ok {
+		return 6
+	}
+	if channel <= 14 {
+		return 2.4
+	}
+	return 5
+}
+
+func hostapdRustapPhy(conf map[string]interface{}) string {
+	if value, ok := hostapdUint(conf, "ieee80211be"); ok && value == 1 {
+		return "be"
+	}
+	if value, ok := hostapdUint(conf, "ieee80211ax"); ok && value == 1 {
+		return "ax"
+	}
+	if value, ok := hostapdUint(conf, "ieee80211ac"); ok && value == 1 {
+		return "ac"
+	}
+	if value, ok := hostapdUint(conf, "ieee80211n"); ok && value == 1 {
+		return "n"
+	}
+	return "ac"
+}
+
+func hostapdRustapWidth(conf map[string]interface{}, phy string) int {
+	key := "vht_oper_chwidth"
+	switch phy {
+	case "be", "eht":
+		key = "eht_oper_chwidth"
+	case "ax", "he":
+		key = "he_oper_chwidth"
+	}
+	chwidth, ok := hostapdUint(conf, key)
+	if !ok {
+		chwidth, ok = hostapdUint(conf, "vht_oper_chwidth")
+	}
+	if ok {
+		switch chwidth {
+		case 1:
+			return 80
+		case 2, 3:
+			return 160
+		}
+	}
+	if strings.Contains(hostapdStr(conf, "ht_capab"), "HT40") {
+		return 40
+	}
+	return 20
+}
+
+func hostapdRustapKeyMgmt(akm string) string {
+	upper := strings.ToUpper(akm)
+	hasSAE := strings.Contains(upper, "SAE")
+	hasPSK := strings.Contains(upper, "PSK")
+	switch {
+	case strings.Contains(upper, "OWE"):
+		return "owe"
+	case hasSAE && hasPSK:
+		return "sae-transition"
+	case hasSAE:
+		return "sae"
+	default:
+		return "psk"
+	}
+}
+
+func rustapPskFile(keyMgmt string) string {
+	if strings.Contains(keyMgmt, "sae") {
+		return "/configs/wifi/sae_passwords"
+	}
+	return "/configs/wifi/wpa2pskfile"
+}
+
+var rustapGuestMACs = []int64{0x06, 0x0a, 0x0e, 0x12, 0x16, 0x1a, 0x1e}
+
+func rustapGuestBSSID(base string, index int) (string, bool) {
+	if index >= len(rustapGuestMACs) {
+		return "", false
+	}
+	if len(base) < 3 || base[2] != ':' {
+		return "", false
+	}
+	return fmt.Sprintf("%02x", rustapGuestMACs[index]) + base[2:], true
+}
+
+func generateRustapRadioLocked(entry InterfaceConfig) (map[string]interface{}, error) {
+	conf, err := getHostapdJson(entry.Name)
+	if err != nil {
+		return nil, err
+	}
+	channel := 0
+	if value, ok := hostapdUint(conf, "channel"); ok {
+		channel = int(value)
+	}
+	ssid := hostapdStr(conf, "ssid")
+	if ssid == "" {
+		ssid = "SPR_" + entry.Name
+	}
+	phy := hostapdRustapPhy(conf)
+	radio := map[string]interface{}{
+		"iface":     entry.Name,
+		"ssid":      ssid,
+		"channel":   channel,
+		"band":      hostapdRustapBand(conf, channel),
+		"width":     hostapdRustapWidth(conf, phy),
+		"phy":       phy,
+		"ctrl_path": "/state/wifi/control_" + entry.Name + "/" + entry.Name,
+	}
+	base := entry.MACOverride
+	if base == "" {
+		if live, err := rustapHardwareMAC(entry.Name); err == nil {
+			base = live
+		}
+	}
+	bssList := make([]interface{}, 0, len(entry.ExtraBSS))
+	for i := range entry.ExtraBSS {
+		guest := entry.ExtraBSS[i]
+		item := map[string]interface{}{
+			"ssid": guest.Ssid,
+		}
+		if mac, ok := rustapGuestBSSID(base, i); ok {
+			item["mac"] = mac
+		}
+		if guest.WpaKeyMgmt != "" {
+			item["key_mgmt"] = hostapdRustapKeyMgmt(guest.WpaKeyMgmt)
+		}
+		if guest.GuestPassword != "" {
+			item["passphrase"] = guest.GuestPassword
+		}
+		if guest.DisableIsolation {
+			item["disable_isolation"] = true
+		}
+		bssList = append(bssList, item)
+	}
+	if len(bssList) > 0 {
+		radio["bss"] = bssList
+	}
+	return radio, nil
+}
+
+func generateRustapConfigLocked() (map[string]interface{}, error) {
+	config := loadInterfacesConfigLocked()
+	radios := make([]interface{}, 0)
+	var policy map[string]interface{}
+	for _, entry := range config {
+		if entry.Type != "AP" || !entry.Enabled {
+			continue
+		}
+		radio, err := generateRustapRadioLocked(entry)
+		if err != nil {
+			continue
+		}
+		if policy == nil {
+			if conf, err := getHostapdJson(entry.Name); err == nil {
+				keyMgmt := hostapdRustapKeyMgmt(hostapdStr(conf, "wpa_key_mgmt"))
+				country := hostapdStr(conf, "country_code")
+				if country == "" {
+					country = "US"
+				}
+				perStaVif := false
+				if value, ok := hostapdUint(conf, "per_sta_vif"); ok {
+					perStaVif = value == 1
+				}
+				policy = map[string]interface{}{
+					"mode":            "netlink",
+					"country":         country,
+					"key_mgmt":        keyMgmt,
+					"psk_file":        rustapPskFile(keyMgmt),
+					"per_sta_vif":     perStaVif,
+					"spr_api_socket":  "/state/wifi/apisock",
+					"spr_dhcp_helper": "/hostap_dhcp_helper",
+				}
+				if value, ok := hostapdUint(conf, "wmm_enabled"); ok {
+					policy["wmm"] = value == 1
+				}
+			}
+		}
+		radios = append(radios, radio)
+	}
+	if len(radios) == 0 || policy == nil {
+		return nil, nil
+	}
+	policy["radios"] = radios
+	return policy, nil
+}
+
+func rustapConfigIsMultiRadio() bool {
+	data, err := os.ReadFile(getRustapConfigPath())
+	if err != nil {
+		return false
+	}
+	var raw map[string]interface{}
+	if json.Unmarshal(data, &raw) != nil {
+		return false
+	}
+	_, ok := raw["radios"].([]interface{})
+	return ok
+}
+
+func ensureRustapConfig() error {
+	if _, err := os.Stat(getRustapConfigPath()); err == nil {
+		return nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	Interfacesmtx.Lock()
+	conf, err := generateRustapConfigLocked()
+	Interfacesmtx.Unlock()
+	if err != nil {
+		return err
+	}
+	if conf == nil {
+		return nil
+	}
+	return writeRustapConfig(conf)
 }
