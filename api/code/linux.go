@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"os"
 	"strconv"
 	"syscall"
 
@@ -215,4 +216,20 @@ func (s *RouteSnapshot) InterfaceForIP(ip string) string {
 		}
 	}
 	return best
+}
+
+func openFileNoSymlinks(path string, flags int, perm os.FileMode) (*os.File, error) {
+	how := unix.OpenHow{
+		Flags:   uint64(flags) | unix.O_CLOEXEC,
+		Mode:    uint64(perm.Perm()),
+		Resolve: unix.RESOLVE_NO_SYMLINKS,
+	}
+	fd, err := unix.Openat2(unix.AT_FDCWD, path, &how)
+	if err == unix.ENOSYS {
+		return os.OpenFile(path, flags|unix.O_NOFOLLOW, perm)
+	}
+	if err != nil {
+		return nil, &os.PathError{Op: "openat2", Path: path, Err: err}
+	}
+	return os.NewFile(uintptr(fd), path), nil
 }

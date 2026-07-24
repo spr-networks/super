@@ -218,7 +218,7 @@ const firstOutboundRouteTable = 11
 func SyncBaseContainer() {
 	// Wait for the base container to grab the flock
 
-	file, err := os.OpenFile(BASE_READY, os.O_RDWR|os.O_CREATE, 0600)
+	file, err := openFileNoSymlinks(BASE_READY, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		log.Println("[-] Failed to open base ready file", err)
 		return
@@ -241,7 +241,7 @@ func SyncBaseContainer() {
 
 func saveFirewallRulesLocked() {
 	file, _ := json.MarshalIndent(gFirewallConfig, "", " ")
-	err := ioutil.WriteFile(FirewallConfigFile, file, 0600)
+	err := writeFileAtomic(FirewallConfigFile, file, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}

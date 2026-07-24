@@ -7,12 +7,7 @@ import (
 	"path/filepath"
 )
 
-func saveFileJSON(path string, value interface{}) error {
-	data, err := json.MarshalIndent(value, "", " ")
-	if err != nil {
-		return fmt.Errorf("marshal %s: %w", path, err)
-	}
-
+func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
 	dir := filepath.Dir(path)
 	tmp, err := os.CreateTemp(dir, "."+filepath.Base(path)+".*")
 	if err != nil {
@@ -24,7 +19,7 @@ func saveFileJSON(path string, value interface{}) error {
 		_ = os.Remove(tmpPath)
 	}()
 
-	if err := tmp.Chmod(0600); err != nil {
+	if err := tmp.Chmod(perm); err != nil {
 		return fmt.Errorf("set permissions on temporary file for %s: %w", path, err)
 	}
 	if _, err := tmp.Write(data); err != nil {
@@ -46,4 +41,13 @@ func saveFileJSON(path string, value interface{}) error {
 	}
 
 	return nil
+}
+
+func saveFileJSON(path string, value interface{}) error {
+	data, err := json.MarshalIndent(value, "", " ")
+	if err != nil {
+		return fmt.Errorf("marshal %s: %w", path, err)
+	}
+
+	return writeFileAtomic(path, data, 0600)
 }

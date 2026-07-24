@@ -178,7 +178,7 @@ func saveWanHealthConfig(config WanHealthConfig) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(WanHealthConfigPath, file, 0600)
+	return writeFileAtomic(WanHealthConfigPath, file, 0600)
 }
 
 func loadWanHealthState() {

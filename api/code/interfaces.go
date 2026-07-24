@@ -222,7 +222,7 @@ func configureInterface(interfaceType string, subType string, name string, MACRa
 			configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+name)
 			configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+name)
 
-			err = ioutil.WriteFile(path, []byte(configData), 0600)
+			err = writeFileAtomic(path, []byte(configData), 0600)
 			if err != nil {
 				fmt.Println("Error creating", path)
 				return err
@@ -562,7 +562,7 @@ func writeInterfacesConfigLocked(config []InterfaceConfig) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(gAPIInterfacesPath, file, 0600)
+	err = writeFileAtomic(gAPIInterfacesPath, file, 0600)
 	if err != nil {
 		return err
 	}

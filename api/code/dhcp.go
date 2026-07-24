@@ -187,7 +187,7 @@ func saveDHCPConfig() {
 
 	lanIP := getLANIP()
 
-	err := ioutil.WriteFile(gLANIPPath, []byte(lanIP), 0600)
+	err := writeFileAtomic(gLANIPPath, []byte(lanIP), 0600)
 	if err != nil {
 		log.Fatal(err)
 	}

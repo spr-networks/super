@@ -5,6 +5,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"syscall"
 )
 
 func bindToDevice(fd int, ifName string) error {
@@ -408,3 +410,7 @@ type RouteSnapshot struct{}
 
 func SnapshotRoutes() *RouteSnapshot                  { return &RouteSnapshot{} }
 func (s *RouteSnapshot) InterfaceForIP(string) string { return "" }
+
+func openFileNoSymlinks(path string, flags int, perm os.FileMode) (*os.File, error) {
+	return os.OpenFile(path, flags|syscall.O_NOFOLLOW, perm)
+}

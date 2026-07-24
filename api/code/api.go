@@ -170,6 +170,12 @@ func loadConfig() {
 		go restartPlugin("WIFIUPLINK")
 	}
 
+	if slices.Contains(config.FeatureFlags, "rustap") {
+		if err := ensureRustapConfig(); err != nil {
+			log.Printf("failed to generate rustap.json: %v", err)
+		}
+	}
+
 	//loading this will make sure devices-public.json is made
 	getDevicesJson()
 
@@ -320,6 +326,12 @@ func featureFlags(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if rustapEnabled {
+		if err := ensureRustapConfig(); err != nil {
+			log.Printf("failed to generate rustap.json: %v", err)
+		}
+	}
+
 	if rustapChanged || markersChanged {
 		go callSuperdRestart("", "wifid")
 		go restartPlugin("WIFIUPLINK")
@@ -375,7 +387,7 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 			}
 
 			encoded := []byte(fmt.Sprintf("%q", newName))
-			err = ioutil.WriteFile(HostnameConfigPath, encoded, 0600)
+			err = writeFileAtomic(HostnameConfigPath, encoded, 0600)
 			if err != nil {
 				http.Error(w, err.Error(), 400)
 			}
@@ -611,7 +623,7 @@ func runAutoUpdates() {
 
 func saveMulticastJsonLocked(settings MulticastSettings) {
 	file, _ := json.MarshalIndent(settings, "", " ")
-	err := ioutil.WriteFile(MulticastConfigFile, file, 0600)
+	err := writeFileAtomic(MulticastConfigFile, file, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -2027,7 +2039,7 @@ var (
 
 func saveGroupsJson(groups []GroupEntry) {
 	file, _ := json.MarshalIndent(groups, "", " ")
-	err := ioutil.WriteFile(GroupsConfigFile, file, 0600)
+	err := writeFileAtomic(GroupsConfigFile, file, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -3004,7 +3016,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 	// bcrypt password for setup watcher on first install
 	sysHash, err := bcrypt.GenerateFromPassword([]byte(conf.AdminPassword), 12)
 	if err == nil {
-		ioutil.WriteFile(SetupSysHashPath, sysHash, 0600)
+		writeFileAtomic(SetupSysHashPath, sysHash, 0600)
 	}
 
 	//write to config.sh
@@ -3020,7 +3032,7 @@ func setup(w http.ResponseWriter, r *http.Request) {
 
 	configData = matchInterfaceUplink.ReplaceAllString(configData, "$1="+conf.InterfaceUplink)
 
-	err = ioutil.WriteFile(ConfigFile, []byte(configData), 0600)
+	err = writeFileAtomic(ConfigFile, []byte(configData), 0600)
 	if err != nil {
 		http.Error(w, "Failed to write config to "+ConfigFile, 400)
 		panic(err)
@@ -3040,7 +3052,7 @@ func finalizeSetup(w http.ResponseWriter, r *http.Request) {
 	//ssh/http/https service ports to LAN access only
 	setupRestrictUpstreamServices()
 
-	ioutil.WriteFile(SetupDonePath, []byte("true"), 0600)
+	writeFileAtomic(SetupDonePath, []byte("true"), 0600)
 
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
 }

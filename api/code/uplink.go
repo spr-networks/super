@@ -49,7 +49,7 @@ func saveUplinksConfig(config UplinksConfig) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(gAPIUplinksConfigPath, file, 0600)
+	err = writeFileAtomic(gAPIUplinksConfigPath, file, 0600)
 	if err != nil {
 		return err
 	}
@@ -193,7 +193,7 @@ network={
 			return err
 		}
 		fp := TEST_PREFIX + "/configs/wifi_uplink/wpa_" + wpa.Iface + ".conf"
-		err = ioutil.WriteFile(fp, result.Bytes(), 0600)
+		err = writeFileAtomic(fp, result.Bytes(), 0600)
 		if err != nil {
 			return err
 		}
@@ -269,7 +269,7 @@ func insertWpaConfigAndSave(interfaces []InterfaceConfig, new_wpa WPAIface) erro
 	config.WPAs = wpas
 
 	file, _ := json.MarshalIndent(config, "", " ")
-	err = ioutil.WriteFile(WpaConfigPath, file, 0600)
+	err = writeFileAtomic(WpaConfigPath, file, 0600)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -495,7 +495,7 @@ func writePPP(interfaces []InterfaceConfig, config PPPConfig) error {
 		return err
 	}
 	fp := TEST_PREFIX + "/configs/ppp/chap-secrets"
-	err = ioutil.WriteFile(fp, result.Bytes(), 0600)
+	err = writeFileAtomic(fp, result.Bytes(), 0600)
 	if err != nil {
 		return err
 	}
@@ -533,7 +533,7 @@ user "{{.Username}}"
 		}
 
 		fp := TEST_PREFIX + "/configs/ppp/peers/provider_" + ppp.Iface
-		err = ioutil.WriteFile(fp, result.Bytes(), 0600)
+		err = writeFileAtomic(fp, result.Bytes(), 0600)
 		if err != nil {
 			return err
 		}
@@ -591,7 +591,7 @@ func insertPPPConfigAndSave(interfaces []InterfaceConfig, new_ppp PPPIface) erro
 	config.PPPs = ppps
 
 	file, _ := json.MarshalIndent(config, "", " ")
-	err = ioutil.WriteFile(PPPConfigPath, file, 0600)
+	err = writeFileAtomic(PPPConfigPath, file, 0600)
 	if err != nil {
 		log.Println(err)
 		return err

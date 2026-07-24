@@ -794,7 +794,7 @@ func trafficInsightsConfigHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), 500)
 			return
 		}
-		if err := os.WriteFile(TrafficInsightsConfigPath, data, 0600); err != nil {
+		if err := writeFileAtomic(TrafficInsightsConfigPath, data, 0600); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}

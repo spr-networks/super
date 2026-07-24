@@ -66,7 +66,7 @@ func loadParentalConfig() {
 
 func saveParentalConfig() {
 	file, _ := json.MarshalIndent(gParentalConfig, "", " ")
-	if err := ioutil.WriteFile(PersonasConfigFile, file, 0600); err != nil {
+	if err := writeFileAtomic(PersonasConfigFile, file, 0600); err != nil {
 		log.Println("failed to save personas.json", err)
 	}
 }

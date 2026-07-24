@@ -168,7 +168,7 @@ func loadAlertsConfig() {
 func saveAlertsConfig() {
 	//assumes lock is held
 	file, _ := json.MarshalIndent(gAlertsConfig, "", " ")
-	err := ioutil.WriteFile(AlertSettingsFile, file, 0600)
+	err := writeFileAtomic(AlertSettingsFile, file, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -294,7 +294,7 @@ func loadAlertDevices() {
 func saveAlertDevices() {
 	//assumes lock is held
 	file, _ := json.MarshalIndent(gAlertDevices, "", " ")
-	err := ioutil.WriteFile(AlertDevicesFile, file, 0600)
+	err := writeFileAtomic(AlertDevicesFile, file, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -431,7 +431,7 @@ func loadMobileProxySettings() {
 func saveMobileProxySettings() {
 	//assumes lock is held
 	file, _ := json.MarshalIndent(gMobileAlertProxySettings, "", " ")
-	err := ioutil.WriteFile(MobileProxySettingsFile, file, 0600)
+	err := writeFileAtomic(MobileProxySettingsFile, file, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}

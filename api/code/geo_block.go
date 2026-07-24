@@ -118,7 +118,7 @@ func saveGeoBlockConfigLocked() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(GeoBlockConfigPath, data, 0600)
+	return writeFileAtomic(GeoBlockConfigPath, data, 0600)
 }
 
 func geoBlockConfigCopy() GeoBlockConfig {

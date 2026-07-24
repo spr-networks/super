@@ -25,7 +25,7 @@ func setRustapFeatureMarkers(enabled bool) (bool, error) {
 			} else if err != nil {
 				return changed, fmt.Errorf("inspect RustAP feature marker: %w", err)
 			}
-			if err := os.WriteFile(path, nil, 0644); err != nil {
+			if err := writeFileAtomic(path, nil, 0644); err != nil {
 				return changed, fmt.Errorf("enable RustAP feature: %w", err)
 			}
 			continue

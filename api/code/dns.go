@@ -375,22 +375,10 @@ func updateDNSCorefileMulti(dns DNSSettings) {
 	}
 
 	// Write the updated content back to the file
-	outputFile, err := os.Create(DNSConfigFile)
-	if err != nil {
-		fmt.Printf("Error creating file: %v\n", err)
+	if err := writeFileAtomic(DNSConfigFile, []byte(strings.Join(updatedLines, "\n")+"\n"), 0600); err != nil {
+		fmt.Printf("Error writing to file: %v\n", err)
 		return
 	}
-	defer outputFile.Close()
-
-	writer := bufio.NewWriter(outputFile)
-	for _, line := range updatedLines {
-		_, err := writer.WriteString(line + "\n")
-		if err != nil {
-			fmt.Printf("Error writing to file: %v\n", err)
-			return
-		}
-	}
-	writer.Flush()
 }
 
 func updateDNSCorefile(dns DNSSettings) {
@@ -488,21 +476,10 @@ func updateDNSCorefile(dns DNSSettings) {
 	}
 
 	// Write the updated content back to the file
-	outputFile, err := os.Create(DNSConfigFile)
-	if err != nil {
-		fmt.Printf("Error creating file: %v\n", err)
+	if err := writeFileAtomic(DNSConfigFile, []byte(strings.Join(updatedLines, "\n")+"\n"), 0600); err != nil {
+		fmt.Printf("Error writing to file: %v\n", err)
 		return
 	}
-	defer outputFile.Close()
-	writer := bufio.NewWriter(outputFile)
-	for _, line := range updatedLines {
-		_, err := writer.WriteString(line + "\n")
-		if err != nil {
-			fmt.Printf("Error writing to file: %v\n", err)
-			return
-		}
-	}
-	writer.Flush()
 }
 
 func dnsSettings(w http.ResponseWriter, r *http.Request) {

@@ -118,7 +118,7 @@ func customThemes(w http.ResponseWriter, r *http.Request) {
 		}
 
 		file, _ := json.MarshalIndent(themes, "", " ")
-		err = os.WriteFile(CustomThemesPath, file, 0600)
+		err = writeFileAtomic(CustomThemesPath, file, 0600)
 		if err != nil {
 			http.Error(w, "failed to save themes", 500)
 			return
