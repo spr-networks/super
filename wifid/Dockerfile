@@ -7,6 +7,31 @@ ARG SOURCE_DATE_EPOCH
 
 FROM ${ALPINE_REF} AS cacerts
 
+# Install the pinned oxwifid Rust AP release. oxwifid currently publishes an
+# ARM64 archive; AMD64 retains the hostapd path and gets an explicit error if
+# its Rust feature marker is enabled.
+FROM ${ALPINE_REF} AS rust-ap
+ARG TARGETARCH
+ARG OXWIFID_VERSION=0.1.2
+ARG OXWIFID_ARM64_URL=https://github.com/spr-networks/oxwifid/releases/download/v0.1.2/barely-ap-v0.1.2-aarch64-unknown-linux-musl.tar.gz
+ARG OXWIFID_ARM64_ARCHIVE_SHA256=201843a3da49acf18a1d9e506911a5b736723f87e5424d66fbfb53ca65f2b0c4
+ARG OXWIFID_BARELY_AP_ARM64_SHA256=805b06ab44efb75d49c3788bb897289f319d07df8789b4d3d4e0429bd468bfbc
+RUN set -eux; \
+    case "${TARGETARCH}" in \
+      arm64) \
+        archive=/tmp/oxwifid.tar.gz; \
+        member="barely-ap-v${OXWIFID_VERSION}-aarch64-unknown-linux-musl/barely-ap"; \
+        wget -q -O "${archive}" "${OXWIFID_ARM64_URL}"; \
+        printf '%s  %s\n' "${OXWIFID_ARM64_ARCHIVE_SHA256}" "${archive}" | sha256sum -c -; \
+        tar -xOzf "${archive}" "${member}" > /barely-ap; \
+        printf '%s  %s\n' "${OXWIFID_BARELY_AP_ARM64_SHA256}" /barely-ap | sha256sum -c -; \
+        rm "${archive}";; \
+      amd64) \
+        printf '#!/bin/sh\necho "Rust AP is unavailable on linux/amd64" >&2\nexit 1\n' > /barely-ap;; \
+      *) echo "unsupported TARGETARCH=${TARGETARCH}" >&2; exit 1;; \
+    esac; \
+    chmod 0755 /barely-ap
+
 FROM ${UBUNTU_REF} AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 ARG UBUNTU_SNAPSHOT=20260701T000000Z
@@ -77,11 +102,15 @@ ARG UBUNTU_SNAPSHOT=20260701T000000Z
 RUN set -eux; \
     printf 'Types: deb\nURIs: https://snapshot.ubuntu.com/ubuntu/%s\nSuites: noble noble-updates noble-security\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' "${UBUNTU_SNAPSHOT}" > /etc/apt/sources.list.d/ubuntu.sources; \
     printf 'APT::Install-Recommends "false";\nAcquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99reproducible
-RUN apt-get update && apt-get install -y --no-install-recommends libnl-genl-3-dev libnl-route-3-dev iw lshw && rm -rf /var/lib/apt/lists/* /var/log/* /var/cache/ldconfig/aux-cache
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      iw libnl-genl-3-dev libnl-route-3-dev lshw nftables xdp-tools \
+    && rm -rf /var/lib/apt/lists/* /var/log/* /var/cache/ldconfig/aux-cache \
+    && mkdir -p /code/xdp-tools/xdp-loader \
+    && ln -s "$(command -v xdp-loader)" /code/xdp-tools/xdp-loader/xdp-loader
 COPY --from=builder /code/hostap/hostapd/hostapd /usr/local/bin/
 COPY --from=builder /code/hostap/hostapd/hostapd_cli /usr/local/bin/
+COPY --from=rust-ap /barely-ap /usr/local/bin/barely-ap
 COPY --from=builder /hostap_dhcp_helper /
-RUN mkdir /code/
 COPY --from=builder /code/filter_dhcp_mismatch.o /code/
 COPY scripts /scripts
 ENTRYPOINT ["/scripts/startup.sh"]

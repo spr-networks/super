@@ -163,6 +163,13 @@ func loadConfig() {
 		saveConfigLocked()
 	}
 
+	if markersChanged, err := setRustapFeatureMarkers(slices.Contains(config.FeatureFlags, "rustap")); err != nil {
+		log.Printf("failed to synchronize RustAP feature markers: %v", err)
+	} else if markersChanged {
+		go callSuperdRestart("", "wifid")
+		go restartPlugin("WIFIUPLINK")
+	}
+
 	//loading this will make sure devices-public.json is made
 	getDevicesJson()
 
@@ -300,6 +307,22 @@ func featureFlags(w http.ResponseWriter, r *http.Request) {
 		config.FeatureFlags = previous
 		http.Error(w, "failed to save feature flags", http.StatusInternalServerError)
 		return
+	}
+
+	rustapEnabled := slices.Contains(config.FeatureFlags, "rustap")
+	rustapChanged := rustapEnabled != slices.Contains(previous, "rustap")
+	markersChanged, err := setRustapFeatureMarkers(rustapEnabled)
+	if err != nil {
+		config.FeatureFlags = previous
+		_ = saveFileJSON(ApiConfigPath, config)
+		_, _ = setRustapFeatureMarkers(slices.Contains(previous, "rustap"))
+		http.Error(w, "failed to apply RustAP feature flag", http.StatusInternalServerError)
+		return
+	}
+
+	if rustapChanged || markersChanged {
+		go callSuperdRestart("", "wifid")
+		go restartPlugin("WIFIUPLINK")
 	}
 
 	_ = json.NewEncoder(w).Encode(config.FeatureFlags)

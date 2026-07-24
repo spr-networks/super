@@ -71,9 +71,11 @@ type WPANetwork struct {
 }
 
 type WPAIface struct {
-	Iface    string
-	Enabled  bool
-	Networks []WPANetwork
+	Iface        string
+	Enabled      bool
+	Networks     []WPANetwork
+	ScanIface    string `json:",omitempty"`
+	MonitorIface string `json:",omitempty"`
 }
 
 type WPASupplicantConfig struct {
@@ -243,6 +245,14 @@ func insertWpaConfigAndSave(interfaces []InterfaceConfig, new_wpa WPAIface) erro
 	found := false
 	for _, wpa := range config.WPAs {
 		if wpa.Iface == new_wpa.Iface {
+			// The system interface provisioner owns these names. Preserve them
+			// when the frontend updates only credentials or enablement.
+			if new_wpa.ScanIface == "" {
+				new_wpa.ScanIface = wpa.ScanIface
+			}
+			if new_wpa.MonitorIface == "" {
+				new_wpa.MonitorIface = wpa.MonitorIface
+			}
 			wpas = append(wpas, new_wpa)
 			found = true
 		} else {
@@ -291,6 +301,26 @@ func updateWpaSupplicantConfig(w http.ResponseWriter, r *http.Request) {
 	if !isValidIface(wpa.Iface) {
 		log.Println("Invalid iface name", err)
 		http.Error(w, "Invalid iface name", 400)
+		return
+	}
+	for field, iface := range map[string]string{
+		"ScanIface":    wpa.ScanIface,
+		"MonitorIface": wpa.MonitorIface,
+	} {
+		if iface != "" && (len(iface) > 15 || !isValidIface(iface)) {
+			http.Error(w, "Invalid "+field, 400)
+			return
+		}
+	}
+	if (wpa.ScanIface == "") != (wpa.MonitorIface == "") {
+		http.Error(w, "ScanIface and MonitorIface must be set together", 400)
+		return
+	}
+	if wpa.ScanIface != "" && wpa.MonitorIface != "" &&
+		(wpa.ScanIface == wpa.Iface ||
+			wpa.MonitorIface == wpa.Iface ||
+			wpa.ScanIface == wpa.MonitorIface) {
+		http.Error(w, "Iface, ScanIface, and MonitorIface must be distinct", 400)
 		return
 	}
 
