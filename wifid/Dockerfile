@@ -12,10 +12,10 @@ FROM ${ALPINE_REF} AS cacerts
 # its Rust feature marker is enabled.
 FROM ${ALPINE_REF} AS rust-ap
 ARG TARGETARCH
-ARG OXWIFID_VERSION=0.1.2
-ARG OXWIFID_ARM64_URL=https://github.com/spr-networks/oxwifid/releases/download/v0.1.2/barely-ap-v0.1.2-aarch64-unknown-linux-musl.tar.gz
-ARG OXWIFID_ARM64_ARCHIVE_SHA256=201843a3da49acf18a1d9e506911a5b736723f87e5424d66fbfb53ca65f2b0c4
-ARG OXWIFID_BARELY_AP_ARM64_SHA256=805b06ab44efb75d49c3788bb897289f319d07df8789b4d3d4e0429bd468bfbc
+ARG OXWIFID_VERSION=0.1.4
+ARG OXWIFID_ARM64_URL=https://github.com/spr-networks/oxwifid/releases/download/v0.1.4/barely-ap-v0.1.4-aarch64-unknown-linux-musl.tar.gz
+ARG OXWIFID_ARM64_ARCHIVE_SHA256=23d0f32e89279ec079b9f158f85d5756977ae27477e0fbe306b7b5a628e05f29
+ARG OXWIFID_BARELY_AP_ARM64_SHA256=4efd02e3e25c1bbef342a66b1002dad79a459256d8086aa19d049a3cda399f4e
 RUN set -eux; \
     case "${TARGETARCH}" in \
       arm64) \
@@ -82,7 +82,7 @@ RUN --mount=type=tmpfs,target=/tmpfs \
     go build -trimpath -ldflags="-s -w" -o /hostap_dhcp_helper main.go control.go roaming.go
 
 # Build hostapd
-ARG HOSTAP_COMMIT=596ffafdda209026c4cfe5e5f0367fce745991d7
+ARG HOSTAP_COMMIT=8f2abe0e014e85202fdd3b6c95be6620257fb4e9
 RUN git init hostap \
  && git -C hostap remote add origin https://github.com/spr-networks/hostap \
  && git -C hostap fetch --depth 1 origin "${HOSTAP_COMMIT}" \
