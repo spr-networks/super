@@ -7,6 +7,7 @@
 - Harden file writes
 - Update hostap version
 - Add a CSP of default-src self for sandboxed iframes
+- Fix dhcp interface regex for plugins
 
 ## v1.2.0
 **Features**
