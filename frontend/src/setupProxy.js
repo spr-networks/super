@@ -12,7 +12,12 @@ module.exports = (app) => {
       // Preserve localhost Host/Origin for WebSocket and WebAuthn validation.
       changeOrigin: false,
       pathFilter: '/__spr_api',
-      pathRewrite: { '^/__spr_api': '' }
+      pathRewrite: { '^/__spr_api': '' },
+      on: {
+        proxyRes: (proxyRes) => {
+          delete proxyRes.headers['content-security-policy']
+        }
+      }
     })
   )
 }

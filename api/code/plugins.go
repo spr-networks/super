@@ -43,6 +43,8 @@ const pluginNetworkReconcileInterval = time.Minute * 5
 const (
 	pluginRuntimeDefault = "default"
 	pluginRuntimeKVM     = "kvm"
+
+	sandboxedPluginContentSecurityPolicy = "default-src 'self'"
 )
 
 type NetworkCapabilities struct {
@@ -328,6 +330,12 @@ func PluginProxy(config PluginConfig) (*httputil.ReverseProxy, error) {
 			//Empty headers from the request
 			//SECURITY benefit: API extensions do not receive credentials
 			req.Header = http.Header{}
+		},
+		ModifyResponse: func(response *http.Response) error {
+			if config.HasUI && config.IsUISandboxed() {
+				response.Header.Set("Content-Security-Policy", sandboxedPluginContentSecurityPolicy)
+			}
+			return nil
 		},
 		Transport: &http.Transport{
 			Dial: func(network, addr string) (net.Conn, error) {
