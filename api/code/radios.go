@@ -190,6 +190,9 @@ func (h *HostapdConfigEntry) Validate() error {
 	if strings.ContainsAny(h.Hw_mode, "\n") {
 		return fmt.Errorf("Hw_mode contains newlines")
 	}
+	if strings.ContainsAny(h.Mlo_hw_mode, "\n") {
+		return fmt.Errorf("Mlo_hw_mode contains newlines")
+	}
 	if strings.ContainsAny(h.Ssid, "\n") {
 		return fmt.Errorf("Ssid contains newlines")
 	}

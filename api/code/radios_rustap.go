@@ -703,11 +703,34 @@ func hostapdRustapKeyMgmt(akm string) string {
 	}
 }
 
-func rustapPskFile(keyMgmt string) string {
-	if strings.Contains(keyMgmt, "sae") {
-		return "/configs/wifi/sae_passwords"
+func setRustapCredentialPaths(conf map[string]interface{}, keyMgmt string) bool {
+	switch keyMgmt {
+	case "psk", "psk-sha256", "sae", "sae-transition", "owe":
+	default:
+		return false
 	}
-	return "/configs/wifi/wpa2pskfile"
+	wantsWPA := keyMgmt == "psk" || keyMgmt == "psk-sha256" || keyMgmt == "sae-transition"
+	wantsSAE := keyMgmt == "sae" || keyMgmt == "sae-transition"
+	changed := false
+	set := func(key, path string, wanted bool) {
+		current, exists := conf[key]
+		if wanted {
+			if current != path {
+				conf[key] = path
+				changed = true
+			}
+		} else if exists {
+			delete(conf, key)
+			changed = true
+		}
+	}
+	set("wpa_psk_file", "/configs/wifi/wpa2pskfile", wantsWPA)
+	set("sae_psk_file", "/configs/wifi/sae_passwords", wantsSAE)
+	if _, exists := conf["psk_file"]; exists {
+		delete(conf, "psk_file")
+		changed = true
+	}
+	return changed
 }
 
 var rustapGuestMACs = []int64{0x06, 0x0a, 0x0e, 0x12, 0x16, 0x1a, 0x1e}
@@ -804,11 +827,11 @@ func generateRustapConfigLocked() (map[string]interface{}, error) {
 					"mode":            "netlink",
 					"country":         country,
 					"key_mgmt":        keyMgmt,
-					"psk_file":        rustapPskFile(keyMgmt),
 					"per_sta_vif":     perStaVif,
 					"spr_api_socket":  "/state/wifi/apisock",
 					"spr_dhcp_helper": "/hostap_dhcp_helper",
 				}
+				setRustapCredentialPaths(policy, keyMgmt)
 				if value, ok := hostapdUint(conf, "wmm_enabled"); ok {
 					policy["wmm"] = value == 1
 				}
@@ -837,9 +860,24 @@ func rustapConfigIsMultiRadio() bool {
 }
 
 func ensureRustapConfig() error {
-	if _, err := os.Stat(getRustapConfigPath()); err == nil {
+	data, err := os.ReadFile(getRustapConfigPath())
+	if err == nil {
+		decoder := json.NewDecoder(strings.NewReader(string(data)))
+		decoder.UseNumber()
+		conf := map[string]interface{}{}
+		if err := decoder.Decode(&conf); err != nil {
+			return fmt.Errorf("invalid rustap.json: %w", err)
+		}
+		if err := requireRustapJSONEOF(decoder); err != nil {
+			return fmt.Errorf("invalid rustap.json: %w", err)
+		}
+		keyMgmt, _ := conf["key_mgmt"].(string)
+		if setRustapCredentialPaths(conf, keyMgmt) {
+			return writeRustapConfig(conf)
+		}
 		return nil
-	} else if !errors.Is(err, os.ErrNotExist) {
+	}
+	if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	Interfacesmtx.Lock()
