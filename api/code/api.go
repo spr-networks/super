@@ -3171,6 +3171,8 @@ func migrateDevicePolicies() {
 	}
 }
 
+const mainPageContentSecurityPolicy = "default-src 'self'"
+
 // set up SPA handler. From gorilla mux's documentation
 type spaHandler struct {
 	staticPath string
@@ -3184,6 +3186,9 @@ func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	path = filepath.Join(h.staticPath, path)
+
+	w.Header().Set("Content-Security-Policy", mainPageContentSecurityPolicy)
+
 	_, err = os.Stat(path)
 	if os.IsNotExist(err) {
 		http.ServeFile(w, r, filepath.Join(h.staticPath, h.indexPath))
