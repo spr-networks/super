@@ -96,6 +96,8 @@ export const getAuthReturn = () => {
   })
 }
 
+export const getJWTOTPHeader = () => gJWTOTPHeader
+
 export const setJWTOTPHeader = (jwt = '') => {
   if (gJWTOTPHeader != jwt) {
     AsyncStorage.setItem(

@@ -20,7 +20,7 @@ import {
 } from 'lucide-react-native'
 
 import { getApiURL } from 'api/API'
-import { api } from 'api'
+import { api, getJWTOTPHeader } from 'api'
 import { AlertContext } from 'AppContext'
 import { ListHeader } from 'components/List'
 
@@ -109,6 +109,9 @@ const SpeedTest = (props) => {
     req.open('PUT', url, true)
     req.setRequestHeader('Authorization', authHeaders)
     req.setRequestHeader('Content-Type', 'application/octet-stream')
+    if (getJWTOTPHeader()) {
+      req.setRequestHeader('X-JWT-OTP', getJWTOTPHeader())
+    }
 
     //postData = new Blob([new Uint8Array(4 * 1024 * 1024)])
 
@@ -141,6 +144,9 @@ const SpeedTest = (props) => {
     // load file avoiding the cache
     req.open('GET', url, true)
     req.setRequestHeader('Authorization', authHeaders)
+    if (getJWTOTPHeader()) {
+      req.setRequestHeader('X-JWT-OTP', getJWTOTPHeader())
+    }
     req.responseType = 'blob'
     req.send(null)
   }

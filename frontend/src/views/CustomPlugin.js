@@ -23,7 +23,7 @@ import {
 } from '@gluestack-ui/themed'
 
 import { AlertContext, AppContext } from 'AppContext'
-import { api, pluginAPI } from 'api'
+import { api, getJWTOTPHeader, pluginAPI } from 'api'
 import { themes } from 'Themes'
 
 const pluginThemePayload = (ctx) => {
@@ -154,6 +154,11 @@ const getPluginHTML = async (plugin, theme, pluginAuth = null) => {
   let Authorization = await api.getAuthHeaders()
   let headers = {
     Authorization
+  }
+
+  let jwtOTP = getJWTOTPHeader()
+  if (jwtOTP && api.remoteURL == '') {
+    headers['X-JWT-OTP'] = jwtOTP
   }
 
   let pathname = `plugins/${plugin.URI}/`

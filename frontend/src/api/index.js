@@ -12,6 +12,7 @@ export {
   isMockAPI,
   getApiHostname,
   getWsURL,
+  getJWTOTPHeader,
   setJWTOTPHeader,
   setAuthReturn,
   getAuthReturn
