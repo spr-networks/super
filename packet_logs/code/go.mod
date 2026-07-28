@@ -1,21 +1,21 @@
 module github.com/spr-networks/super/packet_logs
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/florianl/go-nflog/v2 v2.3.0
 	github.com/google/gopacket v1.1.19
 	github.com/vishvananda/netlink v1.3.1
-	golang.org/x/sys v0.42.0
+	golang.org/x/sys v0.47.0
 )
 
 require (
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/mdlayher/netlink v1.9.1-0.20260312172110-2a932c0fc1ae // indirect
-	github.com/mdlayher/socket v0.5.1 // indirect
+	github.com/mdlayher/netlink v1.11.2 // indirect
+	github.com/mdlayher/socket v0.6.1 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/spr-networks/sprbus-json v0.0.0-20260616150305-efdec19847c8
 	github.com/vishvananda/netns v0.0.5 // indirect
-	golang.org/x/net v0.52.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/net v0.57.0 // indirect
+	golang.org/x/sync v0.22.0 // indirect
 )

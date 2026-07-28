@@ -1,6 +1,6 @@
 module lookup_plugin
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/bradfitz/ip2asn v0.0.0-20220725205325-1069e332e707
@@ -12,5 +12,5 @@ require (
 require (
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	go4.org/mem v0.0.0-20240501181205-ae6ca9944745 // indirect
-	golang.org/x/sys v0.42.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 )

@@ -12,10 +12,10 @@ FROM ${ALPINE_REF} AS cacerts
 # its Rust feature marker is enabled.
 FROM ${ALPINE_REF} AS rust-ap
 ARG TARGETARCH
-ARG OXWIFID_VERSION=0.1.6
-ARG OXWIFID_ARM64_URL=https://github.com/spr-networks/oxwifid/releases/download/v0.1.6/barely-ap-v0.1.6-aarch64-unknown-linux-musl.tar.gz
-ARG OXWIFID_ARM64_ARCHIVE_SHA256=25ee56295deed38526163cfa0f8b76467bffc752ec82dbfb7d679f9edf6e7e2c
-ARG OXWIFID_BARELY_AP_ARM64_SHA256=07aba5181acd431bc5270507757840a465d9bd12e8277a7cc86751219475d0ad
+ARG OXWIFID_VERSION=0.1.7
+ARG OXWIFID_ARM64_URL=https://github.com/spr-networks/oxwifid/releases/download/v0.1.7/barely-ap-v0.1.7-aarch64-unknown-linux-musl.tar.gz
+ARG OXWIFID_ARM64_ARCHIVE_SHA256=00850f9232f07dff53cfc6eb170d03b653f1f72668bf5c954b0c0d60e7d93e5f
+ARG OXWIFID_BARELY_AP_ARM64_SHA256=98be3269a4b216d8e77481d4de6b6d6e153b493b908fc04f97d2a1a53f2929b5
 RUN set -eux; \
     case "${TARGETARCH}" in \
       arm64) \
@@ -35,9 +35,9 @@ RUN set -eux; \
 FROM ${UBUNTU_REF} AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 ARG UBUNTU_SNAPSHOT=20260701T000000Z
-ARG GO_VERSION=1.25.12
-ARG GO_SHA256_AMD64=234828b7a89e0e303d2556310ee549fbcf253d28de937bac3da13d6294262ac1
-ARG GO_SHA256_ARM64=8b5884aef89600aef5b0b051fb971f11f49bb996521e911f30f02a66884f7bd2
+ARG GO_VERSION=1.26.5
+ARG GO_SHA256_AMD64=5c2c3b16caefa1d968a94c1daca04a7ca301a496d9b086e17ad77bb81393f053
+ARG GO_SHA256_ARM64=fe4789e92b1f33358680864bbe8704289e7bb5fc207d80623c308935bd696d49
 ARG TARGETARCH
 COPY --from=cacerts /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 RUN set -eux; \
