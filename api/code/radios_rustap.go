@@ -17,7 +17,15 @@ func getRustapConfigPath() string {
 	return TEST_PREFIX + "/configs/wifi/rustap.json"
 }
 
+func rustapFeatureEnabled() bool {
+	_, err := os.Stat(TEST_PREFIX + "/configs/wifi/enable_rust")
+	return err == nil
+}
+
 func readRustapConfig(iface string) (conf map[string]interface{}, ok bool, err error) {
+	if !rustapFeatureEnabled() {
+		return nil, false, nil
+	}
 	data, err := os.ReadFile(getRustapConfigPath())
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, false, nil
