@@ -270,10 +270,6 @@ table inet filter {
     #jump USERDEF_INPUT
     iif lo counter accept
 
-    # Mark whether the input came from upstream (wan:in) or local network (lan:in)
-    iifname @uplink_interfaces log prefix "wan:in " group 0
-    iifname != @uplink_interfaces log prefix "lan:in " group 0
-
     # block lan ranges from uplink interfaces
     iifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGINP
     iifname @uplink_interfaces ip daddr @supernetworks goto DROPLOGINP
@@ -320,6 +316,10 @@ table inet filter {
     iifname @lan_interfaces jump DROP_MAC_SPOOF
 
     counter jump F_EST_RELATED
+
+    # Mark whether the input came from upstream (wan:in) or local network (lan:in)
+    iifname @uplink_interfaces log prefix "wan:in " group 0
+    iifname != @uplink_interfaces log prefix "lan:in " group 0
 
     # DNS Allow rules
     # Docker can DNS
