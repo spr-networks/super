@@ -4,10 +4,10 @@
 ## v1.2.2
 **Features**
 - Make Mesh & PFW open access
-
 **Fixes**
 - Update rustap version
 - pluginlist.json was missing an import
+- Fix DHCP / Supernets page
 
 ## v1.2.1
 **Fixes**
