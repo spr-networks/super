@@ -262,12 +262,18 @@ func getPortsFromPortVerdictMap(name string) []string {
 	if !ok {
 		return ports
 	}
-	data3, ok := data2[1].(map[string]interface{})
-	if !ok {
-		return ports
+	var data4 map[string]interface{}
+	for _, entry := range data2 {
+		data3, ok := entry.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if m, ok := data3["map"].(map[string]interface{}); ok {
+			data4 = m
+			break
+		}
 	}
-	data4, ok := data3["map"].(map[string]interface{})
-	if !ok {
+	if data4 == nil {
 		return ports
 	}
 	data5, ok := data4["elem"].([]interface{})
@@ -276,10 +282,12 @@ func getPortsFromPortVerdictMap(name string) []string {
 	}
 	for _, entry := range data5 {
 		entryList, ok := entry.([]interface{})
-		if ok {
-			port, ok := entryList[0].(float64)
-			if ok {
+		if ok && len(entryList) > 0 {
+			switch port := entryList[0].(type) {
+			case float64:
 				ports = append(ports, strconv.Itoa(int(port)))
+			case string:
+				ports = append(ports, port)
 			}
 		}
 	}

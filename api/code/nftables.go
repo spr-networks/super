@@ -151,16 +151,37 @@ func (c *NFTClient) ListMapElements(family TableFamily, tableName, mapName strin
 		return nil, err
 	}
 
-	// Convert elements to JSON format similar to nft -j output
+	return mapElementsJSON(family, tableName, mapName, set, elements)
+}
+
+func mapElementsJSON(family TableFamily, tableName, mapName string, set *nftables.Set, elements []nftables.SetElement) ([]byte, error) {
+	keyLen := 0
+	if len(elements) > 0 {
+		keyLen = len(elements[0].Key)
+	}
+
+	mapObj := map[string]interface{}{
+		"family": familyToString(family),
+		"name":   mapName,
+		"table":  tableName,
+		"elem":   formatMapElements(set, mapName, elements),
+	}
+	if keyType := mapKeyTypeJSON(mapName, keyLen, set); keyType != nil {
+		mapObj["type"] = keyType
+	}
+	if set != nil && set.DataType.Name != "" {
+		mapObj["map"] = set.DataType.Name
+	}
+
 	result := map[string]interface{}{
 		"nftables": []map[string]interface{}{
 			{
-				"map": map[string]interface{}{
-					"family": familyToString(family),
-					"name":   mapName,
-					"table":  tableName,
-					"elem":   formatElements(mapName, elements),
+				"metainfo": map[string]interface{}{
+					"json_schema_version": 1,
 				},
+			},
+			{
+				"map": mapObj,
 			},
 		},
 	}
@@ -180,16 +201,26 @@ func (c *NFTClient) ListSetElements(family TableFamily, tableName, setName strin
 		return nil, err
 	}
 
+	setObj := map[string]interface{}{
+		"family": familyToString(family),
+		"name":   setName,
+		"table":  tableName,
+		"elem":   formatSetElements(setName, elements),
+	}
+	if set.KeyType.Name != "" {
+		setObj["type"] = set.KeyType.Name
+	}
+
 	// Convert elements to JSON format similar to nft -j output
 	result := map[string]interface{}{
 		"nftables": []map[string]interface{}{
 			{
-				"set": map[string]interface{}{
-					"family": familyToString(family),
-					"name":   setName,
-					"table":  tableName,
-					"elem":   formatSetElements(setName, elements),
+				"metainfo": map[string]interface{}{
+					"json_schema_version": 1,
 				},
+			},
+			{
+				"set": setObj,
 			},
 		},
 	}
@@ -677,18 +708,6 @@ func familyToString(family TableFamily) string {
 	}
 }
 
-// formatElements formats set elements for JSON output
-func formatElements(mapName string, elements []nftables.SetElement) []interface{} {
-	var result []interface{}
-	for _, elem := range elements {
-		formatted := formatElement(mapName, elem)
-		if formatted != nil {
-			result = append(result, formatted)
-		}
-	}
-	return result
-}
-
 // formatSetElements formats set elements (no values) for JSON output
 func formatSetElements(setName string, elements []nftables.SetElement) []interface{} {
 	var result []interface{}
@@ -718,6 +737,82 @@ func formatSetElements(setName string, elements []nftables.SetElement) []interfa
 		} else {
 			result = append(result, val)
 		}
+	}
+	return result
+}
+
+var concatFieldTypeNames = map[string]string{
+	"ip":    "ipv4_addr",
+	"iface": "ifname",
+	"mac":   "ether_addr",
+}
+
+func mapKeyTypeJSON(mapName string, keyLen int, set *nftables.Set) interface{} {
+	if schema := concatKeySchema(mapName, keyLen); schema != nil {
+		names := make([]interface{}, len(schema))
+		for i, field := range schema {
+			names[i] = concatFieldTypeNames[field]
+		}
+		return names
+	}
+	if set != nil && set.KeyType.Name != "" {
+		return set.KeyType.Name
+	}
+	return nil
+}
+
+func parseElementVerdict(val []byte) interface{} {
+	if len(val) < 8 {
+		return nil
+	}
+	kind := expr.VerdictKind(int32(binaryutil.BigEndian.Uint32(val[4:8])))
+	chain := ""
+	if len(val) > 12 {
+		chain = string(bytes.Trim(val[12:], "\x00"))
+	}
+	switch kind {
+	case expr.VerdictAccept:
+		return map[string]interface{}{"accept": nil}
+	case expr.VerdictDrop:
+		return map[string]interface{}{"drop": nil}
+	case expr.VerdictContinue:
+		return map[string]interface{}{"continue": nil}
+	case expr.VerdictReturn:
+		return map[string]interface{}{"return": nil}
+	case expr.VerdictJump:
+		return map[string]interface{}{"jump": map[string]interface{}{"target": chain}}
+	case expr.VerdictGoto:
+		return map[string]interface{}{"goto": map[string]interface{}{"target": chain}}
+	}
+	return nil
+}
+
+func formatMapElementKey(mapName string, elem nftables.SetElement) interface{} {
+	if parts := splitConcatKey(mapName, elem.Key); parts != nil {
+		concat := make([]interface{}, len(parts))
+		for i, p := range parts {
+			concat[i] = p
+		}
+		return map[string]interface{}{"concat": concat}
+	}
+	return formatElementKey(elem.Key)
+}
+
+func formatMapElements(set *nftables.Set, mapName string, elements []nftables.SetElement) []interface{} {
+	result := []interface{}{}
+	isVerdict := set != nil && set.DataType.Name == "verdict"
+	for _, elem := range elements {
+		key := formatMapElementKey(mapName, elem)
+		if key == nil {
+			continue
+		}
+		var value interface{}
+		if isVerdict {
+			value = parseElementVerdict(elem.Val)
+		} else {
+			value = formatElementKey(elem.Val)
+		}
+		result = append(result, []interface{}{key, value})
 	}
 	return result
 }
@@ -833,10 +928,10 @@ func formatElementKey(keyBytes []byte) interface{} {
 	} else if len(keyBytes) == 2 {
 		// Treat as port
 		port := uint16(keyBytes[0])<<8 | uint16(keyBytes[1])
-		return strconv.Itoa(int(port))
+		return int(port)
 	} else if len(keyBytes) == 1 {
 		// Treat as protocol number
-		return strconv.Itoa(int(keyBytes[0]))
+		return int(keyBytes[0])
 	} else if len(keyBytes) == 6 {
 		// Treat as MAC address
 		mac := net.HardwareAddr(keyBytes)

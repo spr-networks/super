@@ -16,7 +16,8 @@ export class APINfmap extends API {
 
   getNFVerdictMap(group) {
     return this.get('/' + this.translate(group)).then((v) => {
-      let vmap = v.nftables[1].map
+      let entry = (v.nftables || []).find((e) => e.map)
+      let vmap = entry ? entry.map : {}
       let results = []
       if (vmap.elem && vmap.type) {
         for (const device of vmap.elem) {
