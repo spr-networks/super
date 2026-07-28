@@ -470,40 +470,6 @@ const AdminLayout = ({
       //console.log('++ got', res.length, 'devices')
     })
 
-    // callback for notifications, web & ios
-    // action = allow,deny,cancel, data = nft data
-    const confirmTrafficAction = (action, data) => {
-      //action == allow, deny, cancel
-      console.log('## confirm action:', action, 'data:', data)
-
-      //depending on action here:
-      //if packet allowed & should deny in future
-      //if packet denied & should allow in future
-      if (data.Action == 'allowed' && action == 'deny') {
-        if (!data.TCP && !data.UDP) {
-          return
-        }
-
-        let Protocol = data.TCP !== undefined ? 'tcp' : 'udp'
-
-        let block = {
-          RuleName: `Block ${data.Timestamp}`,
-          Condition: '',
-          Protocol,
-          Client: { SrcIP: data.IP.SrcIP },
-          DstIP: data.IP.DstIP,
-          DstPort: data[Protocol.toUpperCase()].DstPort.toString(),
-          Time: { Days: [], Start: '', End: '' }
-        }
-
-        pfwAPI.addBlock(block).then((res) => {
-          //console.log('++ block added')
-        })
-      } else if (data.action == 'blocked' && action == 'allow') {
-        // TODO remove block if data['oob.prefix'].startsWith('drop:pfw')
-      }
-    }
-
     // store info if ios
     if (Platform.OS == 'ios') {
       DeviceInfo.saveDeviceInfo()
@@ -693,6 +659,40 @@ const AdminLayout = ({
       })
       .catch(() => {})
   }, [])
+
+  // callback for notifications, web & ios
+  // action = allow,deny,cancel, data = nft data
+  const confirmTrafficAction = (action, data) => {
+    //action == allow, deny, cancel
+    console.log('## confirm action:', action, 'data:', data)
+
+    //depending on action here:
+    //if packet allowed & should deny in future
+    //if packet denied & should allow in future
+    if (data.Action == 'allowed' && action == 'deny') {
+      if (!data.TCP && !data.UDP) {
+        return
+      }
+
+      let Protocol = data.TCP !== undefined ? 'tcp' : 'udp'
+
+      let block = {
+        RuleName: `Block ${data.Timestamp}`,
+        Condition: '',
+        Protocol,
+        Client: { SrcIP: data.IP.SrcIP },
+        DstIP: data.IP.DstIP,
+        DstPort: data[Protocol.toUpperCase()].DstPort.toString(),
+        Time: { Days: [], Start: '', End: '' }
+      }
+
+      pfwAPI.addBlock(block).then((res) => {
+        //console.log('++ block added')
+      })
+    } else if (data.action == 'blocked' && action == 'allow') {
+      // TODO remove block if data['oob.prefix'].startsWith('drop:pfw')
+    }
+  }
 
   const webConfirm = (title, body, data) => {
     alertState.confirm(title, body, (action) => {
