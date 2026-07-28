@@ -39,7 +39,7 @@ import { Tooltip } from 'components/Tooltip'
 import ModalForm from 'components/ModalForm'
 import EditPlugin from 'components/Plugins/EditPlugin'
 
-import { pluginAPI } from 'api'
+import { api, pluginAPI } from 'api'
 import { alertState } from 'AppContext'
 
 const NO_POLICY = 'no attestation policy for this image'
