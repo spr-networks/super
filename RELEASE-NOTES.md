@@ -1,6 +1,14 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.2.2
+**Features**
+- Make Mesh & PFW open access
+
+**Fixes**
+- Update rustap version
+- pluginlist.json was missing an import
+
 ## v1.2.1
 **Fixes**
 - Support more rustap configurations

@@ -185,7 +185,7 @@ const Plugins = (props) => {
         </HStack>
       </ListHeader>
 
-      {activeToken !== '' ? (
+      {plusList.length > 0 ? (
         <>
           <ListHeader title="PLUS Plugins" />
           <PluginList

@@ -492,18 +492,24 @@ const PluginList = ({ list, deleteListItem, notifyChange, ...props }) => {
       .update(plugin)
       .then((plugins) => {
         notifyChange(plugins)
+
+        if (plugin.Plus == true) {
+          let action =
+            Enabled == false
+              ? pluginAPI.stopPlusExtension(plugin.Name)
+              : pluginAPI.startPlusExtension(plugin.Name)
+
+          action.catch((err) => {
+            alertState.error(
+              `Failed to ${Enabled ? 'start' : 'stop'} ${plugin.Name}: ` +
+                (err?.message || err)
+            )
+          })
+        }
       })
       .catch((err) => {
         alertState.error('Failed to update plugin state: ' + err.message)
       })
-
-    if (plugin.Plus == true) {
-      if (Enabled == false) {
-        pluginAPI.stopPlusExtension(plugin.Name)
-      } else {
-        pluginAPI.startPlusExtension(plugin.Name)
-      }
-    }
   }
 
   const handleRestart = (plugin) => {

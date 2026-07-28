@@ -776,8 +776,10 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid token "+err.Error(), 400)
 			return
 		}
+	}
 
-		git_url = "https://" + creds.Username + ":" + creds.Secret + "@" + git_url
+	if git_url != "" {
+		git_url = gitCloneURL(git_url, creds.Username, creds.Secret)
 	}
 
 	if git_url == "" {
@@ -861,6 +863,21 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"Changed": gitChanged})
+}
+
+func gitCloneURL(gitURL string, username string, secret string) string {
+	scheme := "https://"
+	rest := gitURL
+	if strings.HasPrefix(gitURL, "https://") {
+		rest = strings.TrimPrefix(gitURL, "https://")
+	} else if strings.HasPrefix(gitURL, "http://") {
+		scheme = "http://"
+		rest = strings.TrimPrefix(gitURL, "http://")
+	}
+	if secret != "" {
+		return scheme + username + ":" + secret + "@" + rest
+	}
+	return scheme + rest
 }
 
 func getRepoName(gitURL string) string {

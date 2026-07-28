@@ -27,10 +27,12 @@ import (
 )
 
 var PlusUser = "lts-super-plus"
-var PfwGitURL = "git.plus.supernetworks.org/spr-networks/pfw_extension"
-var MeshGitURL = "git.plus.supernetworks.org/spr-networks/mesh_extension"
-var OldPfwGitURL = "github.com/spr-networks/pfw_extension"
-var OldMeshGitURL = "github.com/spr-networks/mesh_extension"
+var PlusGitHost = "git.plus.supernetworks.org"
+var PfwGitURL = "github.com/spr-networks/pfw_extension"
+var MeshGitURL = "github.com/spr-networks/mesh_extension"
+var PlusPfwGitURL = PlusGitHost + "/spr-networks/pfw_extension"
+var PlusMeshGitURL = PlusGitHost + "/spr-networks/mesh_extension"
+var PlusAuthGitURL = PlusGitHost + "/spr-networks/plus-auth"
 
 var MeshdSocketPath = TEST_PREFIX + "/state/plugins/mesh/socket"
 var DbSocketPath = TEST_PREFIX + "/state/plugins/db/socket"
@@ -67,6 +69,7 @@ type PluginConfig struct {
 	UnixPath            string
 	Enabled             bool
 	Plus                bool
+	TokenRequired       bool `json:",omitempty"`
 	GitURL              string
 	ComposeFilePath     string
 	HasUI               bool
@@ -388,16 +391,56 @@ func PlusEnabled() bool {
 	return config.PlusToken != ""
 }
 
+func plusExtensionGitURLs(def PluginConfig) []string {
+	switch def.GitURL {
+	case PfwGitURL:
+		return []string{PfwGitURL, PlusPfwGitURL}
+	case MeshGitURL:
+		return []string{MeshGitURL, PlusMeshGitURL}
+	}
+	return []string{def.GitURL}
+}
+
+func plusExtensionDefaultFor(plugin PluginConfig) *PluginConfig {
+	for i := range gPlusExtensionDefaults {
+		def := &gPlusExtensionDefaults[i]
+		if def.UnixPath == plugin.UnixPath || def.ComposeFilePath == plugin.ComposeFilePath {
+			return def
+		}
+	}
+	return nil
+}
+
+func extensionRequiresToken(plugin PluginConfig) bool {
+	if !plugin.Plus {
+		return false
+	}
+	if def := plusExtensionDefaultFor(plugin); def != nil {
+		return def.TokenRequired
+	}
+	return true
+}
+
+func extensionTokenSatisfied(plugin PluginConfig) bool {
+	return !extensionRequiresToken(plugin) || PlusEnabled()
+}
+
+func plusGitCreds(gitURL string) (string, string) {
+	if strings.HasPrefix(gitURL, PlusGitHost+"/") && config.PlusToken != "" {
+		return PlusUser, config.PlusToken
+	}
+	return "", ""
+}
+
 func validatePlus(plugin PluginConfig) bool {
 	//validate PLUS, GitURL and ComposeFilePath is whitelisted.
 
 	//let superd handle validating ComposeFilePath for custom plugins.
 	if plugin.Plus == true {
 		for _, plusPlugin := range gPlusExtensionDefaults {
-			if plusPlugin.GitURL == plugin.GitURL || plugin.GitURL == OldMeshGitURL || plugin.GitURL == OldPfwGitURL {
-				if plusPlugin.ComposeFilePath == plugin.ComposeFilePath {
-					return true
-				}
+			if plusPlugin.ComposeFilePath == plugin.ComposeFilePath &&
+				slices.Contains(plusExtensionGitURLs(plusPlugin), plugin.GitURL) {
+				return true
 			}
 		}
 		return false
@@ -434,21 +477,21 @@ func getPlugins(w http.ResponseWriter, r *http.Request) {
 		ret[i] = pluginWithRuntimeAvailability(plugin)
 	}
 
-	if PlusEnabled() {
-		for _, defaultPlusPlugin := range gPlusExtensionDefaults {
-			exists := false
-			for _, entry := range config.Plugins {
-				if entry.Plus == true && entry.UnixPath == defaultPlusPlugin.UnixPath {
-					exists = true
-					break
-				}
-			}
-
-			if !exists {
-				ret = append(ret, defaultPlusPlugin)
+	for _, defaultPlusPlugin := range gPlusExtensionDefaults {
+		if defaultPlusPlugin.TokenRequired && !PlusEnabled() {
+			continue
+		}
+		exists := false
+		for _, entry := range config.Plugins {
+			if entry.Plus == true && entry.UnixPath == defaultPlusPlugin.UnixPath {
+				exists = true
+				break
 			}
 		}
 
+		if !exists {
+			ret = append(ret, defaultPlusPlugin)
+		}
 	}
 
 	json.NewEncoder(w).Encode(ret)
@@ -590,6 +633,13 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 						fmt.Println("Failed to download extension " + plugin.GitURL)
 						// fall thru, dont fail
 					}
+				}
+			}
+
+			if plugin.Plus && plugin.GitURL != "" && !found && extensionTokenSatisfied(plugin) {
+				if !downloadPlusExtension(plugin.GitURL) {
+					fmt.Println("Failed to download extension " + plugin.GitURL)
+					// fall thru, dont fail
 				}
 			}
 
@@ -783,13 +833,13 @@ func enablePlugin(name string) bool {
 // PLUS feature support
 
 func validPlusToken(token string) bool {
-	validToken := regexp.MustCompile(`^[A-za-z0-9_]{40}$`).MatchString
+	validToken := regexp.MustCompile(`^[A-Za-z0-9_]{40}$`).MatchString
 	if !validToken(token) {
 		fmt.Println("invalid token format")
 		return false
 	}
 
-	cmd := exec.Command("git", "ls-remote", "https://"+PlusUser+":"+token+"@"+PfwGitURL)
+	cmd := exec.Command("git", "ls-remote", "https://"+PlusUser+":"+token+"@"+PlusAuthGitURL)
 	stdout, err := cmd.Output()
 
 	if err != nil {
@@ -1009,8 +1059,9 @@ func downloadExtension(user string, secret string, gitURL string, Plus bool, Aut
 }
 
 func downloadPlusExtension(gitURL string) bool {
-	_, ret := downloadExtension(PlusUser, config.PlusToken, gitURL, true, false)
-	if ret == true && gitURL == PfwGitURL || gitURL == OldPfwGitURL {
+	user, secret := plusGitCreds(gitURL)
+	_, ret := downloadExtension(user, secret, gitURL, true, false)
+	if ret == true && (gitURL == PfwGitURL || gitURL == PlusPfwGitURL) {
 		generatePFWAPIToken()
 	}
 	return ret
@@ -1615,7 +1666,7 @@ func stopPlusExt(w http.ResponseWriter, r *http.Request) {
 	defer Configmtx.Unlock()
 
 	for _, entry := range config.Plugins {
-		if entry.Name == name {
+		if entry.Name == name && entry.Plus == true {
 			if !stopExtension(entry.ComposeFilePath) {
 				http.Error(w, "Failed to stop service", 400)
 				return
@@ -1639,10 +1690,12 @@ func startPlusExt(w http.ResponseWriter, r *http.Request) {
 	defer Configmtx.Unlock()
 
 	for _, entry := range config.Plugins {
-		if entry.Name == name && entry.ComposeFilePath != "" && entry.Enabled == true {
+		if entry.Name == name && entry.Plus == true && entry.ComposeFilePath != "" && entry.Enabled == true {
 
-			if PlusEnabled() && entry.Plus == true {
-				//only plus extensions update on start for now
+			if extensionTokenSatisfied(entry) {
+				if entry.GitURL != "" && !downloadPlusExtension(entry.GitURL) {
+					fmt.Println("[-] Failed to update extension repo " + entry.GitURL)
+				}
 				if !updateExtension(entry.ComposeFilePath) {
 					fmt.Println("[-] Failed to update extension " + entry.ComposeFilePath)
 				}
@@ -1684,10 +1737,12 @@ func updatePluginContainer(w http.ResponseWriter, r *http.Request) {
 	Configmtx.Lock()
 	var plugin PluginConfig
 	found := false
+	gitUser, gitSecret := "", ""
 	for _, entry := range config.Plugins {
 		if trimLower(entry.Name) == name && entry.Enabled {
 			plugin = entry
 			found = true
+			gitUser, gitSecret = plusGitCreds(entry.GitURL)
 			break
 		}
 	}
@@ -1707,7 +1762,7 @@ func updatePluginContainer(w http.ResponseWriter, r *http.Request) {
 	if plugin.GitURL != "" {
 		gitOK := false
 		if plugin.Plus {
-			gitChanged, gitOK = downloadExtension(PlusUser, config.PlusToken, plugin.GitURL, true, false)
+			gitChanged, gitOK = downloadExtension(gitUser, gitSecret, plugin.GitURL, true, false)
 		} else {
 			gitChanged, gitOK = downloadExtension("", "", plugin.GitURL, false, false)
 		}
@@ -1829,13 +1884,10 @@ func startExtensionServices() error {
 	for _, entry := range config.Plugins {
 		if entry.ComposeFilePath != "" && entry.Enabled == true {
 			started := runPluginStartWithNetworkPrepared(entry, func() bool {
-				if PlusEnabled() && entry.Plus == true {
+				if entry.Plus == true && extensionTokenSatisfied(entry) {
 					if !updateExtension(entry.ComposeFilePath) {
 						fmt.Println("Could not update Extension at " + entry.ComposeFilePath)
-						return false
-					}
-
-					if entry.Name == "PFW" {
+					} else if entry.Name == "PFW" {
 						if !restartExtension(entry.ComposeFilePath) {
 							return startExtension(entry.ComposeFilePath)
 						}
@@ -2069,10 +2121,6 @@ func dockerPS(w http.ResponseWriter, r *http.Request) {
 // mesh support
 func updateMeshPluginPut(endpoint string, jsonValue []byte) {
 
-	if !PlusEnabled() {
-		return
-	}
-
 	if !PluginEnabled("MESH") {
 		return
 	}
@@ -2120,10 +2168,6 @@ func deauthConnectedStation(MAC string) {
 
 func updateMeshPluginConnect(event PSKAuthSuccess) {
 
-	if !PlusEnabled() {
-		return
-	}
-
 	if !PluginEnabled("MESH") {
 		return
 	}
@@ -2168,10 +2212,6 @@ type LeafStations struct {
 
 // fetchAllLeafStations fetches station information from all leaf routers via mesh plugin
 func fetchAllLeafStations() (map[string]LeafStations, error) {
-	if !PlusEnabled() {
-		return nil, nil
-	}
-
 	if !PluginEnabled("MESH") {
 		return nil, nil
 	}

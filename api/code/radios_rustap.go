@@ -810,6 +810,7 @@ func generateRustapConfigLocked() (map[string]interface{}, error) {
 		}
 		radio, err := generateRustapRadioLocked(entry)
 		if err != nil {
+			log.Printf("rustap: skipping AP interface %s: %v", entry.Name, err)
 			continue
 		}
 		if policy == nil {
@@ -887,6 +888,7 @@ func ensureRustapConfig() error {
 		return err
 	}
 	if conf == nil {
+		log.Printf("rustap: rustap.json not generated, no enabled AP interfaces with a hostapd config")
 		return nil
 	}
 	return writeRustapConfig(conf)

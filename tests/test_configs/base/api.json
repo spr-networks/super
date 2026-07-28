@@ -58,7 +58,7 @@
    "UnixPath": "/state/plugins/pfw/socket",
    "Enabled": true,
    "Plus": true,
-   "GitURL": "git.plus.supernetworks.org/spr-networks/pfw_extension",
+   "GitURL": "github.com/spr-networks/pfw_extension",
    "ComposeFilePath": "plugins/plus/pfw_extension/docker-compose.yml"
   },
   {

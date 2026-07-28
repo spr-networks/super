@@ -1,14 +1,15 @@
 package main
 
 /*
- Registry-based provenance verification for the plus extensions.
+ Registry-based provenance verification for the extensions.
 
- The extension repos are private, so their attestations are not readable from
- the GitHub attestations API. Their CI signs and attests with cosign instead:
- the SLSA provenance lives in the registry as a sha256-<digest>.att manifest
- whose layer annotations carry the Fulcio certificate and Rekor entry. Those
- parts assemble into a sigstore v0.1 bundle, verified with the same trusted
- root and policies as the github-sourced bundles.
+ The extension CI signs and attests with cosign: the SLSA provenance lives in
+ the registry as a sha256-<digest>.att manifest whose layer annotations carry
+ the Fulcio certificate and Rekor entry. Those parts assemble into a sigstore
+ v0.1 bundle, verified with the same trusted root and policies as the
+ github-sourced bundles. This works for both the public ghcr.io images
+ (PFW/MESH, fetched anonymously) and images on the private PLUS registry,
+ whose attestations are not readable from the GitHub attestations API.
 */
 
 import (

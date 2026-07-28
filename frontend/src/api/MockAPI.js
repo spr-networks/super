@@ -49,6 +49,7 @@ const r = (n) => parseInt(Math.random() * n)
 const rpick = (l) => l[parseInt(r(l.length))]
 
 let mockCustomFingerprints = []
+let mockPlusToken = ''
 let mockDbBuckets = {}
 let mockAlertRules = null
 const mockAlertItems = (bucket, items, filter) => {
@@ -887,6 +888,15 @@ export default function MockAPI(props = null) {
         Plus: true,
         GitURL: 'github.com/spr-networks/pfw_extension',
         ComposeFilePath: 'plugins/plus/pfw_extension/docker-compose.yml'
+      })
+      server.create('plugin', {
+        Name: 'MESH',
+        URI: 'mesh',
+        UnixPath: '/state/plugins/mesh/socket',
+        Enabled: false,
+        Plus: true,
+        GitURL: 'github.com/spr-networks/mesh_extension',
+        ComposeFilePath: 'plugins/plus/mesh_extension/docker-compose.yml'
       })
       server.create('plugin', {
         Name: 'spr-atlas',
@@ -3620,7 +3630,49 @@ export default function MockAPI(props = null) {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
-        return JSON.stringify('token')
+        return JSON.stringify(mockPlusToken)
+      })
+
+      this.put('/plusToken', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        mockPlusToken = JSON.parse(request.requestBody)
+        return JSON.stringify(mockPlusToken)
+      })
+
+      this.get('/plusTokenValid', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        if (mockPlusToken == '') {
+          return new Response(400, {}, 'Empty plus token')
+        }
+        return new Response(200)
+      })
+
+      this.put('/startPlusExtension', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        let name = JSON.parse(request.requestBody)
+        let plugin = schema.plugins.findBy({ Name: name, Plus: true })
+        if (!plugin) {
+          return new Response(404, {}, 'Plus extension not found: ' + name)
+        }
+        return new Response(200)
+      })
+
+      this.put('/stopPlusExtension', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+        let name = JSON.parse(request.requestBody)
+        let plugin = schema.plugins.findBy({ Name: name, Plus: true })
+        if (!plugin) {
+          return new Response(404, {}, 'Plus extension not found: ' + name)
+        }
+        return new Response(200)
       })
 
       //DNS plugin
