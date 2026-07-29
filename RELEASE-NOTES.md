@@ -1,6 +1,10 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.2.3
+**Fixes**
+- NetworkManager and other devices setting DF were being blocked for DHCP incorrectly
+
 ## v1.2.2
 **Features**
 - Make Mesh & PFW open access
