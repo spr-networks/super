@@ -2821,9 +2821,9 @@ func getMeshPeerInterfaces() map[string]string {
 
 	// Process the leaf stations data
 	for leafIP, leafData := range leafStations {
-		if leafData.Error != nil {
-			fmt.Printf("Error from leaf %s: %v\n", leafIP, leafData.Error)
-			continue
+		if leafData.Error != "" {
+			// Partial failure: other interfaces on this leaf may still have stations
+			log.Printf("Error from leaf %s: %s\n", leafIP, leafData.Error)
 		}
 
 		// Get the route interface for this leaf IP from cache or fetch it
