@@ -1,4 +1,4 @@
-import createServer from 'api/MockAPI'
+import createServer, { shutdownMockAPI } from 'api/MockAPI'
 import { Base64 } from 'utils'
 import { Platform } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -17,6 +17,10 @@ export const setApiURL = (url) => {
     createServer()
     return
   }
+
+  // Leaving mock mode: stop MirageJS from intercepting requests to the
+  // real backend (it patches global fetch/XHR until shut down).
+  shutdownMockAPI()
 
   if (!url.endsWith('/')) {
     url += '/'

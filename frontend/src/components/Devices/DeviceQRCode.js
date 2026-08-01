@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
-import QRCode from 'react-qr-code'
+import QRCode from 'components/QRCode'
 
 import { Box } from '@gluestack-ui/themed'
 

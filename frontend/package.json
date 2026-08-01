@@ -137,6 +137,7 @@
     "@babel/core": "^7.21.4",
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@babel/preset-env": "^7.21.4",
+    "@react-native/metro-config": "^0.72.6",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-native": "^5.4.3",
     "@testing-library/react-native": "^12.3.0",
@@ -191,7 +192,8 @@
     },
     "moduleNameMapper": {
       "^@react-native-clipboard/clipboard$": "<rootDir>/node_modules/@react-native-clipboard/clipboard/jest/clipboard-mock.js",
-      "^api/SecureStore$": "<rootDir>/src/api/SecureStore.js"
+      "^api/SecureStore$": "<rootDir>/src/api/SecureStore.js",
+      "^react-qr-code/lib/index.native.js$": "<rootDir>/node_modules/react-qr-code/lib/index.native.js"
     }
   },
   "packageManager": "yarn@4.17.0"

@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { AlertContext } from 'layouts/Admin'
 import { authAPI, setJWTOTPHeader } from 'api'
-import QRCode from 'react-qr-code'
+import QRCode from 'components/QRCode'
 
 import {
   Box,

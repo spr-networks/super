@@ -14,6 +14,18 @@ import * as jsonpath from 'jsonpath'
 let server = null
 let opts = {}
 
+// Stop intercepting network traffic when the app leaves mock mode. MirageJS
+// patches global fetch/XHR on createServer, so without this a session that
+// ever used the "mock" hostname can no longer reach a real router.
+export const shutdownMockAPI = () => {
+  if (server) {
+    try {
+      server.shutdown()
+    } catch (e) {}
+    server = null
+  }
+}
+
 const MODEL_ARTIFACT_HOSTS = new Set([
   'huggingface.co',
   'raw.githubusercontent.com'
@@ -1339,9 +1351,10 @@ export default function MockAPI(props = null) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
 
-        let ups = new URLSearchParams(request.url.replace(/^\/device/, ''))
-        let id = ups.get('identity')
-        let copy = ups.get('copy')
+        // NOTE use mirage's queryParams: React Native's URLSearchParams shim
+        // throws "not implemented" from get(), 500ing this route on iOS.
+        let id = request.queryParams.identity
+        let copy = request.queryParams.copy
 
         let MAC = copy || id
 
@@ -1402,8 +1415,7 @@ export default function MockAPI(props = null) {
           return new Response(401, {}, { error: 'invalid auth' })
         }
 
-        let ups = new URLSearchParams(request.url.replace(/^\/device/, ''))
-        let id = ups.get('identity')
+        let id = request.queryParams.identity
 
         return schema.devices.findBy({ MAC: id }).destroy()
       })
