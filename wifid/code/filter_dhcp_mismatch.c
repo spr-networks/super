@@ -53,7 +53,8 @@ int FUNCNAME(struct xdp_md *ctx) {
             if (ip->ihl != 5) {
               return XDP_DROP;
             }
-            if (ip->frag_off != 0) {
+            // drop actual fragments (MF flag or nonzero offset), allow DF
+            if (ip->frag_off & bpf_htons(0x3FFF)) {
               return XDP_DROP;
             }
             struct dhcp *d = (void *)udp + sizeof(*udp);

@@ -2207,7 +2207,7 @@ type StationInfo map[string]string
 type LeafStations struct {
 	LeafIP   string
 	Stations map[string]StationInfo // MAC -> station info
-	Error    error
+	Error    string                 `json:",omitempty"`
 }
 
 // fetchAllLeafStations fetches station information from all leaf routers via mesh plugin

@@ -74,6 +74,53 @@ func TestBuildKrunTrustedPolicyReplacesPrivilegedValues(t *testing.T) {
 	}
 }
 
+func TestBuildKrunTrustedPolicyAuthorizesRawKernel(t *testing.T) {
+	annotations := map[string]string{
+		"krun.kernel_path":   "/tamago-kernel",
+		"krun.kernel_format": "0",
+		"krun.vsock_path":    "/state/plugins/spr-tamago-demo/socket.sock",
+		"krun.vsock_port":    "4040",
+	}
+	policy, err := buildKrunTrustedPolicy("plugin-a", "service-a", annotations, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if policy.KernelPath != "/tamago-kernel" || policy.KernelFormat == nil || *policy.KernelFormat != 0 {
+		t.Fatalf("unexpected external kernel policy: %#v", policy)
+	}
+	if policy.VsockPath != "/run/spr-krun/listen/socket.sock" || policy.VsockPort != 4040 {
+		t.Fatalf("external kernel lost its SPR upcall mapping: %#v", policy)
+	}
+}
+
+func TestBuildKrunTrustedPolicyRejectsUnsafeKernel(t *testing.T) {
+	tests := []map[string]string{
+		{"krun.kernel_path": "/tamago-kernel"},
+		{"krun.kernel_format": "0"},
+		{
+			"krun.kernel_path":   "../../host-kernel",
+			"krun.kernel_format": "0",
+		},
+		{
+			"krun.kernel_path":   "/boot/tamago-kernel",
+			"krun.kernel_format": "0",
+		},
+		{
+			"krun.kernel_path":   "/.krun_vm.json",
+			"krun.kernel_format": "0",
+		},
+		{
+			"krun.kernel_path":   "/tamago-kernel",
+			"krun.kernel_format": "1",
+		},
+	}
+	for _, annotations := range tests {
+		if _, err := buildKrunTrustedPolicy("plugin-a", "service-a", annotations, ""); err == nil {
+			t.Fatalf("unsafe external kernel policy accepted: %#v", annotations)
+		}
+	}
+}
+
 func TestBuildKrunTrustedPolicyRejectsLegacyComposeMAC(t *testing.T) {
 	annotations := map[string]string{
 		"krun.tap_name":   "kruntap0",

@@ -61,6 +61,8 @@ type krunTrustedPolicy struct {
 	VsockPort        int    `json:"vsock_port,omitempty"`
 	VsockConnectPath string `json:"vsock_connect_path,omitempty"`
 	VsockConnectPort int    `json:"vsock_connect_port,omitempty"`
+	KernelPath       string `json:"kernel_path,omitempty"`
+	KernelFormat     *int   `json:"kernel_format,omitempty"`
 }
 
 type krunComposeOverrideService struct {
@@ -236,6 +238,21 @@ func parseKrunPolicyInt(annotations map[string]string, key string) (int, error) 
 	return int(value), nil
 }
 
+func assignedKrunKernelPath(requestedPath string) (string, error) {
+	name := filepath.Base(requestedPath)
+	if requestedPath == "" || !filepath.IsAbs(requestedPath) ||
+		filepath.Clean(requestedPath) != requestedPath || filepath.Dir(requestedPath) != "/" ||
+		name == "." || strings.HasPrefix(name, ".") || !krunSocketNameRE.MatchString(name) {
+		return "", fmt.Errorf("krun kernel_path must be a non-hidden direct child of /: %q", requestedPath)
+	}
+	return "/" + name, nil
+}
+
+func rawKrunKernelFormat() *int {
+	format := 0
+	return &format
+}
+
 func assignedKrunSocketPath(requestedPath string, listen bool) (string, error) {
 	name := filepath.Base(requestedPath)
 	if requestedPath == "" || name == "." || name == string(filepath.Separator) || !krunSocketNameRE.MatchString(name) {
@@ -353,6 +370,24 @@ func buildKrunTrustedPolicy(pluginID, service string, annotations map[string]str
 	}
 	if policy.NestedVirt, err = parseKrunPolicyInt(annotations, "krun.nested_virt"); err != nil {
 		return policy, err
+	}
+
+	kernelPath, hasKernelPath := annotations["krun.kernel_path"]
+	kernelFormat, hasKernelFormat := annotations["krun.kernel_format"]
+	if hasKernelPath != hasKernelFormat {
+		return policy, fmt.Errorf("krun external kernel requires both kernel_path and kernel_format")
+	}
+	if hasKernelPath {
+		policy.KernelPath, err = assignedKrunKernelPath(kernelPath)
+		if err != nil {
+			return policy, err
+		}
+		// The packaged SPR runtime is ARM64. Raw format keeps the loader and
+		// entry address deterministic and avoids accepting firmware/initrd paths.
+		if kernelFormat != "0" {
+			return policy, fmt.Errorf("krun.kernel_format must be 0 (raw ARM64 kernel)")
+		}
+		policy.KernelFormat = rawKrunKernelFormat()
 	}
 
 	_, hasTap := annotations["krun.tap_name"]
