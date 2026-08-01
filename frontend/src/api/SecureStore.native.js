@@ -2,8 +2,16 @@ import * as Keychain from 'react-native-keychain'
 
 const SERVICE = 'org.supernetworks.spr.login'
 
-export const getBiometryType = () =>
-  Keychain.getSupportedBiometryType().catch(() => null)
+// react-native-keychain throws synchronously when its native module is
+// missing (e.g. a build without the pod); await inside try so both sync
+// throws and rejections resolve to null.
+export const getBiometryType = async () => {
+  try {
+    return await Keychain.getSupportedBiometryType()
+  } catch (e) {
+    return null
+  }
+}
 
 export const saveSecureLogin = async (payload) =>
   Keychain.setGenericPassword('spr', JSON.stringify(payload), {
