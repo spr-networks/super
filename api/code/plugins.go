@@ -1295,6 +1295,10 @@ func preparePluginDeviceNetworkCapabilities(plugin PluginConfig) error {
 		return fmt.Errorf("authorize DHCP for plugin %s: %w", plugin.Name, err)
 	}
 
+	// Reconciliation must also clean up trust left by older DHCP handling. The
+	// plugin's declared policies will add only the capabilities it requested.
+	deleteLanInterface(plugin.NetworkCapabilities.Interface)
+
 	Groupsmtx.Lock()
 	defer Groupsmtx.Unlock()
 	Devicesmtx.Lock()

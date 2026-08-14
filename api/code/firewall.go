@@ -2649,6 +2649,13 @@ func isAuthorizedPluginDeviceLink(
 	return err == nil
 }
 
+func isPluginDHCPInterface(mac string, iface string, pluginDeviceLinks map[string]string) bool {
+	if mac == "" || iface == "" {
+		return false
+	}
+	return pluginDeviceLinks[mac] == iface
+}
+
 func restorePluginDHCPInterfaces(
 	devices map[string]DeviceEntry,
 	recentDHCPIfaces map[string]string,
@@ -2672,23 +2679,27 @@ func restorePluginDHCPInterfaces(
 }
 
 func notifyFirewallDHCP(device DeviceEntry, iface string) {
-	addLanInterface(iface)
-
 	FWmtx.Lock()
-	defer FWmtx.Unlock()
+	pluginInterface := isPluginDHCPInterface(device.MAC, iface, PluginDeviceLinks)
 
 	if device.MAC != "" {
 		RecentDHCPIface[device.MAC] = iface
 	}
 
-	if device.WGPubKey == "" {
+	if device.WGPubKey != "" {
+		// for wireguard clients only
+		RecentDHCPWG[device.WGPubKey] = time.Now().Unix()
+	}
+	FWmtx.Unlock()
+
+	// DHCP authorizes the declared plugin MAC on its dedicated bridge, but it
+	// must not make that bridge a trusted LAN interface. API access for plugins
+	// is granted separately through the explicit "api" network capability.
+	if pluginInterface {
+		deleteLanInterface(iface)
 		return
 	}
-
-	// for wireguard clients only below
-	cur_time := time.Now().Unix()
-
-	RecentDHCPWG[device.WGPubKey] = cur_time
+	addLanInterface(iface)
 }
 
 func getWireguardActivePeers() ([]string, []string) {
