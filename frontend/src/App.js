@@ -333,6 +333,21 @@ export default function App() {
     </Routes>
   )
 
+  const content =
+    Platform.OS == 'web' ? (
+      <Theme name={theme} style={{ flex: 1 }}>
+        {appRoutes}
+      </Theme>
+    ) : (
+      <View style={{ flex: 1 }}>{appRoutes}</View>
+    )
+
+  let body = content
+  if (__DEV__ && Platform.OS != 'web') {
+    const { PaneWalkHarness } = require('../e2e/PaneWalk')
+    body = <PaneWalkHarness>{content}</PaneWalkHarness>
+  }
+
   return (
     <Router>
       <GluestackUIProvider
@@ -340,13 +355,7 @@ export default function App() {
         config={runtimeConfig}
         colorMode={effectiveColorMode}
       >
-        {Platform.OS == 'web' ? (
-          <Theme name={theme} style={{ flex: 1 }}>
-            {appRoutes}
-          </Theme>
-        ) : (
-          <View style={{ flex: 1 }}>{appRoutes}</View>
-        )}
+        {body}
       </GluestackUIProvider>
     </Router>
   )

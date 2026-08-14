@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import PropTypes from 'prop-types'
 import { Platform, Dimensions, ScrollView } from 'react-native'
 import { TabView, SceneMap } from 'react-native-tab-view'
@@ -11,6 +11,20 @@ import {
   View,
   useColorMode
 } from '@gluestack-ui/themed'
+
+const isDev = typeof __DEV__ !== 'undefined' && __DEV__
+
+const registerTabView = (handle) => {
+  if (!isDev) {
+    return undefined
+  }
+
+  const registry = (global.__SPR_TAB_VIEWS__ =
+    global.__SPR_TAB_VIEWS__ || new Set())
+  registry.add(handle)
+
+  return () => registry.delete(handle)
+}
 
 const TabViewComponent = ({ tabs, initialIndex, ...props }) => {
   const [index, setIndex] = useState(initialIndex > 0 ? initialIndex : 0)
@@ -32,6 +46,12 @@ const TabViewComponent = ({ tabs, initialIndex, ...props }) => {
       description: tab.description
     }))
   )
+
+  const testHandle = useRef({})
+  testHandle.current.titles = parsedTabs.map((tab) => tab.title)
+  testHandle.current.setIndex = setIndex
+
+  useEffect(() => registerTabView(testHandle.current), [])
 
   const initialLayout = {
     width: Dimensions.get('window').width

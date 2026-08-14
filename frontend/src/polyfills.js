@@ -1,3 +1,31 @@
+import URLSearchParamsPolyfill from 'URLSearchParamsPolyfill'
+
+const hasWorkingSearchParams = () => {
+  if (typeof global.URLSearchParams === 'undefined') {
+    return false
+  }
+
+  try {
+    const params = new global.URLSearchParams('a=1')
+    if (
+      typeof params.set !== 'function' ||
+      typeof params.forEach !== 'function'
+    ) {
+      return false
+    }
+    params.set('b', '2')
+    let seen = 0
+    params.forEach(() => seen++)
+    return seen === 2 && params.get('a') === '1'
+  } catch (e) {
+    return false
+  }
+}
+
+if (!hasWorkingSearchParams()) {
+  global.URLSearchParams = URLSearchParamsPolyfill
+}
+
 // Hermes (React Native's JS engine) ships no global TextEncoder. react-qr-code
 // calls `new TextEncoder().encode(value)` to UTF-8 encode the QR payload, which
 // throws "property TextEncoder doesn't exist" when the add-device QR renders.

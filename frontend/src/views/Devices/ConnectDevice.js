@@ -105,6 +105,20 @@ const WifiConnect = (props) => {
     }
   }
 
+  if (!device?.PSKEntry) {
+    return (
+      <VStack p="$4" space="md" alignItems="center">
+        <Text size="lg" color="$muted500">
+          No device selected. Add a device to get its wifi password.
+        </Text>
+        <Button w="$1/3" action="secondary" variant="solid" onPress={goBack}>
+          <ButtonIcon as={ArrowLeftIcon} />
+          <ButtonText>Back</ButtonText>
+        </Button>
+      </VStack>
+    )
+  }
+
   return (
     <VStack p="$4">
       {ssids.length == 0 && (
