@@ -1,6 +1,12 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.2.4
+**Fixes**
+- Update golang 1.26 for api
+- iOS native app fixes
+- krun plugins were incorrectly assigned as lan_interfaces
+
 ## v1.2.3
 **Fixes**
 - NetworkManager and other devices setting DF were being blocked for DHCP incorrectly
