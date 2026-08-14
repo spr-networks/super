@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -112,5 +113,70 @@ func TestRestorePluginDHCPInterfaces(t *testing.T) {
 	restored = restorePluginDHCPInterfaces(devices, map[string]string{}, map[string]string{mac: "other0"})
 	if restored[mac] != "" {
 		t.Fatalf("mismatched plugin interface restored as %q", restored[mac])
+	}
+}
+
+func TestPluginDHCPInterfaceRequiresDeclaredDeviceLink(t *testing.T) {
+	const (
+		mac   = "02:53:50:52:4b:12"
+		iface = "spr-usque"
+	)
+	links := map[string]string{mac: iface}
+
+	if !isPluginDHCPInterface(mac, iface, links) {
+		t.Fatal("declared plugin DHCP interface was not recognized")
+	}
+	if isPluginDHCPInterface(mac, "eth0", links) {
+		t.Fatal("mismatched physical interface was recognized as a plugin interface")
+	}
+	if isPluginDHCPInterface("02:53:50:52:4b:13", iface, links) {
+		t.Fatal("mismatched device MAC was recognized as a plugin interface")
+	}
+	if isPluginDHCPInterface("", iface, links) || isPluginDHCPInterface(mac, "", links) {
+		t.Fatal("empty DHCP identity was recognized as a plugin interface")
+	}
+}
+
+func TestPluginDHCPDoesNotTrustInterfaceAsLAN(t *testing.T) {
+	const (
+		pluginMAC   = "02:53:50:52:4b:12"
+		pluginIface = "spr-kvmtest"
+		clientMAC   = "02:53:50:52:4b:13"
+		clientIface = "wlan-test"
+	)
+
+	setContains := func(table string, iface string) bool {
+		data, err := ListSetJSON("inet", table, "lan_interfaces")
+		if err != nil {
+			t.Fatalf("list %s lan_interfaces: %v", table, err)
+		}
+		return strings.Contains(string(data), `"`+iface+`"`)
+	}
+
+	FWmtx.Lock()
+	PluginDeviceLinks[pluginMAC] = pluginIface
+	FWmtx.Unlock()
+	t.Cleanup(func() {
+		FWmtx.Lock()
+		delete(PluginDeviceLinks, pluginMAC)
+		delete(RecentDHCPIface, pluginMAC)
+		delete(RecentDHCPIface, clientMAC)
+		FWmtx.Unlock()
+		deleteLanInterface(pluginIface)
+		deleteLanInterface(clientIface)
+	})
+
+	addLanInterface(pluginIface)
+	if !setContains("filter", pluginIface) || !setContains("nat", pluginIface) {
+		t.Fatal("failed to seed plugin interface into lan_interfaces")
+	}
+	notifyFirewallDHCP(DeviceEntry{MAC: pluginMAC}, pluginIface)
+	if setContains("filter", pluginIface) || setContains("nat", pluginIface) {
+		t.Fatal("plugin DHCP interface retained trusted LAN access")
+	}
+
+	notifyFirewallDHCP(DeviceEntry{MAC: clientMAC}, clientIface)
+	if !setContains("filter", clientIface) || !setContains("nat", clientIface) {
+		t.Fatal("ordinary DHCP interface was not added to lan_interfaces")
 	}
 }

@@ -1295,6 +1295,8 @@ func preparePluginDeviceNetworkCapabilities(plugin PluginConfig) error {
 		return fmt.Errorf("authorize DHCP for plugin %s: %w", plugin.Name, err)
 	}
 
+	deleteLanInterface(plugin.NetworkCapabilities.Interface)
+
 	Groupsmtx.Lock()
 	defer Groupsmtx.Unlock()
 	Devicesmtx.Lock()
