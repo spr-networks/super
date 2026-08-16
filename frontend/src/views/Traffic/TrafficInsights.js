@@ -42,7 +42,7 @@ import {
   RefreshCwIcon
 } from 'lucide-react-native'
 
-import { AlertContext } from 'layouts/Admin'
+import { AppContext, AlertContext } from 'AppContext'
 import { deviceAPI, geoBlockAPI, trafficInsightsAPI } from 'api'
 import { getContainerIpMap, containerDevice } from 'api/Containers'
 import { prettySize, timeAgo } from 'utils'
@@ -112,6 +112,50 @@ const ipInCidrs = (ip, cidrs) => {
   }
 
   return false
+}
+
+export const devicesByRecentIp = (devices) => {
+  let byIp = {}
+  for (let device of Array.isArray(devices)
+    ? devices
+    : Object.values(devices || {})) {
+    if (device.RecentIP) {
+      byIp[device.RecentIP] = device
+    }
+  }
+  return byIp
+}
+
+export const isContainerIp = (ip, containerNets, devicesByIp) =>
+  Boolean(
+    ipInCidrs(ip, containerNets) ||
+      devicesByIp[ip]?.Type == 'Container' ||
+      devicesByIp[ip]?.isContainer
+  )
+
+const replaceDeviceRecords = (devicesByIp, devices) => {
+  let next = {}
+  for (let [ip, device] of Object.entries(devicesByIp)) {
+    if (device.isContainer) {
+      next[ip] = device
+    }
+  }
+  return { ...next, ...devicesByRecentIp(devices) }
+}
+
+export const addDockerContainers = (devicesByIp, containers) => {
+  let next = {}
+  for (let [ip, device] of Object.entries(devicesByIp)) {
+    if (!device.isContainer) {
+      next[ip] = device
+    }
+  }
+  for (let [ip, entry] of Object.entries(containers || {})) {
+    if (!next[ip] || next[ip].isContainer) {
+      next[ip] = containerDevice(ip, entry)
+    }
+  }
+  return next
 }
 
 const ContainerItem = ({ ip, device }) => (
@@ -567,6 +611,7 @@ const tabs = ['Countries', 'ASNs', 'Devices', 'Containers']
 
 const TrafficInsights = (props) => {
   const context = useContext(AlertContext)
+  const appContext = useContext(AppContext)
   const params = useParams()
   const navigate = useNavigate()
 
@@ -574,7 +619,9 @@ const TrafficInsights = (props) => {
   const [tab, setTab] = useState('Countries')
   const [overview, setOverview] = useState(null)
   const [geoConfig, setGeoConfig] = useState(null)
-  const [devicesByIp, setDevicesByIp] = useState({})
+  const [devicesByIp, setDevicesByIp] = useState(() =>
+    devicesByRecentIp(appContext.devices)
+  )
   const [pendingBlock, setPendingBlock] = useState(null)
 
   let detailIp = params.ip && params.ip != ':ip' ? params.ip : null
@@ -586,24 +633,22 @@ const TrafficInsights = (props) => {
       .catch((err) => context.error('API Failure: ' + err.message))
   }
 
-  const fetchDevices = () => {
-    Promise.all([
-      deviceAPI.list().catch(() => ({})),
-      getContainerIpMap()
-    ]).then(([devs, containers]) => {
-      let byIp = {}
-      Object.values(devs || {}).map((d) => {
-        if (d.RecentIP) {
-          byIp[d.RecentIP] = d
-        }
+  const fetchDevices = (forceFetch = false) => {
+    let deviceRequest = appContext.getDevices?.(forceFetch)
+    if (!deviceRequest || typeof deviceRequest.then != 'function') {
+      deviceRequest = deviceAPI.list()
+    }
+    Promise.resolve(deviceRequest)
+      .then((devices) => {
+        setDevicesByIp((current) => replaceDeviceRecords(current, devices))
       })
-      Object.entries(containers || {}).map(([ip, entry]) => {
-        if (!byIp[ip]) {
-          byIp[ip] = containerDevice(ip, entry)
-        }
+      .catch(() => {})
+
+    getContainerIpMap()
+      .then((containers) => {
+        setDevicesByIp((current) => addDockerContainers(current, containers))
       })
-      setDevicesByIp(byIp)
-    })
+      .catch(() => {})
   }
 
   const refreshGeo = () => {
@@ -619,12 +664,21 @@ const TrafficInsights = (props) => {
   }, [])
 
   useEffect(() => {
+    let cachedDevices = devicesByRecentIp(appContext.devices)
+    if (Object.keys(cachedDevices).length) {
+      setDevicesByIp((current) =>
+        replaceDeviceRecords(current, appContext.devices)
+      )
+    }
+  }, [appContext.devices])
+
+  useEffect(() => {
     fetchOverview()
   }, [minutes, tab])
 
   const refreshAll = () => {
     fetchOverview()
-    fetchDevices()
+    fetchDevices(true)
     refreshGeo()
   }
 
@@ -760,7 +814,7 @@ const TrafficInsights = (props) => {
     let isContainerTab = tab == 'Containers'
     let containerNets = overview.ContainerNets || []
     let deviceList = deviceTotals().filter(
-      (d) => ipInCidrs(d.IP, containerNets) == isContainerTab
+      (d) => isContainerIp(d.IP, containerNets, devicesByIp) === isContainerTab
     )
 
     return (
@@ -848,7 +902,7 @@ const TrafficInsights = (props) => {
             </ButtonGroup>
           ) : (
             <Heading size="sm">
-              {ipInCidrs(detailIp, overview?.ContainerNets)
+              {isContainerIp(detailIp, overview?.ContainerNets, devicesByIp)
                 ? 'Container Traffic'
                 : 'Device Traffic'}
             </Heading>
