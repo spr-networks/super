@@ -60,6 +60,10 @@ table inet filter {
     type ifname;
   }
 
+  set noapi_interfaces {
+    type ifname;
+  }
+
   # clients to block from the api, for example those with
   # the guest policy or noapi policy
   set api_block {
@@ -313,6 +317,8 @@ table inet filter {
 
     # Dynamic verdict map for dns access
     counter udp dport 53  ip saddr . iifname vmap @dns_access
+
+    counter iifname @noapi_interfaces goto DROPLOGINP
 
     # TCP services
     iifname @lan_interfaces counter tcp dport vmap @lan_tcp_accept

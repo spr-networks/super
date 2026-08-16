@@ -60,6 +60,8 @@ const LANLinkSetIP = ({ curItem, iface, onSubmit, ...props }) => {
     curItem.AdditionalIPs || []
   )
 
+  const [disableAPI, setDisableAPI] = useState(curItem.DisableAPI || false)
+
   const [errors, setErrors] = useState({})
 
   const validate = () => {
@@ -107,7 +109,8 @@ const LANLinkSetIP = ({ curItem, iface, onSubmit, ...props }) => {
     if (validate()) {
       const item = {
         Name: iface,
-        AdditionalIPs: additionalIPs.filter(ip => ip.IP !== '')
+        AdditionalIPs: additionalIPs.filter(ip => ip.IP !== ''),
+        DisableAPI: disableAPI
       }
       onSubmit(item, type, true)
     }
@@ -187,6 +190,27 @@ const LANLinkSetIP = ({ curItem, iface, onSubmit, ...props }) => {
       <Button action="secondary" variant="outline" onPress={addAdditionalIP}>
         <ButtonText>Add Additional IP</ButtonText>
       </Button>
+
+      <FormControl>
+        <FormControlLabel>
+          <FormControlLabelText>API Access</FormControlLabelText>
+        </FormControlLabel>
+        <Text size="sm" color="$muted500" pb="$2">
+          Block clients on this interface from reaching router services
+        </Text>
+        <Checkbox
+          value={disableAPI}
+          isChecked={disableAPI}
+          onChange={(value) => {
+            setDisableAPI(value)
+          }}
+        >
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>No API Access</CheckboxLabel>
+        </Checkbox>
+      </FormControl>
 
       <Button action="primary" onPress={doSubmit}>
         <ButtonText>Save</ButtonText>

@@ -42,6 +42,7 @@ type InterfaceConfig struct {
 	Enabled                  bool
 	ExtraBSS                 []ExtraBSS     `json:",omitempty"`
 	DisableDHCP              bool           `json:",omitempty"`
+	DisableAPI               bool           `json:",omitempty"`
 	IP                       string         `json:",omitempty"`
 	Router                   string         `json:",omitempty"`
 	VLAN                     string         `json:",omitempty"`
@@ -232,7 +233,7 @@ func configureInterface(interfaceType string, subType string, name string, MACRa
 
 	}
 
-	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, "", "", "", "", MACRandomize, MACCloak, []AdditionalIP{}, false, []string{}}
+	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, false, "", "", "", "", MACRandomize, MACCloak, []AdditionalIP{}, false, []string{}}
 
 	config := loadInterfacesConfigLocked()
 
@@ -410,12 +411,14 @@ func updateInterfaceIP(iconfig InterfaceConfig) error {
 			found = true
 			if interfaces[i].Enabled != iconfig.Enabled ||
 				interfaces[i].DisableDHCP != iconfig.DisableDHCP ||
+				interfaces[i].DisableAPI != iconfig.DisableAPI ||
 				interfaces[i].IP != iconfig.IP ||
 				interfaces[i].VLAN != iconfig.VLAN ||
 				interfaces[i].Router != iconfig.Router {
 				changed = true
 				interfaces[i].Enabled = iconfig.Enabled
 				interfaces[i].DisableDHCP = iconfig.DisableDHCP
+				interfaces[i].DisableAPI = iconfig.DisableAPI
 				interfaces[i].IP = iconfig.IP
 				interfaces[i].Router = iconfig.Router
 				interfaces[i].VLAN = iconfig.VLAN
@@ -439,6 +442,7 @@ func updateInterfaceIP(iconfig InterfaceConfig) error {
 		if err != nil {
 			return err
 		}
+		refreshDownlinksLocked()
 	}
 
 	// Apply additional IPs if they changed and interface is enabled
@@ -679,6 +683,10 @@ func addApiInterface(iface string) {
 
 func deleteApiInterface(iface string) {
 	DeleteInterfaceFromSet("api_interfaces", iface)
+}
+
+func addNoAPIInterface(iface string) {
+	AddInterfaceToSet("noapi_interfaces", iface)
 }
 
 func addSetupInterface(iface string) {
@@ -967,6 +975,7 @@ func refreshDownlinksLocked() {
 
 	//empty the wired lan interfaces list
 	FlushSetWithTable("inet", "filter", "wired_lan_interfaces")
+	FlushSetWithTable("inet", "filter", "noapi_interfaces")
 
 	// and repopulate it
 	lanif := os.Getenv("LANIF")
@@ -984,6 +993,23 @@ func refreshDownlinksLocked() {
 			if ifconfig.Enabled && isValidIface(ifconfig.Name) {
 				exec.Command("ip", "link", "set", ifconfig.Name, "up").Run()
 			}
+		}
+	}
+
+	for _, ifconfig := range interfaces {
+		if ifconfig.Type != "Downlink" || !ifconfig.DisableAPI {
+			continue
+		}
+		if !isValidIface(ifconfig.Name) {
+			continue
+		}
+		addNoAPIInterface(ifconfig.Name)
+		vlans, err := getVLANInterfaces(ifconfig.Name)
+		if err != nil {
+			continue
+		}
+		for _, vlan := range vlans {
+			addNoAPIInterface(vlan.Name)
 		}
 	}
 }
@@ -1148,6 +1174,17 @@ func updateLANLinkIPConfig(w http.ResponseWriter, r *http.Request) {
 	if !isValidIface(iconfig.Name) {
 		http.Error(w, "Invalid iface name", 400)
 		return
+	}
+
+	if iconfig.DisableAPI {
+		remote := r.RemoteAddr
+		if host, _, err := net.SplitHostPort(remote); err == nil {
+			remote = host
+		}
+		if remote != "" && getRouteInterface(remote) == iconfig.Name {
+			http.Error(w, "Refusing to disable API access on the interface serving this request", 400)
+			return
+		}
 	}
 
 	// Validate additional IPs
