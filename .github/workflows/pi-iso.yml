@@ -80,7 +80,7 @@ jobs:
       # Build Debian image
       - name: Build pi-builder image
         working-directory: ./installer/raspbian
-        run: docker build -t spr-pi-builder -f Dockerfile.pi-builder .
+        run: docker buildx build --load -t spr-pi-builder -f Dockerfile.pi-builder .
       - name: Download Debian base image
         working-directory: ./installer/raspbian
         run: ./pi-download-image.sh
