@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react'
 
-import { deviceAPI } from 'api'
+import { deviceAPI, allowlistAPI } from 'api'
 import { AlertContext, AppContext } from 'AppContext'
 import { WifiConnect, WiredConnect } from 'views/Devices/ConnectDevice'
 import { format as timeAgo } from 'timeago.js'
@@ -40,6 +40,11 @@ import {
 } from '@gluestack-ui/themed'
 import { ListHeader } from 'components/List'
 import DeviceExpiry from './DeviceExpiry'
+import AllowlistPolicyControl from 'components/AllowlistPolicyControl'
+import {
+  normalizeInternetPolicySelection,
+  allowlistPolicyValues
+} from 'utils/allowlist'
 
 const AddDevice = (props) => {
   const context = useContext(AlertContext)
@@ -58,6 +63,7 @@ const AddDevice = (props) => {
   const [expiration, setExpiration] = useState(0)
   const [deleteExpiry, setDeleteExpiry] = useState(false)
   const [deviceDisabled, setDeviceDisabled] = useState(false)
+  const [allowlistPolicies, setAllowlistPolicies] = useState([])
 
   const [submitted, setSubmitted] = useState(false)
 
@@ -83,6 +89,11 @@ const AddDevice = (props) => {
         }
       })
       .catch((e) => {})
+
+    allowlistAPI
+      .config()
+      .then((config) => setAllowlistPolicies(allowlistPolicyValues(config)))
+      .catch(() => setAllowlistPolicies([]))
   }, [])
 
   const filterMAC = (value) => {
@@ -411,48 +422,59 @@ const AddDevice = (props) => {
               <FormControlLabelText>Policies</FormControlLabelText>
             </FormControlLabel>
 
-            <CheckboxGroup
-              value={policies}
-              accessibilityLabel="Set Device Policies"
-              onChange={(values) => setPolicies(values)}
-              py="$1"
-            >
-              <HStack space="xl" space="md" w="$full" flexWrap="wrap">
-                {allPolicies.map((policy) =>
-                  policyTips[policy] !== null ? (
-                    <Tooltip
-                      h={undefined}
-                      placement="bottom"
-                      trigger={(triggerProps) => {
-                        return (
-                          <Box {...triggerProps}>
-                            <Checkbox value={policy} colorScheme="primary">
-                              <CheckboxIndicator mr="$2">
-                                <CheckboxIcon />
-                              </CheckboxIndicator>
-                              <CheckboxLabel>
-                                {policyName[policy]}
-                              </CheckboxLabel>
-                            </Checkbox>
-                          </Box>
-                        )
-                      }}
-                    >
-                      <TooltipContent>
-                        <TooltipText>{policyTips[policy]}</TooltipText>
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    <Checkbox value={policy} colorScheme="primary">
-                      <CheckboxIndicator mr="$2">
-                        <CheckboxIcon />
-                      </CheckboxIndicator>
-                      <CheckboxLabel>{policy}</CheckboxLabel>
-                    </Checkbox>
+            <VStack space="sm">
+              <CheckboxGroup
+                value={policies}
+                accessibilityLabel="Set Device Policies"
+                onChange={(values) =>
+                  setPolicies(
+                    normalizeInternetPolicySelection(values, policies)
                   )
-                )}
-              </HStack>
-            </CheckboxGroup>
+                }
+                py="$1"
+              >
+                <HStack space="md" w="$full" flexWrap="wrap">
+                  {allPolicies.map((policy) =>
+                    policyTips[policy] !== null ? (
+                      <Tooltip
+                        h={undefined}
+                        placement="bottom"
+                        trigger={(triggerProps) => {
+                          return (
+                            <Box {...triggerProps}>
+                              <Checkbox value={policy} colorScheme="primary">
+                                <CheckboxIndicator mr="$2">
+                                  <CheckboxIcon />
+                                </CheckboxIndicator>
+                                <CheckboxLabel>
+                                  {policyName[policy]}
+                                </CheckboxLabel>
+                              </Checkbox>
+                            </Box>
+                          )
+                        }}
+                      >
+                        <TooltipContent>
+                          <TooltipText>{policyTips[policy]}</TooltipText>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <Checkbox value={policy} colorScheme="primary">
+                        <CheckboxIndicator mr="$2">
+                          <CheckboxIcon />
+                        </CheckboxIndicator>
+                        <CheckboxLabel>{policy}</CheckboxLabel>
+                      </Checkbox>
+                    )
+                  )}
+                </HStack>
+              </CheckboxGroup>
+              <AllowlistPolicyControl
+                policies={policies}
+                allowlistPolicies={allowlistPolicies}
+                onChange={setPolicies}
+              />
+            </VStack>
 
             <FormControlHelper>
               <FormControlHelperText>

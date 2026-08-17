@@ -465,6 +465,7 @@ func handleDnsEvent(topic string, value string) {
 			//get rid if the pesky trailing .
 			domain = domain[:len(domain)-1]
 			updateDnsCache(domain, ips, ttls)
+			allowlistObserveDNS(domain, ips, ttls)
 		}
 	}
 }

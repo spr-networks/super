@@ -1825,7 +1825,7 @@ func AddIPIfaceVerdictElement(family, tableName, mapName, ip, iface, verdict str
 		if mapName == "fwd_iface_lan" || mapName == "fwd_iface_wan" {
 			return AddIfaceIPCIDRVerdictElement(family, tableName, mapName, iface, ip, verdict)
 		}
-		if mapName == "dns_access" {
+		if mapName == "dns_access" || mapName == gAllowlistSourceMapName {
 			return AddIPIfaceCIDRVerdictElement(family, tableName, mapName, ip, iface, verdict)
 		}
 	}
@@ -2037,6 +2037,25 @@ func CreateIPIfaceVerdictMap(family, tableName, mapName string) error {
 	return nil
 }
 
+func CreateIPv4IntervalSet(family, tableName, setName string) error {
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
+	}
+	if err := CheckTableExists(family, tableName); err != nil {
+		return fmt.Errorf("table %s not found", tableName)
+	}
+	table := client.GetTable(f, tableName)
+	set := &nftables.Set{Table: table, Name: setName, KeyType: nftables.TypeIPAddr, Interval: true}
+	if err := client.conn.AddSet(set, nil); err != nil {
+		return fmt.Errorf("failed to create set %s: %v", setName, err)
+	}
+	if err := client.conn.Flush(); err != nil {
+		return fmt.Errorf("failed to create set %s: %v", setName, err)
+	}
+	return nil
+}
+
 // AddRuleToChain adds a rule to a chain (simplified version)
 func AddRuleToChain(family, tableName, chainName, rule string) error {
 	// Use exec to add rules - TBD google/nftables support
@@ -2101,6 +2120,92 @@ func AddAcceptRule(family, tableName, chainName string) error {
 	return addRuleExprs(family, tableName, chainName, []expr.Any{
 		&expr.Verdict{Kind: expr.VerdictAccept},
 	}, false)
+}
+
+func inspectAllowlistDestinationRules(rules []*nftables.Rule, setName string) (hasAllow, hasDrop bool) {
+	for _, rule := range rules {
+		matchesSet := false
+		accepts := false
+		for _, ruleExpr := range rule.Exprs {
+			switch value := ruleExpr.(type) {
+			case *expr.Lookup:
+				matchesSet = matchesSet || value.SetName == setName
+			case *expr.Verdict:
+				accepts = accepts || value.Kind == expr.VerdictAccept
+				hasDrop = hasDrop || value.Kind == expr.VerdictDrop
+			}
+		}
+		hasAllow = hasAllow || (matchesSet && accepts)
+	}
+	return hasAllow, hasDrop
+}
+
+func allowlistDestinationAllowExprs(setName string) []expr.Any {
+	exprs := ipv4Dependency()
+	return append(exprs,
+		&expr.Payload{DestRegister: 1, Base: expr.PayloadBaseNetworkHeader, Offset: 16, Len: 4},
+		&expr.Lookup{SourceRegister: 1, SetName: setName},
+		&expr.Verdict{Kind: expr.VerdictAccept},
+	)
+}
+
+func CreateAllowlistDestinationChain(family, tableName, chainName, setName string) error {
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
+	}
+	table := client.GetTable(f, tableName)
+	if table == nil {
+		return fmt.Errorf("table %s not found", tableName)
+	}
+	chain := client.conn.AddChain(&nftables.Chain{Name: chainName, Table: table})
+	client.conn.AddRule(&nftables.Rule{
+		Table: table,
+		Chain: chain,
+		Exprs: allowlistDestinationAllowExprs(setName),
+	})
+	client.conn.AddRule(&nftables.Rule{
+		Table: table,
+		Chain: chain,
+		Exprs: []expr.Any{&expr.Verdict{Kind: expr.VerdictDrop}},
+	})
+	if err := client.conn.Flush(); err != nil {
+		return fmt.Errorf("failed to create fail-closed allowlist chain %s: %w", chainName, err)
+	}
+	return nil
+}
+
+func EnsureAllowlistDestinationRule(family, tableName, chainName, setName string) error {
+	f, client, err := withFamily(family)
+	if err != nil {
+		return err
+	}
+	table := client.GetTable(f, tableName)
+	if table == nil {
+		return fmt.Errorf("table %s not found", tableName)
+	}
+	chain := &nftables.Chain{Name: chainName, Table: table}
+	rules, err := client.conn.GetRules(table, chain)
+	if err != nil {
+		if denyErr := addRuleExprs(family, tableName, chainName, []expr.Any{
+			&expr.Verdict{Kind: expr.VerdictDrop},
+		}, false); denyErr != nil {
+			return fmt.Errorf("failed to inspect allowlist chain %s: %v; failed to enforce default deny: %w", chainName, err, denyErr)
+		}
+		return fmt.Errorf("failed to inspect allowlist chain %s: %w", chainName, err)
+	}
+	hasAllow, hasDrop := inspectAllowlistDestinationRules(rules, setName)
+	if !hasDrop {
+		if err := addRuleExprs(family, tableName, chainName, []expr.Any{
+			&expr.Verdict{Kind: expr.VerdictDrop},
+		}, false); err != nil {
+			return err
+		}
+	}
+	if hasAllow {
+		return nil
+	}
+	return addRuleExprs(family, tableName, chainName, allowlistDestinationAllowExprs(setName), true)
 }
 
 // AddOutboundUplinkHashRule appends the outbound load-balancing rule:

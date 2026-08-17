@@ -115,6 +115,7 @@ const ContainerInterfaceRulesList = (props) => {
               appContext={appContext}
               interfaceList={interfaceList}
               netBlocks={netBlocks}
+              existingRules={list}
             />
           </ModalForm>
         ) : null}
@@ -129,6 +130,7 @@ const ContainerInterfaceRulesList = (props) => {
             appContext={appContext}
             interfaceList={interfaceList}
             netBlocks={netBlocks}
+            existingRules={list}
           />
         ) : null}
       </ModalForm>

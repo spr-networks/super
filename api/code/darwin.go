@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"syscall"
 )
@@ -47,6 +48,18 @@ func GetNFTClient() *NFTClient {
 		InitNFTClient()
 	}
 	return nftClient
+}
+
+type MapSnapshot struct{}
+
+func (c *NFTClient) SnapshotMaps(_ TableFamily, _ string, _ []string) *MapSnapshot {
+	return &MapSnapshot{}
+}
+
+func (s *MapSnapshot) Entries(_ string) []verdictEntry { return nil }
+func (s *MapSnapshot) HasMAC(_, _ string) bool         { return false }
+func (s *MapSnapshot) HasElement(_ string, _ []string) bool {
+	return false
 }
 
 // Utility functions for converting values to bytes
@@ -295,6 +308,10 @@ func CreateIPIfaceVerdictMap(family, tableName, mapName string) error {
 	return fmt.Errorf("nftables not supported on macOS")
 }
 
+func CreateIPv4IntervalSet(family, tableName, setName string) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
 func fwdBlockKey(srcIP, dstIP, protocol, dstPort string) (key, keyEnd []byte) {
 	return nil, nil
 }
@@ -313,6 +330,14 @@ func AddMarkSetRule(family, tableName, chainName string, mark uint32) error {
 }
 
 func AddAcceptRule(family, tableName, chainName string) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
+func EnsureAllowlistDestinationRule(family, tableName, chainName, setName string) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
+func CreateAllowlistDestinationChain(family, tableName, chainName, setName string) error {
 	return fmt.Errorf("nftables not supported on macOS")
 }
 
@@ -359,6 +384,10 @@ func DeleteIPFromSet(family, tableName, setName, ip string) error {
 }
 
 func AddCIDRToSet(family, tableName, setName, cidr string) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
+func AddIPRangesToSet(family, tableName, setName string, ranges [][2]net.IP, verdict ...string) error {
 	return fmt.Errorf("nftables not supported on macOS")
 }
 

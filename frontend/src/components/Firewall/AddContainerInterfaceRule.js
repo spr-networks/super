@@ -1,7 +1,7 @@
-import React, { useContext } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
-import { firewallAPI } from 'api'
+import { firewallAPI, allowlistAPI } from 'api'
 import { AlertContext, AppContext } from 'AppContext'
 
 import {
@@ -35,6 +35,12 @@ import { GroupMenu, TagMenu, PolicyMenu } from 'components/TagMenu'
 
 import ProtocolRadio from 'components/Form/ProtocolRadio'
 import InputSelect from 'components/InputSelect'
+import AllowlistPolicyControl from 'components/AllowlistPolicyControl'
+import {
+  normalizeInternetPolicySelection,
+  allowlistPolicyValues,
+  hasAllowlistSourceConflict
+} from 'utils/allowlist'
 
 class AddContainerInterfaceRuleImpl extends React.Component {
   state = {
@@ -139,7 +145,10 @@ class AddContainerInterfaceRuleImpl extends React.Component {
   }
 
   handlePolicies = (policies) => {
-    this.handleChange('Policies', policies)
+    this.handleChange(
+      'Policies',
+      normalizeInternetPolicySelection(policies, this.state.Policies)
+    )
   }
 
   handleGroups = (groups) => {
@@ -153,6 +162,13 @@ class AddContainerInterfaceRuleImpl extends React.Component {
   render() {
     let interfaceOptions = this.props.interfaceList.map((n) => {
       return { label: n, value: n }
+    })
+    const allowlistSourceConflict = hasAllowlistSourceConflict({
+      rules: this.props.existingRules,
+      currentRule: this.props.item,
+      interfaceName: this.state.Interface,
+      source: this.state.SrcIP,
+      policies: this.state.Policies
     })
     return (
       <VStack space="md">
@@ -203,11 +219,15 @@ class AddContainerInterfaceRuleImpl extends React.Component {
 
         <FormControl>
           <FormControlLabel>
-            <FormControlLabelText>Network Policies, Groups, & Tags</FormControlLabelText>
+            <FormControlLabelText>
+              Network Policies, Groups, & Tags
+            </FormControlLabelText>
           </FormControlLabel>
           <HStack flexWrap="wrap" w="$full" space="md">
             <HStack space="md" flexWrap="wrap" alignItems="center">
-              {this.state.Policies.map((policy) => (
+              {this.state.Policies.filter(
+                (policy) => !policy.startsWith('allowlist:')
+              ).map((policy) => (
                 <PolicyItem key={policy} name={policy} size="sm" />
               ))}
             </HStack>
@@ -224,9 +244,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
           </HStack>
           <HStack space="md" flexWrap="wrap" alignItems="center">
             <PolicyMenu
-              items={[
-                ...new Set(this.defaultPolicies)
-              ]}
+              items={this.defaultPolicies}
               selectedKeys={this.state.Policies}
               onSelectionChange={this.handlePolicies}
             />
@@ -250,12 +268,23 @@ class AddContainerInterfaceRuleImpl extends React.Component {
               onSelectionChange={this.handleTags}
             />
           </HStack>
+          <AllowlistPolicyControl
+            policies={this.state.Policies}
+            allowlistPolicies={this.props.allowlistPolicies}
+            onChange={this.handlePolicies}
+          />
+
+          {allowlistSourceConflict ? (
+            <Text color="$warning600" size="sm">
+              This address is already used by another rule. Its policies can
+              bypass the Whitelist.
+            </Text>
+          ) : null}
 
           <FormControlHelper>
             <FormControlHelperText>
-              Choose what this interface can reach. Add 'wan' + 'dns' for
-              internet, 'lan' for other SPR devices, 'api' for the SPR API.
-              (lan_upstream isn't supported for an address range.)
+              Choose what this interface can reach. Add DNS if it needs name
+              resolution.
             </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
@@ -267,9 +296,7 @@ class AddContainerInterfaceRuleImpl extends React.Component {
         >
           <HStack space="sm" alignItems="center" py="$1">
             <Icon
-              as={
-                this.state.showAdvanced ? ChevronDownIcon : ChevronRightIcon
-              }
+              as={this.state.showAdvanced ? ChevronDownIcon : ChevronRightIcon}
               size="sm"
               color="$muted500"
             />
@@ -294,8 +321,8 @@ class AddContainerInterfaceRuleImpl extends React.Component {
             </Input>
             <FormControlHelper>
               <FormControlHelperText>
-                Optional: send this interface's traffic to a specific gateway IP.
-                Leave blank for default routing.
+                Optional: send this interface's traffic to a specific gateway
+                IP. Leave blank for default routing.
               </FormControlHelperText>
             </FormControlHelper>
           </FormControl>
@@ -353,11 +380,21 @@ class AddContainerInterfaceRuleImpl extends React.Component {
 }
 
 AddContainerInterfaceRuleImpl.propTypes = {
-  notifyChange: PropTypes.func
+  notifyChange: PropTypes.func,
+  existingRules: PropTypes.array
 }
 
 export default function AddContainerInterfaceRule(props) {
   let alertContext = useContext(AlertContext)
+  const [allowlistPolicies, setAllowlistPolicies] = useState([])
+
+  useEffect(() => {
+    allowlistAPI
+      .config()
+      .then((config) => setAllowlistPolicies(allowlistPolicyValues(config)))
+      .catch(() => setAllowlistPolicies([]))
+  }, [])
+
   return (
     <AddContainerInterfaceRuleImpl
       notifyChange={props.notifyChange}
@@ -366,6 +403,8 @@ export default function AddContainerInterfaceRule(props) {
       interfaceList={props.interfaceList}
       netBlocks={props.netBlocks}
       item={props.item}
+      existingRules={props.existingRules}
+      allowlistPolicies={allowlistPolicies}
     ></AddContainerInterfaceRuleImpl>
   )
 }

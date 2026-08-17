@@ -44,7 +44,11 @@ const TagItem = React.memo(({ name, size, ...props }) => {
       rounded="$lg"
     >
       <BadgeText color={fg}>{name}</BadgeText>
-      <BadgeIcon color={fg} as={name.match(/^persona?:/) ? UserIcon : TagIcon} ml="$1" />
+      <BadgeIcon
+        color={fg}
+        as={name.match(/^persona?:/) ? UserIcon : TagIcon}
+        ml="$1"
+      />
     </Badge>
   )
 })
@@ -52,6 +56,7 @@ const TagItem = React.memo(({ name, size, ...props }) => {
 const PolicyItem = React.memo(({ name, size }) => {
   let policyIcons = {
     wan: Globe2Icon,
+    allowlist: FileSearch,
     dns: FileSearch,
     lan: ArrowLeftRight, //NetworkIcon is crammed
     api: RouteIcon,
@@ -61,9 +66,14 @@ const PolicyItem = React.memo(({ name, size }) => {
 
   let colorMode = useColorMode()
 
-  let icon = policyIcons[name] || UsersIcon
+  let icon = name.startsWith('allowlist:')
+    ? policyIcons.allowlist
+    : policyIcons[name] || UsersIcon
   let bg = colorMode == 'light' ? '$blueGray300' : '$blueGray600'
   let fg = colorMode == 'light' ? '$muted800' : '$muted100'
+  let label = name.startsWith('allowlist:')
+    ? `Whitelist: ${name.replace('allowlist:', '')}`
+    : name
 
   return (
     <Badge
@@ -76,7 +86,7 @@ const PolicyItem = React.memo(({ name, size }) => {
       px="$2"
       rounded="$lg"
     >
-      <BadgeText color={fg}>{name}</BadgeText>
+      <BadgeText color={fg}>{label}</BadgeText>
       <BadgeIcon color={fg} as={icon} ml="$1" />
     </Badge>
   )
@@ -161,7 +171,7 @@ const InterfaceItem = React.memo(({ name, address, size, type, ...props }) => {
 
 const InterfaceTypeItem = ({ item, operstate, ...props }) => {
   let name = item.Interface.match(/wlan(\d+)\.(\d+)/) ? 'client' : item.Type
-  if ( item.Interface.match(/wlan(\d+)\.ap(\d+)\.(\d+)/) ) {
+  if (item.Interface.match(/wlan(\d+)\.ap(\d+)\.(\d+)/)) {
     name = 'AP-Multi/Guest'
   }
 

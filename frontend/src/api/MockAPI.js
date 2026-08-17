@@ -118,6 +118,18 @@ let mockGeoBlockConfig = {
   RefreshSeconds: 86400
 }
 
+let mockAllowlistConfig = {
+  Allowlists: [
+    {
+      Name: 'work-services',
+      CIDRs: ['203.0.113.0/24'],
+      ASNs: [{ ASN: 54113, Name: 'FASTLY, US' }],
+      Domains: ['github.com', '*.githubusercontent.com']
+    }
+  ],
+  RefreshSeconds: 300
+}
+
 const mockASNTable = [
   { ASN: 7922, Name: 'COMCAST-7922, US', Country: 'US', RangeCount: 1234 },
   { ASN: 15169, Name: 'GOOGLE, US', Country: 'US', RangeCount: 981 },
@@ -3233,6 +3245,38 @@ export default function MockAPI(props = null) {
       this.get('/firewall/geo_block/status', () => mockGeoBlockStatus())
 
       this.put('/firewall/geo_block/refresh', () => mockGeoBlockStatus())
+
+      const mockAllowlistStatus = () => ({
+        LastRefresh: new Date(Date.now() - 5 * 60e3).toISOString(),
+        Allowlists: mockAllowlistConfig.Allowlists.map((item) => ({
+          Name: item.Name,
+          Policy: `allowlist:${item.Name}`,
+          RangesProgrammed:
+            item.CIDRs.length + item.ASNs.length * 10 + item.Domains.length,
+          Sources: [
+            ...item.CIDRs.map((cidr) => ({ Type: 'cidr', Key: cidr, Ranges: 1 })),
+            ...item.ASNs.map((asn) => ({
+              Type: 'asn',
+              Key: `AS${asn.ASN}`,
+              Ranges: 10
+            })),
+            ...item.Domains.map((domain) => ({
+              Type: 'domain',
+              Key: domain,
+              Ranges: domain.startsWith('*.') ? 0 : 1,
+              Addresses: 1
+            }))
+          ]
+        }))
+      })
+
+      this.get('/firewall/allowlist/config', () => mockAllowlistConfig)
+      this.put('/firewall/allowlist/config', (schema, request) => {
+        mockAllowlistConfig = JSON.parse(request.requestBody)
+        return mockAllowlistConfig
+      })
+      this.get('/firewall/allowlist/status', () => mockAllowlistStatus())
+      this.put('/firewall/allowlist/refresh', () => mockAllowlistStatus())
 
       this.get('/plugins/lookup/asn_search/:query', (schema, request) => {
         let q = `${request.params.query}`.toLowerCase()

@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import { useNavigate } from 'react-router-dom'
 import { AlertContext, AppContext } from 'AppContext'
 import { deviceAPI } from 'api/Device'
-import { meshAPI, classifyAPI } from 'api'
+import { meshAPI, classifyAPI, allowlistAPI } from 'api'
 
 import ModalConfirm from 'components/ModalConfirm'
 
@@ -48,6 +48,7 @@ import { Address4, Address6 } from 'ip-address'
 import { TagItem, GroupItem, PolicyItem } from 'components/TagItem'
 import ColorPicker from 'components/ColorPicker'
 import IconPicker from 'components/IconPicker'
+import AllowlistPolicyControl from 'components/AllowlistPolicyControl'
 
 import { GroupMenu, PolicyMenu, TagMenu } from 'components/TagMenu'
 import {
@@ -56,16 +57,21 @@ import {
   isClassificationTag,
   categoryStyle
 } from 'components/Devices/Classification'
+import {
+  normalizeInternetPolicySelection,
+  allowlistPolicyValues
+} from 'utils/allowlist'
 
-const mergeUnique = (...arrays) => [
-  ...new Set(
-    arrays
-      .flat()
-      .filter((value) => typeof value === 'string')
-      .map((value) => value.trim())
-      .filter((value) => value.length)
-  )
-].sort()
+const mergeUnique = (...arrays) =>
+  [
+    ...new Set(
+      arrays
+        .flat()
+        .filter((value) => typeof value === 'string')
+        .map((value) => value.trim())
+        .filter((value) => value.length)
+    )
+  ].sort()
 
 const EditDevice = ({ device, notifyChange, ...props }) => {
   const context = useContext(AlertContext)
@@ -97,12 +103,27 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   const [deleteExpiry, setDeleteExpiry] = useState(
     device.DeleteExpiration || false
   )
+  const [allowlistPolicies, setAllowlistPolicies] = useState([])
+
+  useEffect(() => {
+    allowlistAPI
+      .config()
+      .then((config) => setAllowlistPolicies(allowlistPolicyValues(config)))
+      .catch(() => setAllowlistPolicies([]))
+  }, [])
 
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState('')
 
   // for adding
-  let defaultPolicies = ['wan', 'dns', 'dns:family', 'lan', 'lan_upstream', 'noapi']
+  let defaultPolicies = [
+    'wan',
+    'dns',
+    'dns:family',
+    'lan',
+    'lan_upstream',
+    'noapi'
+  ]
 
   if (!isSimpleMode) {
     defaultPolicies.push(...['disabled', 'quarantine'])
@@ -156,7 +177,9 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
 
     classifyAPI
       .signals(device.MAC)
-      .then((signals) => setFingerprint({ OUI: deviceOUI() || undefined, ...signals }))
+      .then((signals) =>
+        setFingerprint({ OUI: deviceOUI() || undefined, ...signals })
+      )
       .catch(() => {})
 
     classifyAPI
@@ -210,15 +233,16 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
       )
   }
 
-  const handlePolicies = (policies) => {
+  const handlePolicies = (nextPolicies) => {
     if (!device.MAC && !device.WGPubKey) {
       return
     }
 
-    setPolicies([...new Set(policies.filter((v) => typeof v === 'string'))])
+    nextPolicies = normalizeInternetPolicySelection(nextPolicies, policies)
+    setPolicies(nextPolicies)
 
     deviceAPI
-      .updatePolicies(device.MAC || device.WGPubKey, policies)
+      .updatePolicies(device.MAC || device.WGPubKey, nextPolicies)
       .then(notifyChange)
       .catch((error) =>
         context.error('[API] updateDevice error: ' + error.message)
@@ -430,7 +454,11 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     delete signals.RandomMAC
     let txt = {}
     for (let key of Object.keys(signals.TXT || {})) {
-      if (!key.match(/id|mac|serial|token|key|uuid|addr|auth|secret|sig|pass|cert|tag/i)) {
+      if (
+        !key.match(
+          /id|mac|serial|token|key|uuid|addr|auth|secret|sig|pass|cert|tag/i
+        )
+      ) {
         txt[key] = signals.TXT[key]
       }
     }
@@ -474,9 +502,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     if (Platform.OS == 'web' && typeof window != 'undefined') {
       window.open(url, '_blank')
     } else {
-      Linking.openURL(url).catch(() =>
-        context.error('Could not open browser')
-      )
+      Linking.openURL(url).catch(() => context.error('Could not open browser'))
     }
   }
 
@@ -607,13 +633,16 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         )
     }
 
-    if (!(customDNS == "" && device.DNSCustom === undefined) && customDNS != device.DNSCustom) {
+    if (
+      !(customDNS == '' && device.DNSCustom === undefined) &&
+      customDNS != device.DNSCustom
+    ) {
       //validate IP
 
       let toSend = customDNS
       try {
-        if (customDNS == "" && device.DNSCustom != "") {
-          toSend = "0"
+        if (customDNS == '' && device.DNSCustom != '') {
+          toSend = '0'
         } else {
           let address = new Address4(customDNS)
         }
@@ -625,7 +654,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
             context.error('[API] update DNS error: ' + error.message)
           )
       } catch (e) {
-        context.error("Invalid Custom DNS Server")
+        context.error('Invalid Custom DNS Server')
         return
       }
     }
@@ -944,46 +973,53 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
             <FormControlLabelText>Policies</FormControlLabelText>
           </FormControlLabel>
 
-          <CheckboxGroup
-            value={policies}
-            accessibilityLabel="Set Device Policies"
-            onChange={(values) => handlePolicies(values)}
-            py="$1"
-          >
-            <HStack flex={1} space="md" w="$full" flexWrap="wrap">
-              {defaultPolicies.map((policy) =>
-                policyTips[policy] !== null ? (
-                  <Tooltip
-                    h={undefined}
-                    placement="bottom"
-                    trigger={(triggerProps) => {
-                      return (
-                        <Box {...triggerProps}>
-                          <Checkbox value={policy} colorScheme="primary">
-                            <CheckboxIndicator mr="$2">
-                              <CheckboxIcon />
-                            </CheckboxIndicator>
-                            <CheckboxLabel>{policyName[policy]}</CheckboxLabel>
-                          </Checkbox>
-                        </Box>
-                      )
-                    }}
-                  >
-                    <TooltipContent>
-                      <TooltipText>{policyTips[policy]}</TooltipText>
-                    </TooltipContent>
-                  </Tooltip>
-                ) : (
-                  <Checkbox value={policy} colorScheme="primary">
-                    <CheckboxIndicator mr="$2">
-                      <CheckboxIcon />
-                    </CheckboxIndicator>
-                    <CheckboxLabel>{policy}</CheckboxLabel>
-                  </Checkbox>
-                )
-              )}
-            </HStack>
-          </CheckboxGroup>
+          <VStack space="sm">
+            <CheckboxGroup
+              value={policies}
+              accessibilityLabel="Set Device Policies"
+              onChange={(values) => handlePolicies(values)}
+              py="$1"
+            >
+              <HStack flex={1} space="md" w="$full" flexWrap="wrap">
+                {defaultPolicies.map((policy) =>
+                  policyTips[policy] !== null ? (
+                    <Tooltip
+                      h={undefined}
+                      placement="bottom"
+                      trigger={(triggerProps) => {
+                        return (
+                          <Box {...triggerProps}>
+                            <Checkbox value={policy} colorScheme="primary">
+                              <CheckboxIndicator mr="$2">
+                                <CheckboxIcon />
+                              </CheckboxIndicator>
+                              <CheckboxLabel>{policyName[policy]}</CheckboxLabel>
+                            </Checkbox>
+                          </Box>
+                        )
+                      }}
+                    >
+                      <TooltipContent>
+                        <TooltipText>{policyTips[policy]}</TooltipText>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Checkbox value={policy} colorScheme="primary">
+                      <CheckboxIndicator mr="$2">
+                        <CheckboxIcon />
+                      </CheckboxIndicator>
+                      <CheckboxLabel>{policy}</CheckboxLabel>
+                    </Checkbox>
+                  )
+                )}
+              </HStack>
+            </CheckboxGroup>
+            <AllowlistPolicyControl
+              policies={policies}
+              allowlistPolicies={allowlistPolicies}
+              onChange={handlePolicies}
+            />
+          </VStack>
 
           <FormControlHelper>
             <FormControlHelperText>

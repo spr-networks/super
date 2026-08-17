@@ -138,6 +138,14 @@ var ValidPolicyStrings = []string{"wan", "lan", "dns", "api", "lan_upstream", "n
 
 var BulkSettablePolicyStrings = []string{"wan", "lan", "dns", "dns:family", "lan_upstream", "noapi", "quarantine"}
 
+func isValidPolicyName(policy string) bool {
+	return slices.Contains(ValidPolicyStrings, policy) || isConfiguredAllowlistPolicy(policy)
+}
+
+func isBulkSettablePolicyName(policy string) bool {
+	return slices.Contains(BulkSettablePolicyStrings, policy) || isConfiguredAllowlistPolicy(policy)
+}
+
 var config = APIConfig{}
 
 var Configmtx sync.Mutex
@@ -1594,22 +1602,36 @@ func handleBulkUpdateDevices(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, g := range addGroups {
-		if slices.Contains(ValidPolicyStrings, g) {
+		if isValidPolicyName(g) {
 			http.Error(w, "Invalid group name provided collides with policy name", 400)
 			return
 		}
 	}
 	for _, t := range addTags {
-		if slices.Contains(ValidPolicyStrings, t) {
+		if isValidPolicyName(t) {
 			http.Error(w, "Invalid tag name provided collides with policy name", 400)
 			return
 		}
 	}
 	for _, p := range addPolicies {
-		if !slices.Contains(BulkSettablePolicyStrings, p) {
+		if !isBulkSettablePolicyName(p) {
 			http.Error(w, "policy not settable in bulk: "+p, 400)
 			return
 		}
+	}
+	requestedAllowlist := ""
+	for _, policy := range addPolicies {
+		if _, ok := allowlistNameFromPolicy(policy); ok {
+			if requestedAllowlist != "" && requestedAllowlist != policy {
+				http.Error(w, "Only one allowlist policy can be selected", 400)
+				return
+			}
+			requestedAllowlist = policy
+		}
+	}
+	if requestedAllowlist != "" && slices.Contains(addPolicies, "wan") {
+		http.Error(w, "wan and an allowlist policy cannot be selected together", 400)
+		return
 	}
 
 	Groupsmtx.Lock()
@@ -1622,6 +1644,7 @@ func handleBulkUpdateDevices(w http.ResponseWriter, r *http.Request) {
 
 	updatedVals := []DeviceEntry{}
 	updated := []string{}
+	conntrackIPs := map[string]bool{}
 
 	for _, identity := range req.Identities {
 		id := identity
@@ -1634,6 +1657,7 @@ func handleBulkUpdateDevices(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
+		previousPolicies := append([]string{}, val.Policies...)
 		changed := false
 		for _, g := range addGroups {
 			if !slices.Contains(val.Groups, g) {
@@ -1648,6 +1672,33 @@ func handleBulkUpdateDevices(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		for _, p := range addPolicies {
+			if _, ok := allowlistNameFromPolicy(p); ok {
+				filtered := []string{}
+				for _, current := range val.Policies {
+					if current == "wan" {
+						continue
+					}
+					if _, isAllowlist := allowlistNameFromPolicy(current); isAllowlist {
+						continue
+					}
+					filtered = append(filtered, current)
+				}
+				if len(filtered) != len(val.Policies) {
+					changed = true
+				}
+				val.Policies = filtered
+			} else if p == "wan" {
+				filtered := []string{}
+				for _, current := range val.Policies {
+					if _, isAllowlist := allowlistNameFromPolicy(current); !isAllowlist {
+						filtered = append(filtered, current)
+					}
+				}
+				if len(filtered) != len(val.Policies) {
+					changed = true
+				}
+				val.Policies = filtered
+			}
 			if !slices.Contains(val.Policies, p) {
 				val.Policies = append(val.Policies, p)
 				changed = true
@@ -1655,6 +1706,9 @@ func handleBulkUpdateDevices(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if changed {
+			if !equalStringSlice(previousPolicies, val.Policies) && val.RecentIP != "" {
+				conntrackIPs[val.RecentIP] = true
+			}
 			devices[id] = val
 			updatedVals = append(updatedVals, val)
 			updated = append(updated, id)
@@ -1670,6 +1724,9 @@ func handleBulkUpdateDevices(w http.ResponseWriter, r *http.Request) {
 		for _, val := range updatedVals {
 			if len(addGroups) > 0 || len(addPolicies) > 0 {
 				refreshDeviceGroupsAndPolicy(devices, groups, val)
+				if conntrackIPs[val.RecentIP] {
+					clearConntrackSrcIP(val.RecentIP)
+				}
 				SprbusPublish("device:groups:update", scrubDevice(val))
 			}
 			if len(addTags) > 0 {
@@ -1735,10 +1792,20 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 	dev.Policies = normalizeStringSlice(dev.Policies)
 
 	//validate policies now
+	allowlistPolicies := 0
 	for _, policy := range dev.Policies {
-		if !slices.Contains(ValidPolicyStrings, policy) {
+		if !isValidPolicyName(policy) {
 			return "Invalid policy name provided", 400
 		}
+		if _, ok := allowlistNameFromPolicy(policy); ok {
+			allowlistPolicies++
+		}
+	}
+	if allowlistPolicies > 1 {
+		return "Only one allowlist policy can be selected", 400
+	}
+	if allowlistPolicies == 1 && slices.Contains(dev.Policies, "wan") {
+		return "wan and an allowlist policy cannot be selected together", 400
 	}
 
 	dev.Groups = normalizeStringSlice(dev.Groups)
@@ -1746,13 +1813,13 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 	//dont allow groups or tags to collide with policy
 	for _, group := range dev.Groups {
-		if slices.Contains(ValidPolicyStrings, group) {
+		if isValidPolicyName(group) {
 			return "Invalid group name provided collides with policy name", 400
 		}
 	}
 
 	for _, tag := range dev.DeviceTags {
-		if slices.Contains(ValidPolicyStrings, tag) {
+		if isValidPolicyName(tag) {
 			return "Invalid tag name provided collides with policy name", 400
 		}
 	}
@@ -1795,6 +1862,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 	if exists {
 		//updating an existing entry. Check what was requested
+		previousRecentIP := val.RecentIP
 
 		if dev.Name != "" {
 			val.Name = dev.Name
@@ -1907,6 +1975,14 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 		if refreshPolicies || refreshGroups {
 			refreshDeviceGroupsAndPolicy(devices, groups, val)
+			if refreshPolicies {
+				if previousRecentIP != "" {
+					clearConntrackSrcIP(previousRecentIP)
+				}
+				if val.RecentIP != "" && val.RecentIP != previousRecentIP {
+					clearConntrackSrcIP(val.RecentIP)
+				}
+			}
 			SprbusPublish("device:groups:update", scrubDevice(dev))
 		}
 
@@ -2170,7 +2246,7 @@ func equalStringSlice(a []string, b []string) bool {
 }
 
 var (
-	builtin_maps = []string{"internet_access", "dns_access", "lan_access", "ethernet_filter", "fwd_iface_wan"}
+	builtin_maps = []string{"internet_access", "allowlist_sources", "dns_access", "lan_access", "ethernet_filter", "fwd_iface_wan"}
 
 	ignore_groups = []string{"isolated", "lan", "wan", "dns", "api"}
 )
@@ -3121,7 +3197,7 @@ func migrateDevicePolicies() {
 
 	// rm policy groups
 	for _, entry := range old_groups {
-		if !slices.Contains(ValidPolicyStrings, entry.Name) {
+		if !isValidPolicyName(entry.Name) {
 			groups = append(groups, entry)
 		} else {
 			//skipping a group
@@ -3135,7 +3211,7 @@ func migrateDevicePolicies() {
 		new_tags := []string{}
 
 		for _, group_name := range dev.Groups {
-			if slices.Contains(ValidPolicyStrings, group_name) {
+			if isValidPolicyName(group_name) {
 				if !slices.Contains(new_policies, group_name) {
 					new_policies = append(new_policies, group_name)
 				}
@@ -3145,7 +3221,7 @@ func migrateDevicePolicies() {
 		}
 
 		for _, tag := range dev.DeviceTags {
-			if slices.Contains(ValidPolicyStrings, tag) {
+			if isValidPolicyName(tag) {
 				if !slices.Contains(new_policies, tag) {
 					new_policies = append(new_policies, tag)
 				}
@@ -3273,6 +3349,7 @@ func registerEventClient() {
 }
 
 func main() {
+	loadAllowlistConfig()
 
 	//update auth API
 	migrateAuthAPI()
@@ -3357,6 +3434,9 @@ func main() {
 	external_router_authenticated.HandleFunc("/firewall/geo_block/refresh", geoBlockRefreshHandler).Methods("PUT")
 	external_router_authenticated.HandleFunc("/firewall/geo_block/country/{cc}", geoBlockCountryHandler).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/firewall/geo_block/asn/{asn}", geoBlockASNHandler).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/firewall/allowlist/config", allowlistConfigHandler).Methods("GET", "PUT")
+	external_router_authenticated.HandleFunc("/firewall/allowlist/status", allowlistStatusHandler).Methods("GET")
+	external_router_authenticated.HandleFunc("/firewall/allowlist/refresh", allowlistRefreshHandler).Methods("PUT")
 
 	//traffic monitoring
 	external_router_authenticated.HandleFunc("/traffic/{name}", getDeviceTraffic).Methods("GET")
@@ -3584,8 +3664,10 @@ func main() {
 	initAuth()
 	//set up dhcp
 	initDHCP()
+	initAllowlist()
 	//initialize firewall rules
 	initFirewallRules()
+	initAllowlistSources()
 	//initialize hostap  related items
 	initRadios()
 	//start the websocket handler

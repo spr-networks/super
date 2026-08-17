@@ -56,7 +56,9 @@ const ItemMenu = ({
           if (key == 'newItem') {
             setShowModal(true)
           } else {
-            let [action, item] = key.split(':')
+            let separator = key.indexOf(':')
+            let action = key.slice(0, separator)
+            let item = key.slice(separator + 1)
             let nitems = []
             if (action == 'delete') {
               nitems = selectedKeys.filter((t) => t != item)
@@ -68,11 +70,11 @@ const ItemMenu = ({
           }
         }}
       >
-        {(newDisabled ? null : (
+        {newDisabled ? null : (
           <MenuItem key="newItem" textValue="newItem">
             <MenuItemLabel size="sm">{`New ${type}`}</MenuItemLabel>
           </MenuItem>
-        ))}
+        )}
         {items.map((item) => (
           <MenuItem
             key={
@@ -87,7 +89,6 @@ const ItemMenu = ({
             <MenuItemLabel size="sm">{item}</MenuItemLabel>
           </MenuItem>
         ))}
-
       </Menu>
       <ModalConfirm
         type={modalType}

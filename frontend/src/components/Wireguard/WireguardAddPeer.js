@@ -5,10 +5,15 @@ import InputSelect from 'components/InputSelect'
 import WireguardConfig from './WireguardConfig'
 import { AlertContext } from 'layouts/Admin'
 import ClientSelect from 'components/ClientSelect'
-import { deviceAPI, wireguardAPI } from 'api'
+import AllowlistPolicyControl from 'components/AllowlistPolicyControl'
+import { deviceAPI, wireguardAPI, allowlistAPI } from 'api'
 import { api, wifiAPI } from 'api'
 
 import { Address4 } from 'ip-address'
+import {
+  normalizeInternetPolicySelection,
+  allowlistPolicyValues
+} from 'utils/allowlist'
 
 import {
   Button,
@@ -38,7 +43,8 @@ export default class WireguardAddPeer extends React.Component {
     addrs: [],
     config: null,
     policies: ['dns', 'wan'],
-    deviceName: ''
+    deviceName: '',
+    allowlistPolicies: []
   }
 
   constructor(props) {
@@ -175,6 +181,13 @@ export default class WireguardAddPeer extends React.Component {
   }
 
   componentDidMount() {
+    allowlistAPI
+      .config()
+      .then((config) =>
+        this.setState({ allowlistPolicies: allowlistPolicyValues(config) })
+      )
+      .catch(() => {})
+
     if (this.props.defaultEndpoints?.length) {
       let Endpoint = `${this.props.defaultEndpoints[0]}:${
         this.props.config.listenPort || 51280
@@ -192,7 +205,7 @@ export default class WireguardAddPeer extends React.Component {
         for (let entry of data) {
           next: for (let address of entry.addr_info) {
             if (address.scope == 'global') {
-              if (address.local.includes(":")) {
+              if (address.local.includes(':')) {
                 continue
               }
               //filter out any tiny net ips
@@ -313,23 +326,40 @@ export default class WireguardAddPeer extends React.Component {
                 <FormControlLabelText>Policies</FormControlLabelText>
               </FormControlLabel>
 
-              <CheckboxGroup
-                value={this.state.policies}
-                accessibilityLabel="Set Device Policies"
-                onChange={(values) => this.handleChange('policies', values)}
-                py="$1"
-              >
-                <HStack space="xl">
-                  {allPolicies.map((group) => (
-                    <Checkbox key={group} value={group} colorScheme="primary">
-                      <CheckboxIndicator mr="$2">
-                        <CheckboxIcon />
-                      </CheckboxIndicator>
-                      <CheckboxLabel>{group}</CheckboxLabel>
-                    </Checkbox>
-                  ))}
-                </HStack>
-              </CheckboxGroup>
+              <VStack space="sm">
+                <CheckboxGroup
+                  value={this.state.policies}
+                  accessibilityLabel="Set Device Policies"
+                  onChange={(values) =>
+                    this.handleChange(
+                      'policies',
+                      normalizeInternetPolicySelection(
+                        values,
+                        this.state.policies
+                      )
+                    )
+                  }
+                  py="$1"
+                >
+                  <HStack space="xl" flexWrap="wrap">
+                    {allPolicies.map((group) => (
+                      <Checkbox key={group} value={group} colorScheme="primary">
+                        <CheckboxIndicator mr="$2">
+                          <CheckboxIcon />
+                        </CheckboxIndicator>
+                        <CheckboxLabel>{group}</CheckboxLabel>
+                      </Checkbox>
+                    ))}
+                  </HStack>
+                </CheckboxGroup>
+                <AllowlistPolicyControl
+                  policies={this.state.policies}
+                  allowlistPolicies={this.state.allowlistPolicies}
+                  onChange={(policies) =>
+                    this.handleChange('policies', policies)
+                  }
+                />
+              </VStack>
 
               <FormControlHelper>
                 <FormControlHelperText>
