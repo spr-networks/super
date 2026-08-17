@@ -1,6 +1,8 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.2.5
+
 ## v1.2.4
 **Features**
 - Whitelist mode for internet access
