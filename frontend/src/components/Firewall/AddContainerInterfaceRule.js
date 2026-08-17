@@ -30,8 +30,8 @@ import {
 
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react-native'
 
-import { TagItem, GroupItem, PolicyItem } from 'components/TagItem'
-import { GroupMenu, TagMenu, PolicyMenu } from 'components/TagMenu'
+import { TagItem, GroupItem } from 'components/TagItem'
+import { GroupMenu, TagMenu } from 'components/TagMenu'
 
 import ProtocolRadio from 'components/Form/ProtocolRadio'
 import InputSelect from 'components/InputSelect'
@@ -59,6 +59,14 @@ class AddContainerInterfaceRuleImpl extends React.Component {
   }
 
   defaultPolicies = ['wan', 'dns', 'lan', 'api', 'lan_upstream', 'disabled']
+  policyNames = {
+    wan: 'Internet Access',
+    dns: 'DNS Resolution',
+    lan: 'Local Network',
+    api: 'API Access',
+    lan_upstream: 'Upstream Private Networks',
+    disabled: 'Disabled'
+  }
   defaultGroups = []
   defaultTags = []
 
@@ -225,13 +233,6 @@ class AddContainerInterfaceRuleImpl extends React.Component {
           </FormControlLabel>
           <HStack flexWrap="wrap" w="$full" space="md">
             <HStack space="md" flexWrap="wrap" alignItems="center">
-              {this.state.Policies.filter(
-                (policy) => !policy.startsWith('allowlist:')
-              ).map((policy) => (
-                <PolicyItem key={policy} name={policy} size="sm" />
-              ))}
-            </HStack>
-            <HStack space="md" flexWrap="wrap" alignItems="center">
               {this.state.Groups.map((group) => (
                 <GroupItem key={group} name={group} size="sm" />
               ))}
@@ -242,13 +243,31 @@ class AddContainerInterfaceRuleImpl extends React.Component {
               ))}
             </HStack>
           </HStack>
-          <HStack space="md" flexWrap="wrap" alignItems="center">
-            <PolicyMenu
-              items={this.defaultPolicies}
-              selectedKeys={this.state.Policies}
-              onSelectionChange={this.handlePolicies}
+          <VStack space="sm">
+            <CheckboxGroup
+              value={this.state.Policies}
+              accessibilityLabel="Set Container Policies"
+              onChange={this.handlePolicies}
+              py="$1"
+            >
+              <HStack space="md" w="$full" flexWrap="wrap">
+                {this.defaultPolicies.map((policy) => (
+                  <Checkbox key={policy} value={policy} colorScheme="primary">
+                    <CheckboxIndicator mr="$2">
+                      <CheckboxIcon />
+                    </CheckboxIndicator>
+                    <CheckboxLabel>{this.policyNames[policy]}</CheckboxLabel>
+                  </Checkbox>
+                ))}
+              </HStack>
+            </CheckboxGroup>
+            <AllowlistPolicyControl
+              policies={this.state.Policies}
+              allowlistPolicies={this.props.allowlistPolicies}
+              onChange={this.handlePolicies}
             />
-
+          </VStack>
+          <HStack space="md" flexWrap="wrap" alignItems="center">
             <GroupMenu
               items={[
                 ...new Set(this.defaultGroups.concat(this.state.GroupOptions))
@@ -268,11 +287,6 @@ class AddContainerInterfaceRuleImpl extends React.Component {
               onSelectionChange={this.handleTags}
             />
           </HStack>
-          <AllowlistPolicyControl
-            policies={this.state.Policies}
-            allowlistPolicies={this.props.allowlistPolicies}
-            onChange={this.handlePolicies}
-          />
 
           {allowlistSourceConflict ? (
             <Text color="$warning600" size="sm">
