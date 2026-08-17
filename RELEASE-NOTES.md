@@ -2,6 +2,8 @@
 # Secure Programmable Router (SPR) Release Notes
 
 ## v1.2.4
+**Features**
+- Whitelist mode for internet access
 **Fixes**
 - Update golang 1.26 for api
 - iOS native app fixes
