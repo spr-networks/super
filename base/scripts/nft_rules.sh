@@ -158,6 +158,11 @@ table inet filter {
     type ipv4_addr . ifname: verdict;
   }
 
+  map allowlist_sources {
+    type ipv4_addr . ifname: verdict;
+    flags interval;
+  }
+
   # oifname . ip saddr . iifname
   map site_iface_access {
     type ifname . ipv4_addr . ifname : verdict;
@@ -425,6 +430,8 @@ table inet filter {
     # to be added to @upstream_private_rfc1918_allowed.
     # These maps explicitly allow ranges, whereas @internet_access, @lan_access do not.
     # We can consider combining them later.
+
+    counter oifname @uplink_interfaces ip saddr . iifname vmap @allowlist_sources
 
     counter oifname @uplink_interfaces iifname . ip saddr vmap @fwd_iface_wan
     counter oifname @lan_interfaces    iifname . ip saddr vmap @fwd_iface_lan

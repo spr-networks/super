@@ -1,0 +1,13 @@
+{
+ "Enabled": false,
+ "DenyCountries": [],
+ "DenyASNs": [],
+ "Lists": [
+  {
+   "URI": "https://www.spamhaus.org/drop/asndrop.json",
+   "Enabled": false,
+   "Note": "Spamhaus ASN-DROP"
+  }
+ ],
+ "RefreshSeconds": 86400
+}
