@@ -1,12 +1,22 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 )
+
+const wifiXDPLoader = "/code/xdp-tools/xdp-loader/xdp-loader"
+const wifiXDPObject = "/code/filter_dhcp_mismatch.o"
+const wifiXDPKernelProgramName = "xdp_block_dhcp_"
+
+var runDHCPCommand = func(name string, args ...string) ([]byte, error) {
+	return exec.Command(name, args...).CombinedOutput()
+}
 
 type ifaceMacKey struct {
 	iface string
@@ -51,6 +61,54 @@ func getExistingDhcpSet() []ifaceMacKey {
 	return existing
 }
 
+func dhcpCommandError(operation string, output []byte, err error) error {
+	detail := strings.TrimSpace(string(output))
+	if detail == "" {
+		return fmt.Errorf("%s: %w", operation, err)
+	}
+	return fmt.Errorf("%s: %w: %s", operation, err, detail)
+}
+
+func removeExistingDHCPAccess(existingSet []ifaceMacKey, iface string, mac string) error {
+	for _, e := range existingSet {
+		if e.iface != iface && e.mac != mac {
+			continue
+		}
+		output, err := runDHCPCommand("nft", "delete", "element", "inet", "filter", "dhcp_access", "{", e.iface, ".", e.mac, ":", "accept", "}")
+		if err != nil {
+			return dhcpCommandError("remove existing DHCP authorization", output, err)
+		}
+	}
+	return nil
+}
+
+func ensureWiFiDHCPXDP(iface string) error {
+	status, statusErr := runDHCPCommand(wifiXDPLoader, "status", iface)
+	if statusErr == nil && bytes.Contains(status, []byte(wifiXDPKernelProgramName)) {
+		return nil
+	}
+
+	output, err := runDHCPCommand(wifiXDPLoader, "load", "-m", "skb", iface, wifiXDPObject)
+	if err != nil {
+		return dhcpCommandError("attach DHCP XDP filter", output, err)
+	}
+	return nil
+}
+
+func authorizeWiFiDHCP(existingSet []ifaceMacKey, iface string, mac string) error {
+	if err := removeExistingDHCPAccess(existingSet, iface, mac); err != nil {
+		return err
+	}
+	if err := ensureWiFiDHCPXDP(iface); err != nil {
+		return err
+	}
+	output, err := runDHCPCommand("nft", "add", "element", "inet", "filter", "dhcp_access", "{", iface, ".", mac, ":", "accept", "}")
+	if err != nil {
+		return dhcpCommandError("add DHCP authorization", output, err)
+	}
+	return nil
+}
+
 func main() {
 	if len(os.Args) == 2 && os.Args[1] == "serve" {
 		if err := serveControl(defaultControlSocket); err != nil {
@@ -71,25 +129,13 @@ func main() {
 	existingSet := getExistingDhcpSet()
 
 	if action == "add" {
-		//if this iface or mac is in an existing key, remove it
-		for _, e := range existingSet {
-			if e.iface == iface || e.mac == mac {
-				exec.Command("nft", "delete", "element", "inet", "filter", "dhcp_access", "{", e.iface, ".", e.mac, ":", "accept", "}").Run()
-			}
+		if err := authorizeWiFiDHCP(existingSet, iface, mac); err != nil {
+			log.Fatal(err)
 		}
-		//attach the filter to this interface
-		os.Chdir("/code/xdp-tools/xdp-loader/")
-		exec.Command("./xdp-loader", "load", "-m", "skb", iface, "/code/filter_dhcp_mismatch.o").Run()
-
-		//add it to the dhcp set
-		exec.Command("nft", "add", "element", "inet", "filter", "dhcp_access", "{", iface, ".", mac, ":", "accept", "}").Run()
 	} else if action == "remove" {
-		for _, e := range existingSet {
-			if e.iface == iface || e.mac == mac {
-				exec.Command("nft", "delete", "element", "inet", "filter", "dhcp_access", "{", e.iface, ".", e.mac, ":", "accept", "}").Run()
-			}
+		if err := removeExistingDHCPAccess(existingSet, iface, mac); err != nil {
+			log.Fatal(err)
 		}
-
 	} else {
 		log.Fatal("unknown command", action)
 	}

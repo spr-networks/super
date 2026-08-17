@@ -39,11 +39,17 @@ fi
 
 if [ "$EVENT" = "AP-STA-CONNECTED" ]; then
   VLAN_IFACE="$IFACE"
-  /hostap_dhcp_helper add "$VLAN_IFACE" "$MAC"
+  if ! /hostap_dhcp_helper add "$VLAN_IFACE" "$MAC"; then
+    echo "Error: Failed to authorize DHCP for $MAC on $VLAN_IFACE" >&2
+    exit 1
+  fi
   curl --unix-socket /state/wifi/apisock http://localhost/reportPSKAuthSuccess -X PUT -d "{\"Iface\": \"$VLAN_IFACE\", \"Event\": \"$EVENT\", \"Mac\": \"$MAC\"}"
 elif [ "$EVENT" = "AP-STA-DISCONNECTED" ]; then
   VLAN_IFACE="$IFACE"
-  /hostap_dhcp_helper remove "$VLAN_IFACE" "$MAC"
+  if ! /hostap_dhcp_helper remove "$VLAN_IFACE" "$MAC"; then
+    echo "Error: Failed to revoke DHCP for $MAC on $VLAN_IFACE" >&2
+    exit 1
+  fi
   curl --unix-socket /state/wifi/apisock http://localhost/reportDisconnect -X PUT -d "{\"Iface\": \"$VLAN_IFACE\", \"Event\": \"$EVENT\", \"Mac\": \"$MAC\"}"
 elif [ "$EVENT" = "AP-STA-POSSIBLE-PSK-MISMATCH" ]; then
    TYPE=$4
