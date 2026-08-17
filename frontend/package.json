@@ -123,6 +123,7 @@
     "react-native-svg": "13.4.0",
     "react-native-swipe-list-view": "^3.2.9",
     "react-native-tab-view": "^3.1.1",
+    "react-native-url-polyfill": "2.0.0",
     "react-native-web": "^0.19.9",
     "react-qr-code": "^2.2.0",
     "react-router-dom": "^6.30.4",
@@ -185,7 +186,7 @@
       "./src/setupTests.js"
     ],
     "transformIgnorePatterns": [
-      "/node_modules/(?!(@react-native|react-native|react-router-native|@react-native-community/push-notification-ios|@gluestack-ui|@expo|@legendapp)/).*/"
+      "/node_modules/(?!(@react-native|react-native|react-native-url-polyfill|react-router-native|@react-native-community/push-notification-ios|@gluestack-ui|@expo|@legendapp)/).*/"
     ],
     "globals": {
       "__DEV__": true
