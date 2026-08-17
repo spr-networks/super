@@ -11,7 +11,9 @@
 #include <linux/udp.h>
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_endian.h>
+#ifndef SPR_XDP_STANDALONE
 #include <xdp/xdp_helpers.h>
+#endif
 
 
 struct dhcp {
@@ -33,6 +35,7 @@ struct dhcp {
 };
 
 #define DHCPD_PORT 67
+#define DHCPC_PORT 68
 
 #define FUNCNAME xdp_block_dhcp_mismatch
 
@@ -46,9 +49,16 @@ int FUNCNAME(struct xdp_md *ctx) {
     struct iphdr *ip = data + sizeof(*eth);
     if ((void*)ip + sizeof(*ip) <= data_end) {
       if (ip->protocol == IPPROTO_UDP) {
-        struct udphdr *udp = (void*)ip + sizeof(*ip);
+        __u32 ip_header_len = ip->ihl * 4;
+        if (ip_header_len < sizeof(*ip)) {
+          return XDP_DROP;
+        }
+        struct udphdr *udp = (void*)ip + ip_header_len;
         if ((void*)udp + sizeof(*udp) <= data_end) {
           if (udp->dest == bpf_ntohs(DHCPD_PORT)) {
+            if (udp->source != bpf_ntohs(DHCPC_PORT)) {
+              return XDP_DROP;
+            }
             // https://github.com/spr-networks/super/issues/110 block ip options
             if (ip->ihl != 5) {
               return XDP_DROP;
@@ -77,7 +87,9 @@ int FUNCNAME(struct xdp_md *ctx) {
   return XDP_PASS;
 }
 
+#ifndef SPR_XDP_STANDALONE
 struct {
   __uint(priority, 10);
   __uint(XDP_PASS, 1);
 } XDP_RUN_CONFIG(FUNCNAME);
+#endif
