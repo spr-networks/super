@@ -46,6 +46,10 @@ table inet filter {
     $(if [ "$LANIF" ]; then echo "elements = { $LANIF }" ; fi )
   }
 
+  set container_interfaces {
+    type ifname;
+  }
+
 
   # this set contains misc interfaces with API access
   set api_interfaces {
@@ -313,6 +317,8 @@ table inet filter {
 
 
     # DHCP Allow rules
+    counter udp dport 67 iifname @container_interfaces iifname . ether saddr vmap @dhcp_access
+    iifname @container_interfaces udp dport 67 counter drop
     # Wired lan
     iifname @wired_lan_interfaces udp dport 67 counter accept
     #accept dhcp, dns from setup interfaces also
@@ -323,6 +329,7 @@ table inet filter {
 
     # Prevent MAC Spoofing from LANIF, wired interfaces
     iifname @lan_interfaces jump DROP_MAC_SPOOF
+    iifname @container_interfaces jump DROP_MAC_SPOOF
 
     counter jump F_EST_RELATED
 
@@ -402,6 +409,7 @@ table inet filter {
 
     # Verify MAC addresses for LANIF/WIPHYs
     iifname @lan_interfaces jump DROP_MAC_SPOOF
+    iifname @container_interfaces jump DROP_MAC_SPOOF
 
     counter jump F_EST_RELATED
 

@@ -2,6 +2,9 @@
 # Secure Programmable Router (SPR) Release Notes
 
 ## v1.2.5
+**Fixes**
+- Make container outbound whitelist more consistent with devices
+- Security policy fix for plugins: Harden DHCP with the XDP filter
 
 ## v1.2.4
 **Features**

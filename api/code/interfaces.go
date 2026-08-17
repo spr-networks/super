@@ -719,6 +719,18 @@ func deleteLanInterface(iface string) {
 	DeleteInterfaceFromSetWithTable("inet", "nat", "lan_interfaces", iface)
 }
 
+func addContainerInterface(iface string) error {
+	data, err := ListSetJSON("inet", "filter", "container_interfaces")
+	if err == nil && strings.Contains(string(data), `"`+iface+`"`) {
+		return nil
+	}
+	return AddInterfaceToSetWithTable("inet", "filter", "container_interfaces", iface)
+}
+
+func deleteContainerInterface(iface string) {
+	DeleteInterfaceFromSetWithTable("inet", "filter", "container_interfaces", iface)
+}
+
 func doRefreshVlanTrunk(iface string, enable bool, devices map[string]DeviceEntry) {
 	//first clear any vlan interfaces that already exist
 	ifaces, err := getVLANInterfaces(iface)

@@ -6,7 +6,7 @@ import (
 )
 
 func TestPluginContainerIPFromNetwork(t *testing.T) {
-	data := []byte(`{"Containers":{"container-id":{"IPv4Address":"172.30.117.3/24"}}}`)
+	data := []byte(`{"Containers":{"container-id":{"IPv4Address":"172.30.117.3/24","MacAddress":"02:42:ac:1e:75:03"}}}`)
 
 	got, err := pluginContainerIPFromNetwork(data)
 	if err != nil {
@@ -14,6 +14,25 @@ func TestPluginContainerIPFromNetwork(t *testing.T) {
 	}
 	if got != "172.30.117.3" {
 		t.Fatalf("pluginContainerIPFromNetwork() = %q, want %q", got, "172.30.117.3")
+	}
+}
+
+func TestPluginContainerIdentitiesFromNetwork(t *testing.T) {
+	data := []byte(`{"Containers":{
+		"second":{"IPv4Address":"172.30.117.4/24","MacAddress":"02:42:ac:1e:75:04"},
+		"first":{"IPv4Address":"172.30.117.3/24","MacAddress":"02:42:ac:1e:75:03"}
+	}}`)
+
+	got, err := pluginContainerIdentitiesFromNetwork(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []pluginContainerIdentity{
+		{IP: "172.30.117.3", MAC: "02:42:ac:1e:75:03"},
+		{IP: "172.30.117.4", MAC: "02:42:ac:1e:75:04"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("pluginContainerIdentitiesFromNetwork() = %#v, want %#v", got, want)
 	}
 }
 

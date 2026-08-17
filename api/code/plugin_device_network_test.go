@@ -81,6 +81,132 @@ func TestNetworkCapabilitiesMatchesDeviceMAC(t *testing.T) {
 	}
 }
 
+func TestEnsurePluginDHCPXDP(t *testing.T) {
+	original := runPluginDHCPXDPCommand
+	t.Cleanup(func() { runPluginDHCPXDPCommand = original })
+
+	commands := [][]string{}
+	runPluginDHCPXDPCommand = func(args ...string) ([]byte, error) {
+		commands = append(commands, append([]string(nil), args...))
+		if args[0] == "status" {
+			return nil, errors.New("not attached")
+		}
+		return nil, nil
+	}
+
+	if err := ensurePluginDHCPXDP("spr-test"); err != nil {
+		t.Fatal(err)
+	}
+	if len(commands) != 2 {
+		t.Fatalf("XDP commands = %v", commands)
+	}
+	if got := strings.Join(commands[0], " "); got != "status spr-test" {
+		t.Fatalf("status command = %q", got)
+	}
+	if got := strings.Join(commands[1], " "); got != "load -m skb spr-test /code/filter_dhcp_mismatch.o" {
+		t.Fatalf("load command = %q", got)
+	}
+}
+
+func TestEnsurePluginDHCPXDPIsIdempotent(t *testing.T) {
+	original := runPluginDHCPXDPCommand
+	t.Cleanup(func() { runPluginDHCPXDPCommand = original })
+
+	commands := 0
+	runPluginDHCPXDPCommand = func(args ...string) ([]byte, error) {
+		commands++
+		return []byte("xdp_block_dhcp_"), nil
+	}
+
+	if err := ensurePluginDHCPXDP("spr-test"); err != nil {
+		t.Fatal(err)
+	}
+	if commands != 1 {
+		t.Fatalf("XDP command count = %d, want 1", commands)
+	}
+}
+
+func TestSecurePluginContainerInterfaceFailsClosedOnXDPLoadError(t *testing.T) {
+	originalXDP := runPluginDHCPXDPCommand
+	originalQuarantine := quarantinePluginDHCPInterface
+	t.Cleanup(func() {
+		runPluginDHCPXDPCommand = originalXDP
+		quarantinePluginDHCPInterface = originalQuarantine
+	})
+
+	events := []string{}
+	quarantinePluginDHCPInterface = func(iface string) error {
+		events = append(events, "quarantine "+iface)
+		return nil
+	}
+	runPluginDHCPXDPCommand = func(args ...string) ([]byte, error) {
+		events = append(events, strings.Join(args, " "))
+		if args[0] == "status" {
+			return nil, errors.New("not attached")
+		}
+		return []byte("load failed"), errors.New("exit status 1")
+	}
+
+	err := securePluginContainerInterface(PluginConfig{
+		Name: "test-plugin",
+		NetworkCapabilities: NetworkCapabilities{
+			Interface: "spr-test",
+		},
+	})
+	if err == nil || !strings.Contains(err.Error(), "load failed") {
+		t.Fatalf("error = %v, want XDP load failure", err)
+	}
+	want := []string{
+		"quarantine spr-test",
+		"status spr-test",
+		"load -m skb spr-test /code/filter_dhcp_mismatch.o",
+	}
+	if strings.Join(events, "|") != strings.Join(want, "|") {
+		t.Fatalf("container failure order = %v, want %v", events, want)
+	}
+}
+
+func TestSecurePluginContainerInterfaceUsesXDPForDefaultRuntime(t *testing.T) {
+	originalXDP := runPluginDHCPXDPCommand
+	originalQuarantine := quarantinePluginDHCPInterface
+	t.Cleanup(func() {
+		runPluginDHCPXDPCommand = originalXDP
+		quarantinePluginDHCPInterface = originalQuarantine
+	})
+
+	events := []string{}
+	quarantinePluginDHCPInterface = func(iface string) error {
+		events = append(events, "quarantine "+iface)
+		return nil
+	}
+	runPluginDHCPXDPCommand = func(args ...string) ([]byte, error) {
+		events = append(events, strings.Join(args, " "))
+		if args[0] == "status" {
+			return nil, errors.New("not attached")
+		}
+		return nil, nil
+	}
+
+	err := securePluginContainerInterface(PluginConfig{
+		Name:    "test-plugin",
+		Runtime: pluginRuntimeDefault,
+		NetworkCapabilities: NetworkCapabilities{
+			Interface: "spr-test",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"quarantine spr-test",
+		"status spr-test",
+		"load -m skb spr-test /code/filter_dhcp_mismatch.o",
+	}
+	if strings.Join(events, "|") != strings.Join(want, "|") {
+		t.Fatalf("container security order = %v, want %v", events, want)
+	}
+}
+
 func TestNewPluginDeviceType(t *testing.T) {
 	dev := newPluginDevice(
 		PluginConfig{Name: "test-plugin"},

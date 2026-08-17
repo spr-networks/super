@@ -196,6 +196,10 @@ func AddInterfaceToSetWithTable(family, table, setName, iface string) error {
 	return fmt.Errorf("nftables not supported on macOS")
 }
 
+func QuarantineContainerDHCPInterface(iface string) error {
+	return fmt.Errorf("nftables not supported on macOS")
+}
+
 func DeleteInterfaceFromSetWithTable(family, table, setName, iface string) error {
 	return fmt.Errorf("nftables not supported on macOS")
 }

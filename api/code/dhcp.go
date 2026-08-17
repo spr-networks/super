@@ -391,6 +391,14 @@ func dhcpRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	FWmtx.Lock()
+	pluginInterface, pluginIdentityMatches := pluginDHCPInterfaceIdentity(dhcp.MAC, dhcp.Iface, PluginDeviceLinks)
+	FWmtx.Unlock()
+	if pluginInterface && !pluginIdentityMatches {
+		http.Error(w, "Refuse DHCP identity mismatch on plugin interface", http.StatusForbidden)
+		return
+	}
+
 	wanif := getWanif()
 	if dhcp.Iface == wanif {
 		http.Error(w, "Refuse dhcp from wanif", 400)

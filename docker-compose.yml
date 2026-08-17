@@ -209,7 +209,8 @@ services:
     container_name: superapi
     image: ghcr.io/spr-networks/super_api:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
-      context: api
+      context: .
+      dockerfile: api/Dockerfile
       labels: *default-labels
       x-bake:
         tags:

@@ -7,6 +7,17 @@ ARG SOURCE_DATE_EPOCH
 
 FROM ${ALPINE_REF} AS cacerts
 
+FROM ${UBUNTU_REF} AS xdp-builder
+ENV DEBIAN_FRONTEND=noninteractive
+ARG UBUNTU_SNAPSHOT=20260816T000000Z
+COPY --from=cacerts /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+RUN set -eux; \
+    printf 'Types: deb\nURIs: https://snapshot.ubuntu.com/ubuntu/%s\nSuites: noble noble-updates noble-security\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' "${UBUNTU_SNAPSHOT}" > /etc/apt/sources.list.d/ubuntu.sources; \
+    printf 'APT::Install-Recommends "false";\nAcquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99reproducible
+RUN apt-get update && apt-get install -y --no-install-recommends clang gcc libbpf-dev llvm && rm -rf /var/lib/apt/lists/* /var/log/* /var/cache/ldconfig/aux-cache
+COPY wifid/code/filter_dhcp_mismatch.c /xdp/filter_dhcp_mismatch.c
+RUN clang -O3 -target bpf -D __BPF_TRACING__ -D SPR_XDP_STANDALONE -I"/usr/include/$(gcc -print-multiarch)" -c /xdp/filter_dhcp_mismatch.c -o /filter_dhcp_mismatch.o
+
 FROM ${UBUNTU_REF} AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 ARG UBUNTU_SNAPSHOT=20260816T000000Z
@@ -43,7 +54,7 @@ RUN --mount=type=tmpfs,target=/tmpfs \
     go build -trimpath -ldflags "-s -w" -o /sprbus
 
 WORKDIR /code
-COPY code/ /code/
+COPY api/code/ /code/
 RUN --mount=type=tmpfs,target=/tmpfs \
     [ "$USE_TMPFS" = "true" ] && ln -s /tmpfs /root/go; \
     go build -trimpath -ldflags "-s -w" -o /api
@@ -54,12 +65,13 @@ ARG UBUNTU_SNAPSHOT=20260816T000000Z
 RUN set -eux; \
     printf 'Types: deb\nURIs: https://snapshot.ubuntu.com/ubuntu/%s\nSuites: noble noble-updates noble-security\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' "${UBUNTU_SNAPSHOT}" > /etc/apt/sources.list.d/ubuntu.sources; \
     printf 'APT::Install-Recommends "false";\nAcquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99reproducible
-RUN apt-get update && apt-get install -y --no-install-recommends openssh-client git hostapd iw jc systemd macchanger && rm -rf /var/lib/apt/lists/* /var/log/* /var/cache/ldconfig/aux-cache && : > /etc/machine-id
-COPY scripts /scripts/
+RUN apt-get update && apt-get install -y --no-install-recommends openssh-client git hostapd iw jc systemd macchanger xdp-tools && rm -rf /var/lib/apt/lists/* /var/log/* /var/cache/ldconfig/aux-cache && : > /etc/machine-id
+COPY api/scripts /scripts/
 # iw list json parser
 RUN mkdir -p /root/.local/share/jc/jcparsers
-COPY scripts/iw*.py /root/.local/share/jc/jcparsers/
+COPY api/scripts/iw*.py /root/.local/share/jc/jcparsers/
 
 COPY --from=builder /api /
 COPY --from=builder /sprbus /
+COPY --from=xdp-builder /filter_dhcp_mismatch.o /code/
 ENTRYPOINT ["/scripts/startup.sh"]

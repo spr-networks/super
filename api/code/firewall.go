@@ -2708,6 +2708,23 @@ func isPluginDHCPInterface(mac string, iface string, pluginDeviceLinks map[strin
 	return pluginDeviceLinks[mac] == iface
 }
 
+func pluginDHCPInterfaceIdentity(mac string, iface string, pluginDeviceLinks map[string]string) (bool, bool) {
+	if iface == "" {
+		return false, false
+	}
+	managed := false
+	for expectedMAC, expectedIface := range pluginDeviceLinks {
+		if expectedIface != iface {
+			continue
+		}
+		managed = true
+		if expectedMAC == mac && mac != "" {
+			return true, true
+		}
+	}
+	return managed, false
+}
+
 func restorePluginDHCPInterfaces(
 	devices map[string]DeviceEntry,
 	recentDHCPIfaces map[string]string,
@@ -2733,7 +2750,7 @@ func restorePluginDHCPInterfaces(
 func notifyFirewallDHCP(device DeviceEntry, iface string) {
 	FWmtx.Lock()
 	defer FWmtx.Unlock()
-	pluginInterface := isPluginDHCPInterface(device.MAC, iface, PluginDeviceLinks)
+	pluginInterface, pluginIdentityMatches := pluginDHCPInterfaceIdentity(device.MAC, iface, PluginDeviceLinks)
 
 	if device.MAC != "" {
 		RecentDHCPIface[device.MAC] = iface
@@ -2745,6 +2762,10 @@ func notifyFirewallDHCP(device DeviceEntry, iface string) {
 
 	if pluginInterface {
 		deleteLanInterface(iface)
+		addContainerInterface(iface)
+		if !pluginIdentityMatches {
+			delete(RecentDHCPIface, device.MAC)
+		}
 		return
 	}
 	addLanInterface(iface)

@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -137,6 +140,55 @@ func TestPluginDHCPInterfaceRequiresDeclaredDeviceLink(t *testing.T) {
 	}
 }
 
+func TestPluginDHCPInterfaceIdentity(t *testing.T) {
+	const (
+		mac   = "02:53:50:52:4b:12"
+		iface = "spr-usque"
+	)
+	links := map[string]string{mac: iface}
+
+	managed, matches := pluginDHCPInterfaceIdentity(mac, iface, links)
+	if !managed || !matches {
+		t.Fatal("declared plugin DHCP identity did not match")
+	}
+	managed, matches = pluginDHCPInterfaceIdentity("02:53:50:52:4b:13", iface, links)
+	if !managed || matches {
+		t.Fatal("mismatched plugin DHCP identity was accepted")
+	}
+	managed, matches = pluginDHCPInterfaceIdentity(mac, "eth0", links)
+	if managed || matches {
+		t.Fatal("ordinary interface was treated as plugin-managed")
+	}
+}
+
+func TestDHCPRequestRejectsPluginIdentityMismatch(t *testing.T) {
+	const (
+		mac      = "02:53:50:52:4b:12"
+		otherMAC = "02:53:50:52:4b:13"
+		iface    = "spr-usque"
+	)
+
+	FWmtx.Lock()
+	PluginDeviceLinks[mac] = iface
+	FWmtx.Unlock()
+	t.Cleanup(func() {
+		FWmtx.Lock()
+		delete(PluginDeviceLinks, mac)
+		FWmtx.Unlock()
+	})
+
+	payload, err := json.Marshal(DHCPRequest{MAC: otherMAC, Iface: iface})
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodPut, "/dhcp", bytes.NewReader(payload))
+	response := httptest.NewRecorder()
+	dhcpRequest(response, request)
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("DHCP status = %d, want %d", response.Code, http.StatusForbidden)
+	}
+}
+
 func TestPluginDHCPDoesNotTrustInterfaceAsLAN(t *testing.T) {
 	const (
 		pluginMAC   = "02:53:50:52:4b:12"
@@ -145,10 +197,10 @@ func TestPluginDHCPDoesNotTrustInterfaceAsLAN(t *testing.T) {
 		clientIface = "wlan-test"
 	)
 
-	setContains := func(table string, iface string) bool {
-		data, err := ListSetJSON("inet", table, "lan_interfaces")
+	setContains := func(table string, set string, iface string) bool {
+		data, err := ListSetJSON("inet", table, set)
 		if err != nil {
-			t.Fatalf("list %s lan_interfaces: %v", table, err)
+			t.Fatalf("list %s %s: %v", table, set, err)
 		}
 		return strings.Contains(string(data), `"`+iface+`"`)
 	}
@@ -164,19 +216,23 @@ func TestPluginDHCPDoesNotTrustInterfaceAsLAN(t *testing.T) {
 		FWmtx.Unlock()
 		deleteLanInterface(pluginIface)
 		deleteLanInterface(clientIface)
+		deleteContainerInterface(pluginIface)
 	})
 
 	addLanInterface(pluginIface)
-	if !setContains("filter", pluginIface) || !setContains("nat", pluginIface) {
+	if !setContains("filter", "lan_interfaces", pluginIface) || !setContains("nat", "lan_interfaces", pluginIface) {
 		t.Fatal("failed to seed plugin interface into lan_interfaces")
 	}
 	notifyFirewallDHCP(DeviceEntry{MAC: pluginMAC}, pluginIface)
-	if setContains("filter", pluginIface) || setContains("nat", pluginIface) {
+	if setContains("filter", "lan_interfaces", pluginIface) || setContains("nat", "lan_interfaces", pluginIface) {
 		t.Fatal("plugin DHCP interface retained trusted LAN access")
+	}
+	if !setContains("filter", "container_interfaces", pluginIface) {
+		t.Fatal("plugin DHCP interface was not protected as a container interface")
 	}
 
 	notifyFirewallDHCP(DeviceEntry{MAC: clientMAC}, clientIface)
-	if !setContains("filter", clientIface) || !setContains("nat", clientIface) {
+	if !setContains("filter", "lan_interfaces", clientIface) || !setContains("nat", "lan_interfaces", clientIface) {
 		t.Fatal("ordinary DHCP interface was not added to lan_interfaces")
 	}
 }

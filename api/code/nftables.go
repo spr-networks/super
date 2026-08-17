@@ -1603,6 +1603,65 @@ func AddInterfaceToSetWithTable(family, table, setName, iface string) error {
 	return client.AddSetElement(f, table, setName, InterfaceToBytes(iface))
 }
 
+func QuarantineContainerDHCPInterface(iface string) error {
+	client := GetNFTClient()
+	type setState struct {
+		set      *nftables.Set
+		elements []nftables.SetElement
+	}
+	states := map[string]setState{}
+	for _, name := range []string{"wired_lan_interfaces", "setup_interfaces_dhcp", "container_interfaces", "dhcp_access"} {
+		set, err := client.GetMap(TableFamilyInet, "filter", name)
+		if err != nil {
+			return err
+		}
+		elements, err := client.conn.GetSetElements(set)
+		if err != nil {
+			return err
+		}
+		states[name] = setState{set: set, elements: elements}
+	}
+
+	ifaceKey := InterfaceToBytes(iface)
+	for _, name := range []string{"wired_lan_interfaces", "setup_interfaces_dhcp"} {
+		state := states[name]
+		for _, element := range state.elements {
+			if !compareKeys(element.Key, ifaceKey) {
+				continue
+			}
+			if err := client.conn.SetDeleteElements(state.set, []nftables.SetElement{{Key: element.Key}}); err != nil {
+				return err
+			}
+		}
+	}
+
+	dhcpState := states["dhcp_access"]
+	for _, element := range dhcpState.elements {
+		parts := splitConcatKey("dhcp_access", element.Key)
+		if len(parts) != 2 || parts[0] != iface {
+			continue
+		}
+		if err := client.conn.SetDeleteElements(dhcpState.set, []nftables.SetElement{{Key: element.Key}}); err != nil {
+			return err
+		}
+	}
+
+	containerState := states["container_interfaces"]
+	containerPresent := false
+	for _, element := range containerState.elements {
+		if compareKeys(element.Key, ifaceKey) {
+			containerPresent = true
+			break
+		}
+	}
+	if !containerPresent {
+		if err := client.conn.SetAddElements(containerState.set, []nftables.SetElement{{Key: ifaceKey}}); err != nil {
+			return err
+		}
+	}
+	return client.conn.Flush()
+}
+
 // DeleteInterfaceFromSetWithTable removes an interface from a set in a specific table
 func DeleteInterfaceFromSetWithTable(family, table, setName, iface string) error {
 	f, client, err := withFamily(family)

@@ -39,6 +39,16 @@ var DbSocketPath = TEST_PREFIX + "/state/plugins/db/socket"
 var CustomComposeAllowPath = TEST_PREFIX + "/configs/base/custom_compose_paths.json"
 var extensionStartMtx sync.Mutex
 var pluginNetworkReconcileOnce sync.Once
+var pluginDHCPXDPMtx sync.Mutex
+
+const pluginDHCPXDPObject = "/code/filter_dhcp_mismatch.o"
+const pluginDHCPXDPKernelProgramName = "xdp_block_dhcp_"
+
+var runPluginDHCPXDPCommand = func(args ...string) ([]byte, error) {
+	return exec.Command("xdp-loader", args...).CombinedOutput()
+}
+
+var quarantinePluginDHCPInterface = QuarantineContainerDHCPInterface
 
 const pluginNetworkReconcileInterval = time.Minute * 5
 
@@ -1119,7 +1129,6 @@ func switchExtensionRuntime(current PluginConfig, runtime string, start bool) (p
 func preparePluginNetworkCapabilities(plugin PluginConfig) error {
 	capabilities := plugin.NetworkCapabilities
 	if capabilities.Interface == "" ||
-		len(capabilities.Policies) == 0 ||
 		!pluginUsesDeviceNetwork(plugin) {
 		return nil
 	}
@@ -1146,11 +1155,11 @@ func applyPluginNetworkCapabilitiesRetry(plugin PluginConfig) {
 	go func() {
 		var err error
 		for i := 0; i < 36; i++ {
-			time.Sleep(5 * time.Second)
 			err = applyPluginNetworkCapabilities(plugin)
 			if err == nil {
 				return
 			}
+			time.Sleep(5 * time.Second)
 		}
 		fmt.Printf("Warning: Failed to apply network capabilities for plugin %s: %v\n", plugin.Name, err)
 	}()
@@ -1264,10 +1273,47 @@ func newPluginDevice(plugin PluginConfig, mac string) DeviceEntry {
 	}
 }
 
-func preparePluginDeviceNetworkCapabilities(plugin PluginConfig) error {
+func ensurePluginDHCPXDP(iface string) error {
+	pluginDHCPXDPMtx.Lock()
+	defer pluginDHCPXDPMtx.Unlock()
+
+	status, statusErr := runPluginDHCPXDPCommand("status", iface)
+	if statusErr == nil && bytes.Contains(status, []byte(pluginDHCPXDPKernelProgramName)) {
+		return nil
+	}
+
+	output, err := runPluginDHCPXDPCommand(
+		"load", "-m", "skb", iface, pluginDHCPXDPObject,
+	)
+	if err != nil {
+		return fmt.Errorf("attach DHCP XDP filter to %s: %w: %s", iface, err, strings.TrimSpace(string(output)))
+	}
+	return nil
+}
+
+func securePluginContainerInterface(plugin PluginConfig) error {
 	if !isValidIface(plugin.NetworkCapabilities.Interface) ||
 		len(plugin.NetworkCapabilities.Interface) >= 16 {
-		return fmt.Errorf("invalid device interface for plugin %s", plugin.Name)
+		return fmt.Errorf("invalid container interface for plugin %s", plugin.Name)
+	}
+	FWmtx.Lock()
+	err := quarantinePluginDHCPInterface(plugin.NetworkCapabilities.Interface)
+	if err == nil {
+		deleteLanInterface(plugin.NetworkCapabilities.Interface)
+	}
+	FWmtx.Unlock()
+	if err != nil {
+		return fmt.Errorf("block DHCP before securing plugin %s: %w", plugin.Name, err)
+	}
+	if err := ensurePluginDHCPXDP(plugin.NetworkCapabilities.Interface); err != nil {
+		return fmt.Errorf("secure DHCP for plugin %s: %w", plugin.Name, err)
+	}
+	return nil
+}
+
+func preparePluginDeviceNetworkCapabilities(plugin PluginConfig) error {
+	if err := securePluginContainerInterface(plugin); err != nil {
+		return err
 	}
 
 	mac, err := pluginDeviceMAC(plugin)
@@ -1294,8 +1340,6 @@ func preparePluginDeviceNetworkCapabilities(plugin PluginConfig) error {
 	if err != nil {
 		return fmt.Errorf("authorize DHCP for plugin %s: %w", plugin.Name, err)
 	}
-
-	deleteLanInterface(plugin.NetworkCapabilities.Interface)
 
 	Groupsmtx.Lock()
 	defer Groupsmtx.Unlock()
@@ -1386,12 +1430,16 @@ func ensurePluginDeviceEthernetRule(plugin PluginConfig, sourceIP string) error 
 
 	FWmtx.Lock()
 	defer FWmtx.Unlock()
+	return ensurePluginEthernetRuleLocked(sourceIP, plugin.NetworkCapabilities.Interface, mac)
+}
+
+func ensurePluginEthernetRuleLocked(sourceIP string, iface string, mac string) error {
 	if GetMACVerdictElement(
 		"inet",
 		"filter",
 		"ethernet_filter",
 		sourceIP,
-		plugin.NetworkCapabilities.Interface,
+		iface,
 		mac,
 		"return",
 	) == nil {
@@ -1402,10 +1450,29 @@ func ensurePluginDeviceEthernetRule(plugin PluginConfig, sourceIP string) error 
 		"filter",
 		"ethernet_filter",
 		sourceIP,
-		plugin.NetworkCapabilities.Interface,
+		iface,
 		mac,
 		"return",
 	)
+}
+
+func ensurePluginContainerEthernetRules(plugin PluginConfig, identities []pluginContainerIdentity) error {
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
+
+	if err := addContainerInterface(plugin.NetworkCapabilities.Interface); err != nil {
+		return err
+	}
+	for _, identity := range identities {
+		if err := ensurePluginEthernetRuleLocked(
+			identity.IP,
+			plugin.NetworkCapabilities.Interface,
+			identity.MAC,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func applyPluginCustomInterfaceRule(plugin PluginConfig, sourceIP string) error {
@@ -1457,7 +1524,7 @@ func applyPluginCustomInterfaceRule(plugin PluginConfig, sourceIP string) error 
 }
 
 func applyPluginNetworkCapabilities(plugin PluginConfig) error {
-	if plugin.NetworkCapabilities.Interface == "" || len(plugin.NetworkCapabilities.Policies) == 0 {
+	if plugin.NetworkCapabilities.Interface == "" {
 		return nil
 	}
 
@@ -1472,19 +1539,31 @@ func applyPluginNetworkCapabilities(plugin PluginConfig) error {
 		if err := ensurePluginDeviceEthernetRule(plugin, sourceIP); err != nil {
 			return err
 		}
+		if len(plugin.NetworkCapabilities.Policies) == 0 {
+			return nil
+		}
 		return applyPluginCustomInterfaceRule(plugin, sourceIP)
 	}
 
-	containerIP, err := getPluginContainerIP(plugin.NetworkCapabilities.Interface)
+	if err := securePluginContainerInterface(plugin); err != nil {
+		return err
+	}
+	identities, err := getPluginContainerIdentities(plugin.NetworkCapabilities.Interface)
 	if err != nil {
 		return err
 	}
-	return applyPluginCustomInterfaceRule(plugin, containerIP)
+	if err := ensurePluginContainerEthernetRules(plugin, identities); err != nil {
+		return err
+	}
+	if len(plugin.NetworkCapabilities.Policies) == 0 {
+		return nil
+	}
+	return applyPluginCustomInterfaceRule(plugin, identities[0].IP)
 }
 
 func removePluginNetworkCapabilities(plugin PluginConfig) error {
 	// Only remove if NetworkCapabilities are defined
-	if plugin.NetworkCapabilities.Interface == "" || len(plugin.NetworkCapabilities.Policies) == 0 {
+	if plugin.NetworkCapabilities.Interface == "" {
 		return nil
 	}
 
@@ -1496,6 +1575,7 @@ func removePluginNetworkCapabilities(plugin PluginConfig) error {
 		sourceIP, _ := getPluginDeviceIP(plugin)
 
 		FWmtx.Lock()
+		deleteContainerInterface(plugin.NetworkCapabilities.Interface)
 		delete(RecentDHCPIface, mac)
 		delete(PluginDeviceLinks, mac)
 		if GetElementFromMapComplex(
@@ -1535,11 +1615,36 @@ func removePluginNetworkCapabilities(plugin PluginConfig) error {
 		return err
 	}
 
-	// We need to get the actual rule to delete it properly
+	identities, _ := getPluginContainerIdentities(plugin.NetworkCapabilities.Interface)
 	FWmtx.Lock()
 	defer FWmtx.Unlock()
 
+	deleteContainerInterface(plugin.NetworkCapabilities.Interface)
 	err := removePluginCustomInterfaceRulesLocked(plugin.Name)
+	for _, identity := range identities {
+		if GetMACVerdictElement(
+			"inet",
+			"filter",
+			"ethernet_filter",
+			identity.IP,
+			plugin.NetworkCapabilities.Interface,
+			identity.MAC,
+			"return",
+		) == nil {
+			cleanupErr := DeleteMACVerdictElement(
+				"inet",
+				"filter",
+				"ethernet_filter",
+				identity.IP,
+				plugin.NetworkCapabilities.Interface,
+				identity.MAC,
+				"return",
+			)
+			if err == nil {
+				err = cleanupErr
+			}
+		}
+	}
 	if err != nil {
 		fmt.Printf("Failed to remove network capabilities for plugin %s: %v\n", plugin.Name, err)
 		return err
@@ -1549,26 +1654,31 @@ func removePluginNetworkCapabilities(plugin PluginConfig) error {
 	return nil
 }
 
-func getPluginContainerIP(interfaceName string) (string, error) {
+type pluginContainerIdentity struct {
+	IP  string
+	MAC string
+}
+
+func getPluginContainerIdentities(interfaceName string) ([]pluginContainerIdentity, error) {
 	// Compose normally prefixes network names with its project name, while
 	// NetworkCapabilities.Interface is the Linux bridge name. Try the direct
 	// name first for explicitly named networks, then resolve project-scoped
 	// networks by their bridge driver option.
 	directData, directErr := dockerInfoRequest("networks", interfaceName)
 	if directErr == nil {
-		if ip, err := pluginContainerIPFromNetwork(directData); err == nil {
-			return ip, nil
+		if identities, err := pluginContainerIdentitiesFromNetwork(directData); err == nil {
+			return identities, nil
 		}
 	}
 
 	data, err := dockerInfoRequest("networks", "")
 	if err != nil {
-		return "", fmt.Errorf("inspect network %s: %v; list networks: %w", interfaceName, directErr, err)
+		return nil, fmt.Errorf("inspect network %s: %v; list networks: %w", interfaceName, directErr, err)
 	}
 
 	networkIDs, err := dockerNetworkIDsForBridge(data, interfaceName)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	for _, networkID := range networkIDs {
@@ -1576,12 +1686,20 @@ func getPluginContainerIP(interfaceName string) (string, error) {
 		if err != nil {
 			continue
 		}
-		if ip, ipErr := pluginContainerIPFromNetwork(data); ipErr == nil {
-			return ip, nil
+		if identities, identityErr := pluginContainerIdentitiesFromNetwork(data); identityErr == nil {
+			return identities, nil
 		}
 	}
 
-	return "", fmt.Errorf("no container found on Docker network for bridge %s", interfaceName)
+	return nil, fmt.Errorf("no container found on Docker network for bridge %s", interfaceName)
+}
+
+func getPluginContainerIP(interfaceName string) (string, error) {
+	identities, err := getPluginContainerIdentities(interfaceName)
+	if err != nil {
+		return "", err
+	}
+	return identities[0].IP, nil
 }
 
 type dockerPluginNetwork struct {
@@ -1590,22 +1708,47 @@ type dockerPluginNetwork struct {
 	Options    map[string]string `json:"Options"`
 	Containers map[string]struct {
 		IPv4Address string `json:"IPv4Address"`
+		MacAddress  string `json:"MacAddress"`
 	} `json:"Containers"`
 }
 
 func pluginContainerIPFromNetwork(data []byte) (string, error) {
-	var networkInfo dockerPluginNetwork
-	if err := json.Unmarshal(data, &networkInfo); err != nil {
+	identities, err := pluginContainerIdentitiesFromNetwork(data)
+	if err != nil {
 		return "", err
 	}
+	return identities[0].IP, nil
+}
 
-	for _, container := range networkInfo.Containers {
-		if container.IPv4Address != "" {
-			return strings.SplitN(container.IPv4Address, "/", 2)[0], nil
-		}
+func pluginContainerIdentitiesFromNetwork(data []byte) ([]pluginContainerIdentity, error) {
+	var networkInfo dockerPluginNetwork
+	if err := json.Unmarshal(data, &networkInfo); err != nil {
+		return nil, err
 	}
 
-	return "", errors.New("network has no attached container with an IPv4 address")
+	identities := []pluginContainerIdentity{}
+	for _, container := range networkInfo.Containers {
+		if container.IPv4Address == "" {
+			continue
+		}
+		ip := net.ParseIP(strings.SplitN(container.IPv4Address, "/", 2)[0])
+		mac, err := net.ParseMAC(container.MacAddress)
+		if ip == nil || ip.To4() == nil || err != nil || len(mac) != 6 || mac[0]&1 != 0 || mac.String() == "00:00:00:00:00:00" {
+			return nil, errors.New("network container has an invalid IPv4 or MAC address")
+		}
+		identities = append(identities, pluginContainerIdentity{IP: ip.String(), MAC: mac.String()})
+	}
+
+	if len(identities) == 0 {
+		return nil, errors.New("network has no attached container with an IPv4 address")
+	}
+	slices.SortFunc(identities, func(a, b pluginContainerIdentity) int {
+		if ipOrder := strings.Compare(a.IP, b.IP); ipOrder != 0 {
+			return ipOrder
+		}
+		return strings.Compare(a.MAC, b.MAC)
+	})
+	return identities, nil
 }
 
 func dockerNetworkIDsForBridge(data []byte, interfaceName string) ([]string, error) {
@@ -1802,6 +1945,7 @@ func updatePluginContainer(w http.ResponseWriter, r *http.Request) {
 
 	var imageResult struct{ Updated bool }
 	json.Unmarshal(data, &imageResult)
+	applyPluginNetworkCapabilitiesRetry(plugin)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{
