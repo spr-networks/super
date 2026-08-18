@@ -82,6 +82,22 @@ COMBINED_PATCH="$SCRIPT_DIR/patches/0001-spr-krun-runtime.patch"
 git -C "$SOURCE_ROOT" apply --check --whitespace=error-all "$COMBINED_PATCH"
 git -C "$SOURCE_ROOT" apply --whitespace=error-all "$COMBINED_PATCH"
 
+cp "$SCRIPT_DIR/patches/libkrunfw/0001-krunfw-Don-t-panic-when-init-dies.patch" \
+    "$LIBKRUNFW_DIR/patches/0001-krunfw-Don-t-panic-when-init-dies.patch"
+mkdir -p "$LIBKRUNFW_DIR/patches/archived"
+mv \
+    "$LIBKRUNFW_DIR"/patches/000[3-9]-*.patch \
+    "$LIBKRUNFW_DIR"/patches/001[0-9]-*.patch \
+    "$LIBKRUNFW_DIR"/patches/002[235-9]-*.patch \
+    "$LIBKRUNFW_DIR"/patches/0030-*.patch \
+    "$LIBKRUNFW_DIR/patches/archived/"
+test "$(find "$LIBKRUNFW_DIR/patches/archived" -maxdepth 1 -type f -name '0*.patch' | wc -l)" -eq 25
+test "$(find "$LIBKRUNFW_DIR/patches" -maxdepth 1 -type f -name '0*.patch' | wc -l)" -eq 5
+sed -i \
+    -e "s/^KERNEL_VERSION = .*/KERNEL_VERSION = $LIBKRUNFW_KERNEL_VERSION/" \
+    -e 's/find patches\/ -name/find patches\/ -maxdepth 1 -name/' \
+    "$LIBKRUNFW_DIR/Makefile"
+
 mkdir -p "$LIBKRUNFW_DIR/tarballs"
 download \
     "https://cdn.kernel.org/pub/linux/kernel/v6.x/${LIBKRUNFW_KERNEL_VERSION}.tar.xz" \
@@ -90,10 +106,15 @@ download \
 
 tar -C "$LIBKRUNFW_DIR" -xf \
     "$LIBKRUNFW_DIR/tarballs/${LIBKRUNFW_KERNEL_VERSION}.tar.xz"
-while IFS= read -r kernel_patch; do
+for kernel_patch in \
+    "$LIBKRUNFW_DIR/patches/0001-krunfw-Don-t-panic-when-init-dies.patch" \
+    "$LIBKRUNFW_DIR/patches/0002-krunfw-Ignore-run_cmd-on-orderly-reboot.patch" \
+    "$LIBKRUNFW_DIR/patches/0020-dax-Allow-block-size-PAGE_SIZE.patch" \
+    "$LIBKRUNFW_DIR/patches/0021-mm-Fix-__wp_page_copy_user-fallback-path-for-remote-.patch" \
+    "$LIBKRUNFW_DIR/patches/0024-fuse-mark-DAX-inode-releases-as-blocking.patch"; do
     patch -p1 -d "$LIBKRUNFW_DIR/$LIBKRUNFW_KERNEL_VERSION" \
         < "$kernel_patch"
-done < <(find "$LIBKRUNFW_DIR/patches" -name '0*.patch' | sort)
+done
 make -C "$LIBKRUNFW_DIR/$LIBKRUNFW_KERNEL_VERSION" \
     ARCH=arm64 \
     INSTALL_HDR_PATH="$KERNEL_UAPI_DIR" \
