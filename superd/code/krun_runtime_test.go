@@ -426,3 +426,35 @@ func TestUpdateKrunRuntimeReturnsInstallFailure(t *testing.T) {
 		t.Fatalf("update error = %v", err)
 	}
 }
+
+func TestSPRUpdateContinuesWhenKrunRuntimeUpdateFails(t *testing.T) {
+	oldPull := pullVerifiedUpdateForRequest
+	oldUpdate := updateKrunRuntimeForRequest
+	t.Cleanup(func() {
+		pullVerifiedUpdateForRequest = oldPull
+		updateKrunRuntimeForRequest = oldUpdate
+	})
+	pulled := false
+	krunAttempted := false
+	pullVerifiedUpdateForRequest = func(compose, target string) (int, error) {
+		if compose != "" || target != "" {
+			t.Fatalf("pull arguments = %q %q", compose, target)
+		}
+		pulled = true
+		return http.StatusOK, nil
+	}
+	updateKrunRuntimeForRequest = func(context.Context) error {
+		krunAttempted = true
+		return errors.New("krun install failed")
+	}
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPut, "http://localhost/update", nil)
+	update(recorder, request)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("SPR update status = %d, body = %q", recorder.Code, recorder.Body.String())
+	}
+	if !pulled || !krunAttempted {
+		t.Fatalf("pulled = %t, krun attempted = %t", pulled, krunAttempted)
+	}
+}

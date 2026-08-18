@@ -418,18 +418,20 @@ func pullVerifiedUpdate(compose string, target string) (int, error) {
 	return http.StatusOK, nil
 }
 
+var pullVerifiedUpdateForRequest = pullVerifiedUpdate
+var updateKrunRuntimeForRequest = updateKrunRuntime
+
 func update(w http.ResponseWriter, r *http.Request) {
 	target := r.URL.Query().Get("service")
 	compose := r.URL.Query().Get("compose_file")
 
-	if status, err := pullVerifiedUpdate(compose, target); err != nil {
+	if status, err := pullVerifiedUpdateForRequest(compose, target); err != nil {
 		http.Error(w, err.Error(), status)
 		return
 	}
 	if compose == "" && target == "" {
-		if err := updateKrunRuntime(r.Context()); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		if err := updateKrunRuntimeForRequest(r.Context()); err != nil {
+			fmt.Println("failed to update krun runtime: " + err.Error())
 		}
 	}
 }
