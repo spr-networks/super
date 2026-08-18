@@ -426,6 +426,12 @@ func update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), status)
 		return
 	}
+	if compose == "" && target == "" {
+		if err := updateKrunRuntime(r.Context()); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
 }
 
 func start(w http.ResponseWriter, r *http.Request) {
@@ -1772,5 +1778,6 @@ func main() {
 	}
 	pluginServer := http.Server{Handler: logRequest(unix_plugin_router)}
 
+	go bootstrapKrunRuntime()
 	pluginServer.Serve(unixPluginListener)
 }
