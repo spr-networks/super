@@ -82,7 +82,7 @@ RUN --mount=type=tmpfs,target=/tmpfs \
     go build -trimpath -ldflags="-s -w" -o /hostap_dhcp_helper main.go control.go roaming.go
 
 # Build hostapd
-ARG HOSTAP_COMMIT=8f2abe0e014e85202fdd3b6c95be6620257fb4e9
+ARG HOSTAP_COMMIT=25cb8a49356c48cb27d4e9f73052646fe97a2264
 RUN git init hostap \
  && git -C hostap remote add origin https://github.com/spr-networks/hostap \
  && git -C hostap fetch --depth 1 origin "${HOSTAP_COMMIT}" \
