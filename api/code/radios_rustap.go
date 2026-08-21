@@ -266,6 +266,56 @@ func writeRustapConfig(conf map[string]interface{}) error {
 	return writeFileAtomic(getRustapConfigPath(), data, 0600)
 }
 
+func writeRustapInterfaceConfig(iface string, updated map[string]interface{}) error {
+	data, err := os.ReadFile(getRustapConfigPath())
+	if err != nil {
+		return err
+	}
+	decoder := json.NewDecoder(strings.NewReader(string(data)))
+	decoder.UseNumber()
+	document := map[string]interface{}{}
+	if err := decoder.Decode(&document); err != nil {
+		return err
+	}
+	if err := requireRustapJSONEOF(decoder); err != nil {
+		return err
+	}
+	if configured, ok := document["iface"].(string); ok && configured == iface {
+		return writeRustapConfig(updated)
+	}
+
+	radios, ok := document["radios"].([]interface{})
+	if !ok {
+		return fmt.Errorf("RustAP config does not contain interface %s", iface)
+	}
+	for _, key := range []string{"country", "wmm", "per_sta_vif"} {
+		if value, exists := updated[key]; exists {
+			document[key] = cloneRustapValue(value, false)
+		}
+	}
+	radioKeys := []string{"ssid", "channel", "width", "phy", "band", "mld", "link_id", "mld_links", "mac"}
+	found := false
+	for _, raw := range radios {
+		radio, ok := raw.(map[string]interface{})
+		if !ok || rustapString(radio, "iface", "") != iface {
+			continue
+		}
+		found = true
+		for _, key := range radioKeys {
+			if value, exists := updated[key]; exists {
+				radio[key] = cloneRustapValue(value, false)
+			} else {
+				delete(radio, key)
+			}
+		}
+		break
+	}
+	if !found {
+		return fmt.Errorf("RustAP config does not contain interface %s", iface)
+	}
+	return writeRustapConfig(document)
+}
+
 func rustapHardwareMAC(iface string) (string, error) {
 	dev, err := net.InterfaceByName(iface)
 	if err != nil {
@@ -318,7 +368,7 @@ func applyRustapPatch(existing, patch map[string]interface{}, iface, hardwareMAC
 	conf := cloneRustapValue(existing, false).(map[string]interface{})
 	for key := range patch {
 		switch key {
-		case "ssid", "country", "channel", "width", "phy", "band", "wmm", "per_sta_vif", "mld", "mld_links":
+		case "ssid", "country", "channel", "width", "phy", "band", "wmm", "per_sta_vif", "mld", "link_id", "mld_links":
 		default:
 			return nil, fmt.Errorf("RustAP config field %q is not modifiable", key)
 		}
@@ -422,6 +472,9 @@ func applyRustapPatch(existing, patch map[string]interface{}, iface, hardwareMAC
 		}
 	}
 	if !mld {
+		if _, supplied := patch["link_id"]; supplied {
+			return nil, fmt.Errorf("link_id requires mld to be enabled")
+		}
 		if _, supplied := patch["mld_links"]; supplied {
 			return nil, fmt.Errorf("mld_links requires mld to be enabled")
 		}
@@ -445,6 +498,13 @@ func applyRustapPatch(existing, patch map[string]interface{}, iface, hardwareMAC
 	hardwareMAC, err = rustapMLDHardwareMAC(conf, iface, hardwareMAC)
 	if err != nil {
 		return nil, err
+	}
+	if _, supplied := patch["link_id"]; supplied {
+		associationLinkID, linkErr := rustapInt(patch, "link_id", -1)
+		if linkErr != nil || associationLinkID < 0 || associationLinkID > 15 {
+			return nil, fmt.Errorf("association link_id must be between 0 and 15")
+		}
+		conf["link_id"] = associationLinkID
 	}
 	associationLinkID, err := rustapInt(conf, "link_id", 0)
 	if err != nil || associationLinkID < 0 || associationLinkID > 15 {
@@ -536,10 +596,6 @@ func rustapUpdateConfigIfOwned(w http.ResponseWriter, r *http.Request, iface str
 	if !ok {
 		return false
 	}
-	if rustapConfigIsMultiRadio() {
-		http.Error(w, "multi-radio RustAP config must be edited by regenerating rustap.json", http.StatusBadRequest)
-		return true
-	}
 	patch, err := decodeRustapPatch(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -550,7 +606,7 @@ func rustapUpdateConfigIfOwned(w http.ResponseWriter, r *http.Request, iface str
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return true
 	}
-	if err := writeRustapConfig(updated); err != nil {
+	if err := writeRustapInterfaceConfig(iface, updated); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return true
 	}
@@ -569,11 +625,6 @@ func rustapChannelSwitchIfOwned(w http.ResponseWriter, iface string, params Chan
 	if !ok {
 		return false
 	}
-	if rustapConfigIsMultiRadio() {
-		http.Error(w, "multi-radio RustAP config must be edited by regenerating rustap.json", http.StatusBadRequest)
-		return true
-	}
-
 	phy := "vht"
 	if params.EHT_Enable {
 		phy = "be"
@@ -599,7 +650,7 @@ func rustapChannelSwitchIfOwned(w http.ResponseWriter, iface string, params Chan
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return true
 	}
-	if err := writeRustapConfig(updated); err != nil {
+	if err := writeRustapInterfaceConfig(iface, updated); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return true
 	}
@@ -644,6 +695,9 @@ func hostapdRustapBand(conf map[string]interface{}, channel int) float64 {
 	if op, ok := hostapdUint(conf, "op_class"); ok && op >= 131 && op <= 137 {
 		return 6
 	}
+	if _, ok := conf["he_6ghz_reg_pwr_type"]; ok {
+		return 6
+	}
 	if _, ok := conf["he_6ghz_reg_power_type"]; ok {
 		return 6
 	}
@@ -670,6 +724,20 @@ func hostapdRustapPhy(conf map[string]interface{}) string {
 }
 
 func hostapdRustapWidth(conf map[string]interface{}, phy string) int {
+	if opClass, ok := hostapdUint(conf, "op_class"); ok {
+		switch opClass {
+		case 131, 136:
+			return 20
+		case 132:
+			return 40
+		case 128, 133:
+			return 80
+		case 129, 134:
+			return 160
+		case 137:
+			return 320
+		}
+	}
 	key := "vht_oper_chwidth"
 	switch phy {
 	case "be", "eht":
@@ -687,6 +755,8 @@ func hostapdRustapWidth(conf map[string]interface{}, phy string) int {
 			return 80
 		case 2, 3:
 			return 160
+		case 9:
+			return 320
 		}
 	}
 	if strings.Contains(hostapdStr(conf, "ht_capab"), "HT40") {
@@ -754,7 +824,7 @@ func rustapGuestBSSID(base string, index int) (string, bool) {
 }
 
 func generateRustapRadioLocked(entry InterfaceConfig) (map[string]interface{}, error) {
-	conf, err := getHostapdJson(entry.Name)
+	conf, err := readHostapdConfigFile(getHostapdConfigPath(entry.Name))
 	if err != nil {
 		return nil, err
 	}
@@ -775,6 +845,31 @@ func generateRustapRadioLocked(entry InterfaceConfig) (map[string]interface{}, e
 		"width":     hostapdRustapWidth(conf, phy),
 		"phy":       phy,
 		"ctrl_path": "/state/wifi/control_" + entry.Name + "/" + entry.Name,
+	}
+	mld, associationLinkID, links, err := readHostapdMldLinks(conf, entry.Name)
+	if err != nil {
+		return nil, err
+	}
+	if mld {
+		base := entry.MACOverride
+		if base == "" {
+			if live, liveErr := rustapHardwareMAC(entry.Name); liveErr == nil {
+				base = live
+			}
+		}
+		if validRustapHardwareMAC(base) {
+			radio["mac"] = base
+			for i := range links {
+				linkMAC, linkErr := rustapLinkMAC(base, links[i].LinkID)
+				if linkErr != nil {
+					return nil, linkErr
+				}
+				links[i].MAC = linkMAC
+			}
+		}
+		radio["mld"] = true
+		radio["link_id"] = associationLinkID
+		radio["mld_links"] = links
 	}
 	base := entry.MACOverride
 	if base == "" {
@@ -818,11 +913,10 @@ func generateRustapConfigLocked() (map[string]interface{}, error) {
 		}
 		radio, err := generateRustapRadioLocked(entry)
 		if err != nil {
-			log.Printf("rustap: skipping AP interface %s: %v", entry.Name, err)
-			continue
+			return nil, fmt.Errorf("generate RustAP radio %s: %w", entry.Name, err)
 		}
 		if policy == nil {
-			if conf, err := getHostapdJson(entry.Name); err == nil {
+			if conf, err := readHostapdConfigFile(getHostapdConfigPath(entry.Name)); err == nil {
 				keyMgmt := hostapdRustapKeyMgmt(hostapdStr(conf, "wpa_key_mgmt"))
 				country := hostapdStr(conf, "country_code")
 				if country == "" {
@@ -855,17 +949,180 @@ func generateRustapConfigLocked() (map[string]interface{}, error) {
 	return policy, nil
 }
 
-func rustapConfigIsMultiRadio() bool {
-	data, err := os.ReadFile(getRustapConfigPath())
+func decodeMldLinks(value interface{}) ([]MldLinkConfig, error) {
+	data, err := json.Marshal(value)
 	if err != nil {
-		return false
+		return nil, err
 	}
-	var raw map[string]interface{}
-	if json.Unmarshal(data, &raw) != nil {
-		return false
+	var links []MldLinkConfig
+	if err := json.Unmarshal(data, &links); err != nil {
+		return nil, fmt.Errorf("invalid mld_links: %w", err)
 	}
-	_, ok := raw["radios"].([]interface{})
-	return ok
+	return links, nil
+}
+
+func hostapdConfigData(conf map[string]interface{}) []byte {
+	data := ""
+	for key, value := range conf {
+		data += fmt.Sprint(key, "=", value, "\n")
+	}
+	return []byte(data)
+}
+
+func syncHostapdRadioFromRustap(conf map[string]interface{}) error {
+	iface := rustapString(conf, "iface", "")
+	if !isValidIface(iface) {
+		return fmt.Errorf("invalid RustAP interface %q", iface)
+	}
+	hostapd, err := readHostapdConfigFile(getHostapdConfigPath(iface))
+	if err != nil {
+		return fmt.Errorf("read hostapd fallback for %s: %w", iface, err)
+	}
+	channel, err := rustapInt(conf, "channel", 0)
+	if err != nil {
+		return err
+	}
+	width, err := rustapInt(conf, "width", 0)
+	if err != nil {
+		return err
+	}
+	band, err := rustapBand(conf, "band", 0)
+	if err != nil {
+		return err
+	}
+	if err := validateRustapRadio(channel, width, band, iface); err != nil {
+		return err
+	}
+	phy := rustapString(conf, "phy", "")
+	if !validRustapPhy(phy) {
+		return fmt.Errorf("invalid RustAP phy %q for %s", phy, iface)
+	}
+	applyHostapdRadioSettings(hostapd, channel, width, band, phy)
+	if ssid := rustapString(conf, "ssid", ""); ssid != "" {
+		hostapd["ssid"] = ssid
+	}
+	if country := rustapString(conf, "country", ""); country != "" {
+		hostapd["country_code"] = country
+	}
+	if wmm, ok := conf["wmm"].(bool); ok {
+		if wmm {
+			hostapd["wmm_enabled"] = 1
+		} else {
+			hostapd["wmm_enabled"] = 0
+		}
+	}
+	if perStaVIF, ok := conf["per_sta_vif"].(bool); ok {
+		if perStaVIF {
+			hostapd["per_sta_vif"] = 1
+		} else {
+			delete(hostapd, "per_sta_vif")
+		}
+	}
+
+	mld := rustapBool(conf, "mld", false)
+	sidecarPath := getHostapdMloConfigPath(iface)
+	var sidecarData []byte
+	if mld {
+		associationLinkID, err := rustapInt(conf, "link_id", 0)
+		if err != nil {
+			return err
+		}
+		links, err := decodeMldLinks(conf["mld_links"])
+		if err != nil {
+			return err
+		}
+		if err := validateMldLinks(associationLinkID, links); err != nil {
+			return err
+		}
+		if len(links) != 2 {
+			return fmt.Errorf("hostapd fallback currently requires exactly two mld_links")
+		}
+		associationLink, _ := mldLinkByID(links, associationLinkID)
+		applyHostapdRadioSettings(hostapd, associationLink.Channel, associationLink.Width, associationLink.Band, "be")
+		hostapd["mld_ap"] = 1
+		hostapd["ieee80211w"] = 2
+		var secondaryLink MldLinkConfig
+		for _, link := range links {
+			if link.LinkID != associationLinkID {
+				secondaryLink = link
+				break
+			}
+		}
+		existingSidecar, _ := readHostapdConfigFile(sidecarPath)
+		sidecarData = []byte(generateHostapdMldLinkConfig(hostapd, iface, secondaryLink, existingSidecar))
+	} else {
+		delete(hostapd, "mld_ap")
+	}
+
+	mainData := updateExtraBSS(iface, string(hostapdConfigData(hostapd)), "")
+	if mld {
+		if err := writeFileAtomic(sidecarPath, sidecarData, 0600); err != nil {
+			return fmt.Errorf("write hostapd MLD fallback for %s: %w", iface, err)
+		}
+	}
+	if err := writeFileAtomic(getHostapdConfigPath(iface), []byte(mainData), 0600); err != nil {
+		return fmt.Errorf("write hostapd fallback for %s: %w", iface, err)
+	}
+	if !mld {
+		if err := os.Remove(sidecarPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("remove stale hostapd MLD fallback for %s: %w", iface, err)
+		}
+	}
+	return nil
+}
+
+func syncHostapdFromRustapConfig() error {
+	data, err := os.ReadFile(getRustapConfigPath())
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	decoder := json.NewDecoder(strings.NewReader(string(data)))
+	decoder.UseNumber()
+	document := map[string]interface{}{}
+	if err := decoder.Decode(&document); err != nil {
+		return err
+	}
+	if err := requireRustapJSONEOF(decoder); err != nil {
+		return err
+	}
+	if radios, ok := document["radios"].([]interface{}); ok {
+		for _, raw := range radios {
+			radio, ok := raw.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("RustAP radios entry must be an object")
+			}
+			effective := map[string]interface{}{}
+			for key, value := range document {
+				if key != "radios" {
+					effective[key] = value
+				}
+			}
+			for key, value := range radio {
+				effective[key] = value
+			}
+			if err := syncHostapdRadioFromRustap(effective); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	return syncHostapdRadioFromRustap(document)
+}
+
+func regenerateRustapConfig() error {
+	Interfacesmtx.Lock()
+	conf, err := generateRustapConfigLocked()
+	Interfacesmtx.Unlock()
+	if err != nil {
+		return err
+	}
+	if conf == nil {
+		return fmt.Errorf("no enabled AP interfaces with a hostapd config")
+	}
+	return writeRustapConfig(conf)
 }
 
 func ensureRustapConfig() error {
@@ -889,15 +1146,9 @@ func ensureRustapConfig() error {
 	if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	Interfacesmtx.Lock()
-	conf, err := generateRustapConfigLocked()
-	Interfacesmtx.Unlock()
-	if err != nil {
+	if err := regenerateRustapConfig(); err != nil {
+		log.Printf("rustap: rustap.json not generated: %v", err)
 		return err
 	}
-	if conf == nil {
-		log.Printf("rustap: rustap.json not generated, no enabled AP interfaces with a hostapd config")
-		return nil
-	}
-	return writeRustapConfig(conf)
+	return nil
 }

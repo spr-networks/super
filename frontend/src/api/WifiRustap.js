@@ -69,7 +69,6 @@ export const buildRustapRadioPatch = ({
   const primaryChannel = requireInteger('channel', channel)
   const primaryWidth = requireInteger('width', width)
   const primaryBand = rustapBandFromMode(mode)
-  const selectedSecondaryBand = Number(secondaryBand)
   const patch = {
     channel: primaryChannel,
     width: primaryWidth,
@@ -79,6 +78,35 @@ export const buildRustapRadioPatch = ({
   }
 
   if (!mld) return patch
+  patch.link_id = requireInteger('association link ID', config.link_id ?? 0)
+  patch.mld_links = buildMldLinks({
+    config,
+    channel: primaryChannel,
+    width: primaryWidth,
+    mode,
+    secondaryBand,
+    secondaryChannel,
+    secondaryWidth,
+    secondaryLinkID
+  })
+  return patch
+}
+
+export const buildMldLinks = ({
+  config,
+  channel,
+  width,
+  mode,
+  primaryBand,
+  secondaryBand,
+  secondaryChannel,
+  secondaryWidth,
+  secondaryLinkID
+}) => {
+  const primaryChannel = requireInteger('channel', channel)
+  const primaryWidth = requireInteger('width', width)
+  const selectedPrimaryBand = Number(primaryBand ?? rustapBandFromMode(mode))
+  const selectedSecondaryBand = Number(secondaryBand)
   if (![2.4, 5, 6].includes(selectedSecondaryBand)) {
     throw new Error('secondary band must be 2.4, 5, or 6')
   }
@@ -119,7 +147,7 @@ export const buildRustapRadioPatch = ({
     link_id: associationLinkID,
     channel: primaryChannel,
     width: primaryWidth,
-    band: primaryBand
+    band: selectedPrimaryBand
   }
   const secondaryLink = {
     link_id: selectedSecondaryLinkID,
@@ -139,8 +167,7 @@ export const buildRustapRadioPatch = ({
     ...linksByID.get(selectedSecondaryLinkID),
     ...secondaryLink
   })
-  patch.mld_links = Array.from(linksByID.values()).sort(
+  return Array.from(linksByID.values()).sort(
     (left, right) => Number(left.link_id) - Number(right.link_id)
   )
-  return patch
 }

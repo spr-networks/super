@@ -316,6 +316,20 @@ func featureFlags(w http.ResponseWriter, r *http.Request) {
 	}
 
 	previous := config.FeatureFlags
+	rustapEnabled := slices.Contains(normalized, "rustap")
+	rustapChanged := rustapEnabled != slices.Contains(previous, "rustap")
+	if rustapChanged {
+		var transitionErr error
+		if rustapEnabled {
+			transitionErr = regenerateRustapConfig()
+		} else {
+			transitionErr = syncHostapdFromRustapConfig()
+		}
+		if transitionErr != nil {
+			http.Error(w, "failed to prepare RustAP backend transition: "+transitionErr.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
 	config.FeatureFlags = normalized
 	if err := saveFileJSON(ApiConfigPath, config); err != nil {
 		config.FeatureFlags = previous
@@ -323,8 +337,6 @@ func featureFlags(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rustapEnabled := slices.Contains(config.FeatureFlags, "rustap")
-	rustapChanged := rustapEnabled != slices.Contains(previous, "rustap")
 	markersChanged, err := setRustapFeatureMarkers(rustapEnabled)
 	if err != nil {
 		config.FeatureFlags = previous
@@ -334,7 +346,7 @@ func featureFlags(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if rustapEnabled {
+	if rustapEnabled && !rustapChanged {
 		if err := ensureRustapConfig(); err != nil {
 			log.Printf("failed to generate rustap.json: %v", err)
 		}
