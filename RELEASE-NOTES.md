@@ -1,6 +1,14 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.2.6
+**Features**
+- Allow superd to update the krun runtime to get security fixes
+**Fixes**
+- Allow plugins to download files
+- Update hostap version
+- Update krun kernel and dont let plugins block updates
+
 ## v1.2.5
 **Fixes**
 - Make container outbound whitelist more consistent with devices
