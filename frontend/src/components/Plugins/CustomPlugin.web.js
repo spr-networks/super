@@ -117,7 +117,7 @@ const CustomPlugin = ({ ...props }) => {
     style: { borderWidth: 0, height: '100vh' }
   }
   if (props.isSandboxed !== false) {
-    iframeProps.sandbox = 'allow-scripts'
+    iframeProps.sandbox = 'allow-scripts allow-downloads'
   }
   return React.createElement('iframe', iframeProps)
 }

@@ -13,7 +13,7 @@ Files: libkrunfw
 Copyright: The libkrunfw and Linux kernel contributors
 License: GPL-2.0-only and LGPL-2.1-only
 Comment:
- libkrunfw 5.5.0 embeds Linux 6.12.91. Its complete build recipe, kernel
+ libkrunfw 5.5.0 embeds Linux 6.18.44. Its complete build recipe, kernel
  configuration and patch set are published at the tagged upstream source URL.
 
 Files: crun

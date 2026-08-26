@@ -1,0 +1,40 @@
+diff --git a/kernel/exit.c b/kernel/exit.c
+--- a/kernel/exit.c
++++ b/kernel/exit.c
+@@ -67,6 +67,7 @@
+ #include <linux/sysfs.h>
+ #include <linux/user_events.h>
+ #include <linux/unwind_deferred.h>
++#include <linux/reboot.h>
+ #include <linux/uaccess.h>
+ #include <linux/pidfs.h>
+ 
+@@ -933,8 +934,12 @@ void __noreturn do_exit(long code)
+ 		 * immediately to get a useable coredump.
+ 		 */
+ 		if (unlikely(is_global_init(tsk)))
++#ifdef VERBOSE_LIBKRUN
+ 			panic("Attempted to kill init! exitcode=0x%08x\n",
+ 				tsk->signal->group_exit_code ?: (int)code);
++#else
++			orderly_reboot();
++#endif
+ 
+ #ifdef CONFIG_POSIX_TIMERS
+ 		hrtimer_cancel(&tsk->signal->real_timer);
+diff --git a/kernel/reboot.c b/kernel/reboot.c
+--- a/kernel/reboot.c
++++ b/kernel/reboot.c
+@@ -290,10 +290,12 @@ void kernel_restart(char *cmd)
+ 	do_kernel_restart_prepare();
+ 	migrate_to_reboot_cpu();
+ 	syscore_shutdown();
++#ifdef VERBOSE_LIBKRUN
+ 	if (!cmd)
+ 		pr_emerg("Restarting system\n");
+ 	else
+ 		pr_emerg("Restarting system with command '%s'\n", cmd);
++#endif
+ 	kmsg_dump(KMSG_DUMP_SHUTDOWN);
+ 	machine_restart(cmd);
+ }

@@ -1,4 +1,5 @@
 import {
+  buildMldLinks,
   buildRustapRadioPatch,
   rustapBandFromFrequency,
   rustapBandFromMode,
@@ -61,7 +62,8 @@ describe('RustAP radio configuration', () => {
       width: 160,
       band: 5,
       phy: 'be',
-      mld: true
+      mld: true,
+      link_id: 4
     })
     expect(patch.mld_links).toEqual([
       {
@@ -96,5 +98,24 @@ describe('RustAP radio configuration', () => {
       phy: 'be',
       mld: false
     })
+  })
+
+  test('builds the same canonical links for the hostapd fallback', () => {
+    expect(
+      buildMldLinks({
+        config: { link_id: 0 },
+        channel: 37,
+        width: 160,
+        mode: 'a',
+        primaryBand: 6,
+        secondaryBand: 2.4,
+        secondaryChannel: 1,
+        secondaryWidth: 20,
+        secondaryLinkID: 1
+      })
+    ).toEqual([
+      { link_id: 0, band: 6, channel: 37, width: 160 },
+      { link_id: 1, band: 2.4, channel: 1, width: 20 }
+    ])
   })
 })

@@ -99,6 +99,34 @@ import { Select } from 'components/Select'
 
 import WifiChannelParameters from 'components/Wifi/WifiChannelParameters'
 import { ListHeader } from 'components/List'
+
+const RustapMldLinks = ({ links, associationLinkID }) => (
+  <VStack flex={2} space="sm">
+    {links.map((link, index) => {
+      const isAssociationLink = link.link_id === associationLinkID
+
+      return (
+        <VStack key={link.link_id ?? index} space="xs">
+          <HStack alignItems="center" space="sm">
+            <Text bold size="sm">
+              Link {link.link_id ?? index}
+            </Text>
+            <Text size="xs" color="$muted500">
+              {isAssociationLink ? 'Association' : 'Additional'}
+            </Text>
+          </HStack>
+          <Text size="sm">
+            {link.band} GHz · Ch {link.channel} · {link.width} MHz
+          </Text>
+          <Text size="xs" color="$muted500">
+            {link.mac || 'MAC assigned automatically'}
+          </Text>
+        </VStack>
+      )
+    })}
+  </VStack>
+)
+
 const WifiHostapd = (props) => {
   const context = useContext(AlertContext)
   const [iface, setIface] = useState('')
@@ -133,7 +161,6 @@ const WifiHostapd = (props) => {
     'he_su_beamformee',
     'he_mu_beamformer',
     'ieee80211be',
-    'mld_ap',
     'rssi_reject_assoc_rssi',
     'rssi_reject_assoc_timeout',
     'rssi_ignore_probe_request'
@@ -210,7 +237,6 @@ const WifiHostapd = (props) => {
             return iw
           })
         )
-
 
         setIwMap(iwMap)
         setIws(iws)
@@ -321,8 +347,7 @@ const WifiHostapd = (props) => {
       He_su_beamformer: parseInt(inconfig.he_su_beamformer),
       He_su_beamformee: parseInt(inconfig.he_su_beamformee),
       He_mu_beamformer: parseInt(inconfig.he_mu_beamformer),
-      Ieee80211be: parseInt(inconfig.ieee80211be || 0),
-      Mld_ap: parseInt(inconfig.mld_ap || 0)
+      Ieee80211be: parseInt(inconfig.ieee80211be || 0)
     }
 
     // Add RSSI fields if they exist
@@ -330,10 +355,14 @@ const WifiHostapd = (props) => {
       data.Rssi_reject_assoc_rssi = parseInt(inconfig.rssi_reject_assoc_rssi)
     }
     if (inconfig.rssi_reject_assoc_timeout !== undefined) {
-      data.Rssi_reject_assoc_timeout = parseInt(inconfig.rssi_reject_assoc_timeout)
+      data.Rssi_reject_assoc_timeout = parseInt(
+        inconfig.rssi_reject_assoc_timeout
+      )
     }
     if (inconfig.rssi_ignore_probe_request !== undefined) {
-      data.Rssi_ignore_probe_request = parseInt(inconfig.rssi_ignore_probe_request)
+      data.Rssi_ignore_probe_request = parseInt(
+        inconfig.rssi_ignore_probe_request
+      )
     }
 
     wifiAPI.updateConfig(iface, data).then((curConfig) => {
@@ -364,8 +393,7 @@ const WifiHostapd = (props) => {
       He_su_beamformer: parseInt(config.he_su_beamformer),
       He_su_beamformee: parseInt(config.he_su_beamformee),
       He_mu_beamformer: parseInt(config.he_mu_beamformer),
-      Ieee80211be: parseInt(config.ieee80211be || 0),
-      Mld_ap: parseInt(config.mld_ap || 0)
+      Ieee80211be: parseInt(config.ieee80211be || 0)
     }
 
     // Add RSSI fields if they exist
@@ -373,10 +401,14 @@ const WifiHostapd = (props) => {
       data.Rssi_reject_assoc_rssi = parseInt(config.rssi_reject_assoc_rssi)
     }
     if (config.rssi_reject_assoc_timeout !== undefined) {
-      data.Rssi_reject_assoc_timeout = parseInt(config.rssi_reject_assoc_timeout)
+      data.Rssi_reject_assoc_timeout = parseInt(
+        config.rssi_reject_assoc_timeout
+      )
     }
     if (config.rssi_ignore_probe_request !== undefined) {
-      data.Rssi_ignore_probe_request = parseInt(config.rssi_ignore_probe_request)
+      data.Rssi_ignore_probe_request = parseInt(
+        config.rssi_ignore_probe_request
+      )
     }
 
     wifiAPI.updateConfig(iface, data).then((curConfig) => {
@@ -722,9 +754,7 @@ const WifiHostapd = (props) => {
                 onPress={disableInterface}
               >
                 <ButtonText>
-                  {Platform.OS == 'web'
-                    ? 'Disable Radio Interface'
-                    : 'Disable'}
+                  {Platform.OS == 'web' ? 'Disable Radio Interface' : 'Disable'}
                 </ButtonText>
               </Button>
               <Button
@@ -749,74 +779,91 @@ const WifiHostapd = (props) => {
       >
         <VStack space="md">
           {interfaceConfigured && interfaceEnabled == true ? (
-            Object.keys(config).map((label) => (
-              <HStack
-                key={label}
-                space="md"
-                justifyContent="center"
-                alignItems="center"
-              >
-                <Text bold flex={1} size="sm" textAlign="right">
-                  {label}
-                </Text>
-
-                {canEdit.includes(label) ? (
-                  tooltips[label] ? (
-                    <TooltipOrig
-                      placement="bottom"
-                      trigger={(triggerProps) => {
-                        return (
-                          <Input
-                            size="md"
-                            variant="underlined"
-                            flex={2}
-                            {...triggerProps}
-                          >
-                            <InputField
-                              type="text"
-                        value={
-                          config[label] != null
-                            ? String(config[label])
-                            : ''
-                        }
-                        onChangeText={(value) =>
-                          handleChange(label, value)
-                        }
-                        onSubmitEditing={handleSubmit}
-                        onMouseLeave={handleSubmit}
-                      />
-                    </Input>
-                  )
-                }}
-              >
-                <TooltipContent>
-                  <TooltipText>{tooltips[label]}</TooltipText>
-                </TooltipContent>
-              </TooltipOrig>
-            ) : (
-              <Input size="md" flex={2} variant="underlined">
-                <InputField
-                  type="text"
-                  value={
-                    config[label] != null
-                      ? String(config[label])
-                      : ''
-                  }
-                  onChangeText={(value) => handleChange(label, value)}
-                  onSubmitEditing={handleSubmit}
-                  onMouseLeave={handleSubmit}
-                />
-                    </Input>
-                  )
-                ) : (
-                  <Text flex={2}>
-                    {typeof config[label] === 'object'
-                      ? JSON.stringify(config[label])
-                      : String(config[label])}
+            <>
+              {Array.isArray(config.mld_links) ? (
+                <HStack
+                  space="md"
+                  justifyContent="center"
+                  alignItems="flex-start"
+                >
+                  <Text bold flex={1} size="sm" textAlign="right">
+                    MLD links
                   </Text>
-                )}
-              </HStack>
-            ))
+                  <RustapMldLinks
+                    links={config.mld_links}
+                    associationLinkID={config.link_id}
+                  />
+                </HStack>
+              ) : null}
+              {Object.keys(config)
+                .filter((label) => label !== 'mld_links')
+                .map((label) => (
+                <HStack
+                  key={label}
+                  space="md"
+                  justifyContent="center"
+                  alignItems="center"
+                >
+                  <Text bold flex={1} size="sm" textAlign="right">
+                    {label}
+                  </Text>
+
+                  {canEdit.includes(label) ? (
+                    tooltips[label] ? (
+                      <TooltipOrig
+                        placement="bottom"
+                        trigger={(triggerProps) => {
+                          return (
+                            <Input
+                              size="md"
+                              variant="underlined"
+                              flex={2}
+                              {...triggerProps}
+                            >
+                              <InputField
+                                type="text"
+                                value={
+                                  config[label] != null
+                                    ? String(config[label])
+                                    : ''
+                                }
+                                onChangeText={(value) =>
+                                  handleChange(label, value)
+                                }
+                                onSubmitEditing={handleSubmit}
+                                onMouseLeave={handleSubmit}
+                              />
+                            </Input>
+                          )
+                        }}
+                      >
+                        <TooltipContent>
+                          <TooltipText>{tooltips[label]}</TooltipText>
+                        </TooltipContent>
+                      </TooltipOrig>
+                    ) : (
+                      <Input size="md" flex={2} variant="underlined">
+                        <InputField
+                          type="text"
+                          value={
+                            config[label] != null ? String(config[label]) : ''
+                          }
+                          onChangeText={(value) => handleChange(label, value)}
+                          onSubmitEditing={handleSubmit}
+                          onMouseLeave={handleSubmit}
+                        />
+                      </Input>
+                    )
+                  ) : (
+                    <Text flex={2}>
+                      {typeof config[label] === 'object'
+                        ? JSON.stringify(config[label])
+                        : String(config[label])}
+                    </Text>
+                  )}
+                </HStack>
+                ))}
+            </>
           ) : (
             <Button
               size="md"

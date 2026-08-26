@@ -1,7 +1,5 @@
 import API from './API'
 
-
-
 const default5Ghz = {
   ap_isolate: 1,
   auth_algs: 1,
@@ -335,7 +333,6 @@ const filterCapabilities = (template, ht_capstr, vht_capstr, band) => {
   return config
 }
 
-
 export const generateCapabilitiesString = (iwmap, iface, wanted_band) => {
   let iwinfo = iwmap[iface]
   let ht_capstr = ''
@@ -400,28 +397,13 @@ export const generateConfigForBand = (iwmap, iface, wanted_band) => {
     }
 
     if (band.band.includes('Band 2') && wanted_band == 2) {
-      defaultConfig = filterCapabilities(
-        default5Ghz,
-        ht_capstr,
-        vht_capstr,
-        2
-      )
+      defaultConfig = filterCapabilities(default5Ghz, ht_capstr, vht_capstr, 2)
       break
     } else if (band.band.includes('Band 1') && wanted_band == 1) {
-      defaultConfig = filterCapabilities(
-        default2Ghz,
-        ht_capstr,
-        vht_capstr,
-        1
-      )
+      defaultConfig = filterCapabilities(default2Ghz, ht_capstr, vht_capstr, 1)
       break
     } else if (band.band.includes('Band 4') && wanted_band == 4) {
-      defaultConfig = filterCapabilities(
-        default6GHz,
-        ht_capstr,
-        vht_capstr,
-        4
-      )
+      defaultConfig = filterCapabilities(default6GHz, ht_capstr, vht_capstr, 4)
       break
     }
   }
@@ -455,9 +437,11 @@ export const generateConfigForBand = (iwmap, iface, wanted_band) => {
 }
 
 export const isSPRCompat = (iw) => {
-  if (iw.supported_ciphers.includes('GCMP-128 (00-0f-ac:8)') &&
-    iw.supported_interface_modes.includes("AP/VLAN")) {
-      return true
+  if (
+    iw.supported_ciphers.includes('GCMP-128 (00-0f-ac:8)') &&
+    iw.supported_interface_modes.includes('AP/VLAN')
+  ) {
+    return true
   }
   return false
 }
@@ -508,18 +492,16 @@ const canEditInt = [
   'he_su_beamformee',
   'he_mu_beamformer',
   'ieee80211be',
-  'mld_ap',
   'rssi_reject_assoc_rssi',
   'rssi_reject_assoc_timeout',
   'rssi_ignore_probe_request'
 ]
 const canEdit = canEditInt.concat(canEditString)
 
-
 const decodeUTF8 = (str) => {
   const x = str.replace(/\\x([0-9A-Fa-f]{2})/g, (_, p1) =>
     String.fromCharCode(parseInt(p1, 16))
-  );
+  )
 
   return decodeURIComponent(escape(x))
 }
@@ -553,27 +535,27 @@ export default class APIWifi extends API {
   }
 
   config(iface) {
-    return this.get(`hostapd/${iface}/config`);
+    return this.get(`hostapd/${iface}/config`)
   }
 
   updateConfig(iface, config) {
-    return this.put(`hostapd/${iface}/config`, config);
+    return this.put(`hostapd/${iface}/config`, config)
   }
 
   setChannel(iface, params) {
-    return this.put(`hostapd/${iface}/setChannel`, params);
+    return this.put(`hostapd/${iface}/setChannel`, params)
   }
 
   calcChannel(params) {
-    return this.put(`hostapd/calcChannel`, params);
+    return this.put(`hostapd/calcChannel`, params)
   }
 
   allStations(iface) {
-    return this.get(`hostapd/${iface}/all_stations`);
+    return this.get(`hostapd/${iface}/all_stations`)
   }
 
   deauth(iface, mac) {
-    return this.put(`hostapd/${iface}/deauth`, mac);
+    return this.put(`hostapd/${iface}/deauth`, mac)
   }
 
   status(iface) {
@@ -587,74 +569,72 @@ export default class APIWifi extends API {
       if (status['ssid[2]']) {
         status['ssid[2]'] = decodeUTF8(status['ssid[2]'])
       }
-      return status;
-    });
+      return status
+    })
   }
 
   checkFailsafe(iface) {
-    return this.get(`hostapd/${iface}/failsafe`);
+    return this.get(`hostapd/${iface}/failsafe`)
   }
 
   arp() {
-    return this.get('arp');
+    return this.get('arp')
   }
 
   ipAddr() {
-    return this.get('ip/addr');
+    return this.get('ip/addr')
   }
 
   ipLinkState(iface, state) {
-    return this.put(`ip/link/${iface}/${state}`);
+    return this.put(`ip/link/${iface}/${state}`)
   }
 
   iwDev() {
-    return this.get('iw/dev');
+    return this.get('iw/dev')
   }
 
   iwList() {
-    return this.get('iw/list');
+    return this.get('iw/list')
   }
 
   iwReg() {
-    return this.get('iw/reg');
+    return this.get('iw/reg')
   }
 
-
   iwScan(iface) {
-    return this.get(`iw/dev/${iface}/scan`);
+    return this.get(`iw/dev/${iface}/scan`)
   }
 
   enableInterface(iface) {
-    return this.put(`hostapd/${iface}/enable`);
+    return this.put(`hostapd/${iface}/enable`)
   }
 
   disableInterface(iface) {
-    return this.put(`hostapd/${iface}/disable`);
+    return this.put(`hostapd/${iface}/disable`)
   }
 
   resetInterfaceConfig(iface) {
-    return this.put(`hostapd/${iface}/resetConfiguration`);
+    return this.put(`hostapd/${iface}/resetConfiguration`)
   }
 
-
   enableExtraBSS(iface, params) {
-    return this.put(`hostapd/${iface}/enableExtraBSS`, params);
+    return this.put(`hostapd/${iface}/enableExtraBSS`, params)
   }
 
   disableExtraBSS(iface) {
-    return this.delete(`hostapd/${iface}/enableExtraBSS`);
+    return this.delete(`hostapd/${iface}/enableExtraBSS`)
   }
 
   restartWifi() {
-    return this.put(`hostapd/restart`);
+    return this.put(`hostapd/restart`)
   }
 
   restartSetupWifi() {
-    return this.put(`hostapd/restart_setup`);
+    return this.put(`hostapd/restart_setup`)
   }
 
   syncMesh() {
-    return this.put(`hostapd/syncMesh`);
+    return this.put(`hostapd/syncMesh`)
   }
 
   interfacesConfiguration() {
@@ -664,58 +644,58 @@ export default class APIWifi extends API {
   interfaces(typeFilter) {
     //look up the interfaces from iw/dev
     return wifiAPI.iwDev().then((devs) => {
-      let ifaces = [];
+      let ifaces = []
       for (let dev of Object.keys(devs)) {
-        let wifis = Object.keys(devs[dev]);
+        let wifis = Object.keys(devs[dev])
         for (let wifi of wifis) {
           //only grab devices in AP mode
           if (typeFilter) {
-            if (!devs[dev][wifi].type.includes(typeFilter)) continue;
+            if (!devs[dev][wifi].type.includes(typeFilter)) continue
           }
-
 
           //ignore the set up ap
-          if (typeFilter == 'AP' && devs[dev][wifi].ssid === 'spr-setup') continue;
+          if (typeFilter == 'AP' && devs[dev][wifi].ssid === 'spr-setup')
+            continue
 
           //ignore vlans
-          if (wifi.includes(".ap")) {
+          if (wifi.includes('.ap')) {
             //extra ssids look like .ap0.<vlan>
-            if (wifi.split(".").length > 2) continue
-          } else if (wifi.includes('.')) continue;
-
-          ifaces = ifaces.concat(wifi);
-        }
-      }
-
-      ifaces = ifaces.sort();
-      return ifaces;
-    });
-  }
-
-  interfacesApi(api, typeFilter) {
-    //look up the interfaces from iw/dev
-    return api.iwDev().then((devs) => {
-      let ifaces = [];
-      for (let dev of Object.keys(devs)) {
-        let wifis = Object.keys(devs[dev]);
-        for (let wifi of wifis) {
-          //only grab devices in AP mode
-          if (typeFilter) {
-            if (!devs[dev][wifi].type.includes(typeFilter)) continue;
-          }
-          //ignore vlans
-          if (wifi.includes(".ap")) {
-            //extra ssids look like .ap0.<vlan>
-            if (wifi.split(".").length > 2) continue
-          } else if (wifi.includes('.')) continue;
+            if (wifi.split('.').length > 2) continue
+          } else if (wifi.includes('.')) continue
 
           ifaces = ifaces.concat(wifi)
         }
       }
 
-      ifaces = ifaces.sort();
-      return ifaces;
-    });
+      ifaces = ifaces.sort()
+      return ifaces
+    })
+  }
+
+  interfacesApi(api, typeFilter) {
+    //look up the interfaces from iw/dev
+    return api.iwDev().then((devs) => {
+      let ifaces = []
+      for (let dev of Object.keys(devs)) {
+        let wifis = Object.keys(devs[dev])
+        for (let wifi of wifis) {
+          //only grab devices in AP mode
+          if (typeFilter) {
+            if (!devs[dev][wifi].type.includes(typeFilter)) continue
+          }
+          //ignore vlans
+          if (wifi.includes('.ap')) {
+            //extra ssids look like .ap0.<vlan>
+            if (wifi.split('.').length > 2) continue
+          } else if (wifi.includes('.')) continue
+
+          ifaces = ifaces.concat(wifi)
+        }
+      }
+
+      ifaces = ifaces.sort()
+      return ifaces
+    })
   }
 
   defaultInterface() {
@@ -723,25 +703,25 @@ export default class APIWifi extends API {
       this.interfaces('AP')
         .then((ifaces) => {
           if (!ifaces.length) {
-            reject('missing AP interface');
+            reject('missing AP interface')
           }
 
-          resolve(ifaces[0]);
+          resolve(ifaces[0])
         })
-        .catch(reject);
-    });
+        .catch(reject)
+    })
   }
 
   //TBD this is in the wrong spot. Needs its own plugin.
   asn(ip) {
-    return this.get(`/plugins/lookup/asn/${ip}`);
+    return this.get(`/plugins/lookup/asn/${ip}`)
   }
   asns(ips) {
     if (typeof ips === 'string') {
-      ips = ips.split(',');
+      ips = ips.split(',')
     }
 
-    return this.get(`/plugins/lookup/asns/${ips.join(',')}`);
+    return this.get(`/plugins/lookup/asns/${ips.join(',')}`)
   }
 }
 

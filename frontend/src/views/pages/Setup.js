@@ -2,12 +2,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Platform } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { api, wifiAPI, saveLogin } from 'api'
-import {
-  generateConfigForBand,
-  getBestWifiConfig,
-  isSPRCompat,
-  generateCapabilitiesString
-} from 'api/Wifi'
+import { generateConfigForBand, getBestWifiConfig, isSPRCompat } from 'api/Wifi'
 import { useNavigate } from 'react-router-dom'
 import AddDevice from 'components/Setup/AddDevice'
 import { countryCodes } from 'utils'
@@ -559,16 +554,27 @@ const Setup = (props) => {
           (b) => b.band?.includes('Band 1') && b.eht_phy_capabilities
         )
         if (has_24_eht) {
-          data.Mld_ap = 1
-          data.Mlo_channel = 1
-          data.Mlo_bandwidth = 20
-          data.Mlo_hw_mode = 'g'
-          // 2.4 GHz link caps must come from Band 1, not from the 5 GHz primary
-          let [mloHt] = generateCapabilitiesString(iwMap, iface, 1)
-          if (mloHt && mloHt.length) {
-            mloHt.sort()
-            data.Mlo_ht_capab = mloHt.join('')
-          }
+          const primaryWidth =
+            data.Eht_oper_chwidth === 9
+              ? 320
+              : data.Eht_oper_chwidth === 2 || data.Vht_oper_chwidth === 2
+              ? 160
+              : data.Eht_oper_chwidth === 1 || data.Vht_oper_chwidth === 1
+              ? 80
+              : bestConfig.ht_capab?.includes('HT40')
+              ? 40
+              : 20
+          data.mld = true
+          data.link_id = 0
+          data.mld_links = [
+            {
+              link_id: 0,
+              band: 5,
+              channel: Number(bestConfig.channel),
+              width: primaryWidth
+            },
+            { link_id: 1, band: 2.4, channel: 1, width: 20 }
+          ]
         }
       }
 

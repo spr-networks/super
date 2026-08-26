@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gorilla/mux"
 	"io"
@@ -145,11 +146,9 @@ type HostapdConfigEntry struct {
 	Eht_oper_chwidth             int
 	Eht_oper_centr_freq_seg0_idx int
 	Mld_ap                       int
-	Mlo_channel                  int
-	Mlo_bandwidth                int
-	Mlo_hw_mode                  string
-	Mlo_ht_capab                 string
-	Mlo_vht_capab                string
+	Mld                          bool            `json:"mld"`
+	LinkID                       int             `json:"link_id"`
+	MldLinks                     []MldLinkConfig `json:"mld_links"`
 	Ssid                         string
 	Channel                      int
 	Vht_oper_centr_freq_seg0_idx int
@@ -181,17 +180,8 @@ func (h *HostapdConfigEntry) Validate() error {
 	if strings.ContainsAny(h.Ht_capab, "\n") {
 		return fmt.Errorf("Ht_capab contains newlines")
 	}
-	if strings.ContainsAny(h.Mlo_ht_capab, "\n") {
-		return fmt.Errorf("Mlo_ht_capab contains newlines")
-	}
-	if strings.ContainsAny(h.Mlo_vht_capab, "\n") {
-		return fmt.Errorf("Mlo_vht_capab contains newlines")
-	}
 	if strings.ContainsAny(h.Hw_mode, "\n") {
 		return fmt.Errorf("Hw_mode contains newlines")
-	}
-	if strings.ContainsAny(h.Mlo_hw_mode, "\n") {
-		return fmt.Errorf("Mlo_hw_mode contains newlines")
 	}
 	if strings.ContainsAny(h.Ssid, "\n") {
 		return fmt.Errorf("Ssid contains newlines")
@@ -207,6 +197,40 @@ func (h *HostapdConfigEntry) Validate() error {
 
 	//	validSSID := regexp.MustCompile(`^[^!#;+\]\/"\t][^+\]\/"\t]{0,30}[^ +\]\/"\t]$|^[^ !#;+\]\/"\t]$[ \t]+$`).MatchString
 
+	return nil
+}
+
+type MldLinkConfig struct {
+	LinkID  int     `json:"link_id"`
+	MAC     string  `json:"mac,omitempty"`
+	Band    float64 `json:"band"`
+	Channel int     `json:"channel"`
+	Width   int     `json:"width"`
+}
+
+func validateMldLinks(associationLinkID int, links []MldLinkConfig) error {
+	if associationLinkID < 0 || associationLinkID > 15 {
+		return fmt.Errorf("association link_id must be between 0 and 15")
+	}
+	if len(links) < 2 {
+		return fmt.Errorf("mld_links must contain at least two links")
+	}
+	seen := map[int]bool{}
+	for _, link := range links {
+		if link.LinkID < 0 || link.LinkID > 15 || seen[link.LinkID] {
+			return fmt.Errorf("mld link_id must be unique and between 0 and 15")
+		}
+		seen[link.LinkID] = true
+		if err := validateRustapRadio(link.Channel, link.Width, link.Band, fmt.Sprintf("MLD link %d", link.LinkID)); err != nil {
+			return err
+		}
+		if link.MAC != "" && !validRustapHardwareMAC(link.MAC) {
+			return fmt.Errorf("MLD link %d has invalid MAC address", link.LinkID)
+		}
+	}
+	if !seen[associationLinkID] {
+		return fmt.Errorf("mld_links must include association link_id %d", associationLinkID)
+	}
 	return nil
 }
 
@@ -677,9 +701,12 @@ func getHostapdJson(iface string) (map[string]interface{}, error) {
 	} else if ok {
 		return rustap, nil
 	}
-	data, err := ioutil.ReadFile(getHostapdConfigPath(iface))
+	return readHostapdConfigFile(getHostapdConfigPath(iface))
+}
+
+func readHostapdConfigFile(path string) (map[string]interface{}, error) {
+	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
 
@@ -695,9 +722,8 @@ func getHostapdJson(iface string) (map[string]interface{}, error) {
 			continue
 		}
 
-		pieces := strings.Split(line, "=")
+		pieces := strings.SplitN(line, "=", 2)
 		key := pieces[0]
-		//value := pieces[1]
 		value, err := strconv.ParseUint(pieces[1], 10, 64)
 		if err != nil {
 			conf[key] = pieces[1]
@@ -751,39 +777,16 @@ func hostapdConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Include MLO link config if it exists
-	mloPath := getHostapdMloConfigPath(iface)
-	if _, statErr := os.Stat(mloPath); statErr == nil {
-		mloData, readErr := ioutil.ReadFile(mloPath)
-		if readErr == nil {
-			for _, line := range strings.Split(string(mloData), "\n") {
-				if strings.HasPrefix(line, "channel=") {
-					pieces := strings.Split(line, "=")
-					val, _ := strconv.ParseUint(pieces[1], 10, 64)
-					conf["mlo_channel"] = val
-				}
-				if strings.HasPrefix(line, "hw_mode=") {
-					pieces := strings.Split(line, "=")
-					conf["mlo_hw_mode"] = pieces[1]
-				}
-				if strings.HasPrefix(line, "op_class=") {
-					pieces := strings.Split(line, "=")
-					val, _ := strconv.ParseUint(pieces[1], 10, 64)
-					// Derive bandwidth from op_class
-					switch val {
-					case 131, 136:
-						conf["mlo_bandwidth"] = 20
-					case 132:
-						conf["mlo_bandwidth"] = 40
-					case 128, 133:
-						conf["mlo_bandwidth"] = 80
-					case 129, 134:
-						conf["mlo_bandwidth"] = 160
-					case 137:
-						conf["mlo_bandwidth"] = 320
-					}
-				}
-			}
+	if conf["backend"] != "rustap" {
+		mld, linkID, links, mldErr := readHostapdMldLinks(conf, iface)
+		if mldErr != nil {
+			http.Error(w, mldErr.Error(), http.StatusBadRequest)
+			return
+		}
+		conf["mld"] = mld
+		if mld {
+			conf["link_id"] = linkID
+			conf["mld_links"] = links
 		}
 	}
 
@@ -912,23 +915,66 @@ func getHostapdMloConfigPath(iface string) string {
 	return TEST_PREFIX + "/configs/wifi/hostapd_" + iface + "_mlo.conf"
 }
 
-// generateMloLinkConfig creates the MLO Link 1 config from the primary config.
-// linkHtCapab/linkVhtCapab are the capability strings for the MLO link's band;
-// when empty, falls back to copying the primary's caps (legacy behavior).
-func generateMloLinkConfig(primaryConf map[string]interface{}, iface string, channel int, bandwidth int, hwMode string, linkHtCapab string, linkVhtCapab string) string {
-	is_24ghz := hwMode == "g" || hwMode == "b"
-	is_6e := false
+func hostapdModeForBand(band float64) string {
+	if band == 2.4 {
+		return "g"
+	}
+	return "a"
+}
 
-	if !is_24ghz {
-		// 5 GHz vs 6 GHz detection (same logic as ChanCalc)
-		if channel%2 == 1 && channel != 149 && channel != 165 {
-			is_6e = true
-		} else if channel == 2 {
-			is_6e = true
+func mldLinkByID(links []MldLinkConfig, linkID int) (MldLinkConfig, bool) {
+	for _, link := range links {
+		if link.LinkID == linkID {
+			return link, true
 		}
 	}
+	return MldLinkConfig{}, false
+}
 
-	calculated := ChanCalc(hwMode, channel, bandwidth, !is_6e, !is_6e && !is_24ghz, !is_24ghz, !is_24ghz)
+func readHostapdMldLinks(primaryConf map[string]interface{}, iface string) (bool, int, []MldLinkConfig, error) {
+	mldAP, ok := hostapdUint(primaryConf, "mld_ap")
+	if !ok || mldAP != 1 {
+		return false, 0, nil, nil
+	}
+	secondaryConf, err := readHostapdConfigFile(getHostapdMloConfigPath(iface))
+	if err != nil {
+		return false, 0, nil, fmt.Errorf("read hostapd MLD link config: %w", err)
+	}
+	primaryChannel, ok := hostapdUint(primaryConf, "channel")
+	if !ok {
+		return false, 0, nil, fmt.Errorf("hostapd MLD primary link has no channel")
+	}
+	secondaryChannel, ok := hostapdUint(secondaryConf, "channel")
+	if !ok {
+		return false, 0, nil, fmt.Errorf("hostapd MLD secondary link has no channel")
+	}
+	primaryPhy := hostapdRustapPhy(primaryConf)
+	secondaryPhy := hostapdRustapPhy(secondaryConf)
+	links := []MldLinkConfig{
+		{
+			LinkID:  0,
+			Band:    hostapdRustapBand(primaryConf, int(primaryChannel)),
+			Channel: int(primaryChannel),
+			Width:   hostapdRustapWidth(primaryConf, primaryPhy),
+		},
+		{
+			LinkID:  1,
+			Band:    hostapdRustapBand(secondaryConf, int(secondaryChannel)),
+			Channel: int(secondaryChannel),
+			Width:   hostapdRustapWidth(secondaryConf, secondaryPhy),
+		},
+	}
+	if err := validateMldLinks(0, links); err != nil {
+		return false, 0, nil, fmt.Errorf("invalid hostapd MLD config: %w", err)
+	}
+	return true, 0, links, nil
+}
+
+func generateHostapdMldLinkConfig(primaryConf map[string]interface{}, iface string, link MldLinkConfig, existingLinkConf map[string]interface{}) string {
+	hwMode := hostapdModeForBand(link.Band)
+	is24GHz := link.Band == 2.4
+	is6GHz := link.Band == 6
+	calculated := calculateHostapdRadio(link.Band, link.Channel, link.Width, !is6GHz, !is6GHz && !is24GHz, !is24GHz, !is24GHz)
 
 	// Build MLO link config from primary, keeping shared settings
 	mloConf := map[string]interface{}{}
@@ -953,7 +999,7 @@ func generateMloLinkConfig(primaryConf map[string]interface{}, iface string, cha
 
 	// Set MLO link specific parameters
 	mloConf["hw_mode"] = hwMode
-	mloConf["channel"] = channel
+	mloConf["channel"] = link.Channel
 	mloConf["ieee80211be"] = 1
 	mloConf["mld_ap"] = 1
 
@@ -969,16 +1015,14 @@ func generateMloLinkConfig(primaryConf map[string]interface{}, iface string, cha
 		mloConf["eht_oper_chwidth"] = calculated.Eht_oper_chwidth
 	}
 
-	if is_24ghz {
+	if is24GHz {
 		// 2.4 GHz link
 		mloConf["ieee80211n"] = 1
 		mloConf["ieee80211ax"] = 1
-		if linkHtCapab != "" {
-			mloConf["ht_capab"] = linkHtCapab
-		} else if val, ok := primaryConf["ht_capab"]; ok {
+		if val, ok := existingLinkConf["ht_capab"]; ok {
 			mloConf["ht_capab"] = val
 		}
-	} else if is_6e {
+	} else if is6GHz {
 		// 6 GHz specific settings
 		mloConf["ieee80211ax"] = 1
 		mloConf["he_6ghz_reg_pwr_type"] = 0
@@ -1005,14 +1049,10 @@ func generateMloLinkConfig(primaryConf map[string]interface{}, iface string, cha
 		if calculated.He_oper_chwidth > 0 {
 			mloConf["he_oper_chwidth"] = calculated.He_oper_chwidth
 		}
-		if linkHtCapab != "" {
-			mloConf["ht_capab"] = linkHtCapab
-		} else if val, ok := primaryConf["ht_capab"]; ok {
+		if val, ok := existingLinkConf["ht_capab"]; ok {
 			mloConf["ht_capab"] = val
 		}
-		if linkVhtCapab != "" {
-			mloConf["vht_capab"] = linkVhtCapab
-		} else if val, ok := primaryConf["vht_capab"]; ok {
+		if val, ok := existingLinkConf["vht_capab"]; ok {
 			mloConf["vht_capab"] = val
 		}
 	}
@@ -1022,6 +1062,84 @@ func generateMloLinkConfig(primaryConf map[string]interface{}, iface string, cha
 		data += fmt.Sprint(key, "=", value, "\n")
 	}
 	return data
+}
+
+func setHostapdCalculatedValue(conf map[string]interface{}, key string, value int) {
+	if value > 0 {
+		conf[key] = value
+	} else {
+		delete(conf, key)
+	}
+}
+
+func applyHostapdRadioSettings(conf map[string]interface{}, channel, width int, band float64, phy string) {
+	hwMode := hostapdModeForBand(band)
+	phy = strings.ToLower(phy)
+	isHE := phy == "ax" || phy == "he" || phy == "be" || phy == "eht"
+	isEHT := phy == "be" || phy == "eht"
+	isVHT := band == 5 && (phy == "ac" || phy == "vht" || isHE)
+
+	conf["channel"] = channel
+	conf["hw_mode"] = hwMode
+	conf["ieee80211n"] = 1
+	if isVHT {
+		conf["ieee80211ac"] = 1
+	} else {
+		delete(conf, "ieee80211ac")
+	}
+	if isHE {
+		conf["ieee80211ax"] = 1
+	} else {
+		delete(conf, "ieee80211ax")
+	}
+	if isEHT {
+		conf["ieee80211be"] = 1
+	} else {
+		delete(conf, "ieee80211be")
+	}
+
+	calculated := calculateHostapdRadio(band, channel, width, true, isVHT, isHE, isEHT)
+	setHostapdCalculatedValue(conf, "vht_oper_centr_freq_seg0_idx", calculated.Vht_oper_centr_freq_seg0_idx)
+	setHostapdCalculatedValue(conf, "he_oper_centr_freq_seg0_idx", calculated.He_oper_centr_freq_seg0_idx)
+	setHostapdCalculatedValue(conf, "eht_oper_centr_freq_seg0_idx", calculated.Eht_oper_centr_freq_seg0_idx)
+	setHostapdCalculatedValue(conf, "vht_oper_chwidth", calculated.Vht_oper_chwidth)
+	setHostapdCalculatedValue(conf, "he_oper_chwidth", calculated.He_oper_chwidth)
+	setHostapdCalculatedValue(conf, "eht_oper_chwidth", calculated.Eht_oper_chwidth)
+	setHostapdCalculatedValue(conf, "op_class", calculated.Op_class)
+	if band == 6 {
+		conf["he_6ghz_reg_pwr_type"] = 0
+		conf["unsol_bcast_probe_resp_interval"] = 20
+		transition6e(conf)
+	} else {
+		delete(conf, "he_6ghz_reg_pwr_type")
+		delete(conf, "he_6ghz_reg_power_type")
+		delete(conf, "unsol_bcast_probe_resp_interval")
+	}
+}
+
+func calculateHostapdRadio(band float64, channel, width int, ht, vht, he, eht bool) CalculatedChannelParameters {
+	calculated := ChanCalc(hostapdModeForBand(band), channel, width, ht, vht, he, eht)
+	if band != 6 {
+		return calculated
+	}
+
+	calculated.Is_6e = true
+	switch width {
+	case 20:
+		calculated.Op_class = 131
+	case 40:
+		calculated.Op_class = 132
+	case 80:
+		calculated.Op_class = 133
+	case 160:
+		calculated.Op_class = 134
+	case 320:
+		centerChannel := ((channel - 1) / 32 * 32) + 31
+		calculated.Op_class = 137
+		calculated.Eht_oper_chwidth = 9
+		calculated.Eht_oper_centr_freq_seg0_idx = centerChannel
+	}
+	return calculated
 }
 
 func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
@@ -1068,6 +1186,15 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
+	}
+	for _, legacyKey := range []string{
+		"Mlo_channel", "Mlo_bandwidth", "Mlo_hw_mode", "Mlo_ht_capab", "Mlo_vht_capab",
+		"mlo_channel", "mlo_bandwidth", "mlo_hw_mode", "mlo_ht_capab", "mlo_vht_capab",
+	} {
+		if _, supplied := newInput[legacyKey]; supplied {
+			http.Error(w, legacyKey+" is obsolete; use mld, link_id, and mld_links", http.StatusBadRequest)
+			return
+		}
 	}
 
 	needRestart := true
@@ -1167,6 +1294,14 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 			conf["ieee80211w"] = 2
 		}
 	}
+	if _, ok := newInput["mld"]; ok {
+		if newConf.Mld {
+			conf["mld_ap"] = 1
+			conf["ieee80211w"] = 2
+		} else {
+			delete(conf, "mld_ap")
+		}
+	}
 
 	if _, ok := newInput["Rrm_neighbor_report"]; ok {
 		conf["rrm_neighbor_report"] = newConf.Rrm_neighbor_report
@@ -1230,6 +1365,40 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	mldEnabled := false
+	if value, ok := hostapdUint(conf, "mld_ap"); ok {
+		mldEnabled = value == 1
+	}
+	associationLinkID := newConf.LinkID
+	mldLinks := newConf.MldLinks
+	_, linksSupplied := newInput["mld_links"]
+	if linksSupplied && !mldEnabled {
+		http.Error(w, "mld_links requires mld to be enabled", http.StatusBadRequest)
+		return
+	}
+	if mldEnabled {
+		if !linksSupplied {
+			var readErr error
+			_, associationLinkID, mldLinks, readErr = readHostapdMldLinks(conf, iface)
+			if readErr != nil {
+				http.Error(w, readErr.Error(), http.StatusBadRequest)
+				return
+			}
+		}
+		if err := validateMldLinks(associationLinkID, mldLinks); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if len(mldLinks) != 2 {
+			http.Error(w, "hostapd fallback currently requires exactly two mld_links", http.StatusBadRequest)
+			return
+		}
+		associationLink, _ := mldLinkByID(mldLinks, associationLinkID)
+		applyHostapdRadioSettings(conf, associationLink.Channel, associationLink.Width, associationLink.Band, "be")
+		conf["mld_ap"] = 1
+		conf["ieee80211w"] = 2
+	}
+
 	// write new conf
 	data := ""
 	for key, value := range conf {
@@ -1246,63 +1415,34 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Handle MLO link config
 	mloPath := getHostapdMloConfigPath(iface)
-	mloChannel := newConf.Mlo_channel
-	mloBandwidth := newConf.Mlo_bandwidth
-	mloHwMode := newConf.Mlo_hw_mode
-	mloHtCapab := newConf.Mlo_ht_capab
-	mloVhtCapab := newConf.Mlo_vht_capab
-
-	// If MLO channel not provided but MLO config already exists, read existing values
-	// so we can regenerate with updated shared settings (SSID, security, etc.)
-	if mloChannel == 0 {
-		if existingMlo, readErr := ioutil.ReadFile(mloPath); readErr == nil {
-			for _, line := range strings.Split(string(existingMlo), "\n") {
-				if strings.HasPrefix(line, "channel=") {
-					pieces := strings.SplitN(line, "=", 2)
-					mloChannel, _ = strconv.Atoi(pieces[1])
-				}
-				if strings.HasPrefix(line, "hw_mode=") {
-					pieces := strings.SplitN(line, "=", 2)
-					mloHwMode = pieces[1]
-				}
-				if strings.HasPrefix(line, "op_class=") {
-					pieces := strings.SplitN(line, "=", 2)
-					opVal, _ := strconv.Atoi(pieces[1])
-					switch opVal {
-					case 128, 133:
-						mloBandwidth = 80
-					case 129, 134:
-						mloBandwidth = 160
-					case 137:
-						mloBandwidth = 320
-					}
-				}
-				if mloHtCapab == "" && strings.HasPrefix(line, "ht_capab=") {
-					pieces := strings.SplitN(line, "=", 2)
-					mloHtCapab = pieces[1]
-				}
-				if mloVhtCapab == "" && strings.HasPrefix(line, "vht_capab=") {
-					pieces := strings.SplitN(line, "=", 2)
-					mloVhtCapab = pieces[1]
-				}
+	if mldEnabled {
+		var secondaryLink MldLinkConfig
+		for _, link := range mldLinks {
+			if link.LinkID != associationLinkID {
+				secondaryLink = link
+				break
 			}
 		}
-	}
-
-	mldEnabled := newConf.Mld_ap == 1 || fmt.Sprint(conf["mld_ap"]) == "1"
-	if mldEnabled && mloChannel > 0 && mloHwMode != "" {
-		mloData := generateMloLinkConfig(conf, iface, mloChannel, mloBandwidth, mloHwMode, mloHtCapab, mloVhtCapab)
+		existingLinkConf, _ := readHostapdConfigFile(mloPath)
+		mloData := generateHostapdMldLinkConfig(conf, iface, secondaryLink, existingLinkConf)
 		err = writeFileAtomic(mloPath, []byte(mloData), 0600)
 		if err != nil {
 			fmt.Println(err)
 			http.Error(w, err.Error(), 400)
 			return
 		}
-		conf["mlo_channel"] = mloChannel
-		conf["mlo_bandwidth"] = mloBandwidth
-		conf["mlo_hw_mode"] = mloHwMode
+		conf["mld"] = true
+		conf["link_id"] = associationLinkID
+		conf["mld_links"] = mldLinks
+	} else if _, explicitlyDisabled := newInput["mld"]; explicitlyDisabled {
+		if err := os.Remove(mloPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		conf["mld"] = false
+		delete(conf, "link_id")
+		delete(conf, "mld_links")
 	}
 
 	if !needRestart {

@@ -15,14 +15,14 @@ describe('plugin iframe sandboxing', () => {
     window.removeEventListener = jest.fn()
   })
 
-  it('sandboxes the iframe by default', () => {
+  it('sandboxes the iframe while allowing downloads by default', () => {
     let renderer
     TestRenderer.act(() => {
       renderer = TestRenderer.create(<CustomPlugin srcDoc="<html />" />)
     })
     const iframe = renderer.root.findByType('iframe')
 
-    expect(iframe.props.sandbox).toBe('allow-scripts')
+    expect(iframe.props.sandbox).toBe('allow-scripts allow-downloads')
     TestRenderer.act(() => renderer.unmount())
   })
 

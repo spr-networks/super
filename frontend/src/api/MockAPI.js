@@ -101,8 +101,38 @@ let mockPersonasState = {
 }
 
 let mockTrafficInsightsConfig = { Enabled: true, RetentionDays: 7 }
-let mockFeatureFlags = []
+let mockFeatureFlags = ['rustap']
 const mockSupportedFeatureFlags = ['rustap', 'webllm']
+let mockRustapRadioConfig = {
+  backend: 'rustap',
+  iface: 'wlan1',
+  ssid: 'TestLab',
+  country: 'US',
+  channel: 36,
+  width: 80,
+  band: 5,
+  phy: 'be',
+  wmm: true,
+  per_sta_vif: true,
+  mld: true,
+  link_id: 0,
+  mld_links: [
+    {
+      link_id: 0,
+      mac: '02:00:00:00:10:00',
+      band: 5,
+      channel: 36,
+      width: 80
+    },
+    {
+      link_id: 1,
+      mac: '02:00:00:00:10:01',
+      band: 6,
+      channel: 37,
+      width: 160
+    }
+  ]
+}
 
 let mockGeoBlockConfig = {
   Enabled: false,
@@ -2159,6 +2189,13 @@ export default function MockAPI(props = null) {
             bands: [
               {
                 band: 'Band 1',
+                frequencies: [
+                  '2412 MHz [1] (20.0 dBm)',
+                  '2437 MHz [6] (20.0 dBm)',
+                  '2462 MHz [11] (20.0 dBm)'
+                ],
+                he_phy_capabilities: ['HE20/HE40'],
+                eht_phy_capabilities: ['EHT20/40'],
                 capabilities: [
                   '0x1062',
                   'HT20/HT40',
@@ -2235,10 +2272,12 @@ export default function MockAPI(props = null) {
                 ],
                 vht_capabilities: [
                   'Max MPDU length: 3895',
-                  'Supported Channel Width: neither 160 nor 80+80',
+                  'Supported Channel Width: 160 MHz',
                   'short GI (80 MHz)',
                   'SU Beamformee'
                 ],
+                he_phy_capabilities: ['HE20/40/80/160'],
+                eht_phy_capabilities: ['EHT20/40/80/160'],
                 vht_rx_mcs_set: [
                   '1 streams: MCS 0-9',
                   '2 streams: not supported',
@@ -2271,6 +2310,20 @@ export default function MockAPI(props = null) {
                   '48.0 Mbps',
                   '54.0 Mbps'
                 ]
+              },
+              {
+                band: 'Band 4',
+                frequencies: [
+                  '5975 MHz [5] (23.0 dBm)',
+                  '6055 MHz [21] (23.0 dBm)',
+                  '6135 MHz [37] (23.0 dBm)',
+                  '6215 MHz [53] (23.0 dBm)',
+                  '6295 MHz [69] (23.0 dBm)',
+                  '6375 MHz [85] (23.0 dBm)',
+                  '6695 MHz [149] (23.0 dBm)'
+                ],
+                he_phy_capabilities: ['HE20/40/80/160'],
+                eht_phy_capabilities: ['EHT20/40/80/160/320']
               }
             ],
             supported_interface_modes: [
@@ -3350,6 +3403,9 @@ export default function MockAPI(props = null) {
       })
 
       this.get('/hostapd/wlan1/config', (schema) => {
+        if (mockFeatureFlags.includes('rustap')) {
+          return mockRustapRadioConfig
+        }
         return {
           ap_isolate: 1,
           auth_algs: 1,
@@ -3381,6 +3437,15 @@ export default function MockAPI(props = null) {
           wpa_key_mgmt: 'WPA-PSK WPA-PSK-SHA256 SAE',
           wpa_psk_file: '/configs/wifi/wpa2pskfile'
         }
+      })
+
+      this.put('/hostapd/wlan1/config', (schema, request) => {
+        if (!mockFeatureFlags.includes('rustap')) {
+          return new Response(400, {}, { error: 'RustAP is not enabled' })
+        }
+        const patch = JSON.parse(request.requestBody)
+        mockRustapRadioConfig = { ...mockRustapRadioConfig, ...patch }
+        return mockRustapRadioConfig
       })
 
       this.get('/hostapd/wlan0/config', (schema) => {

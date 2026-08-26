@@ -6,7 +6,7 @@ KVM-isolated SPR plugins.
 The package contains:
 
 - libkrun 1.19.4 with reliable external DHCP behavior
-- libkrunfw 5.5.0 (Linux 6.12.91) built with the networking feature set from
+- libkrunfw 5.5.0 (Linux 6.18.44) built with the networking feature set from
   `spr-debian-kernel`, plus guest policy routing
 - crun 1.28 with private plugin-network TAP bridging and bidirectional
   Unix-socket/virtio-vsock support, including explicit forwarding of OCI
