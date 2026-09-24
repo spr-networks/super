@@ -3,6 +3,14 @@ FROM ${DEBIAN_REF}
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+ARG DEBIAN_SNAPSHOT=20260901T000000Z
+RUN set -eux; \
+    printf 'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/%s bullseye main\ndeb [check-valid-until=no] http://snapshot.debian.org/archive/debian/%s bullseye-updates main\ndeb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/%s bullseye-security main\n' \
+        "$DEBIAN_SNAPSHOT" "$DEBIAN_SNAPSHOT" "$DEBIAN_SNAPSHOT" \
+        > /etc/apt/sources.list; \
+    printf 'APT::Install-Recommends "false";\nAcquire::Check-Valid-Until "false";\n' \
+        > /etc/apt/apt.conf.d/99reproducible
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     autoconf \
     automake \
