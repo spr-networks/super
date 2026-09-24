@@ -11,7 +11,6 @@ DEB_DIR="$(cd -- "$(dirname -- "$DEB")" && pwd)"
 DEB_NAME="$(basename -- "$DEB")"
 BUILD_CONTEXT="$(mktemp -d)"
 TEST_IMAGES=()
-BULLSEYE_SNAPSHOT=20260901T000000Z
 
 cleanup() {
     if [ "${#TEST_IMAGES[@]}" -gt 0 ]; then
@@ -40,15 +39,11 @@ for image in debian:bullseye debian:trixie; do
     release="${image#debian:}"
     test_image="spr-krun-package-test:${release}-$$"
     TEST_IMAGES+=("$test_image")
-    build_args=(--build-arg "BASE_IMAGE=$image")
-    if [ "$release" = bullseye ]; then
-        build_args+=(--build-arg "DEBIAN_SNAPSHOT=$BULLSEYE_SNAPSHOT")
-    fi
 
     docker buildx build \
         --load \
         --platform linux/arm64 \
-        "${build_args[@]}" \
+        --build-arg "BASE_IMAGE=$image" \
         --tag "$test_image" \
         --file - \
         "$BUILD_CONTEXT" <<'EOF'
@@ -56,15 +51,6 @@ ARG BASE_IMAGE=debian:bullseye
 FROM ${BASE_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive
-ARG DEBIAN_SNAPSHOT
-
-RUN if [ -n "$DEBIAN_SNAPSHOT" ]; then \
-        printf 'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/%s bullseye main\ndeb [check-valid-until=no] http://snapshot.debian.org/archive/debian/%s bullseye-updates main\ndeb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/%s bullseye-security main\n' \
-            "$DEBIAN_SNAPSHOT" "$DEBIAN_SNAPSHOT" "$DEBIAN_SNAPSHOT" \
-            > /etc/apt/sources.list; \
-        printf 'Acquire::Check-Valid-Until "false";\n' \
-            > /etc/apt/apt.conf.d/99reproducible; \
-    fi
 
 COPY spr-krun-runtime.deb /packages/spr-krun-runtime.deb
 
