@@ -1,7 +1,8 @@
 # SPR libkrun host runtime
 
 This directory builds the `spr-krun-runtime` arm64 Debian package used by
-KVM-isolated SPR plugins.
+KVM-isolated SPR plugins. The package is built and tested on Debian 13
+(Trixie).
 
 The package contains:
 

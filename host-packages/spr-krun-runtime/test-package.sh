@@ -35,7 +35,7 @@ case "$(docker version --format '{{.Server.Arch}}')" in
         ;;
 esac
 
-for image in debian:bullseye debian:trixie; do
+for image in debian:trixie; do
     release="${image#debian:}"
     test_image="spr-krun-package-test:${release}-$$"
     TEST_IMAGES+=("$test_image")
@@ -47,7 +47,7 @@ for image in debian:bullseye debian:trixie; do
         --tag "$test_image" \
         --file - \
         "$BUILD_CONTEXT" <<'EOF'
-ARG BASE_IMAGE=debian:bullseye
+ARG BASE_IMAGE=debian:trixie
 FROM ${BASE_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive
