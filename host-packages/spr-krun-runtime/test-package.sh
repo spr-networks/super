@@ -54,12 +54,12 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 COPY spr-krun-runtime.deb /packages/spr-krun-runtime.deb
 
-RUN apt-get update \
+RUN apt-get -o Acquire::Retries=5 update \
     && mkdir -p /etc/docker \
     && printf '%s\n' \
         '{"iptables":false,"runtimes":{"runsc":{"path":"/usr/local/bin/runsc","runtimeArgs":["--host-uds=all","--platform=kvm"]}}}' \
         > /etc/docker/daemon.json \
-    && apt-get install -y --download-only --no-install-recommends \
+    && apt-get -o Acquire::Retries=5 install -y --download-only --no-install-recommends \
         /packages/spr-krun-runtime.deb \
     && dpkg --unpack /packages/spr-krun-runtime.deb \
     && apt-get install -y --fix-broken --no-download --no-install-recommends
