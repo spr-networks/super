@@ -35,7 +35,7 @@ case "$(docker version --format '{{.Server.Arch}}')" in
         ;;
 esac
 
-for image in debian:bullseye debian:trixie; do
+for image in debian:trixie; do
     release="${image#debian:}"
     test_image="spr-krun-package-test:${release}-$$"
     TEST_IMAGES+=("$test_image")
@@ -47,19 +47,19 @@ for image in debian:bullseye debian:trixie; do
         --tag "$test_image" \
         --file - \
         "$BUILD_CONTEXT" <<'EOF'
-ARG BASE_IMAGE=debian:bullseye
+ARG BASE_IMAGE=debian:trixie
 FROM ${BASE_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 COPY spr-krun-runtime.deb /packages/spr-krun-runtime.deb
 
-RUN apt-get update \
+RUN apt-get -o Acquire::Retries=5 update \
     && mkdir -p /etc/docker \
     && printf '%s\n' \
         '{"iptables":false,"runtimes":{"runsc":{"path":"/usr/local/bin/runsc","runtimeArgs":["--host-uds=all","--platform=kvm"]}}}' \
         > /etc/docker/daemon.json \
-    && apt-get install -y --download-only --no-install-recommends \
+    && apt-get -o Acquire::Retries=5 install -y --download-only --no-install-recommends \
         /packages/spr-krun-runtime.deb \
     && dpkg --unpack /packages/spr-krun-runtime.deb \
     && apt-get install -y --fix-broken --no-download --no-install-recommends

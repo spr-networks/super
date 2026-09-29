@@ -1,6 +1,11 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.2.7
+
+**Fixes**
+- Update krun, spr-debian-kernel build versions
+
 ## v1.2.6
 **Features**
 - Allow superd to update the krun runtime to get security fixes
