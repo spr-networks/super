@@ -9,7 +9,7 @@ FROM ${ALPINE_REF} AS cacerts
 
 FROM ${UBUNTU_REF} AS xdp-builder
 ENV DEBIAN_FRONTEND=noninteractive
-ARG UBUNTU_SNAPSHOT=20260816T000000Z
+ARG UBUNTU_SNAPSHOT=20260930T000000Z
 COPY --from=cacerts /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 RUN set -eux; \
     printf 'Types: deb\nURIs: https://snapshot.ubuntu.com/ubuntu/%s\nSuites: noble noble-updates noble-security\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' "${UBUNTU_SNAPSHOT}" > /etc/apt/sources.list.d/ubuntu.sources; \
@@ -20,7 +20,7 @@ RUN clang -O3 -target bpf -D __BPF_TRACING__ -D SPR_XDP_STANDALONE -I"/usr/inclu
 
 FROM ${UBUNTU_REF} AS builder
 ENV DEBIAN_FRONTEND=noninteractive
-ARG UBUNTU_SNAPSHOT=20260816T000000Z
+ARG UBUNTU_SNAPSHOT=20260930T000000Z
 ARG GO_VERSION=1.26.8
 ARG GO_SHA256_AMD64=d0f743b33e8d8945e6b1f432edd15785c70507121d6e2a723b21285eddf8b57b
 ARG GO_SHA256_ARM64=211ffced9dcb9633a55eac6364816ec0ddd951389a740e88fa8b3337971bdda0
@@ -61,7 +61,7 @@ RUN --mount=type=tmpfs,target=/tmpfs \
 
 FROM ${CONTAINER_TEMPLATE_REF}
 ENV DEBIAN_FRONTEND=noninteractive
-ARG UBUNTU_SNAPSHOT=20260816T000000Z
+ARG UBUNTU_SNAPSHOT=20260930T000000Z
 RUN set -eux; \
     printf 'Types: deb\nURIs: https://snapshot.ubuntu.com/ubuntu/%s\nSuites: noble noble-updates noble-security\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' "${UBUNTU_SNAPSHOT}" > /etc/apt/sources.list.d/ubuntu.sources; \
     printf 'APT::Install-Recommends "false";\nAcquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99reproducible
