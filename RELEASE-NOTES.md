@@ -1,8 +1,11 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
-## v1.2.7
+## v1.2.8
+**Fixes**
+- Build maintenance for raspbian, build environment
 
+## v1.2.7
 **Fixes**
 - Update krun, spr-debian-kernel build versions
 
