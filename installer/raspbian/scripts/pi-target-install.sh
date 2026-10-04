@@ -166,7 +166,7 @@ cp -R base/template_configs configs
 [ -f /lib/udev/rules.d/80-net-setup-link.rules ] && mv /lib/udev/rules.d/80-net-setup-link.rules /lib/udev/rules.d/80-net-setup-link.rules.bak
 ln -sf /dev/null /lib/udev/rules.d/80-net-setup-link.rules
 
-echo 'SUBSYSTEM=="net", ACTION=="add", DEVPATH=="*0001:01:00.0*", NAME="eth0"' > /etc/udev/rules.d/70-persistent-net.rules 
+echo 'SUBSYSTEM=="net", ACTION=="add", DEVPATH=="*0001:01:00.0*", NAME="eth0"' > /etc/udev/rules.d/70-persistent-net.rules
 echo 'SUBSYSTEM=="net", ACTION=="add", DEVPATH=="*0000:03:00.0*", NAME="eth1"' >> /etc/udev/rules.d/70-persistent-net.rules
 
 
@@ -289,14 +289,10 @@ rm -rf \
 set -e
 ARCH=$(uname -m)
 URL=https://storage.googleapis.com/gvisor/releases/release/latest/${ARCH}
-wget ${URL}/runsc ${URL}/runsc.sha512 ${URL}/containerd-shim-runsc-v1 ${URL}/containerd-shim-runsc-v1.sha512
-sha512sum -c runsc.sha512
-sha512sum -c containerd-shim-runsc-v1.sha512
+wget "$URL/gvisor.tar.zstd" "$URL/gvisor.tar.zstd.sha512"
+sha512sum -c gvisor.tar.zstd.sha512
+tar --zstd -xf gvisor.tar.zstd -C /usr/local/bin
 rm -f *.sha512
-chmod a+rx runsc containerd-shim-runsc-v1
-sudo mv runsc containerd-shim-runsc-v1 /usr/local/bin
-
-
 
 # prepare docker for SPR with nftables
 
