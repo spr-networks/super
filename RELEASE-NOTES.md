@@ -1,6 +1,13 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.2.9
+**Improvements**
+- Switch to FST for domain looks up in dns-block
+
+**Fixes**
+- Yet a new kernel update
+
 ## v1.2.8
 **Fixes**
 - Build maintenance for raspbian, build environment
