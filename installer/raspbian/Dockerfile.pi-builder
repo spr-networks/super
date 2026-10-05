@@ -17,4 +17,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg \
     docker.io \
     zstd \
+    jq \
     && rm -rf /var/lib/apt/lists/*
+
+ARG GH_VERSION=2.97.0
+ARG GH_SHA256_AMD64=a2c9b8497e1f85b1ad0dfcb78b5a622e098801b8e461e459e88e1ee12f018112
+ARG GH_SHA256_ARM64=73ea440ecad9c9e284429997ee6f93577bc6f7bc6fba357ef62c53ad8fb641a5
+# gh verifies spr-debian-kernel build provenance (fetch-spr-kernel.sh)
+RUN arch=$(dpkg --print-architecture) && \
+    case "$arch" in amd64) sha=$GH_SHA256_AMD64 ;; arm64) sha=$GH_SHA256_ARM64 ;; *) exit 1 ;; esac && \
+    curl -fsSL -o /tmp/gh.tar.gz "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${arch}.tar.gz" && \
+    echo "$sha  /tmp/gh.tar.gz" | sha256sum -c - && \
+    tar -xOzf /tmp/gh.tar.gz "gh_${GH_VERSION}_linux_${arch}/bin/gh" > /usr/local/bin/gh && \
+    chmod 0755 /usr/local/bin/gh && \
+    rm -f /tmp/gh.tar.gz

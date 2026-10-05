@@ -86,14 +86,12 @@ rm -f "$KRUN_DEB"
 mkdir -p /boot/firmware
 mount /dev/vda1 /boot/firmware
 
-# Install latest SPR custom kernel + headers from spr-debian-kernel
-pushd /tmp
-for url in $(wget -qO- "https://api.github.com/repos/spr-networks/spr-debian-kernel/releases/latest" | grep browser_download_url | grep -o 'https://[^"]*\.deb'); do
-  wget "$url"
-done
-dpkg -i linux-image-*.deb linux-headers-*.deb linux-libc-dev_*.deb
-rm -f /tmp/*.deb
+# Install SPR custom kernel + headers from spr-debian-kernel, fetched and
+# provenance-verified on the build host by fetch-spr-kernel.sh
+pushd /var/cache/spr-kernel
+dpkg -i linux-image-*.deb linux-headers-*.deb linux-libc-dev_*.deb || exit 1
 popd
+rm -rf /var/cache/spr-kernel
 
 useradd -m -s /bin/bash ubuntu
 echo "ubuntu:ubuntu" | chpasswd
