@@ -1,8 +1,8 @@
 diff --git a/crun/src/libcrun/container.c b/crun/src/libcrun/container.c
-index 5fd045f..7ff460f 100644
+index 98264d1..bc2b7b9 100644
 --- a/crun/src/libcrun/container.c
 +++ b/crun/src/libcrun/container.c
-@@ -2908,6 +2908,19 @@ libcrun_container_run_internal (libcrun_container_t *container, libcrun_context_
+@@ -2628,6 +2628,19 @@ libcrun_container_run_internal (libcrun_container_t *container, libcrun_context_
    if (UNLIKELY (ret < 0))
      goto fail;
 
@@ -22,7 +22,7 @@ index 5fd045f..7ff460f 100644
    /* sync send own pid.  */
    ret = TEMP_FAILURE_RETRY (write (sync_socket, &pid, sizeof (pid)));
    if (UNLIKELY (ret != sizeof (pid)))
-@@ -3338,6 +3351,7 @@ int
+@@ -3069,6 +3082,7 @@ int
  libcrun_container_start (libcrun_context_t *context, const char *id, libcrun_error_t *err)
  {
    cleanup_container libcrun_container_t *container = NULL;
@@ -30,7 +30,7 @@ index 5fd045f..7ff460f 100644
    const char *state_root = context->state_root;
    runtime_spec_schema_config_schema *def;
    cleanup_container_status libcrun_container_status_t status = {};
-@@ -3359,6 +3373,17 @@ libcrun_container_start (libcrun_context_t *context, const char *id, libcrun_err
+@@ -3090,6 +3104,17 @@ libcrun_container_start (libcrun_context_t *context, const char *id, libcrun_err
    if (UNLIKELY (ret < 0))
      return ret;
 
@@ -49,10 +49,10 @@ index 5fd045f..7ff460f 100644
      {
        ret = get_notify_fd (context, container, &fd, err);
 diff --git a/crun/src/libcrun/custom-handler.h b/crun/src/libcrun/custom-handler.h
-index 7536191..c4d5b4c 100644
+index f67bff5..54dbce7 100644
 --- a/crun/src/libcrun/custom-handler.h
 +++ b/crun/src/libcrun/custom-handler.h
-@@ -43,6 +43,10 @@ struct custom_handler_s
+@@ -45,6 +45,10 @@ struct custom_handler_s
                                libcrun_context_t *context, libcrun_container_t *container,
                                const char *rootfs, libcrun_error_t *err);
 
@@ -64,7 +64,7 @@ index 7536191..c4d5b4c 100644
 
    int (*modify_oci_configuration) (void *cookie, libcrun_context_t *context,
 diff --git a/crun/src/libcrun/handlers/krun.c b/crun/src/libcrun/handlers/krun.c
-index 6e249a9..8fd17b1 100644
+index 67ef91a..3272578 100644
 --- a/crun/src/libcrun/handlers/krun.c
 +++ b/crun/src/libcrun/handlers/krun.c
 @@ -25,11 +25,19 @@
@@ -87,7 +87,7 @@ index 6e249a9..8fd17b1 100644
  #include <sched.h>
  #include <ocispec/runtime_spec_schema_config_schema.h>
 
-@@ -58,6 +66,18 @@
+@@ -57,6 +65,18 @@
  /* The minimum amount of RAM for a viable microVM is 128 MB. */
  #define LIBKRUN_MINIMUM_RAM_MIB 128
 
@@ -106,7 +106,7 @@ index 6e249a9..8fd17b1 100644
  /* crun dumps the container configuration into this file, which will be read by
   * libkrun to set up the environment for the workload inside the microVM.
   */
-@@ -68,12 +88,6 @@
+@@ -67,12 +87,6 @@
   */
  #define KRUN_SEV_FILE "/krun-sev.json"
 
@@ -119,15 +119,7 @@ index 6e249a9..8fd17b1 100644
  #define KRUN_FLAVOR_AWS_NITRO "aws-nitro"
  #define KRUN_FLAVOR_SEV "sev"
 
-@@ -96,6 +110,7 @@ struct krun_config
-   json_object *config_doc;
-   json_object *config_tree;
-   bool use_passt;
-+  bool use_tap;
- };
-
- /* libkrun handler.  */
-@@ -177,24 +192,171 @@ libkrun_enable_virtio_gpu (struct krun_config *kconf, uint32_t virgl_flags)
+@@ -166,24 +180,171 @@ libkrun_configure_kernel (uint32_t ctx_id, void *handle, json_object *config_tre
  }
 
  static int
@@ -193,7 +185,7 @@ index 6e249a9..8fd17b1 100644
 +  for (size_t i = 0; i < limits_len; i++)
      {
 -      // The configuration file is optional, don't generate an error if it's missing.
--      if (errno == ENOENT)
+-      if (crun_error_get_errno (err) == ENOENT)
 +      runtime_spec_schema_config_schema_process_rlimits_element *limit = def->process->rlimits[i];
 +      if (limit == NULL || limit->type == NULL)
 +        {
@@ -310,7 +302,7 @@ index 6e249a9..8fd17b1 100644
    ret = read_all_fd (fd, "krun configuration file", &config, NULL, err);
    if (UNLIKELY (ret < 0))
      return ret;
-@@ -207,59 +369,156 @@ libkrun_read_vm_config (struct krun_config *kconf, int rootfsfd, const char *roo
+@@ -196,97 +357,139 @@ libkrun_read_vm_config (struct krun_config *kconf, int rootfsfd, const char *roo
    return 0;
  }
 
@@ -321,9 +313,10 @@ index 6e249a9..8fd17b1 100644
 - *
 - * The configuration precedence is as follows:
 - * OCI annotations -> krun_vm.json.
+- * The config file is only used if "use_config_file" is "true".
 - */
  static int
--libkrun_parse_resource_configuration (json_object *config_tree, libcrun_container_t *container, const char *annotation, const char *key)
+-libkrun_parse_resource_configuration (json_object *config_tree, libcrun_container_t *container, const char *annotation, const char *key, bool use_config_file)
 +libkrun_parse_resource_configuration (json_object *config_tree, const char *key)
  {
 -  char *val_str, *endptr;
@@ -345,7 +338,7 @@ index 6e249a9..8fd17b1 100644
 -
 -      return val;
 -    }
--  else if (config_tree != NULL)
+-  else if (use_config_file && config_tree != NULL)
 +  if (config_tree != NULL)
      {
        val_json = json_object_object_get (config_tree, key);
@@ -365,9 +358,17 @@ index 6e249a9..8fd17b1 100644
    return val;
  }
 
+-static int
+-libkrun_parse_string_configuration (json_object *config_tree, libcrun_container_t *container,
+-                                    const char *annotation, const char *key,
+-                                    const char **value, libcrun_error_t *err, bool use_config_file)
 +static const char *
 +libkrun_string_configuration (json_object *config_tree, const char *key)
-+{
+ {
+-  const char *val;
+-  json_object *val_json = NULL;
+-
+-  *value = NULL;
 +  json_object *value;
 +
 +  if (config_tree == NULL)
@@ -377,31 +378,50 @@ index 6e249a9..8fd17b1 100644
 +    return NULL;
 +  return json_object_get_string (value);
 +}
-+
+
+-  val = find_annotation (container, annotation);
+-  if (val != NULL)
+-    {
+-      *value = val;
+-      return 0;
+-    }
 +static bool
 +libkrun_valid_socket_name (const char *name)
 +{
 +  size_t len;
-+
+
+-  if (! use_config_file || config_tree == NULL)
+-    return 0;
 +  if (name == NULL || ! isalnum ((unsigned char) name[0]))
 +    return false;
-+
+
+-  val_json = json_object_object_get (config_tree, key);
+-  if (val_json == NULL)
+-    return 0;
 +  len = strlen (name);
 +  if (len < 6 || strcmp (name + len - 5, ".sock") != 0)
 +    return false;
-+
+
+-  if (! json_object_is_type (val_json, json_type_string))
+-    return crun_make_error (err, 0, ".krun_vm.json %s value is not a string", key);
 +  for (size_t i = 1; i < len; i++)
 +    if (! isalnum ((unsigned char) name[i]) && name[i] != '_' && name[i] != '-' && name[i] != '.')
 +      return false;
-+
+
+-  *value = json_object_get_string (val_json);
+-  return 0;
 +  return true;
-+}
-+
+ }
+
+-static void
+-libkrun_make_tap_mac (const char *id, uint8_t mac[6])
 +/* Validate a vsock endpoint relative to an opened, trusted directory.  The
 + * directory is the allowlist: only root can place host services in it. */
 +static int
 +libkrun_validate_vsock_path (const char *path, bool listen, libcrun_error_t *err)
-+{
+ {
+-  uint64_t hash = 14695981039346656037ULL;
+-  size_t i;
 +  cleanup_close int runfd = -1;
 +  cleanup_close int rootfd = -1;
 +  cleanup_close int dirfd = -1;
@@ -414,7 +434,8 @@ index 6e249a9..8fd17b1 100644
 +  const char *prefix;
 +  const char *name;
 +  int ret;
-+
+
+-  for (; *id != '\0'; id++)
 +  directory = listen ? SPR_KRUN_LISTEN_DIR : SPR_KRUN_CONNECT_DIR;
 +  directory_name = listen ? "listen" : "connect";
 +  prefix = listen ? SPR_KRUN_LISTEN_DIR "/" : SPR_KRUN_CONNECT_DIR "/";
@@ -451,12 +472,16 @@ index 6e249a9..8fd17b1 100644
 +
 +  ret = fstatat (dirfd, name, &socket_st, AT_SYMLINK_NOFOLLOW);
 +  if (ret < 0)
-+    {
+     {
+-      hash ^= (uint8_t) *id;
+-      hash *= 1099511628211ULL;
 +      if (errno == ENOENT && listen)
 +        return 0;
 +      return crun_make_error (err, errno, "inspect krun vsock UNIX socket `%s`", path);
-+    }
-+
+     }
+
+-  for (i = 0; i < 6; i++)
+-    mac[i] = (uint8_t) (hash >> (i * 8));
 +  if (listen)
 +    {
 +      if (! S_ISSOCK (socket_st.st_mode) || socket_st.st_uid != 0)
@@ -469,72 +494,64 @@ index 6e249a9..8fd17b1 100644
 +        }
 +      return 0;
 +    }
-+
+
+-  mac[0] = (mac[0] & 0xfe) | 0x02;
 +  if (! S_ISSOCK (socket_st.st_mode) || socket_st.st_uid != 0)
 +    return crun_make_error (err, EPERM, "krun vsock endpoint `%s` must be a root-owned UNIX socket", path);
 +
 +  return 0;
-+}
-+
+ }
+
  static int
- libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf, libcrun_container_t *container, libcrun_error_t *err)
- {
-   runtime_spec_schema_config_schema *def = container->container_def;
+@@ -296,13 +499,14 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
    int32_t (*krun_set_vm_config) (uint32_t ctx_id, uint8_t num_vcpus, uint32_t ram_mib);
    int32_t (*krun_add_net_unixstream) (uint32_t ctx_id, const char *c_path, int fd, uint8_t *const c_mac, uint32_t features, uint32_t flags);
--  int cpus, ram_mib, gpu_flags, nested_virt, ret;
-+  int32_t (*krun_add_net_tap) (uint32_t ctx_id, const char *c_tap_name, uint8_t *const c_mac, uint32_t features, uint32_t flags);
-+  int32_t (*krun_add_vsock_port2) (uint32_t ctx_id, uint32_t port, const char *c_filepath, bool listen);
-+  const char *vsock_path, *vsock_connect_path, *tap_name, *mac_string;
-+  unsigned int mac_values[6];
-+  uint8_t mac[6];
-+  int chars, cpus, ram_mib, gpu_flags, nested_virt, vsock_port, vsock_connect_port, ret;
+   int32_t (*krun_add_net_tap) (uint32_t ctx_id, const char *c_tap_name, const uint8_t *c_mac, uint32_t features, uint32_t flags);
++  int32_t (*krun_add_vsock_port2) (uint32_t ctx_id, uint32_t port, const char *c_filepath, bool listen) = NULL;
++  const char *vsock_path, *vsock_connect_path;
++  int cpus, ram_mib, nested_virt, vsock_port, vsock_connect_port, ret;
+   int32_t (*krun_set_gpu_options) (uint32_t ctx_id, uint32_t virgl_flags);
+   int32_t (*krun_set_gpu_render_server_fd) (uint32_t ctx_id, int fd);
+-  int cpus, ram_mib, nested_virt, ret;
    cpu_set_t set;
 
--  cpus = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.cpus", "cpus");
+-  /* We let the OCI set the number of vCPUs for the VM, since cgroups CPU restrictions still apply. */
+-  cpus = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.cpus", "cpus", true);
 +  cpus = libkrun_parse_resource_configuration (kconf->config_tree, "cpus");
    if (cpus <= 0)
      {
        CPU_ZERO (&set);
-@@ -269,7 +528,7 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+@@ -312,8 +516,7 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
          cpus = 1;
      }
 
--  ram_mib = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.ram_mib", "ram_mib");
+-  /* We let the OCI set the amount of RAM for the VM, since cgroups memory restrictions still apply. */
+-  ram_mib = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.ram_mib", "ram_mib", true);
 +  ram_mib = libkrun_parse_resource_configuration (kconf->config_tree, "ram_mib");
    if (ram_mib <= LIBKRUN_MINIMUM_RAM_MIB)
      {
        if (def && def->linux && def->linux->resources && def->linux->resources->memory
-@@ -288,7 +547,7 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+@@ -332,7 +535,7 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
    if (UNLIKELY (ret < 0))
      return crun_make_error (err, -ret, "could not set krun vm configuration");
 
--  gpu_flags = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.gpu_flags", "gpu_flags");
-+  gpu_flags = libkrun_parse_resource_configuration (kconf->config_tree, "gpu_flags");
-   if (gpu_flags > 0)
-     {
-       if (access ("/dev/dri", F_OK) != 0)
-@@ -302,7 +561,7 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
-         return crun_make_error (err, -ret, "could not enable virtio gpu");
-     }
-
--  nested_virt = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.nested_virt", "nested_virt");
+-  nested_virt = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.nested_virt", "nested_virt", false);
 +  nested_virt = libkrun_parse_resource_configuration (kconf->config_tree, "nested_virt");
    if (nested_virt > 0)
      {
        int32_t (*krun_check_nested_virt) (void);
-@@ -334,6 +593,74 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
-       if (UNLIKELY (ret < 0))
-         return crun_make_error (err, -ret, "could not set krun net configuration");
-     }
-+  else if (kconf->use_tap)
-+    {
-+      tap_name = libkrun_string_configuration (kconf->config_tree, "tap_name");
-+      mac_string = libkrun_string_configuration (kconf->config_tree, "net_mac");
-+      if (tap_name == NULL || mac_string == NULL)
-+        return crun_make_error (err, EINVAL, "trusted krun TAP policy requires tap_name and net_mac");
+@@ -358,8 +561,26 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+         return crun_make_error (err, 0, "could not find symbol `krun_add_net_tap` in the krun library");
+
+       uint8_t mac[6];
+-      libkrun_make_tap_mac (container->context->id, mac);
+-      ret = krun_add_net_tap (ctx_id, kconf->tap_name, &mac[0], COMPAT_NET_FEATURES, 0);
++      unsigned int mac_values[6];
++      const char *mac_string = libkrun_string_configuration (kconf->config_tree, "net_mac");
++      int chars = 0;
++      if (mac_string == NULL)
++        return crun_make_error (err, EINVAL, "trusted krun TAP policy requires net_mac");
 +
-+      chars = 0;
 +      if (sscanf (mac_string, "%2x:%2x:%2x:%2x:%2x:%2x%n",
 +                  &mac_values[0], &mac_values[1], &mac_values[2],
 +                  &mac_values[3], &mac_values[4], &mac_values[5],
@@ -548,15 +565,14 @@ index 6e249a9..8fd17b1 100644
 +      if ((mac[0] & 1) != 0)
 +        return crun_make_error (err, EINVAL, "trusted krun net_mac must be a unicast MAC address");
 +
-+      krun_add_net_tap = dlsym (handle, "krun_add_net_tap");
-+      if (krun_add_net_tap == NULL)
-+        return crun_make_error (err, 0, "could not find symbol `krun_add_net_tap` in the krun library");
-+
-+      ret = krun_add_net_tap (ctx_id, tap_name, &mac[0], COMPAT_NET_FEATURES, NET_FLAG_DHCP_CLIENT);
-+      if (UNLIKELY (ret < 0))
-+        return crun_make_error (err, -ret, "could not configure krun TAP device `%s`", tap_name);
-+    }
-+
++      ret = krun_add_net_tap (ctx_id, kconf->tap_name, &mac[0], COMPAT_NET_FEATURES, NET_FLAG_DHCP_CLIENT);
+       if (UNLIKELY (ret < 0))
+         return crun_make_error (err, -ret, "could not add krun TAP interface `%s`", kconf->tap_name);
+     }
+@@ -377,6 +598,45 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+         return crun_make_error (err, -ret, "could not set krun net configuration");
+     }
+
 +  vsock_path = libkrun_string_configuration (kconf->config_tree, "vsock_path");
 +  vsock_port = libkrun_parse_resource_configuration (kconf->config_tree, "vsock_port");
 +  if (vsock_path != NULL || vsock_port >= 0)
@@ -595,64 +611,55 @@ index 6e249a9..8fd17b1 100644
 +      if (UNLIKELY (ret < 0))
 +        return crun_make_error (err, -ret, "could not configure krun host UNIX socket `%s`", vsock_connect_path);
 +    }
-
-   if (kconf->config_tree != NULL)
++
+   if (kconf->gpu_flags > 0)
      {
-@@ -350,7 +677,7 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+       krun_set_gpu_options = dlsym (kconf->handle, "krun_set_gpu_options");
+@@ -405,20 +665,16 @@ libkrun_configure_vm (uint32_t ctx_id, void *handle, struct krun_config *kconf,
+        * specify a kernel, libkrun automatically fall back to using libkrunfw,
+        * if the library is present and was loaded while creating the context.
+        */
+-      int custom_kernel = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.custom_kernel", "custom_kernel", false);
+-      if (custom_kernel > 0)
+-        {
+-          ret = libkrun_configure_kernel (ctx_id, handle, kconf->config_tree, err);
+-          if (UNLIKELY (ret))
+-            return ret;
+-        }
++      ret = libkrun_configure_kernel (ctx_id, handle, kconf->config_tree, err);
++      if (UNLIKELY (ret))
++        return ret;
+     }
+
+   return 0;
  }
 
  static int
--libkrun_configure_flavor (void *cookie, json_object *config_tree, libcrun_container_t *container, libcrun_error_t *err)
+-libkrun_configure_flavor (void *cookie, libcrun_container_t *container, libcrun_error_t *err)
 +libkrun_configure_flavor (void *cookie, json_object *config_tree, libcrun_error_t *err)
  {
    int ret, sev_indicated = 0, awsnitro_indicated = 0;
    struct krun_config *kconf = (struct krun_config *) cookie;
-@@ -361,11 +688,8 @@ libkrun_configure_flavor (void *cookie, json_object *config_tree, libcrun_contai
+@@ -428,8 +684,7 @@ libkrun_configure_flavor (void *cookie, libcrun_container_t *container, libcrun_
    close_handles[0] = NULL;
    close_handles[1] = NULL;
 
 -  // Check if the user provided the krun variant through OCI annotations.
 -  flavor = find_annotation (container, "krun.variant");
--  if (flavor == NULL && config_tree != NULL)
-+  if (config_tree != NULL)
++  flavor = libkrun_string_configuration (config_tree, "flavor");
+   if (flavor != NULL)
      {
--      // If the user doesn't specify a variant via OCI annotations, check the krun VM config to see if the "flavor" field was populated.
-       val_flavor = json_object_object_get (config_tree, "flavor");
-       if (val_flavor != NULL && json_object_is_type (val_flavor, json_type_string))
-         flavor = json_object_get_string (val_flavor);
-@@ -377,10 +701,6 @@ libkrun_configure_flavor (void *cookie, json_object *config_tree, libcrun_contai
-       awsnitro_indicated |= strcmp (flavor, KRUN_FLAVOR_AWS_NITRO) == 0;
-     }
-
--  // To maintain backward compatibility, also use the SEV flavor if the
--  // KRUN_SEV_FILE was found.
--  sev_indicated |= access (KRUN_SEV_FILE, F_OK) == 0;
--
-   if (sev_indicated)
-     {
-       if (kconf->handle_sev == NULL)
-@@ -442,10 +762,10 @@ libkrun_exec (void *cookie, libcrun_container_t *container, const char *pathname
-                             const char *const argv[], const char *const envp[]);
-   struct krun_config *kconf = (struct krun_config *) cookie;
-   void *handle;
+       sev_indicated |= strcmp (flavor, KRUN_FLAVOR_SEV) == 0;
+@@ -500,7 +755,7 @@ libkrun_exec (void *cookie, libcrun_container_t *container, const char *pathname
    int32_t ctx_id, ret;
    libcrun_error_t err;
 
--  ret = libkrun_configure_flavor (cookie, kconf->config_tree, container, &err);
+-  ret = libkrun_configure_flavor (cookie, container, &err);
 +  ret = libkrun_configure_flavor (cookie, kconf->config_tree, &err);
    if (UNLIKELY (ret < 0))
      {
        int errcode = crun_error_get_errno (&err);
-@@ -544,18 +864,29 @@ libkrun_exec (void *cookie, libcrun_container_t *container, const char *pathname
-         error (EXIT_FAILURE, -ret, "could not set enclave execution arguments");
-     }
-
-   ret = libkrun_configure_vm (ctx_id, handle, kconf, container, &err);
-   if (UNLIKELY (ret))
-     {
-       int errcode = crun_error_get_errno (&err);
-       libcrun_error_t *tmp_err = &err;
-       libcrun_error_write_warning_and_release (NULL, &tmp_err);
+@@ -608,7 +863,18 @@ libkrun_exec (void *cookie, libcrun_container_t *container, const char *pathname
        error (EXIT_FAILURE, errcode, "could not configure krun vm");
      }
 
@@ -671,37 +678,55 @@ index 6e249a9..8fd17b1 100644
 
    ret = krun_start_enter (ctx_id);
    if (UNLIKELY (ret < 0))
-     error (EXIT_FAILURE, -ret, "could not start krun");
-
-@@ -563,7 +894,7 @@ libkrun_exec (void *cookie, libcrun_container_t *container, const char *pathname
+@@ -618,11 +884,11 @@ libkrun_exec (void *cookie, libcrun_container_t *container, const char *pathname
  }
 
  static int
--libkrun_start_passt (void *cookie, libcrun_container_t *container)
-+libkrun_start_passt (void *cookie)
+-libkrun_start_render_server (struct krun_config *kconf, libcrun_container_t *container, libcrun_error_t *err)
++libkrun_start_render_server (struct krun_config *kconf, libcrun_error_t *err)
+ {
+   int ret;
+
+-  kconf->gpu_flags = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.gpu_flags", "gpu_flags", false);
++  kconf->gpu_flags = libkrun_parse_resource_configuration (kconf->config_tree, "gpu_flags");
+   if (kconf->gpu_flags > 0)
+     {
+       if (access ("/dev/dri", F_OK) != 0)
+@@ -721,7 +987,7 @@ libkrun_start_render_server (struct krun_config *kconf, libcrun_container_t *con
+ }
+
+ static int
+-libkrun_configure_network (void *cookie, libcrun_container_t *container, libcrun_error_t *err)
++libkrun_configure_network (void *cookie, libcrun_error_t *err)
  {
    struct krun_config *kconf = (struct krun_config *) cookie;
    pid_t pid;
-@@ -575,9 +906,16 @@ libkrun_start_passt (void *cookie, libcrun_container_t *container)
+@@ -733,22 +999,11 @@ libkrun_configure_network (void *cookie, libcrun_container_t *container, libcrun
    int null;
    int ret;
 
--  use_passt = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.use_passt", "use_passt");
+-  ret = libkrun_parse_string_configuration (kconf->config_tree, container,
+-                                            "krun.tap_name", "tap_name",
+-                                            &kconf->tap_name, err, false);
+-  if (UNLIKELY (ret < 0))
+-    return ret;
+-
+-  if (kconf->tap_name != NULL && is_empty_string (kconf->tap_name))
+-    return crun_make_error (err, 0, "krun.tap_name cannot be empty");
+-
+-  use_passt = libkrun_parse_resource_configuration (kconf->config_tree, container, "krun.use_passt", "use_passt", false);
+-
 +  use_passt = libkrun_parse_resource_configuration (kconf->config_tree, "use_passt");
    if (use_passt > 0)
--    kconf->use_passt = 1;
-+    {
-+      if (kconf->use_tap)
-+        {
-+          errno = EINVAL;
-+          return -1;
-+        }
-+      kconf->use_passt = 1;
-+    }
+     {
+       if (kconf->tap_name != NULL)
+-        return crun_make_error (err, 0, "krun.tap_name and krun.use_passt are mutually exclusive");
+-
++        return crun_make_error (err, EINVAL, "krun TAP networking and passt are mutually exclusive");
+       kconf->use_passt = 1;
+     }
    else
-     return 0;
-
-@@ -589,12 +927,12 @@ libkrun_start_passt (void *cookie, libcrun_container_t *container)
+@@ -763,12 +1018,12 @@ libkrun_configure_network (void *cookie, libcrun_container_t *container, libcrun
    argv_idx = 0;
    passt_argv[argv_idx++] = (char *) "passt";
    passt_argv[argv_idx++] = (char *) "-t";
@@ -716,8 +741,8 @@ index 6e249a9..8fd17b1 100644
        passt_argv[argv_idx++] = (char *) "--no-dhcp-dns";
      }
 
-@@ -634,6 +972,358 @@ libkrun_start_passt (void *cookie, libcrun_container_t *container)
-   return 0;
+@@ -826,6 +1081,360 @@ spec_has_device (runtime_spec_schema_config_schema *def, const char *path)
+   return false;
  }
 
 +static bool
@@ -899,6 +924,7 @@ index 6e249a9..8fd17b1 100644
 +  runtime_spec_schema_config_schema *def = container->container_def;
 +  const char *tap_name;
 +
++  kconf->tap_name = NULL;
 +  tap_name = libkrun_string_configuration (kconf->config_tree, "tap_name");
 +  if (tap_name == NULL)
 +    return 0;
@@ -908,7 +934,8 @@ index 6e249a9..8fd17b1 100644
 +  if (! libkrun_valid_ifname (tap_name) || strcmp (tap_name, "lo") == 0 || strcmp (tap_name, "krunbr0") == 0)
 +    return crun_make_error (err, EINVAL, "invalid or reserved krun TAP interface name");
 +
-+  kconf->use_tap = true;
++  /* Borrowed from the trusted policy; rebind after each policy reload. */
++  kconf->tap_name = tap_name;
 +  return 0;
 +}
 +
@@ -936,7 +963,7 @@ index 6e249a9..8fd17b1 100644
 +  int tap_owned;
 +  int ret;
 +
-+  tap_name = libkrun_string_configuration (kconf->config_tree, "tap_name");
++  tap_name = kconf->tap_name;
 +  if (tap_name == NULL)
 +    return 0;
 +
@@ -1042,7 +1069,7 @@ index 6e249a9..8fd17b1 100644
 +  if (UNLIKELY (ret < 0))
 +    return ret;
 +
-+  if (! kconf->use_tap)
++  if (kconf->tap_name == NULL)
 +    return 0;
 +
 +  current_netns = open ("/proc/self/ns/net", O_RDONLY | O_CLOEXEC);
@@ -1075,7 +1102,7 @@ index 6e249a9..8fd17b1 100644
  /* libkrun_create_kvm_device: explicitly adds kvm device.  */
  static int
  libkrun_configure_container (void *cookie, enum handler_configure_phase phase,
-@@ -691,7 +1381,7 @@ libkrun_configure_container (void *cookie, enum handler_configure_phase phase,
+@@ -882,11 +1491,11 @@ libkrun_configure_container (void *cookie, enum handler_configure_phase phase,
        if (UNLIKELY (ret < 0))
          return ret;
 
@@ -1083,21 +1110,26 @@ index 6e249a9..8fd17b1 100644
 +      ret = libkrun_read_trusted_policy (kconf, container, err);
        if (UNLIKELY (ret < 0))
          return ret;
+
+-      ret = libkrun_start_render_server (kconf, container, err);
++      ret = libkrun_start_render_server (kconf, err);
+       if (UNLIKELY (ret < 0))
+         return ret;
      }
-@@ -699,7 +1389,11 @@ libkrun_configure_container (void *cookie, enum handler_configure_phase phase,
+@@ -894,7 +1503,11 @@ libkrun_configure_container (void *cookie, enum handler_configure_phase phase,
    if (phase != HANDLER_CONFIGURE_AFTER_MOUNTS)
      return 0;
 
--  ret = libkrun_start_passt (cookie, container);
+-  ret = libkrun_configure_network (cookie, container, err);
 +  ret = libkrun_prepare_tap_config (cookie, container, err);
 +  if (UNLIKELY (ret < 0))
 +    return ret;
 +
-+  ret = libkrun_start_passt (cookie);
++  ret = libkrun_configure_network (cookie, err);
    if (UNLIKELY (ret < 0))
-     return crun_make_error (err, errno, "start passt");
+     return ret;
 
-@@ -856,6 +1550,8 @@ libkrun_unload (void *cookie, libcrun_error_t *err)
+@@ -1030,6 +1643,8 @@ libkrun_unload (void *cookie, libcrun_error_t *err)
    struct krun_config *kconf = (struct krun_config *) cookie;
    if (kconf != NULL)
      {
@@ -1106,7 +1138,7 @@ index 6e249a9..8fd17b1 100644
        if (kconf->handle != NULL)
          {
            r = dlclose (kconf->handle);
-@@ -1011,6 +1707,7 @@ struct custom_handler_s handler_libkrun = {
+@@ -1201,6 +1816,7 @@ struct custom_handler_s handler_libkrun = {
    .unload = libkrun_unload,
    .run_func = libkrun_exec,
    .configure_container = libkrun_configure_container,
@@ -1138,7 +1170,7 @@ index a61043b..aa57460 100644
 +    }
 +}
 diff --git a/libkrun/src/devices/src/virtio/vsock/muxer.rs b/libkrun/src/devices/src/virtio/vsock/muxer.rs
-index f4c1024..aba2749 100644
+index 6cf8b6f..b8add87 100644
 --- a/libkrun/src/devices/src/virtio/vsock/muxer.rs
 +++ b/libkrun/src/devices/src/virtio/vsock/muxer.rs
 @@ -169,6 +169,10 @@ impl VsockMuxer {
@@ -1153,7 +1185,7 @@ index f4c1024..aba2749 100644
          !self.rxq.lock().unwrap().is_empty()
      }
 diff --git a/libkrun/src/devices/src/virtio/vsock/unix.rs b/libkrun/src/devices/src/virtio/vsock/unix.rs
-index 2f51c05..a41038f 100644
+index f88eb70..ab22b6b 100644
 --- a/libkrun/src/devices/src/virtio/vsock/unix.rs
 +++ b/libkrun/src/devices/src/virtio/vsock/unix.rs
 @@ -10,10 +10,12 @@ use nix::sys::socket::{
@@ -1170,7 +1202,7 @@ index 2f51c05..a41038f 100644
  use std::sync::{Arc, Mutex};
 
  #[cfg(target_os = "macos")]
-@@ -619,9 +621,117 @@ impl AsRawFd for UnixProxy {
+@@ -652,9 +654,117 @@ impl AsRawFd for UnixProxy {
      }
  }
 
@@ -1288,7 +1320,7 @@ index 2f51c05..a41038f 100644
      peer_port: u32,
  }
 
-@@ -639,9 +749,19 @@ impl UnixAcceptorProxy {
+@@ -672,9 +782,19 @@ impl UnixAcceptorProxy {
              &UnixAddr::new(path).map_err(ProxyError::CreatingSocket)?,
          )
          .map_err(ProxyError::CreatingSocket)?;
@@ -1311,7 +1343,7 @@ index 2f51c05..a41038f 100644
      }
  }
 
-@@ -719,3 +839,50 @@ impl AsRawFd for UnixAcceptorProxy {
+@@ -752,3 +872,50 @@ impl AsRawFd for UnixAcceptorProxy {
          self.fd.as_raw_fd()
      }
  }
@@ -1578,10 +1610,10 @@ index 3c107e5..ff80259 100644
              goto cleanup;
      } else {
 diff --git a/libkrun/src/vmm/src/builder.rs b/libkrun/src/vmm/src/builder.rs
-index 1714390..a1b1b0c 100644
+index 72831f1..ebbfe78 100644
 --- a/libkrun/src/vmm/src/builder.rs
 +++ b/libkrun/src/vmm/src/builder.rs
-@@ -2189,6 +2189,8 @@ fn attach_unixsock_vsock_device(
+@@ -2199,6 +2199,8 @@ fn attach_unixsock_vsock_device(
          .add_subscriber(unix_vsock.clone())
          .map_err(RegisterEvent)?;
 
