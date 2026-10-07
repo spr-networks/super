@@ -160,6 +160,7 @@ type HostapdConfigEntry struct {
 	Rrm_neighbor_report          int
 	Rrm_beacon_report            int
 	Rrm_link_measurement_report  int
+	Rnr                          int
 	Op_class                     int
 	Rsn_pairwise                 string
 	Rssi_reject_assoc_rssi       int
@@ -170,6 +171,10 @@ type HostapdConfigEntry struct {
 }
 
 func (h *HostapdConfigEntry) Validate() error {
+	if h.Rnr != 0 && h.Rnr != 1 {
+		return fmt.Errorf("Rnr must be 0 or 1")
+	}
+
 	// Check for newlines in string fields
 	if strings.ContainsAny(h.Country_code, "\n") {
 		return fmt.Errorf("Country_code contains newlines")
@@ -849,6 +854,7 @@ func updateExtraBSSLocked(iface, data, MACOverride string) string {
 				data += "bssid=" + new_bssid + "\n"
 				data += "ssid=" + entry.ExtraBSS[i].Ssid + "\n"
 				data += "rrm_neighbor_report=1\n"
+				data += "rnr=1\n"
 				if entry.ExtraBSS[i].Wpa == "0" {
 					// Open AP
 				} else {
@@ -990,6 +996,7 @@ func generateHostapdMldLinkConfig(primaryConf map[string]interface{}, iface stri
 		"wmm_enabled", "wpa_disable_eapol_key_retries",
 		"ap_isolate", "multicast_to_unicast", "tdls_prohibit", "per_sta_vif",
 		"ctrl_interface",
+		"rnr", "rrm_neighbor_report", "rrm_beacon_report", "rrm_link_measurement_report",
 	}
 
 	for _, key := range sharedKeys {
@@ -1306,6 +1313,10 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	if _, ok := newInput["Rrm_neighbor_report"]; ok {
 		conf["rrm_neighbor_report"] = newConf.Rrm_neighbor_report
+	}
+
+	if _, ok := newInput["Rnr"]; ok {
+		conf["rnr"] = newConf.Rnr
 	}
 
 	if _, ok := newInput["Rrm_beacon_report"]; ok {
