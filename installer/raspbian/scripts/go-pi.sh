@@ -18,6 +18,7 @@ if [ "${#KRUN_DEBS[@]}" -ne 1 ]; then
 fi
 install -m 0755 -d /mnt/fs/var/cache/apt/archives
 install -m 0644 "${KRUN_DEBS[0]}" /mnt/fs/var/cache/apt/archives/
+/scripts/fetch-spr-kernel.sh /mnt/fs/var/cache/spr-kernel || exit 1
 mount --bind /dev/ /mnt/fs/dev/
 # this just downloads packages onto the image. not much else.
 # the rest is done on an aarch64 conatiner with pi-target-install.sh

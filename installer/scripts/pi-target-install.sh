@@ -59,14 +59,12 @@ dpkg --configure -a
 # sync with install.sh and cross-install.sh
 apt -y upgrade --no-download
 apt -y install --no-download --no-install-recommends nftables wireless-regdb ethtool nano iw fdisk tmux conntrack jq inotify-tools dhcpcd cloud-guest-utils
-# Install latest SPR custom kernel + headers from spr-debian-kernel
-pushd /tmp
-for url in $(wget -qO- "https://api.github.com/repos/spr-networks/spr-debian-kernel/releases/latest" | grep browser_download_url | grep -o 'https://[^"]*\.deb'); do
-  wget "$url"
-done
-dpkg -i linux-image-*.deb linux-headers-*.deb linux-libc-dev_*.deb
-rm -f /tmp/*.deb
+# Install SPR custom kernel + headers from spr-debian-kernel, fetched and
+# provenance-verified on the build host by fetch-spr-kernel.sh
+pushd /var/cache/spr-kernel
+dpkg -i linux-image-*.deb linux-headers-*.deb linux-libc-dev_*.deb || exit 1
 popd
+rm -rf /var/cache/spr-kernel
 
 useradd -m -s /bin/bash ubuntu
 echo "ubuntu:ubuntu" | chpasswd

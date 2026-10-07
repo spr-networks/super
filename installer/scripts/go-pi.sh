@@ -11,6 +11,7 @@ cp /scripts/run-scripts/setup.sh /mnt/fs/
 cp /scripts/run-scripts/run.sh /mnt/fs/
 cp /scripts/spr-environment.sh /mnt/fs/
 cp /scripts/pi-target-install.sh /mnt/fs/pi-target-install.sh
+/scripts/fetch-spr-kernel.sh /mnt/fs/var/cache/spr-kernel || exit 1
 mount --bind /dev/ /mnt/fs/dev/
 # this just downloads packages onto the image. not much else.
 # the rest is done on an aarch64 conatiner with pi-target-install.sh

@@ -28,7 +28,7 @@ mkdir -p "$OUTPUT_DIR"
 cd "$BUILD_DIR"
 
 download \
-    "https://github.com/containers/libkrun/archive/${LIBKRUN_COMMIT}.tar.gz" \
+    "https://github.com/libkrun/libkrun/archive/${LIBKRUN_COMMIT}.tar.gz" \
     libkrun.tar.gz \
     "$LIBKRUN_SHA256"
 download \
@@ -82,16 +82,16 @@ COMBINED_PATCH="$SCRIPT_DIR/patches/0001-spr-krun-runtime.patch"
 git -C "$SOURCE_ROOT" apply --check --whitespace=error-all "$COMBINED_PATCH"
 git -C "$SOURCE_ROOT" apply --whitespace=error-all "$COMBINED_PATCH"
 
-cp "$SCRIPT_DIR/patches/libkrunfw/0001-krunfw-Don-t-panic-when-init-dies.patch" \
-    "$LIBKRUNFW_DIR/patches/0001-krunfw-Don-t-panic-when-init-dies.patch"
+# These patches are rebased onto our newer guest kernel, not upstream's 6.12.
+cp "$SCRIPT_DIR"/patches/libkrunfw/*.patch "$LIBKRUNFW_DIR/patches/"
 mkdir -p "$LIBKRUNFW_DIR/patches/archived"
 mv \
     "$LIBKRUNFW_DIR"/patches/000[3-9]-*.patch \
     "$LIBKRUNFW_DIR"/patches/001[0-9]-*.patch \
     "$LIBKRUNFW_DIR"/patches/002[235-9]-*.patch \
-    "$LIBKRUNFW_DIR"/patches/0030-*.patch \
+    "$LIBKRUNFW_DIR"/patches/003[0-6]-*.patch \
     "$LIBKRUNFW_DIR/patches/archived/"
-test "$(find "$LIBKRUNFW_DIR/patches/archived" -maxdepth 1 -type f -name '0*.patch' | wc -l)" -eq 25
+test "$(find "$LIBKRUNFW_DIR/patches/archived" -maxdepth 1 -type f -name '0*.patch' | wc -l)" -eq 31
 test "$(find "$LIBKRUNFW_DIR/patches" -maxdepth 1 -type f -name '0*.patch' | wc -l)" -eq 5
 sed -i \
     -e "s/^KERNEL_VERSION = .*/KERNEL_VERSION = $LIBKRUNFW_KERNEL_VERSION/" \
@@ -155,7 +155,9 @@ make -C "$LIBKRUNFW_DIR/$LIBKRUNFW_KERNEL_VERSION" olddefconfig
 (
     cd "$LIBKRUNFW_DIR"
     make -j"${MAKE_JOBS:-$(nproc)}"
-    make PREFIX=/usr/local DESTDIR="$FW_SDK_DIR" install
+    # Keep the private packaging layout stable despite libkrunfw's new Debian
+    # multiarch installation default.
+    make PREFIX=/usr/local LIBDIR_Linux=lib64 DESTDIR="$FW_SDK_DIR" install
 )
 
 # The create child and a later start command do not share handler memory.
@@ -165,9 +167,10 @@ make -C "$LIBKRUNFW_DIR/$LIBKRUNFW_KERNEL_VERSION" olddefconfig
 awk '
     /^libkrun_start_container \(/ { in_start = 1 }
     in_start && /libkrun_read_trusted_policy/ { policy = NR }
-    in_start && /if \(! kconf->use_tap\)/ { gate = NR }
+    in_start && /libkrun_prepare_tap_config/ { prepared = NR }
+    in_start && /if \(kconf->tap_name == NULL\)/ { gate = NR }
     in_start && /^}/ { in_start = 0 }
-    END { exit ! (policy > 0 && gate > policy) }
+    END { exit ! (policy > 0 && prepared > policy && gate > prepared) }
 ' "$CRUN_DIR/src/libcrun/handlers/krun.c"
 awk '
     /libcrun_move_network_devices \(container, pid, err\)/ { in_window = 1; moved = NR }
@@ -175,6 +178,36 @@ awk '
     in_window && /sync send own pid/ { synced = NR; in_window = 0 }
     END { exit ! (moved > 0 && hook > moved && synced > hook) }
 ' "$CRUN_DIR/src/libcrun/container.c"
+
+# Upstream also supports annotation/image-supplied configuration. SPR accepts
+# only the manager-issued policy token, and TAP must never enable passt as a
+# fallback. Check the opt-in gate before any passt socket/process is created.
+test "$(grep -c 'find_annotation (' "$CRUN_DIR/src/libcrun/handlers/krun.c")" -eq 1
+grep -F 'find_annotation (container, SPR_KRUN_POLICY_ANNOTATION)' \
+    "$CRUN_DIR/src/libcrun/handlers/krun.c" >/dev/null
+if grep -F 'libkrun_read_vm_config' "$CRUN_DIR/src/libcrun/handlers/krun.c"; then
+    echo "crun still accepts image-supplied krun configuration" >&2
+    exit 1
+fi
+awk '
+    /^libkrun_configure_network \(/ { in_passt = 1 }
+    in_passt && /use_passt = libkrun_parse_resource_configuration/ { policy = NR }
+    in_passt && /if \(use_passt > 0\)/ { opt_in = NR }
+    in_passt && /TAP networking and passt are mutually exclusive/ { exclusive = NR }
+    in_passt && /return 0;/ && ! skipped { skipped = NR }
+    in_passt && /ret = socketpair/ { socket = NR }
+    in_passt && /^}/ { in_passt = 0 }
+    END { exit ! (policy > 0 && opt_in > policy && exclusive > opt_in && skipped > exclusive && socket > skipped) }
+' "$CRUN_DIR/src/libcrun/handlers/krun.c"
+
+# Use upstream's TAP selector with SPR's policy-owned name, MAC and DHCP.
+grep -F 'kconf->tap_name = tap_name;' "$CRUN_DIR/src/libcrun/handlers/krun.c" >/dev/null
+grep -F 'krun_add_net_tap (ctx_id, kconf->tap_name, &mac[0], COMPAT_NET_FEATURES, NET_FLAG_DHCP_CLIENT)' \
+    "$CRUN_DIR/src/libcrun/handlers/krun.c" >/dev/null
+if grep -E 'use_tap|libkrun_make_tap_mac' "$CRUN_DIR/src/libcrun/handlers/krun.c"; then
+    echo "crun must use upstream tap_name with the manager-assigned MAC" >&2
+    exit 1
+fi
 
 # Kernel tunnel placeholders can exist in every new network namespace.  Uplink
 # discovery must identify the single Docker-style veth, not every non-loopback
