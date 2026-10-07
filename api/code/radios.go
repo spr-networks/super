@@ -848,6 +848,7 @@ func updateExtraBSSLocked(iface, data, MACOverride string) string {
 				data += "ctrl_interface=/state/wifi/control_" + iface + ".ap" + strconv.Itoa(i) + "\n"
 				data += "bssid=" + new_bssid + "\n"
 				data += "ssid=" + entry.ExtraBSS[i].Ssid + "\n"
+				data += "rrm_neighbor_report=1\n"
 				if entry.ExtraBSS[i].Wpa == "0" {
 					// Open AP
 				} else {
