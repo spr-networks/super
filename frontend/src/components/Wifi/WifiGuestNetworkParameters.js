@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
 import { AlertContext } from 'AppContext'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   Button,
@@ -87,6 +88,12 @@ const WifiChannelParameters = ({
 
   const [selectedMode, setSelectedMode] = useState(modes[0])
   const [groupValues, setGroupValues] = useState(['wpa2', 'wpa3', 'guestpass'])
+
+  const handleGroupChange = (values) => {
+    // Text input changes can also reach CheckboxGroup on iOS. Only checkbox
+    // selections should replace the array used throughout this form.
+    if (Array.isArray(values)) setGroupValues(values)
+  }
 
   const extra = curInterface?.ExtraBSS?.length === 1
     ? curInterface.ExtraBSS[0]
@@ -258,7 +265,7 @@ const WifiChannelParameters = ({
         <CheckboxGroup
           value={groupValues}
           accessibilityLabel="WiFi Settings"
-          onChange={setGroupValues}
+          onChange={handleGroupChange}
         >
           <HStack pb="$4" space="md">
             <Checkbox {...guestCheckboxProps} value={'guest_enabled'}>
@@ -318,15 +325,20 @@ const WifiChannelParameters = ({
               </CheckboxIndicator>
               <CheckboxLabel>Use Static Password</CheckboxLabel>
             </Checkbox>
+            </>
+          )}
+          </VStack>
+        </CheckboxGroup>
 
-
+        {groupValues.includes('guest_enabled') && (
+          <VStack space="md">
             <HStack>
               <Text flex={1}> Guest SSID Name</Text>
               <Input flex={2} size="md" variant="underlined">
                 <InputField
                   type="text"
                   value={extraSSID}
-                  onChangeText={(value) => setExtraSSID(value)}
+                  onChangeText={(value) => setExtraSSID(normalizeTextInput(value))}
                   autoComplete="off"
                 />
               </Input>
@@ -347,7 +359,7 @@ const WifiChannelParameters = ({
                       aria-label="Guest Password"
                       type={uipasswordType}
                       value={guestPassword}
-                      onChangeText={(value) => setGuestPassword(typeof value === 'string' ? value : '')}
+                      onChangeText={(value) => setGuestPassword(normalizeTextInput(value))}
                       autoComplete="off"
                       autoCorrect={false}
                     />
@@ -368,12 +380,8 @@ const WifiChannelParameters = ({
               </HStack>
             )}
 
-            </>
-          )}
-
           </VStack>
-
-        </CheckboxGroup>
+        )}
 
 
         <Button
