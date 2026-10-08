@@ -4,6 +4,7 @@ import { Linking, Platform } from 'react-native'
 import { AppContext, AlertContext } from 'AppContext'
 import { DEFAULT_CUSTOM, themeFonts, allThemeFontFacesCss } from 'Themes'
 import ThemePreview from 'components/ThemePreview'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   Box,
@@ -195,7 +196,7 @@ export default function ThemeBuilder() {
               autoComplete="off"
               textContentType="none"
               placeholder="e.g. Sunset"
-              onChangeText={setName}
+              onChangeText={(value) => setName(normalizeTextInput(value))}
               autoCapitalize="none"
               autoCorrect={false}
             />

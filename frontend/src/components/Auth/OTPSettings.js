@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from 'react'
 import { AlertContext } from 'layouts/Admin'
 import { authAPI, setJWTOTPHeader } from 'api'
 import QRCode from 'components/QRCode'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   Box,
@@ -137,7 +138,7 @@ const OTPSettings = (props) => {
               placeholder="OTP Code"
               name="OTP"
               value={code}
-              onChangeText={(value) => setCode(value)}
+              onChangeText={(value) => setCode(normalizeTextInput(value))}
             />
           </Input>
 

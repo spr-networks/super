@@ -6,6 +6,7 @@ import { generateConfigForBand, getBestWifiConfig, isSPRCompat } from 'api/Wifi'
 import { useNavigate } from 'react-router-dom'
 import AddDevice from 'components/Setup/AddDevice'
 import { countryCodes } from 'utils'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 import { Tooltip } from 'components/Tooltip'
 
 import {
@@ -1029,7 +1030,7 @@ const Setup = (props) => {
                 autoFocus
                 value={ssid}
                 placeholder={'N\u0430me of your Wireless Network'}
-                onChangeText={(value) => setSsid(value)}
+                onChangeText={(value) => setSsid(normalizeTextInput(value))}
               />
             </Input>
             {'ssid' in errors ? (
@@ -1117,7 +1118,7 @@ const Setup = (props) => {
                 value={tinynet}
                 placeholder={'Private subnet for network'}
                 onChangeText={(value) => {
-                  setTinynet(value)
+                  setTinynet(normalizeTextInput(value))
                   setNeedIPReload(true)
                 }}
               />
@@ -1138,7 +1139,7 @@ const Setup = (props) => {
                 type="password"
                 value={password}
                 placeholder="Password"
-                onChangeText={(value) => setPassword(value)}
+                onChangeText={(value) => setPassword(normalizeTextInput(value))}
                 onSubmitEditing={handlePress}
               />
               <InputSlot>
@@ -1150,7 +1151,7 @@ const Setup = (props) => {
                 type="password"
                 value={passwordConfirm}
                 placeholder="Confirm Password"
-                onChangeText={(value) => setPasswordConfirm(value)}
+                onChangeText={(value) => setPasswordConfirm(normalizeTextInput(value))}
                 onSubmitEditing={handlePress}
               />
               <InputSlot>

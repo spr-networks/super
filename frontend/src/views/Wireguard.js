@@ -4,6 +4,7 @@ import { wireguardAPI } from 'api/Wireguard'
 import PeerList from 'components/Wireguard/PeerList'
 import SiteVPN from 'components/Wireguard/SiteVPN'
 import { AppContext } from 'AppContext'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   Box,
@@ -85,7 +86,7 @@ const Wireguard = (props) => {
   }
 
   const handleEndpoint = (v) => {
-    setPendingEndpoint(v)
+    setPendingEndpoint(normalizeTextInput(v))
   }
 
   const updateNewDomain = () => {

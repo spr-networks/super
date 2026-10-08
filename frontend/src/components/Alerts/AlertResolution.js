@@ -30,6 +30,7 @@ import { deviceAPI } from 'api'
 import { AlertContext, AppContext } from 'AppContext'
 import AddEndpoint from 'components/Firewall/AddEndpoint'
 import { isAlertResolved } from 'components/Alerts/AlertStateUtil'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 const AlertResolution = ({ item, resolution, onResolved }) => {
   const context = useContext(AlertContext)
@@ -208,7 +209,7 @@ const AlertResolution = ({ item, resolution, onResolved }) => {
                         autoComplete="new-password"
                         value={password}
                         onChangeText={(value) => {
-                          setPassword(value)
+                          setPassword(normalizeTextInput(value))
                           setPasswordError('')
                         }}
                       />

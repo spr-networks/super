@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   Button,
@@ -270,6 +271,7 @@ const InputSelect = (props) => {
   }, [props.value])
 
   const handleChangeText = (newValue) => {
+    newValue = normalizeTextInput(newValue)
     setValue(newValue)
 
     if (props.onChangeText) {
@@ -343,6 +345,10 @@ const InputSelect = (props) => {
     props.isDisabled !== undefined ? props.isDisabled : isMultiple
 
   const displayValue = (value) => {
+    if (value == null) {
+      return ''
+    }
+
     if (typeof value == 'string') {
       return value
     }

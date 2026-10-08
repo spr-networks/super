@@ -1,5 +1,6 @@
 import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { Platform } from 'react-native'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   View,
@@ -413,7 +414,7 @@ const DevicesBulkEdit = (props) => {
             <InputField
               placeholder="group"
               value={groupVal}
-              onChangeText={setGroupVal}
+              onChangeText={(value) => setGroupVal(normalizeTextInput(value))}
             />
           </Input>
           <Button
@@ -430,7 +431,7 @@ const DevicesBulkEdit = (props) => {
             <InputField
               placeholder="tag"
               value={tagVal}
-              onChangeText={setTagVal}
+              onChangeText={(value) => setTagVal(normalizeTextInput(value))}
             />
           </Input>
           <Button

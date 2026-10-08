@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Platform } from 'react-native'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   Badge,
@@ -66,6 +67,7 @@ const AllowlistEditor = ({ item, status, onChange, onDelete }) => {
     })
 
   const onASNQuery = (value) => {
+    value = normalizeTextInput(value)
     setAsnQuery(value)
     if (debounceRef.current) clearTimeout(debounceRef.current)
     if (value.trim().length < 2) {
@@ -140,7 +142,7 @@ const AllowlistEditor = ({ item, status, onChange, onDelete }) => {
               placeholder="203.0.113.10 or 203.0.113.0/24"
               autoCorrect={false}
               autoCapitalize="none"
-              onChangeText={setCIDR}
+              onChangeText={(value) => setCIDR(normalizeTextInput(value))}
               onSubmitEditing={() => addValue('CIDRs', cidr, setCIDR)}
             />
           </Input>
@@ -171,7 +173,7 @@ const AllowlistEditor = ({ item, status, onChange, onDelete }) => {
               placeholder="api.example.com or *.updates.example.com"
               autoCorrect={false}
               autoCapitalize="none"
-              onChangeText={setDomain}
+              onChangeText={(value) => setDomain(normalizeTextInput(value))}
               onSubmitEditing={() => addValue('Domains', domain, setDomain)}
             />
           </Input>
@@ -413,7 +415,7 @@ const AllowlistPane = () => {
                 placeholder="work-services"
                 autoCorrect={false}
                 autoCapitalize="none"
-                onChangeText={setNewName}
+                onChangeText={(value) => setNewName(normalizeTextInput(value))}
                 onSubmitEditing={createAllowlist}
               />
             </Input>

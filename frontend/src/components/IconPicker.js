@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   Button,
@@ -84,7 +85,7 @@ const IconsList = ({ selected, setSelected, color }) => {
             value={filterText}
             autoFocus={true}
             placeholder="Search icons ..."
-            onChangeText={(value) => setFilterText(value)}
+            onChangeText={(value) => setFilterText(normalizeTextInput(value))}
             _onSubmitEditing={() => {}}
           />
         </Input>

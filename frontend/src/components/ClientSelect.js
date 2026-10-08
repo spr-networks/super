@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import { Platform, StyleSheet, TouchableOpacity } from 'react-native'
 import { deviceAPI, groupAPI, firewallAPI, allowlistAPI } from 'api'
 import { getContainerIpMap } from 'api/Containers'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   GlobeIcon,
@@ -405,6 +406,7 @@ const ClientSelect = (props) => {
   }
 
   const handleInputChange = (text) => {
+    text = normalizeTextInput(text)
     setInputValue(text)
     setSelectedOption(null)
 
@@ -414,7 +416,7 @@ const ClientSelect = (props) => {
   }
 
   const handleSearchChange = (text) => {
-    setSearchQuery(text)
+    setSearchQuery(normalizeTextInput(text))
   }
 
   const displayValue = useMemo(() => {

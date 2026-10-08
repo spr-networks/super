@@ -4,6 +4,7 @@ import { AlertContext } from 'AppContext'
 
 import ClientSelect from 'components/ClientSelect'
 import { firewallAPI, deviceAPI } from 'api'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   Badge,
@@ -96,6 +97,7 @@ class AddEndpointImpl extends React.Component {
   }
 
   handleChange(name, value) {
+    if (name === 'Tag') value = normalizeTextInput(value)
     //TODO verify IP && port
     this.setState({ [name]: value })
   }

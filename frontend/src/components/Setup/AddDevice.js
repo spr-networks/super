@@ -3,6 +3,7 @@ import React, { useContext, useState } from 'react'
 import { deviceAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 import { WifiConnect } from 'views/Devices/ConnectDevice'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   Box,
@@ -52,6 +53,8 @@ const AddDevice = ({ disabled, onClose, onConnect, ...props }) => {
   }
 
   const handleChange = (name, value) => {
+    if (name == 'name' || name == 'psk') value = normalizeTextInput(value)
+
     if (name == 'name') {
       setName(value)
 

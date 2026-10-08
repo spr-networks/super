@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 
 import { authAPI, setJWTOTPHeader } from 'api'
 import { isPasskeySupported, validatePasskey } from 'api/Passkey'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   AlertCircleIcon,
@@ -106,7 +107,7 @@ const OTPValidate = ({ onSuccess, onSetup, isLogin, ...props }) => {
             autoFocus
             name="OTP"
             value={code}
-            onChangeText={(value) => setCode(value)}
+            onChangeText={(value) => setCode(normalizeTextInput(value))}
             onSubmitEditing={handleClickOTP}
           />
         </Input>

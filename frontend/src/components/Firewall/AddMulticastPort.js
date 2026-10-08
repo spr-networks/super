@@ -18,6 +18,7 @@ import {
   Spinner
 } from '@gluestack-ui/themed'
 import InputSelect from 'components/InputSelect'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 class AddMulticastPortImpl extends React.Component {
   state = {
@@ -59,6 +60,7 @@ class AddMulticastPortImpl extends React.Component {
   }
 
   handleChange(name, value) {
+    value = normalizeTextInput(value)
     //TODO verify IP && port
     if (name == 'Address') {
       if (this.MulticastPorts[value]) {

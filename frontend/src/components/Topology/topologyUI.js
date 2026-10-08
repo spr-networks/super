@@ -1,6 +1,7 @@
 import React, { useContext, useState } from 'react'
 import { Platform } from 'react-native'
 import { AppContext } from 'AppContext'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   Badge,
@@ -359,7 +360,7 @@ const EditablePills = ({ title, values, addOptions, allowAdd = true, onChange })
                 autoFocus
                 value={text}
                 placeholder={`new ${title.toLowerCase().replace(/s$/, '')}`}
-                onChangeText={setText}
+                onChangeText={(value) => setText(normalizeTextInput(value))}
                 onSubmitEditing={add}
                 onBlur={add}
               />
@@ -562,21 +563,21 @@ const RouteSinkSection = ({ sinks, routes, onAdd, onRemoveRoute }) => {
           <Input size="sm" variant="outline">
             <InputField
               value={cidr}
-              onChangeText={setCidr}
+              onChangeText={(value) => setCidr(normalizeTextInput(value))}
               placeholder="CIDR (0.0.0.0/0 = all traffic)"
             />
           </Input>
           <Input size="sm" variant="outline">
             <InputField
               value={port}
-              onChangeText={setPort}
+              onChangeText={(value) => setPort(normalizeTextInput(value))}
               placeholder="Port or range (optional, ex: 53)"
             />
           </Input>
           <Input size="sm" variant="outline">
             <InputField
               value={dns}
-              onChangeText={setDns}
+              onChangeText={(value) => setDns(normalizeTextInput(value))}
               placeholder="Rewrite plaintext DNS to IP (optional)"
             />
           </Input>

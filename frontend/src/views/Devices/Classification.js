@@ -3,6 +3,7 @@ import { Platform, Linking } from 'react-native'
 import { useLocation } from 'react-router-dom'
 import { AlertContext } from 'AppContext'
 import { classifyAPI } from 'api'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   AddIcon,
@@ -211,7 +212,7 @@ const RuleRow = ({ rule, onChange, onRemove, onShare }) => (
           placeholder={patternPlaceholder(rule.SignalType)}
           autoCapitalize="none"
           autoCorrect={false}
-          onChangeText={(value) => onChange('Pattern', value)}
+          onChangeText={(value) => onChange('Pattern', normalizeTextInput(value))}
         />
       </Input>
     </RuleField>
@@ -222,7 +223,7 @@ const RuleRow = ({ rule, onChange, onRemove, onShare }) => (
           value={rule.Category}
           placeholder="camera"
           autoCapitalize="none"
-          onChangeText={(value) => onChange('Category', value)}
+          onChangeText={(value) => onChange('Category', normalizeTextInput(value))}
         />
       </Input>
     </RuleField>
@@ -232,7 +233,7 @@ const RuleRow = ({ rule, onChange, onRemove, onShare }) => (
         <InputField
           value={rule.Vendor}
           placeholder=""
-          onChangeText={(value) => onChange('Vendor', value)}
+          onChangeText={(value) => onChange('Vendor', normalizeTextInput(value))}
         />
       </Input>
     </RuleField>

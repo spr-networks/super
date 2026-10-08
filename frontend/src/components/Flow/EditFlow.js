@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState, useRef, useCallback } from 'react'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 import { useWindowDimensions } from 'react-native'
 
 import {
@@ -514,7 +515,7 @@ const EditFlow = ({ flow, ...props }) => {
         <Input>
           <InputField
             value={title}
-            onChangeText={setTitle}
+            onChangeText={(value) => setTitle(normalizeTextInput(value))}
             onSubmitEditing={onSubmit}
             placeholder="Enter flow name"
           />

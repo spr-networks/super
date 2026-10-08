@@ -5,6 +5,7 @@ import { blockAPI } from 'api/DNS'
 import ClientSelect from 'components/ClientSelect'
 import { format as timeAgo } from 'timeago.js'
 import InputSelect from 'components/InputSelect'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   Button,
@@ -101,6 +102,7 @@ export default class DNSAddOverride extends React.Component {
   }
 
   handleChange(name, value) {
+    if (name !== 'Expiration') value = normalizeTextInput(value)
     this.validateField(name, value)
     this.setState({ [name]: value })
   }

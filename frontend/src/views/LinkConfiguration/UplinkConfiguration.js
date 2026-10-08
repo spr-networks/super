@@ -5,6 +5,7 @@
       test failover
 */
 import React, { useContext, useEffect, useState } from 'react'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 import { Platform } from 'react-native'
 import {
   Badge,
@@ -253,7 +254,7 @@ const UplinkAddWifi = ({ iface, onSubmit, ...props }) => {
               autoCorrect="off"
               placeholder="Password..."
               value={item.Password}
-              onChangeText={(Password) => setItem({ ...item, Password })}
+              onChangeText={(Password) => setItem({ ...item, Password: normalizeTextInput(Password) })}
               autoFocus
             />
           </Input>
@@ -733,7 +734,7 @@ const UplinkAddPPP = ({ curItem, iface, onSubmit, ...props }) => {
             autoCorrect="off"
             placeholder="Password..."
             value={item.Secret}
-            onChangeText={(Secret) => setItem({ ...item, Secret })}
+            onChangeText={(Secret) => setItem({ ...item, Secret: normalizeTextInput(Secret) })}
             autoFocus
           />
         </Input>

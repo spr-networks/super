@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 import { Platform, Linking } from 'react-native'
 import PropTypes from 'prop-types'
 import { useNavigate } from 'react-router-dom'
@@ -507,6 +508,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   }
 
   const handleName = (name) => {
+    name = normalizeTextInput(name)
     setName(name)
     setEditing(name != device.Name)
   }
@@ -517,6 +519,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   }
 
   const handleVLAN = (value) => {
+    value = normalizeTextInput(value)
     if (isPositiveNumber(value) || value == '') {
       setVlanTag(value)
       setEditing(value != device.VLANTag)
@@ -524,7 +527,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   }
 
   const handlecustomDNS = (value) => {
-    setCustomDNS(value)
+    setCustomDNS(normalizeTextInput(value))
   }
 
   function toLong(ipAddress) {
@@ -579,11 +582,11 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
   }, [rawIP])
 
   const handleIP = (value) => {
-    setRawIP(value)
+    setRawIP(normalizeTextInput(value))
   }
 
   const handleWifiPsk = (value) => {
-    setPSK(value)
+    setPSK(normalizeTextInput(value))
   }
 
   let protocolAuth = { sae: 'WPA3', wpa2: 'WPA2' }

@@ -13,6 +13,7 @@ import {
 import { isPasskeySupported, loginPasskey } from 'api/Passkey'
 import { getBiometryType, saveSecureLogin, loadSecureLogin } from 'api/SecureStore'
 import { useNavigate } from 'react-router-dom'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   Box,
@@ -228,7 +229,7 @@ const Login = (props) => {
             </InputSlot>
             <InputField
               value={hostname}
-              onChangeText={(value) => setHostname(value)}
+              onChangeText={(value) => setHostname(normalizeTextInput(value))}
               type="text"
               placeholder="Hostname"
               autoCapitalize="none"
@@ -249,7 +250,7 @@ const Login = (props) => {
           <Input>
             <InputField
               value={username}
-              onChangeText={(value) => setUsername(value)}
+              onChangeText={(value) => setUsername(normalizeTextInput(value))}
               type="text"
               placeholder="Username"
               autoCapitalize="none"
@@ -261,7 +262,7 @@ const Login = (props) => {
           <Input>
             <InputField
               value={password}
-              onChangeText={(value) => setPassword(value)}
+              onChangeText={(value) => setPassword(normalizeTextInput(value))}
               onSubmitEditing={handleLogin}
               type="password"
               placeholder="Password"

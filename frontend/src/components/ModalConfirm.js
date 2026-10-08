@@ -24,6 +24,7 @@ import {
 
 import { Select } from 'components/Select'
 import ClientSelect from 'components/ClientSelect'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 const ModalConfirm = (props) => {
   const defaultValue = props.defaultValue || ''
@@ -146,7 +147,7 @@ const ModalConfirm = (props) => {
           value={value}
           placeholder={'Enter ' + (type == 'IP' ? 'IP address' : type) + '...'}
           autoFocus={isOpen ? true : false}
-          onChangeText={handleChange}
+          onChangeText={(text) => handleChange(normalizeTextInput(text))}
           onSubmitEditing={handlePress}
         />
       </Input>

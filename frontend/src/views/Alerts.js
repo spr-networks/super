@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   Badge,
@@ -445,7 +446,7 @@ const Alerts = () => {
                 topic={selectedBucket}
                 value={searchField}
                 items={logs}
-                onChangeText={setSearchField}
+                onChangeText={(value) => setSearchField(normalizeTextInput(value))}
                 onSubmitEditing={handleSearchSubmit}
                 placeholder="Search alerts, IPs, MACs, devices…"
                 isLoading={searching}

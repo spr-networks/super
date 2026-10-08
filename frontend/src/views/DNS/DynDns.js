@@ -2,6 +2,7 @@ import React, { Component } from 'react'
 import { dyndnsAPI } from 'api/Dyndns'
 import { AlertContext } from 'AppContext'
 import { ucFirst } from 'utils'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 import { Navigate } from 'react-router-dom';
 
 import {
@@ -96,7 +97,10 @@ export default class DynDns extends Component {
     //as an easy workaround,
     //update ip_urls to be an array again
     let ip_urls = this.state.config['ip_urls']
-    this.state.config['ip_urls'] = ip_urls.split(',').map((e) => e.trim())
+    this.state.config['ip_urls'] = (Array.isArray(ip_urls)
+      ? ip_urls
+      : normalizeTextInput(ip_urls).split(',')
+    ).map((e) => e.trim())
     dyndnsAPI.setConfig(this.state.config).then(done, (e) => {
       this.context.error('API Failure: ' + e.message)
     })
@@ -220,7 +224,7 @@ export default class DynDns extends Component {
 
     const handleChange = (name, value) => {
       let config = this.state.config
-      config[name] = value
+      config[name] = normalizeTextInput(value)
       this.setState({ config })
     }
 

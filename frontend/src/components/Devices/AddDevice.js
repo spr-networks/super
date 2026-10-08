@@ -3,6 +3,7 @@ import React, { useContext, useEffect, useState } from 'react'
 import { deviceAPI, allowlistAPI } from 'api'
 import { AlertContext, AppContext } from 'AppContext'
 import { WifiConnect, WiredConnect } from 'views/Devices/ConnectDevice'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 import { format as timeAgo } from 'timeago.js'
 
 import {
@@ -161,6 +162,10 @@ const AddDevice = (props) => {
   }
 
   const handleChange = (name, value) => {
+    if (name == 'name' || name == 'mac' || name == 'psk') {
+      value = normalizeTextInput(value)
+    }
+
     if (name == 'name') {
       setName(value)
 
