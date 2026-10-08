@@ -88,28 +88,34 @@ const WifiChannelParameters = ({
   const [selectedMode, setSelectedMode] = useState(modes[0])
   const [groupValues, setGroupValues] = useState(['wpa2', 'wpa3', 'guestpass'])
 
-  useEffect(() => {
-    let extra =
-      curInterface && curInterface.ExtraBSS && curInterface.ExtraBSS.length == 1
-        ? curInterface.ExtraBSS[0]
-        : null
+  const extra = curInterface?.ExtraBSS?.length === 1
+    ? curInterface.ExtraBSS[0]
+    : null
+  const hasSavedExtra = extra !== null
+  const savedSSID = extra?.Ssid
+  const savedPassword = extra?.GuestPassword || ''
+  const savedWpa = extra?.Wpa
+  const savedWpaKeyMgmt = extra?.WpaKeyMgmt
 
-    if (extra) {
-      setExtraSSID(extra.Ssid)
-      setGuestPassword(extra.GuestPassword || '')
+  useEffect(() => {
+    // Incoming interface/radio data can arrive while the user is typing. Only
+    // load the form when the saved guest configuration actually changes.
+    if (hasSavedExtra) {
+      setExtraSSID(savedSSID)
+      setGuestPassword(savedPassword)
 
       let values = ['guest_enabled']
-      if (extra.Wpa == '0') {
+      if (savedWpa == '0') {
         values.push('wpa_open')
-      } else if (extra.Wpa == '1') {
+      } else if (savedWpa == '1') {
         values.push('wpa1')
       } else {
         values.push('wpa2')
-        if (extra.WpaKeyMgmt && extra.WpaKeyMgmt.includes('SAE')) {
+        if (savedWpaKeyMgmt?.includes('SAE')) {
           values.push('wpa3')
         }
       }
-      if (extra.Wpa != '0' && extra.GuestPassword) {
+      if (savedWpa != '0' && savedPassword) {
         values.push('guestpass')
       }
       setGroupValues(values)
@@ -119,32 +125,36 @@ const WifiChannelParameters = ({
       setGroupValues(['wpa2', 'wpa3', 'guestpass'])
     }
 
-    //set bw and channels
+  }, [iface, config.ssid, hasSavedExtra, savedSSID, savedPassword, savedWpa, savedWpaKeyMgmt])
+
+  useEffect(() => {
+    let canAddGuest = false
     for (let iw of iws) {
-      if (iw.devices[iface]) {
+      if (iw.devices?.[iface]) {
         let cur_device = iw.devices[iface]
         if (!cur_device) continue
 
         //check if valid_interface_combinations supports multiple APs
-        let combos = iw.valid_interface_combinations
+        let combos = iw.valid_interface_combinations || []
         for (let combo of combos) {
           let ap_entry = combo.split('#').filter((e) => e.includes('AP'))
           if (ap_entry[0] && ap_entry[0].includes('<=')) {
             let num_supported = parseInt(ap_entry[0].split('<=')[1])
             if (num_supported > 0) {
-              setDisableExtraBSS(false)
+              canAddGuest = true
             }
           }
         }
 
       }
     }
-  }, [iface, config, iws, curInterface])
+    setDisableExtraBSS(!canAddGuest)
+  }, [iface, iws])
 
 
   const getLLAIfaceAddr = (iface) => {
     for (let iw of iws) {
-      if (iw.devices[iface]) {
+      if (iw.devices?.[iface]) {
         let base = iw.devices[iface].addr
 
         /*
@@ -213,7 +223,7 @@ const WifiChannelParameters = ({
       })
     } else {
       //if interfaces had an extra bss then clear it out
-      if (curInterface.ExtraBSS && curInterface.ExtraBSS.length > 0) {
+      if (curInterface?.ExtraBSS?.length > 0) {
         deleteExtraBSS(iface)
       }
     }
@@ -334,14 +344,16 @@ const WifiChannelParameters = ({
 
                   <Input {...staticGuestPasswordProps} flex={2} size="md" variant="underlined">
                     <InputField
+                      aria-label="Guest Password"
                       type={uipasswordType}
                       value={guestPassword}
                       onChangeText={(value) => setGuestPassword(value)}
                       autoComplete="off"
+                      autoCorrect={false}
                     />
                   </Input>
                   <>
-                    {(uipasswordType == 'text') && (
+                    {(uipasswordType == 'text' && guestPassword.length >= 8 && guestPassword === savedPassword && extraSSID === savedSSID) && (
                       <DeviceQRCode ssid={extraSSID} psk={guestPassword} type="WPA" />
                     )}
                   </>

@@ -368,9 +368,9 @@ const WifiGuestNetwork = (props) => {
   }
 
   const updateExtraBSS = (iface, params) => {
-    wifiAPI.enableExtraBSS(iface, params).then((result) => {
+    return wifiAPI.enableExtraBSS(iface, params).then(() => {
       //update interfaces
-      wifiAPI.interfacesConfiguration().then((ifaces) => {
+      return wifiAPI.interfacesConfiguration().then((ifaces) => {
         setInterfaces(ifaces)
         for (const i of ifaces) {
           if (i.Name == iface) {
@@ -379,13 +379,13 @@ const WifiGuestNetwork = (props) => {
           }
         }
       })
-    })
+    }).catch((e) => context.error('Failed to save guest network: ' + e.message))
   }
 
   const deleteExtraBSS = (iface) => {
-    wifiAPI.disableExtraBSS(iface).then((result) => {
+    return wifiAPI.disableExtraBSS(iface).then(() => {
       //update interfaces
-      wifiAPI.interfacesConfiguration().then((ifaces) => {
+      return wifiAPI.interfacesConfiguration().then((ifaces) => {
         setInterfaces(ifaces)
         for (const i of ifaces) {
           if (i.Name == iface) {
@@ -394,7 +394,7 @@ const WifiGuestNetwork = (props) => {
           }
         }
       })
-    })
+    }).catch((e) => context.error('Failed to disable guest network: ' + e.message))
   }
 
   const triggerBtn = (triggerProps) => (
