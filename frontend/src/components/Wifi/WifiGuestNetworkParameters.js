@@ -347,7 +347,7 @@ const WifiChannelParameters = ({
                       aria-label="Guest Password"
                       type={uipasswordType}
                       value={guestPassword}
-                      onChangeText={(value) => setGuestPassword(value)}
+                      onChangeText={(value) => setGuestPassword(typeof value === 'string' ? value : '')}
                       autoComplete="off"
                       autoCorrect={false}
                     />
