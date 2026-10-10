@@ -1,6 +1,10 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.2.10
+**Fix**
+- Fix a regression in hostap for RSSI"
+
 ## v1.2.9
 **Improvements**
 - Switch to FST for domain looks up in dns-block
