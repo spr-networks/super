@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 import {
   Badge,
   BadgeText,
@@ -440,7 +441,7 @@ const SettingsModal = ({ show, onClose, config, onSave }) => {
               <Input size="sm">
                 <InputField
                   value={targets}
-                  onChangeText={setTargets}
+                  onChangeText={(value) => setTargets(normalizeTextInput(value))}
                   placeholder="1.1.1.1, 8.8.8.8"
                 />
               </Input>
@@ -450,7 +451,7 @@ const SettingsModal = ({ show, onClose, config, onSave }) => {
               <Input size="sm">
                 <InputField
                   value={speedUrl}
-                  onChangeText={setSpeedUrl}
+                  onChangeText={(value) => setSpeedUrl(normalizeTextInput(value))}
                   placeholder="https://speed.cloudflare.com/__down?bytes=33554432"
                 />
               </Input>

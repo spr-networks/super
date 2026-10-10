@@ -16,6 +16,7 @@ import {
 import { api } from 'api'
 import { isPasskeySupported, registerPasskey } from 'api/Passkey'
 import { ListHeader } from 'components/List'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 const WebAuthn = (props) => {
   const [credentials, setCredentials] = useState([])
@@ -82,7 +83,7 @@ const WebAuthn = (props) => {
             <Input flex={1}>
               <InputField
                 value={name}
-                onChangeText={(value) => setName(value)}
+                onChangeText={(value) => setName(normalizeTextInput(value))}
                 placeholder="Passkey name"
                 autoCapitalize="none"
               />

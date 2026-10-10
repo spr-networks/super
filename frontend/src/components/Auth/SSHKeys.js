@@ -15,6 +15,7 @@ import {
 import { ListHeader, ListItem } from 'components/List'
 import { api } from 'api'
 import { AlertContext } from 'AppContext'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 const SSHKeys = () => {
   const context = useContext(AlertContext)
@@ -94,7 +95,7 @@ const SSHKeys = () => {
             <TextareaInput
               placeholder="ssh-ed25519 AAAA..."
               value={pending}
-              onChangeText={setPending}
+              onChangeText={(value) => setPending(normalizeTextInput(value))}
             />
           </Textarea>
           <HStack justifyContent="flex-end">

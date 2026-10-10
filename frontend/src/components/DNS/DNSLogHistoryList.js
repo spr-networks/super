@@ -21,6 +21,7 @@ import JSONSyntax from 'components/SyntaxHighlighter'
 import { Tooltip } from 'components/Tooltip'
 import { dbAPI } from 'api'
 import { prettyDate } from 'utils'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 import { ListHeader } from 'components/List'
 import Pagination from 'components/Pagination'
 
@@ -417,7 +418,7 @@ const DNSLogHistoryList = (props) => {
   }
 
   const handleChange = (value) => {
-    setFilterText(value)
+    setFilterText(normalizeTextInput(value))
   }
 
   const triggerAlert = (item) => {

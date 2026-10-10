@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import InputSelect from 'components/InputSelect'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import WireguardConfig from './WireguardConfig'
 import { AlertContext } from 'layouts/Admin'
@@ -63,7 +64,7 @@ export default class WireguardAddPeer extends React.Component {
   }
 
   handleChangeClient(newValue) {
-    let ClientIP = newValue
+    let ClientIP = normalizeTextInput(newValue)
     // TODO match device by ip
     this.setState({ AllowedIPs: ClientIP })
   }

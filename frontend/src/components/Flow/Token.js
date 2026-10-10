@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   Badge,
@@ -163,7 +164,7 @@ const Token = ({
     <Input variant="outlined">
       <InputField
         defaultValue={value}
-        onChangeText={onChangeText}
+        onChangeText={(text) => onChangeText(normalizeTextInput(text))}
         onSubmitEditing={() => setIsOpen(false)}
       />
     </Input>

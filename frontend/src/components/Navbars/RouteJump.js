@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppContext } from 'AppContext'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   HStack,
@@ -158,6 +159,7 @@ const RouteJump = ({ ...props }) => {
   }
 
   const onChangeText = (value) => {
+    value = normalizeTextInput(value)
     setFilterText(value)
     filterItems(value)
   }

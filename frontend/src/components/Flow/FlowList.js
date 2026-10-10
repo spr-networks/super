@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import { AlertContext } from 'AppContext'
 import { NewCard } from './FlowCard'
@@ -683,6 +684,7 @@ const FlowList = (props) => {
                           placeholder="Search flows..."
                           value={searchQuery}
                           onChangeText={(text) => {
+                            text = normalizeTextInput(text)
                             setSearchQuery(text)
                             filterFlows(text)
                           }}

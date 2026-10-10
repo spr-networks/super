@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 
 import { ModalContext } from 'AppContext'
 import FilterSelect from './FilterSelect'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   Input,
@@ -27,16 +28,17 @@ const FilterInputSelect = ({
   ...props
 }) => {
   const modalContext = useContext(ModalContext)
+  const textValue = normalizeTextInput(value)
 
   const onSubmitEditingPre = (text) => {
-    onSubmitEditing(text)
+    onSubmitEditing(normalizeTextInput(text))
     modalContext.toggleModal()
   }
 
   const filterSelect = (
     <FilterSelect
       NoFilterCommon={props.NoFilterCommon}
-      query={value}
+      query={textValue}
       items={items}
       topic={topic}
       onSubmitEditing={onSubmitEditingPre}
@@ -44,7 +46,7 @@ const FilterInputSelect = ({
   )
 
   const handlePressFilter = () => {
-    if (value.length) {
+    if (textValue.length) {
       onSubmitEditing('')
       return
     }
@@ -61,17 +63,17 @@ const FilterInputSelect = ({
           </InputSlot>
         ) : null}
         <InputField
-          value={value}
-          onChangeText={onChangeText}
+          value={textValue}
+          onChangeText={(text) => onChangeText?.(normalizeTextInput(text))}
           placeholder={props.placeholder || 'Search'}
           autoCapitalize="none"
         />
 
         <InputSlot pr="$3" onPress={handlePressFilter}>
-          <InputIcon as={CloseIcon} display={value.length ? 'flex' : 'none'} />
+          <InputIcon as={CloseIcon} display={textValue.length ? 'flex' : 'none'} />
           <InputIcon
             as={SlidersHorizontalIcon}
-            display={value.length ? 'none' : 'flex'}
+            display={textValue.length ? 'none' : 'flex'}
           />
         </InputSlot>
       </Input>

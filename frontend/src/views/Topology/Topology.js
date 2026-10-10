@@ -41,6 +41,7 @@ import {
 } from 'lucide-react-native'
 
 import { displayName } from 'components/Topology/topologyLayout'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 import {
   DetailPanel,
   FilterPanel,
@@ -794,7 +795,7 @@ const Topology = () => {
                   <InputField
                     value={connectChoice}
                     placeholder="group name"
-                    onChangeText={setConnectChoice}
+                    onChangeText={(value) => setConnectChoice(normalizeTextInput(value))}
                     onSubmitEditing={applyConnect}
                   />
                 </Input>

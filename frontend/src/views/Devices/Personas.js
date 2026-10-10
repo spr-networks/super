@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { AlertContext } from 'AppContext'
 import { deviceAPI, parentalAPI } from 'api'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   AlertDialog,
@@ -150,7 +151,7 @@ const AddPersona = ({ item, limit, devices, onSave }) => {
             value={label}
             placeholder="alice"
             autoCapitalize="none"
-            onChangeText={setLabel}
+            onChangeText={(value) => setLabel(normalizeTextInput(value))}
           />
         </Input>
         <FormControlHelper>
@@ -168,7 +169,7 @@ const AddPersona = ({ item, limit, devices, onSave }) => {
           <InputField
             value={description}
             placeholder="Alice's devices"
-            onChangeText={setDescription}
+            onChangeText={(value) => setDescription(normalizeTextInput(value))}
           />
         </Input>
       </FormControl>
@@ -182,7 +183,7 @@ const AddPersona = ({ item, limit, devices, onSave }) => {
             value={dailyLimit}
             placeholder="0 = no limit"
             keyboardType="numeric"
-            onChangeText={setDailyLimit}
+            onChangeText={(value) => setDailyLimit(normalizeTextInput(value))}
           />
         </Input>
         <FormControlHelper>

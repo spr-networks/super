@@ -109,6 +109,14 @@ describe('Setup', () => {
 
     fireEvent.changeText(inputPasswordConfirm, 'password1')
 
+    fireEvent.changeText(inputPassword, null)
+    expect(inputPassword.props.value).toBe('')
+    fireEvent.press(btnSave)
+    expect(
+      screen.getByText('Password needs to be at least 5 characters')
+    ).toBeTruthy()
+    fireEvent.changeText(inputPassword, 'password1')
+
     fireEvent.press(btnSave)
 
     await waitFor(

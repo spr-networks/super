@@ -5,6 +5,7 @@ import { AppContext, alertState } from 'AppContext'
 import { CoreDNS } from 'api/CoreDNS'
 import { blockAPI } from 'api/DNS'
 import { api, firewallAPI } from 'api'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   Box,
@@ -477,7 +478,7 @@ const CoreDns = (props) => {
             <Input variant="underlined" flex={1}>
               <InputField
                 value={systemDnsOverride}
-                onChangeText={setSystemDnsOverride}
+                onChangeText={(value) => setSystemDnsOverride(normalizeTextInput(value))}
                 placeholder={
                   sprDnsIP
                     ? `${sprDnsIP} (empty = disabled)`

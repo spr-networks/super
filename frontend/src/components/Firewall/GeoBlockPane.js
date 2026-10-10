@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { Platform } from 'react-native'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   Badge,
@@ -176,6 +177,7 @@ const GeoBlockPane = () => {
   }
 
   const onChangeCountryQuery = (q) => {
+    q = normalizeTextInput(q)
     setCountryQuery(q)
     setCountrySuggestions(searchCountries(q))
   }
@@ -213,6 +215,7 @@ const GeoBlockPane = () => {
   }
 
   const onChangeAsnQuery = (q) => {
+    q = normalizeTextInput(q)
     setAsnQuery(q)
 
     if (debounceRef.current) {
@@ -513,7 +516,7 @@ const GeoBlockPane = () => {
                 placeholder="https://example.com/asn-blocklist.json"
                 autoCorrect={false}
                 autoCapitalize="none"
-                onChangeText={setAddListURI}
+                onChangeText={(value) => setAddListURI(normalizeTextInput(value))}
                 onSubmitEditing={() =>
                   addList({ URI: addListURI.trim(), Enabled: true, Note: '' })
                 }

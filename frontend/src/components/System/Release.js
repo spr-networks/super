@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import { Platform } from 'react-native'
 import {
@@ -130,6 +131,7 @@ const UpdateReleaseInfo = ({
   }
 
   const handleChangeVersion = (value) => {
+    value = normalizeTextInput(value)
     let notify = checkVersionChange(releaseInfo.Current, value)
     setShowVerifyMessage(notify)
 

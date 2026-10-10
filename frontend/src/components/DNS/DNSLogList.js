@@ -103,7 +103,7 @@ const DNSLogList = ({ title, description, ...props }) => {
 
   const handleSubmit = (value) => {
     setIsModalOpen(false)
-    if (value.length == 0) {
+    if (!value?.length) {
       return
     }
 

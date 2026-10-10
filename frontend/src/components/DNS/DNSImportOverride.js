@@ -2,6 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { AlertContext } from 'layouts/Admin'
 import { blockAPI } from 'api/DNS'
+import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
   Button,
@@ -1223,6 +1224,9 @@ export default class DNSImportOverride extends React.Component {
   }
 
   handleChange(name, value) {
+    if (name === 'listName' || name === 'jsonContent') {
+      value = normalizeTextInput(value)
+    }
     this.validateField(name, value)
     this.setState({ [name]: value })
   }
