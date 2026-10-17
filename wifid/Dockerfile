@@ -103,7 +103,7 @@ RUN set -eux; \
     printf 'Types: deb\nURIs: https://snapshot.ubuntu.com/ubuntu/%s\nSuites: noble noble-updates noble-security\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' "${UBUNTU_SNAPSHOT}" > /etc/apt/sources.list.d/ubuntu.sources; \
     printf 'APT::Install-Recommends "false";\nAcquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99reproducible
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      iw libnl-genl-3-dev libnl-route-3-dev lshw nftables xdp-tools \
+      iw libnl-genl-3-dev libnl-route-3-dev lshw nftables rfkill xdp-tools \
     && rm -rf /var/lib/apt/lists/* /var/log/* /var/cache/ldconfig/aux-cache \
     && mkdir -p /code/xdp-tools/xdp-loader \
     && ln -s "$(command -v xdp-loader)" /code/xdp-tools/xdp-loader/xdp-loader
