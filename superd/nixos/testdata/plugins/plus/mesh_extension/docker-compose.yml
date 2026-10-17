@@ -1,0 +1,33 @@
+x-logging:
+  &default-logging
+  driver: journald
+
+x-labels:
+  &default-labels
+  # constant (not $CI) so digests are reproducible across CI/local
+  org.supernetworks.ci: "true"
+  org.supernetworks.version: ${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+
+services:
+  mesh:
+    container_name: supermesh
+    image: ghcr.io/spr-networks/mesh_extension_mesh:${RELEASE_VERSION:-latest}
+    build:
+      context: .
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/super_mesh:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/super_mesh:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    network_mode: host
+    privileged: true
+    logging: *default-logging
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - "${SUPERDIR}./state/plugins/mesh:/state/plugins/mesh"
+      - "${SUPERDIR}./configs/auth:/configs/auth"
+      - "${SUPERDIR}./configs/base:/configs/base"
+      - "${SUPERDIR}./configs/mesh:/configs/mesh"
+      - "${SUPERDIR}./state/public/:/state/public/:ro"
+      - "${SUPERDIR}./state/wifi/:/state/wifi/:ro"

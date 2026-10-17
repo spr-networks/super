@@ -790,15 +790,17 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 		git_url = gitCloneURL(git_url, creds.Username, creds.Secret)
 	}
 
+	//never chdir here: policy files are cwd-relative, and other handlers
+	//would read them from inside the plugin repo while git runs
 	if git_url == "" {
-		os.Chdir("/super")
 		//update SPR itself
 		os.Setenv("GIT_TERMINAL_PROMPT", "0")
-		out, _ := exec.Command("git", "pull").CombinedOutput()
+		cmd := exec.Command("git", "pull")
+		cmd.Dir = SuperRootPath
+		out, _ := cmd.CombinedOutput()
 		fmt.Println(string(out))
 		return
 	}
-	os.Chdir("/super")
 
 	repo := getRepoName(git_url)
 	if repo == "" {
@@ -810,43 +812,43 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 	if creds.Plus == false {
 		directory = UserAddons
 	}
+	addonsDir := filepath.Join(SuperRootPath, directory)
 
-	if _, err := os.Stat(directory); os.IsNotExist(err) {
-		err := os.MkdirAll(directory, 0755)
+	if _, err := os.Stat(addonsDir); os.IsNotExist(err) {
+		err := os.MkdirAll(addonsDir, 0755)
 		if err != nil {
 			http.Error(w, "Could not create addons "+directory, 500)
 			return
 		}
 	}
 
-	err = os.Chdir(directory)
-	if err != nil {
+	if info, err := os.Stat(addonsDir); err != nil || !info.IsDir() {
 		http.Error(w, "Could not find addons directory", 500)
-		os.Chdir("/super")
 		return
 	}
 
 	os.Setenv("GIT_TERMINAL_PROMPT", "0")
-	out, _ := exec.Command("git", "clone", "--recurse-submodule", git_url).CombinedOutput()
+	cmd := exec.Command("git", "clone", "--recurse-submodule", git_url)
+	cmd.Dir = addonsDir
+	out, _ := cmd.CombinedOutput()
 	fmt.Println(string(out))
 
 	if strings.Contains(string(out), "fatal") {
 		if !strings.Contains(string(out), "already exists") {
 			http.Error(w, "Could not clone repository", 400)
-			os.Chdir("/super")
 			return
 		}
 	}
 
-	err = os.Chdir(repo)
-
-	if err != nil {
+	repoDir := filepath.Join(addonsDir, repo)
+	if info, err := os.Stat(repoDir); err != nil || !info.IsDir() {
 		http.Error(w, "Could not cd to repository", 400)
-		os.Chdir("/super")
 		return
 	}
 
-	out, _ = exec.Command("git", "pull").CombinedOutput()
+	cmd = exec.Command("git", "pull")
+	cmd.Dir = repoDir
+	out, _ = cmd.CombinedOutput()
 	fmt.Println(string(out))
 
 	gitChanged := !strings.Contains(strings.ToLower(string(out)), "up to date")
@@ -863,11 +865,8 @@ func update_git(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(data)
-		os.Chdir("/super")
 		return
 	}
-
-	os.Chdir("/super")
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"Changed": gitChanged})

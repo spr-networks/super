@@ -3,6 +3,8 @@
 # matching `ARG <KEY>=` defaults and `# syntax=` lines across the Dockerfiles so
 # the two never drift. All lookups are read-only (registry manifest inspect,
 # go.dev, download.docker.com, git ls-remote, GitHub API). Review with `git diff`.
+# Then installer/nixos/update-pins.sh refreshes the Nix build's pins.json
+# (latest SPR kernel and frontend image, Nix hashes) to match.
 #
 # To bump a version: edit a "tracked ref" below (or a git ref), then run this.
 # The Ubuntu snapshot date is preserved unless you pass UBUNTU_SNAPSHOT=<ts>.
@@ -164,4 +166,7 @@ while IFS='=' read -r k v; do
   done
 done < reproducible.env
 
-echo "Done. Review: git diff reproducible.env && git diff -- '*Dockerfile'" >&2
+echo "Refreshing the Nix build's pins" >&2
+installer/nixos/update-pins.sh
+
+echo "Done. Review: git diff reproducible.env installer/nixos/pins.json && git diff -- '*Dockerfile'" >&2
