@@ -1390,7 +1390,7 @@ func refreshDeviceGroupsAndPolicy(devices map[string]DeviceEntry, groups []Group
 		addVerdictMac(ipv4, dev.MAC, ifname, "ethernet_filter", "return")
 
 		//and re-add
-		populateVmapEntries(devices, groups, ipv4, dev.MAC, ifname, "", dev.DNSCustom)
+		populateVmapEntries(devices, groups, ipv4, dev.MAC, ifname, dev.WGPubKey, dev.DNSCustom)
 	}
 
 }
