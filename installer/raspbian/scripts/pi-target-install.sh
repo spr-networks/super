@@ -89,7 +89,12 @@ mount /dev/vda1 /boot/firmware
 # Install SPR custom kernel + headers from spr-debian-kernel, fetched and
 # provenance-verified on the build host by fetch-spr-kernel.sh
 pushd /var/cache/spr-kernel
-dpkg -i linux-image-*.deb linux-headers-*.deb linux-libc-dev_*.deb || exit 1
+KVER_4K=$(dpkg-deb -f 4k/linux-image-*.deb Package) || exit 1
+KVER_16K=$(dpkg-deb -f 16k/linux-image-*.deb Package) || exit 1
+KVER_4K=${KVER_4K#linux-image-}
+KVER_16K=${KVER_16K#linux-image-}
+dpkg -i 4k/linux-image-*.deb 4k/linux-headers-*.deb \
+  16k/linux-image-*.deb 16k/linux-headers-*.deb 16k/linux-libc-dev_*.deb || exit 1
 popd
 rm -rf /var/cache/spr-kernel
 
@@ -223,23 +228,20 @@ EOF
 
 chmod +x /etc/udev/wlan0-swap.sh
 
-KVER=$(ls /lib/modules/ | sort -V | tail -1)
-
 # regenerate initrd with udev rules in place before copying to firmware
-update-initramfs -u -k ${KVER:-all}
+update-initramfs -u -k "$KVER_4K" || exit 1
+update-initramfs -u -k "$KVER_16K" || exit 1
 
-# Install SPR kernel and DTBs
-if [ -n "$KVER" ]; then
-  cp /boot/vmlinuz-${KVER} /boot/firmware/kernel8.img
-  cp /boot/initrd.img-${KVER} /boot/firmware/initramfs8
-  # Pi 5 (2712)
-  cp /boot/vmlinuz-${KVER} /boot/firmware/kernel_2712.img
-  cp /boot/initrd.img-${KVER} /boot/firmware/initramfs_2712
+# Install the Pi 4 and Pi 5 kernels under their firmware-selected names.
+cp "/boot/vmlinuz-${KVER_4K}" /boot/firmware/kernel8.img || exit 1
+cp "/boot/initrd.img-${KVER_4K}" /boot/firmware/initramfs8 || exit 1
+cp "/boot/vmlinuz-${KVER_16K}" /boot/firmware/kernel_2712.img || exit 1
+cp "/boot/initrd.img-${KVER_16K}" /boot/firmware/initramfs_2712 || exit 1
 
-  cp /usr/lib/linux-image-${KVER}/broadcom/bcm27*.dtb /boot/firmware/
-  mkdir -p /boot/firmware/overlays
-  cp /usr/lib/linux-image-${KVER}/overlays/*.dtbo /boot/firmware/overlays/ 2>/dev/null || true
-fi
+cp /usr/lib/linux-image-"${KVER_4K}"/broadcom/bcm27*.dtb /boot/firmware/ || exit 1
+cp /usr/lib/linux-image-"${KVER_16K}"/broadcom/bcm27*.dtb /boot/firmware/ || exit 1
+mkdir -p /boot/firmware/overlays
+cp /usr/lib/linux-image-"${KVER_16K}"/overlays/*.dtbo /boot/firmware/overlays/ 2>/dev/null || true
 
 # we need the pcie-32bit-dma enabled for the mediatek cards
 # the other settings are to enable uart for the cm5
