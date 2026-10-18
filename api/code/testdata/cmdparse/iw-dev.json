@@ -1,0 +1,35 @@
+{
+  "phy0": {
+    "wlan3": {
+      "ifindex": "7",
+      "wdev": "0x1",
+      "addr": "02:00:00:00:01:00",
+      "ssid": "test-ap",
+      "type": "AP",
+      "multicast_txq": {
+        "qsz_byt": 0,
+        "qsz_pkt": 0,
+        "flows": 0,
+        "drops": 0,
+        "marks": 0,
+        "overlmt": 0,
+        "hashcol": 0,
+        "tx_bytes": 0,
+        "tx_packets": 0
+      },
+      "MLD": "with links:",
+      "-": "link ID  1 link addr 02:00:00:00:01:02",
+      "channel": "2 (2417 MHz), width: 20 MHz, center1: 2417 MHz"
+    }
+  },
+  "phy1": {
+    "wlan0": {
+      "ifindex": "5",
+      "wdev": "0x100000001",
+      "addr": "02:00:00:00:01:03",
+      "type": "managed",
+      "channel": "34 (5170 MHz), width: 20 MHz, center1: 5170 MHz",
+      "txpower": "31.00 dBm"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+phy#0
+	Interface wlan3
+		ifindex 7
+		wdev 0x1
+		addr 02:00:00:00:01:00
+		ssid test-ap
+		type AP
+		multicast TXQ:
+			qsz-byt	qsz-pkt	flows	drops	marks	overlmt	hashcol	tx-bytes	tx-packets
+			0	0	0	0	0	0	0	0		0
+		MLD with links:
+		 - link ID  0 link addr 02:00:00:00:01:01
+		   channel 36 (5180 MHz), width: 80 MHz, center1: 5210 MHz
+		 - link ID  1 link addr 02:00:00:00:01:02
+		   channel 2 (2417 MHz), width: 20 MHz, center1: 2417 MHz
+phy#1
+	Interface wlan0
+		ifindex 5
+		wdev 0x100000001
+		addr 02:00:00:00:01:03
+		type managed
+		channel 34 (5170 MHz), width: 20 MHz, center1: 5170 MHz
+		txpower 31.00 dBm

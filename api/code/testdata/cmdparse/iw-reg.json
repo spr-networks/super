@@ -1,0 +1,126 @@
+{
+  "country": "US",
+  "dfs": "DFS-FCC",
+  "bands": [
+    {
+      "start": 902,
+      "end": 904,
+      "max_bandwidth": 2,
+      "max_antenna_gain": null,
+      "max_eirp": 30.0,
+      "flags": [
+        "N/A"
+      ]
+    },
+    {
+      "start": 904,
+      "end": 920,
+      "max_bandwidth": 16,
+      "max_antenna_gain": null,
+      "max_eirp": 30.0,
+      "flags": [
+        "N/A"
+      ]
+    },
+    {
+      "start": 920,
+      "end": 928,
+      "max_bandwidth": 8,
+      "max_antenna_gain": null,
+      "max_eirp": 30.0,
+      "flags": [
+        "N/A"
+      ]
+    },
+    {
+      "start": 2400,
+      "end": 2472,
+      "max_bandwidth": 40,
+      "max_antenna_gain": null,
+      "max_eirp": 30.0,
+      "flags": [
+        "N/A"
+      ]
+    },
+    {
+      "start": 5150,
+      "end": 5250,
+      "max_bandwidth": 80,
+      "max_antenna_gain": null,
+      "max_eirp": 23.0,
+      "flags": [
+        "N/A",
+        "AUTO-BW"
+      ]
+    },
+    {
+      "start": 5250,
+      "end": 5350,
+      "max_bandwidth": 80,
+      "max_antenna_gain": null,
+      "max_eirp": 24.0,
+      "flags": [
+        "0 ms",
+        "DFS",
+        "AUTO-BW"
+      ]
+    },
+    {
+      "start": 5470,
+      "end": 5730,
+      "max_bandwidth": 160,
+      "max_antenna_gain": null,
+      "max_eirp": 24.0,
+      "flags": [
+        "0 ms",
+        "DFS"
+      ]
+    },
+    {
+      "start": 5730,
+      "end": 5850,
+      "max_bandwidth": 80,
+      "max_antenna_gain": null,
+      "max_eirp": 30.0,
+      "flags": [
+        "N/A",
+        "AUTO-BW"
+      ]
+    },
+    {
+      "start": 5850,
+      "end": 5895,
+      "max_bandwidth": 40,
+      "max_antenna_gain": null,
+      "max_eirp": 27.0,
+      "flags": [
+        "N/A",
+        "NO-OUTDOOR",
+        "AUTO-BW",
+        "PASSIVE-SCAN"
+      ]
+    },
+    {
+      "start": 5925,
+      "end": 7125,
+      "max_bandwidth": 320,
+      "max_antenna_gain": null,
+      "max_eirp": 12.0,
+      "flags": [
+        "N/A",
+        "NO-OUTDOOR",
+        "PASSIVE-SCAN"
+      ]
+    },
+    {
+      "start": 57240,
+      "end": 71000,
+      "max_bandwidth": 2160,
+      "max_antenna_gain": null,
+      "max_eirp": 40.0,
+      "flags": [
+        "N/A"
+      ]
+    }
+  ]
+}
