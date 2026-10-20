@@ -1,6 +1,12 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.2.11
+**Fix**
+- Security updates with go 1.26.10
+- Update kernel
+- Fix rfkill during setup
+
 ## v1.2.10
 **Fix**
 - Fix a regression in hostap for RSSI"
