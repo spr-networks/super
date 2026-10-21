@@ -2,6 +2,10 @@
 # Secure Programmable Router (SPR) Release Notes
 
 ## v1.2.11
+**Improvements*
+- New nixos build for CM5/PI5
+- New TransparentSink setting for plugins
+
 **Fix**
 - Security updates with go 1.26.10
 - Update kernel

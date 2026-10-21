@@ -60,15 +60,17 @@ const (
 )
 
 type NetworkCapabilities struct {
-	Interface string
-	DeviceMAC string
-	Policies  []string
-	Groups    []string
+	Interface       string
+	DeviceMAC       string
+	TransparentSink bool
+	Policies        []string
+	Groups          []string
 }
 
 func (p NetworkCapabilities) Matches(q NetworkCapabilities) bool {
 	return p.Interface == q.Interface &&
 		p.DeviceMAC == q.DeviceMAC &&
+		p.TransparentSink == q.TransparentSink &&
 		slices.Compare(p.Policies, q.Policies) == 0 &&
 		slices.Compare(p.Groups, q.Groups) == 0
 }
@@ -1430,7 +1432,27 @@ func ensurePluginDeviceEthernetRule(plugin PluginConfig, sourceIP string) error 
 
 	FWmtx.Lock()
 	defer FWmtx.Unlock()
-	return ensurePluginEthernetRuleLocked(sourceIP, plugin.NetworkCapabilities.Interface, mac)
+	if err := ensurePluginEthernetRuleLocked(sourceIP, plugin.NetworkCapabilities.Interface, mac); err != nil {
+		return err
+	}
+	if plugin.NetworkCapabilities.TransparentSink {
+		return setPluginTransparentSinkInterfaceLocked(plugin.NetworkCapabilities.Interface, true)
+	}
+	return nil
+}
+
+func setPluginTransparentSinkInterfaceLocked(iface string, enabled bool) error {
+	data, err := ListSetJSON("inet", "filter", "transparent_sink_interfaces")
+	if err != nil {
+		return err
+	}
+	if strings.Contains(string(data), `"`+iface+`"`) == enabled {
+		return nil
+	}
+	if enabled {
+		return AddInterfaceToSetWithTable("inet", "filter", "transparent_sink_interfaces", iface)
+	}
+	return DeleteInterfaceFromSetWithTable("inet", "filter", "transparent_sink_interfaces", iface)
 }
 
 func ensurePluginEthernetRuleLocked(sourceIP string, iface string, mac string) error {
@@ -1504,6 +1526,12 @@ func applyPluginCustomInterfaceRule(plugin PluginConfig, sourceIP string) error 
 	var err error
 	if !hasCurrent {
 		err = modifyCustomInterfaceRulesImpl(rule, false)
+	} else if slices.Contains(rule.Policies, "wan") && GetElementFromMapComplex(
+		"inet", "filter", "fwd_iface_wan", []string{rule.Interface, rule.SrcIP},
+	) != nil {
+		err = AddElementToMapComplex(
+			"inet", "filter", "fwd_iface_wan", []string{rule.Interface, rule.SrcIP}, "accept",
+		)
 	}
 	FWmtx.Unlock()
 
@@ -1608,6 +1636,11 @@ func removePluginNetworkCapabilities(plugin PluginConfig) error {
 				mac,
 				"return",
 			); err == nil {
+				err = cleanupErr
+			}
+		}
+		if plugin.NetworkCapabilities.TransparentSink {
+			if cleanupErr := setPluginTransparentSinkInterfaceLocked(plugin.NetworkCapabilities.Interface, false); err == nil {
 				err = cleanupErr
 			}
 		}
