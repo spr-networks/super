@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	logStd "log"
 	"net"
@@ -422,22 +421,8 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	if name == "uptime" {
-		cmd := exec.Command("uptime")
-		output, err := cmd.Output()
-
-		cmd = exec.Command("jc", "--uptime")
-		stdin, err := cmd.StdinPipe()
-		if err != nil {
-			http.Error(w, err.Error(), 400)
-			return
-		}
-
-		go func() {
-			defer stdin.Close()
-			io.WriteString(stdin, strings.Replace(string(output), "0 user,", "0 users,", 1))
-		}()
-
-		data, err = cmd.Output()
+		output, _ := exec.Command("uptime").Output()
+		data, err = parseUptime(string(output))
 	} else if name == "dockernetworks" {
 		data, err = dockerInfoRequest("networks", "")
 	} else if name == "docker" {
@@ -460,7 +445,12 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 			err = nil
 		}
 	} else if name == "ss" {
-		data, err = exec.Command("jc", "-p", "ss", "-4", "-n").Output()
+		output, err2 := exec.Command("ss", "-4", "-n").Output()
+		if err2 != nil {
+			http.Error(w, err2.Error(), 400)
+			return
+		}
+		data, err = parseSS(string(output))
 	} else {
 		http.Error(w, "Invalid info", 400)
 		return

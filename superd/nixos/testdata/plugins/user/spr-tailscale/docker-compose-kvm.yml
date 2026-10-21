@@ -1,0 +1,37 @@
+services:
+  spr-tailscale:
+    extends:
+      file: docker-compose.yml
+      service: spr-tailscale
+    image: ghcr.io/spr-networks/spr-tailscale:latest
+    build: !reset null
+    runtime: ${SPR_KRUN_RUNTIME:-spr-krun}
+    annotations:
+      krun.cpus: "${SPR_KRUN_CPUS:-1}"
+      krun.ram_mib: "${SPR_KRUN_RAM_MIB:-128}"
+      krun.tap_name: "kruntap0"
+      krun.net_uplink: "eth0"
+      krun.vsock_path: "/state/plugins/spr-tailscale/socket.sock"
+      krun.vsock_port: "4040"
+      krun.vsock_connect_path: "/state/api/eventbus.sock"
+      krun.vsock_connect_port: "4041"
+    environment:
+      SPR_KRUN_PLUGIN_SOCKET: "/run/spr-krun-plugin/spr-tailscale.sock"
+      SPR_KRUN_VSOCK_PORT: "4040"
+      SPR_KRUN_HOST_SOCKET: "/run/spr-krun-plugin/eventbus.sock"
+      SPR_KRUN_HOST_VSOCK_PORT: "4041"
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - "${SUPERDIR}./state/public/:/state/public/"
+      - "${SUPERDIR}./state/api/:/state/api/"
+      - "${SUPERDIR}./configs/base/config.sh:/configs/base/config.sh"
+
+networks:
+  tailscalenet:
+    name: spr-tailscale
+    driver_opts:
+      com.docker.network.bridge.name: spr-tailscale
+      com.docker.network.bridge.inhibit_ipv4: "true"

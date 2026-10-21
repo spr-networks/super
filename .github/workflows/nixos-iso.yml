@@ -1,0 +1,95 @@
+name: NixOS ISO Installer
+
+on:
+  workflow_run:
+    workflows: ["Docker Image CI"]
+    types:
+      - completed
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  attestations: write
+  contents: write
+
+jobs:
+  build_iso:
+    runs-on: self-hosted
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: '0'
+      - name: Fetch tags
+        run:  git fetch --tags
+      # tag names go into GITHUB_ENV, which sets variables for every later
+      # step: take only one exact release version, never other tag text
+      - name: Get version from git
+        run: |
+          version=$(git tag --contains "$(git rev-parse HEAD)" | grep -xE 'v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?' || true)
+          if [ "$(printf '%s' "$version" | grep -c .)" -gt 1 ]; then
+            echo "more than one release version tag contains HEAD" >&2
+            exit 1
+          fi
+          echo "RELEASE_VERSION_TAG=$version" >> "$GITHUB_ENV"
+      - name: Set up Qemu emulation
+        run: ./installer/qemu-setup-linux.sh
+      - name: Build install image and system archive
+        env:
+          SYSTEM_ARCHIVE: "1"
+          SPR_RELEASE_VERSION: ${{ env.RELEASE_VERSION_TAG }}
+        run: ./installer/nixos/build-image.sh aarch64
+      - name: Compress image
+        run: |
+          sudo apt-get install -y zstd
+          sudo chown -R "$(id -u):$(id -g)" ./installer/nixos/output
+          zstd -dc ./installer/nixos/output/nixos-image-*.img.zst | xz -T 0 -9 -z > ./installer/nixos/output/spr-nixos.img.xz
+      - name: Create Release
+        if: ${{ github.ref_name == 'main' }}
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          release_name: NixOS Release ${{ env.RELEASE_VERSION_TAG }}
+          tag_name: nixos-${{ env.RELEASE_VERSION_TAG }}
+          draft: false
+          prerelease: true
+      - name: Attest ISO Provenance
+        uses: actions/attest-build-provenance@v4.1.0
+        with:
+          subject-path: "./installer/nixos/output/spr-nixos.img.xz"
+          subject-name: "spr-nixos.img.xz"
+      # devices update from this: superd verifies the attestation against
+      # this workflow on main before it installs anything (sysupdate.go)
+      - name: Attest System Archive Provenance
+        uses: actions/attest-build-provenance@v4.1.0
+        with:
+          subject-path: "./installer/nixos/output/spr-nixos-system.tar"
+          subject-name: "spr-nixos-system.tar"
+      - name: Upload Release Asset
+        if: ${{ github.ref_name == 'main' }}
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./installer/nixos/output/spr-nixos.img.xz
+          asset_name: spr-nixos.img.xz
+          asset_content_type: application/x-xz
+      - name: Upload System Archive
+        if: ${{ github.ref_name == 'main' }}
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./installer/nixos/output/spr-nixos-system.tar
+          asset_name: spr-nixos-system.tar
+          asset_content_type: application/x-tar
+      - name: Remove image
+        if: ${{ always() }}
+        run: sudo rm -rf ./installer/nixos/output

@@ -15,6 +15,15 @@ is_valid_ifname() {
     return 0
 }
 
+# Pi firmware can leave WLAN soft blocked, including after a reboot.
+# Clear it before either hostapd or rustAP initializes a radio.
+if grep -q "Raspberry Pi" /proc/cpuinfo; then
+  if ! rfkill unblock wifi; then
+    echo "Error: Failed to unblock Wi-Fi before starting wifid" >&2
+    exit 1
+  fi
+fi
+
 /scripts/update_iface_names.sh
 
 if [ -f /configs/wifi/enable_rust ]; then

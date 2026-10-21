@@ -1,0 +1,32 @@
+x-logging:
+  &default-logging
+  driver: journald
+
+x-labels:
+  &default-labels
+  # constant (not $CI) so digests are reproducible across CI/local
+  org.supernetworks.ci: "true"
+  org.supernetworks.version: ${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+
+services:
+  pfw:
+    container_name: superpfw
+    image: ghcr.io/spr-networks/pfw_extension_pfw:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    build:
+      context: .
+      labels: *default-labels
+      x-bake:
+        tags:
+        - ghcr.io/spr-networks/pfw_extension_pfw:latest${RELEASE_CHANNEL:-}
+        - ghcr.io/spr-networks/pfw_extension_pfw:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    network_mode: ${NETWORK_MODE:-host}
+    privileged: true
+    logging: *default-logging
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - "${SUPERDIR}./state/plugins/pfw:/state/plugins/pfw"
+      - "${SUPERDIR}./configs/base:/configs/base"
+      - "${SUPERDIR}./configs/pfw:/configs/pfw"
+      - "${SUPERDIR}./state/public/:/state/public/:ro"
+      - "${SUPERDIR}./state/api/:/state/api/:ro"

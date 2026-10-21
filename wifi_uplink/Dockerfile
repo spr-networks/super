@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 ARG ALPINE_REF=alpine@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
-ARG CONTAINER_TEMPLATE_REF=ghcr.io/spr-networks/container_template@sha256:ef770c9ac3f064ca532b06882d3d6bbd6dbe8632f6704077bb1113b9b9c4996e
+ARG CONTAINER_TEMPLATE_REF=ghcr.io/spr-networks/container_template@sha256:0304bffdabc5964083d71ba3251960e39eeaa7ebc3a867b249f91674effbe59c
 ARG SOURCE_DATE_EPOCH
 
 FROM ${ALPINE_REF} AS rust-client

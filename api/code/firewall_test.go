@@ -1994,6 +1994,45 @@ func TestDHCPDevicePolicyApplication(t *testing.T) {
 	})
 }
 
+func TestWireGuardDevicePolicyRefresh(t *testing.T) {
+	setupFirewallTest(t)
+	defer teardownFirewallTest(t)
+
+	device := DeviceEntry{
+		WGPubKey:          "test-wireguard-public-key",
+		RecentIP:          "10.168.0.6",
+		DHCPLastInterface: "wg0",
+		Policies:          []string{"wan", "dns"},
+	}
+	devices := map[string]DeviceEntry{device.WGPubKey: device}
+
+	refreshDeviceGroupsAndPolicy(devices, nil, device)
+
+	for _, mapName := range []string{"internet_access", "dns_access"} {
+		if err := GetIPIfaceVerdictElement("inet", "filter", mapName, device.RecentIP, "wg0", "accept"); err != nil {
+			t.Errorf("WireGuard device policy missing from %s: %v", mapName, err)
+		}
+	}
+
+	// A device with both identities is still keyed by MAC and may be routed
+	// over LAN. Passing its WireGuard key must not change that lookup or iface.
+	lanDevice := DeviceEntry{
+		MAC:               "aa:bb:cc:dd:ee:ff",
+		WGPubKey:          "another-wireguard-public-key",
+		RecentIP:          "192.168.1.122",
+		DHCPLastInterface: "eth0",
+		Policies:          []string{"lan", "dns"},
+	}
+	devices[lanDevice.MAC] = lanDevice
+	refreshDeviceGroupsAndPolicy(devices, nil, lanDevice)
+
+	for _, mapName := range []string{"lan_access", "dns_access"} {
+		if err := GetIPIfaceVerdictElement("inet", "filter", mapName, lanDevice.RecentIP, "eth0", "accept"); err != nil {
+			t.Errorf("LAN-routed device policy missing from %s: %v", mapName, err)
+		}
+	}
+}
+
 func TestFlushVmaps(t *testing.T) {
 	setupFirewallTest(t)
 	defer teardownFirewallTest(t)

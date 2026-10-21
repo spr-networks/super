@@ -1,0 +1,19 @@
+{
+  "Name": "spr-tailscale",
+  "Runtime": "kvm",
+  "UnixPath": "/state/plugins/spr-tailscale/socket.sock",
+  "URI": "spr-tailscale",
+  "HasUI": true,
+  "Icon": "BlocksIcon",
+  "HasTopology": true,
+  "SandboxedUI": true,
+  "InstallTokenPath": "/configs/plugins/spr-tailscale/api-token",
+  "ScopedPaths": ["/firewall/config:r", "/firewall/custom_interface:rw"],
+  "NetworkCapabilities": {
+    "Interface": "spr-tailscale",
+    "DeviceMAC": "02:53:50:52:4b:14",
+    "Policies": ["wan", "dns", "api"],
+    "Groups": ["tailnet"]
+  },
+  "Enabled": true
+}

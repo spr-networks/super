@@ -1,0 +1,26 @@
+[
+  {
+    "netid": "tcp",
+    "state": "ESTAB",
+    "recv_q": 0,
+    "send_q": 0,
+    "local_address": "192.168.2.1",
+    "local_port": "22",
+    "peer_address": "192.168.2.6",
+    "peer_port": "53064",
+    "local_port_num": 22,
+    "peer_port_num": 53064
+  },
+  {
+    "netid": "udp",
+    "state": "ESTAB",
+    "recv_q": 0,
+    "send_q": 0,
+    "local_address": "192.168.2.1",
+    "local_port": "41234",
+    "peer_address": "1.1.1.1",
+    "peer_port": "53",
+    "local_port_num": 41234,
+    "peer_port_num": 53
+  }
+]

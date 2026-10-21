@@ -1498,37 +1498,29 @@ func iwCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// use json parsers if available (iwlist, iwdev, iw-scan)
-	if command == "list" || command == "dev" || command == "reg" || strings.HasSuffix(command, "scan") {
-		parser := "--iw" + command // bug: jc dont allow - when using local parsers
-		if strings.HasSuffix(command, "scan") {
-			parser = "--iw-scan"
-		}
+	// iw list, dev, reg and scan are returned as json
+	var parse func(string) ([]byte, error)
+	switch {
+	case command == "list":
+		parse = parseIwList
+	case command == "dev":
+		parse = parseIwDev
+	case command == "reg":
+		parse = parseIwReg
+	case strings.HasSuffix(command, "scan"):
+		parse = parseIwScan
+	}
 
-		cmd = exec.Command("jc", parser)
-
-		stdin, err := cmd.StdinPipe()
+	if parse != nil {
+		out, err := parse(string(data))
 		if err != nil {
-			fmt.Println("iwCommand stdin pipe error:", err)
-			http.Error(w, err.Error(), 400)
-			return
-		}
-
-		go func() {
-			defer stdin.Close()
-			io.WriteString(stdin, string(data))
-		}()
-
-		stdout, err := cmd.Output()
-		if err != nil {
-			fmt.Println("iwCommand stdout error:", err)
+			fmt.Println("iwCommand parse error:", err)
 			http.Error(w, err.Error(), 400)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "%s", string(stdout))
-
+		w.Write(out)
 		return
 	}
 

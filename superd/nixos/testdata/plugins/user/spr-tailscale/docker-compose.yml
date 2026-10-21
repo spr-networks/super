@@ -1,0 +1,45 @@
+version: '3.4'
+
+#x-logging:
+#  &default-logging
+#  driver: journald
+
+x-labels:
+  &default-labels
+  # constant (not $CI) so digests are reproducible across CI/local
+  org.supernetworks.ci: "true"
+  org.supernetworks.version: ${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+
+services:
+  spr-tailscale:
+    container_name: spr-tailscale
+    image: ghcr.io/spr-networks/spr-tailscale:latest
+    build:
+      context: "${BUILDCTX:-.}"
+      labels: *default-labels
+    environment:
+      - TS_STATE_DIR=/var/lib/tailscale
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.route_localnet=1
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    networks:
+      tailscalenet:
+    volumes:
+      - "${SUPERDIR}./state/plugins/spr-tailscale:/state/plugins/spr-tailscale"
+      - "${SUPERDIR}./state/public/:/state/public/:ro"
+      - "${SUPERDIR}./state/api/:/state/api/:ro"
+      - "${SUPERDIR}./configs/base/config.sh:/configs/base/config.sh:ro"
+      - "${SUPERDIR}./configs/plugins/spr-tailscale:/configs/spr-tailscale"
+      - "${SUPERDIR}./state/plugins/spr-tailscale/varlib:/var/lib"
+
+# Note, if updating the bridge name,
+# // also make an udpate in tailscale_plugin.go in gSPRTailscaleInterface
+networks:
+  tailscalenet:
+    driver_opts:
+      com.docker.network.bridge.name: spr-tailscale
