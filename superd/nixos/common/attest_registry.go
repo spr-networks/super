@@ -137,6 +137,27 @@ func (r *regClient) get(path, accept string) (*http.Response, error) {
 	return r.c.Do(req)
 }
 
+// RegistryClient reads one repository of a registry, with the credentials
+// and token handshake of the attestation checks. Only the response headers
+// have a deadline: image blobs can take long to download.
+type RegistryClient struct{ r *regClient }
+
+func NewRegistryClient(host, repo string) (*RegistryClient, error) {
+	r, err := newRegClient(host, repo)
+	if err != nil {
+		return nil, err
+	}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.ResponseHeaderTimeout = 30 * time.Second
+	r.c = http.Client{Transport: transport}
+	return &RegistryClient{r}, nil
+}
+
+// Get fetches path ("/v2/...") from the registry.
+func (c *RegistryClient) Get(path, accept string) (*http.Response, error) {
+	return c.r.get(path, accept)
+}
+
 func SplitImageRef(imageRef string) (host, repo, tag string) {
 	tag = "latest"
 	pieces := strings.SplitN(imageRef, "/", 2)

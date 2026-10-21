@@ -3,10 +3,11 @@
 # reproducible.env:
 #   - kernel: the latest spr-debian-kernel release, attestation-verified
 #     (installer/raspbian/scripts/fetch-spr-kernel.sh)
-#   - frontend: the super_frontend image of the latest SPR release
-#   - src, vendorHash: the Nix hash of every reproducible.env source and Go
-#     module set, found by building each one
-#   - krun: libkrun's cargo vendor hash (spr-krun-runtime.nix)
+#   - go, src, vendorHash: the Nix hash of the Go source (GO_VERSION) and
+#     every source and Go module set, found by building each one
+#
+# SPR's service images and krun runtime aren't pinned: fetch-images.sh
+# fetches the release's and verifies them with cosign at build time.
 #
 # ../../update-pins.sh runs this after rewriting reproducible.env. Run it on
 # its own after changing a go.mod/go.sum. Everything runs in the nixos/nix
@@ -15,6 +16,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
+# the Nix builder image, pinned in reproducible.env
+NIX_REF=$(sed -n 's/^NIX_REF=//p' reproducible.env)
+: "${NIX_REF:?NIX_REF missing from reproducible.env}"
 echo "Resolving Nix pins..." >&2
 GITDIR=$(git rev-parse --path-format=absolute --git-common-dir)
 docker run --rm --privileged \
@@ -22,7 +26,7 @@ docker run --rm --privileged \
   -e NIX_CONFIG="experimental-features = nix-command flakes
 build-users-group =
 sandbox = true" \
-  nixos/nix:latest bash -c '
+  "$NIX_REF" bash -c '
 set -euo pipefail
 git config --global --add safe.directory "*"
 F=./installer/nixos
@@ -31,13 +35,12 @@ SYS=$(nix eval --impure --raw --expr builtins.currentSystem)
 say() { echo "  $*" >&2; }
 # tools from the flake'"'"'s nixpkgs
 for p in $(nix build --no-link --print-out-paths --inputs-from $F \
-    nixpkgs#jq nixpkgs#gh nixpkgs#skopeo nixpkgs#curl nixpkgs#gawk nixpkgs#gnused nixpkgs#gnugrep); do
+    nixpkgs#jq nixpkgs#gh nixpkgs#curl nixpkgs#gawk nixpkgs#gnused nixpkgs#gnugrep); do
   PATH=$p/bin:$PATH
 done
 export PATH
 # set <jq path> <string>
 set_pin() { jq --arg v "$2" "$1 = \$v" "$PINS" > "$PINS.tmp" && mv "$PINS.tmp" "$PINS"; }
-FAKE=sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
 
 WORK=$(mktemp -d)
 say "spr-debian-kernel: latest release"
@@ -51,15 +54,6 @@ set_pin .kernel.modDirVersion "$mod"
 set_pin .kernel.url "https://github.com/spr-networks/spr-debian-kernel/releases/download/${tag}/${deb//+/%2B}"
 set_pin .kernel.hash "$(nix hash file --sri --type sha256 "$WORK/kernel/$deb")"
 say "  $tag ($mod)"
-
-say "super_frontend: image of the latest SPR release"
-ftag=$(curl -fsSL https://api.github.com/repos/spr-networks/super/releases/latest | jq -r ".tag_name | ltrimstr(\"v\")")
-fdigest=sha256:$(skopeo inspect --raw "docker://ghcr.io/spr-networks/super_frontend:$ftag" | sha256sum | cut -d" " -f1)
-# a new image: drop the old hash, which still matches the old image
-[ "$(jq -r .frontend.digest "$PINS")" = "$fdigest" ] || set_pin .frontend.hash "$FAKE"
-set_pin .frontend.tag "$ftag"
-set_pin .frontend.digest "$fdigest"
-say "  $ftag ($fdigest)"
 
 # check <jq path> <flake attr>: build the fixed-output derivation the pin
 # covers and take the hash nix computes. --rebuild refetches one already in
@@ -86,22 +80,16 @@ check() {
   exit 1
 }
 
-say "Nix hashes: sources, Go modules, frontend image"
+say "Nix hashes: sources, Go modules"
 for s in $(jq -r ".src | keys[]" "$PINS"); do
-  [ "$s" = spr-dns ] || check ".src.\"$s\"" "legacyPackages.$SYS.sources.$s"
+  check ".src.\"$s\"" "legacyPackages.$SYS.sources.$s"
 done
-# CoreDNS with the SPR plugins go-got in (dns/Dockerfile), then its modules
-check ".src.\"spr-dns\"" "packages.$SYS.spr-dns.src"
+# Go at reproducible.env GO_VERSION, as the Docker build
+check .go "packages.$SYS.spr-superd.go.src"
 for p in $(jq -r ".vendorHash | keys[]" "$PINS"); do
   check ".vendorHash.\"$p\"" "packages.$SYS.$p.goModules"
 done
-check .frontend.hash "packages.$SYS.spr-frontend"
-# libkrun's crates, at the host-packages/spr-krun-runtime/versions.env commit
-check .krun.cargoHash "packages.$SYS.spr-krun-runtime.libkrun.cargoDeps"
 
-go=$(nix eval --raw "$F#packages.$SYS.spr-api.go.version")
-want=$(sed -n "s/^GO_VERSION=//p" reproducible.env)
-[ "$go" = "$want" ] || say "note: nixpkgs builds with go $go, the Docker build with go $want"
 rm -rf "$WORK"
 '
 

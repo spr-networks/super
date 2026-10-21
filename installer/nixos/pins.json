@@ -1,42 +1,17 @@
 {
   "kernel": {
-    "release": "v6.18.55-1",
-    "version": "6.18.55",
-    "modDirVersion": "6.18.55-v8-16k+",
-    "url": "https://github.com/spr-networks/spr-debian-kernel/releases/download/v6.18.55-1/linux-image-6.18.55-v8-16k%2B_1.rpi.trixie_arm64.deb",
-    "hash": "sha256-8werfT80Gml9jdqjqxbz7MJqqteYxIdU7U4nD8uoYqs="
+    "release": "v6.18.57-1",
+    "version": "6.18.57",
+    "modDirVersion": "6.18.57-v8-16k+",
+    "url": "https://github.com/spr-networks/spr-debian-kernel/releases/download/v6.18.57-1/linux-image-6.18.57-v8-16k%2B_1.rpi.trixie_arm64.deb",
+    "hash": "sha256-u5H2QeIvmURz59M+yd5gIV1KhWBSPY7O7Bjxc+K8Xt4="
   },
-  "frontend": {
-    "tag": "1.2.10",
-    "digest": "sha256:9706756d24275f495e7f825b81318fbb05a0054d9a7cc1a7b71457f4c5b2b9b5",
-    "hash": "sha256-ILnMEFiKEVzkOXDGKyzWAGQcnZZH+Kzm/WyZq4E6lhk="
-  },
+  "go": "sha256-/WPog7ovK/ypPBZGsx6+9j4rHk0rMXyXidl2po2B828=",
   "src": {
-    "coredhcp": "sha256-sIwws1dDjVili5vuZymTxHvt+kNwUxAwGTCi4EVZyso=",
-    "coredns": "sha256-Uk4oWsUxaGdLQzX5JywYzi7pmQHGo06uQdLeOkP4U/s=",
-    "hostap": "sha256-P5plYo1oAntp5A13weFeLPZwwrzcFL/Qag8fXF46iCs=",
-    "xdp-tools": "sha256-7KsksfcOizLOL+mlqIR6qu0ZP2KyPQldQ2dOItEDFMQ=",
-    "godns": "sha256-LdMeb7pFYj+6HdUBgFkS756oox2HRgkwlHz65SgJoqY=",
-    "sprbus-json": "sha256-Rlw12JJ0hrSWczc874wuYaF4UnsA1OGfYs7K2WKzpAQ=",
-    "spr-dns": "sha256-uU7GaRGhvf1r2AxzB1jgGjd+BonTj2NQz6kPwxiKXrs=",
     "mt76": "sha256-YuKdjBCiGV4ptTSqEmTaMd92ajIuGbHHDFPJIn2FS88=",
     "mt76-mt7996": "sha256-s8SGL+xot9ck1RJkTOdg0Odt+w+Z9FTeFRqsfDfqB6Q="
   },
   "vendorHash": {
-    "spr-api": "sha256-mCJmdS513H/gN0pyKFuUk2qHiPlpv43UdYp5ycL3trU=",
-    "spr-db": "sha256-IjbUewtpunfXUpGwmRP/42HMl1eMEf7nzoyQifhw4X4=",
-    "spr-multicast-proxy": "sha256-ztXSQDJQaldWG8Wg925wUMYsP9jGWt4ilem+XZIdn4g=",
-    "spr-packet-logs": "sha256-+P0pylDp0bRMCqlpuPRIZ4Xpwkz0h4AdKrZK5cowV6U=",
-    "spr-plugin-lookup": "sha256-6sxCoXrarLRu1E4ozYVisE8s4bUdCcYp0ktDETz+Nfw=",
-    "spr-wireguard": "sha256-i4fUsEfJcFY8sz3dBkeWXOMVqeH09QMh4p0GrCjOg9c=",
-    "spr-superd": "sha256-zsCOzPb8Taco+IeerWnT2jPgwrHAs7odCU/XBUtKRIA=",
-    "spr-sprbus-cli": "sha256-vb+2wOtLdcAhUABGWV0iE3LAYi5RZX4P5G58udmswUA=",
-    "spr-dyndns": "sha256-8wYERVt3PIsKkarkwPu8Zy/Sdx43P6g2lz2xRfvTZ2E=",
-    "spr-godns": "sha256-wGaRJFxuhwwwP7CBZ7eY5uR95EMdpWiJuU43eWXtHNo=",
-    "spr-dhcp": "sha256-UxP5H106jHHIfyMBqu0RjX2LrFf+RGG4ykQYn+8rQyg=",
-    "spr-dns": "sha256-Kv03GQ9qz18Z/rzhb6hTJqNdJPdhLY3vK4wbrEFMxIY="
-  },
-  "krun": {
-    "cargoHash": "sha256-SPlozqdmX0khawoFjZrqYjQ5qDY4tSVa7gpehYHUTz8="
+    "spr-superd": "sha256-X8ZMGwxHYmKNs8hwNoMfejN2INw3TM1ZrucKSOipnFU="
   }
 }

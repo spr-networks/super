@@ -21,6 +21,10 @@
 # Needs ssh key access to the device (ssh-agent). For a VM from boot-vm.sh:
 # SSH_PORT=12222. SSH_OPTS replaces the default ssh options.
 #
+# SPR's services come from the super_* images of SPR_IMAGE_TAG (default:
+# the latest release), verified with cosign (fetch-images.sh): set it to
+# the tag the device runs, or the build differs from the device's.
+#
 # QEMU (boot-vm.sh) skips the Pi firmware, so it can't do tryboot: boot the
 # staged image with BOOT_IMG=tryboot.img ./installer/nixos/boot-vm.sh.
 #
@@ -30,6 +34,10 @@
 
 set -euo pipefail
 cd "$(dirname "$0")/../.."
+
+# the Nix builder image, pinned in reproducible.env
+NIX_REF=$(sed -n 's/^NIX_REF=//p' reproducible.env)
+: "${NIX_REF:?NIX_REF missing from reproducible.env}"
 
 TARGET=${1:?usage: $0 user@host [boot|switch|reboot]}
 MODE=${2:-boot}
@@ -70,10 +78,11 @@ SYSTEM=$(docker run --rm --privileged \
   -v "$(pwd):$(pwd)" -w "$(pwd)" ${GIT_DIR_MOUNT[@]+"${GIT_DIR_MOUNT[@]}"} \
   -v spr-nix-store:/nix "${AGENT[@]}" -v "$WORK:/work" ${KEY[@]+"${KEY[@]}"} \
   -e NIX_SSHOPTS="$SSH_OPTS" \
+  -e SPR_IMAGE_TAG="${SPR_IMAGE_TAG:-}" -e SPR_IMAGES=/tmp/spr-images \
   -e NIX_CONFIG="experimental-features = nix-command flakes
 build-users-group =
 sandbox = true" \
-  nixos/nix:latest bash -c "
+  "$NIX_REF" bash -c "
     set -e
     git config --global --add safe.directory '*'
     # ssh needs a passwd entry for root and a shell for nix copy's local
@@ -83,7 +92,8 @@ sandbox = true" \
     rm -f /etc/passwd /bin/sh
     echo \"root:x:0:0:root:/root:\$SHELL\" > /etc/passwd
     ln -s \$SHELL /bin/sh
-    img=\$(nix build --no-link --print-out-paths '$FLAKE_ATTR')
+    bash ./installer/nixos/fetch-images.sh \$SPR_IMAGES >&2
+    img=\$(nix build --impure --no-link --print-out-paths '$FLAKE_ATTR')
     out=\$(readlink \$img/system)
     cp \$img/boot.img \$img/sha256 /work/
     if [ -e /boot-key.pem ]; then

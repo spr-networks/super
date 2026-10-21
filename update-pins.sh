@@ -19,6 +19,8 @@ ALPINE_TAG=alpine:latest
 DOCKERFILE_TAG=docker/dockerfile:1
 BUILDKIT_TAG=moby/buildkit:buildx-stable-1
 CONTAINER_TEMPLATE_TAG=ghcr.io/spr-networks/container_template:latest
+NIX_TAG=nixos/nix:2.35.3
+QEMU_USER_STATIC_TAG=multiarch/qemu-user-static:7.2.0-1
 GO_MINOR=1.26
 OXWIFID_VERSION=0.1.8
 
@@ -40,6 +42,8 @@ ALPINE_REF="${ALPINE_TAG%%:*}@$(mdigest "$ALPINE_TAG")"
 DOCKERFILE_SYNTAX="${DOCKERFILE_TAG}@$(mdigest "$DOCKERFILE_TAG")"
 BUILDKIT_REF="${BUILDKIT_TAG}@$(mdigest "$BUILDKIT_TAG")"
 CONTAINER_TEMPLATE_REF="${CONTAINER_TEMPLATE_TAG%:*}@$(mdigest "$CONTAINER_TEMPLATE_TAG")"
+NIX_REF="${NIX_TAG}@$(mdigest "$NIX_TAG")"
+QEMU_USER_STATIC_REF="${QEMU_USER_STATIC_TAG}@$(mdigest "$QEMU_USER_STATIC_TAG")"
 
 say "ubuntu snapshot"
 UBUNTU_SNAPSHOT="${UBUNTU_SNAPSHOT:-$(grep -E '^UBUNTU_SNAPSHOT=' reproducible.env | cut -d= -f2)}"
@@ -108,6 +112,10 @@ ALPINE_REF=${ALPINE_REF}
 DOCKERFILE_SYNTAX=${DOCKERFILE_SYNTAX}
 BUILDKIT_REF=${BUILDKIT_REF}
 CONTAINER_TEMPLATE_REF=${CONTAINER_TEMPLATE_REF}
+
+# Build host images: the Nix builder (installer/nixos) and qemu binfmt registration
+NIX_REF=${NIX_REF}
+QEMU_USER_STATIC_REF=${QEMU_USER_STATIC_REF}
 
 # apt: Ubuntu snapshot timestamp (one host serves every arch + pocket)
 UBUNTU_SNAPSHOT=${UBUNTU_SNAPSHOT}
