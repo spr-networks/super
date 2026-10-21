@@ -76,6 +76,32 @@ func appendComposeCommandArgs(args []string, command string, optional string, ta
 	return args
 }
 
+var validServiceTokenRE = regexp.MustCompile(`^[a-zA-Z0-9_.-]+$`)
+var validDockerUserRE = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
+
+func validateComposeTarget(target string) error {
+	if target == "" {
+		return nil
+	}
+	if strings.ContainsAny(target, "\r\n\x00;|&`$<>\\\"'") {
+		return fmt.Errorf("invalid characters in target: %q", target)
+	}
+	fields := strings.Fields(target)
+	for _, f := range fields {
+		if !validServiceTokenRE.MatchString(f) || strings.HasPrefix(f, "-") {
+			return fmt.Errorf("invalid service identifier: %q", f)
+		}
+	}
+	return nil
+}
+
+func validateDockerUsername(username string) error {
+	if !validDockerUserRE.MatchString(username) || strings.HasPrefix(username, "-") {
+		return fmt.Errorf("invalid docker username: %q", username)
+	}
+	return nil
+}
+
 var composeAllowMtx sync.Mutex
 
 func getReleaseVersion() string {
@@ -207,6 +233,10 @@ func remediateNetworkBridgeConflict(detail string, removed map[string]bool) bool
 func composeCommand(composeFileIN string, target string, command string, optional string, new_docker bool) error {
 	composeCommandMtx.Lock()
 	defer composeCommandMtx.Unlock()
+
+	if err := validateComposeTarget(target); err != nil {
+		return err
+	}
 
 	args := []string{}
 	release_channel := ""
@@ -346,15 +376,15 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		// so now we need to handle both cases
 
 		if haveOldDC {
-			args = append(d_args, "--entrypoint=/bin/bash",
-				"ghcr.io/spr-networks/super_superd",
-				"-c",
-				"docker-compose "+strings.Join(args, " "))
+			composeArgs := append([]string{}, args...)
+			args = append(d_args, "--entrypoint=docker-compose",
+				"ghcr.io/spr-networks/super_superd")
+			args = append(args, composeArgs...)
 		} else {
-			args = append(d_args, "--entrypoint=/bin/bash",
-				"ghcr.io/spr-networks/super_superd",
-				"-c",
-				"docker compose "+strings.Join(args, " "))
+			composeArgs := append([]string{"compose"}, args...)
+			args = append(d_args, "--entrypoint=docker",
+				"ghcr.io/spr-networks/super_superd")
+			args = append(args, composeArgs...)
 		}
 
 	}
@@ -728,6 +758,11 @@ func ghcr_auth(w http.ResponseWriter, r *http.Request) {
 
 	if username == "" || secret == "" {
 		http.Error(w, "need username and secret parameters", 400)
+		return
+	}
+
+	if err := validateDockerUsername(username); err != nil {
+		http.Error(w, err.Error(), 400)
 		return
 	}
 
@@ -1666,7 +1701,10 @@ func setup() {
 var sshKeyRe = regexp.MustCompile(`^[A-Za-z0-9.@_-]+ [A-Za-z0-9+/]+=*( [\x20-\x7E]*)?$`)
 
 const tplImage = "ghcr.io/spr-networks/container_template:latest"
-const authorizedKeysScript = "/home/spr/super/superd/scripts/install-authorized-keys.sh"
+
+func getAuthorizedKeysScript() string {
+	return filepath.Join(getHostSuperDir(), "superd/scripts/install-authorized-keys.sh")
+}
 
 func deployAuthorizedKeys(w http.ResponseWriter, r *http.Request) {
 	var keys []string
@@ -1684,7 +1722,7 @@ func deployAuthorizedKeys(w http.ResponseWriter, r *http.Request) {
 	}
 	cmd := exec.Command("docker", "run", "--rm", "-i",
 		"-v", "/home/ubuntu/.ssh:/host_ssh",
-		"-v", authorizedKeysScript+":/install.sh:ro",
+		"-v", getAuthorizedKeysScript()+":/install.sh:ro",
 		tplImage, "/install.sh")
 	cmd.Stdin = strings.NewReader(strings.Join(keys, "\n") + "\n")
 	out, err := cmd.CombinedOutput()
