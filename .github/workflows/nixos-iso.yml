@@ -1,15 +1,14 @@
 name: NixOS ISO Installer
 
 on:
-  # main: after PI ISO Installer, which publishes the release's
-  # spr-krun-runtime .deb that this image ships (fetch-images.sh)
+  # after PI ISO Installer on main (itself after Docker Image CI, as the
+  # other ISOs), which publishes the release's spr-krun-runtime .deb that
+  # this image ships (fetch-images.sh)
   workflow_run:
-    workflows: ["Docker Image CI", "PI ISO Installer"]
+    workflows: ["PI ISO Installer"]
     types:
       - completed
-    # TODO: dev only while testing the ARM64 runner build; remove dev and
-    # "Docker Image CI" before merging. Releases are main-only either way.
-    branches: [ main, dev ]
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -24,10 +23,7 @@ jobs:
     # armbuild1 has only this label (registered with --no-default-labels),
     # so jobs asking for plain self-hosted never land on it
     runs-on: spr-nixos-arm64
-    if: >-
-      ${{ github.event_name == 'workflow_dispatch' ||
-          (github.event.workflow_run.conclusion == 'success' &&
-           (github.event.workflow_run.name == 'PI ISO Installer') == (github.event.workflow_run.head_branch == 'main')) }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     env:
       # a workflow_run run is on the default branch: build and release
       # what the triggering run built
