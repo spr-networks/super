@@ -1,6 +1,15 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.2.12
+**Improvements*
+- Harden superd unix socket (pull/533)
+
+**Fix**
+- Fix nixos image builder
+- Security updates for dependencies
+
+
 ## v1.2.11
 **Improvements*
 - New nixos build for CM5/PI5

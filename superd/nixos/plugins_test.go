@@ -11,7 +11,6 @@ import (
 	"strings"
 	"testing"
 
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"superd/nixos/common"
 )
 
@@ -91,7 +90,7 @@ func TestKVMPluginCompose(t *testing.T) {
 		t.Fatalf("attachments = %#v", c.Networks)
 	}
 
-	img := Image{Ref: svc.Image, Digest: "sha256:00", Config: v1.Config{Entrypoint: []string{"/run.sh"}, Env: []string{"A=1"}}}
+	img := Image{Ref: svc.Image, Digest: "sha256:00", Config: ImageConfig{Entrypoint: []string{"/run.sh"}, Env: []string{"A=1"}}}
 	if _, err := os.Stat("/dev/net/tun"); err != nil {
 		svc.Devices = nil
 	}
@@ -156,7 +155,7 @@ func TestPlusPluginCompose(t *testing.T) {
 				t.Fatalf("%s: krun grant %v %v", compose, grant, err)
 			}
 			c := &Container{ID: containerID(project.Name, svc.Name), Name: svc.ContainerName, NetworkMode: "host"}
-			img := Image{Config: v1.Config{Cmd: []string{"/scripts/startup.sh"}}}
+			img := Image{Config: ImageConfig{Cmd: []string{"/scripts/startup.sh"}}}
 			spec, err := buildSpec(c, svc, img, nil)
 			if err != nil {
 				t.Fatal(err)

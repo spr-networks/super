@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 mkdir data
-VERSION="2026-09-15"
+VERSION="2026-10-06"
 IMG="${VERSION}-raspios-trixie-arm64-lite.img.xz"
-HASH="cdf4f3bfac35ae947b46e4e767f935453810549779ac3290e05a6754aee627e5"
+HASH="483db18a48da399b5b7022ffae9a07bc6d99daab30e593aedac09b69ff422843"
 
 cd ./data
 

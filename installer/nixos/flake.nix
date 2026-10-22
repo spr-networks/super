@@ -28,10 +28,21 @@
           (map (builtins.match "([A-Z0-9_]+)=(.*)")
             (nixpkgs.lib.splitString "\n" (builtins.readFile ../../reproducible.env)))));
       pins = builtins.fromJSON (builtins.readFile ./pins.json);
-    in
-    flake-utils.lib.eachSystem supportedSystems (system:
+
+      # SPR's service binaries from the super_* images and the release's
+      # krun .deb, which fetch-images.sh verified (cosign) into SPR_IMAGES:
+      # build with --impure (build-image.sh, update.sh)
+      sprImages = let dir = builtins.getEnv "SPR_IMAGES"; in
+        if dir == "" then throw "SPR_IMAGES is unset: build with installer/nixos/build-image.sh"
+        else builtins.path { path = dir; name = "spr-images"; };
+      sprImagesTag = nixpkgs.lib.removeSuffix "\n" (builtins.readFile "${sprImages}/tag");
+
+      # SPR's packages for a package set: each system's own nixpkgs for
+      # packages.<system>, and the system's pkgs in the NixOS configurations,
+      # so a cross build (spr-aarch64-cross) cross-compiles them too
+      sprFor = pkgs:
       let
-        pkgs = import nixpkgs { inherit system; };
+        system = pkgs.stdenv.hostPlatform.system;
 
         # Placeholder hash — nix will error with the correct hash on first build.
         # Replace each one as you go: nix build .#spr-api 2>&1 | grep 'got:'
@@ -39,105 +50,139 @@
 
         goLdflags = "-s -w";
 
-        # the Go release line of the Docker build (GO_VERSION)
+        # the Go release of the Docker build (GO_VERSION): nixpkgs' go of
+        # that line, built from that release's source, as nixpkgs can lag
+        # behind it (security fixes)
         goMinor = nixpkgs.lib.versions.majorMinor env.GO_VERSION;
-        go = pkgs."go_${builtins.replaceStrings [ "." ] [ "_" ] goMinor}";
-        buildGoModule = pkgs."buildGo${builtins.replaceStrings [ "." ] [ "" ] goMinor}Module";
+        go = pkgs."go_${builtins.replaceStrings [ "." ] [ "_" ] goMinor}".overrideAttrs (old: {
+          version = env.GO_VERSION;
+          src = pkgs.fetchurl {
+            url = "https://go.dev/dl/go${env.GO_VERSION}.src.tar.gz";
+            hash = pins.go;
+          };
+        });
+        buildGoModule = pkgs."buildGo${builtins.replaceStrings [ "." ] [ "" ] goMinor}Module".override { inherit go; };
 
-        # sources at their reproducible.env commits
+        # sources at pinned commits
         sources = builtins.mapAttrs (name: src: pkgs.fetchFromGitHub (src // {
           hash = pins.src.${name};
         })) {
-          coredhcp = { owner = "spr-networks"; repo = "coredhcp"; rev = env.COREDHCP_COMMIT; };
-          coredns = { owner = "coredns"; repo = "coredns"; rev = env.COREDNS_COMMIT; };
-          hostap = { owner = "spr-networks"; repo = "hostap"; rev = env.HOSTAP_COMMIT; };
-          xdp-tools = { owner = "xdp-project"; repo = "xdp-tools"; rev = env.XDP_TOOLS_COMMIT; };
-          godns = { owner = "TimothyYe"; repo = "godns"; rev = env.GODNS_COMMIT; };
-          sprbus-json = { owner = "spr-networks"; repo = "sprbus-json"; rev = env.SPRBUS_JSON_COMMIT; };
           # MediaTek firmware, at installer/raspbian/scripts/pi-target-install.sh's commits
           mt76 = { owner = "openwrt"; repo = "mt76"; rev = "65bbd4c394a9d51f1ca5a0531166c22ff07d4e56"; };
           mt76-mt7996 = { owner = "openwrt"; repo = "mt76"; rev = "018f60316d4dd6b4e741874eda40e2dfaa29df3b"; };
         };
 
         # ================================================================
-        #  In-repo Go services
+        #  SPR's services: the published super_* images
         # ================================================================
 
-        spr-api = buildGoModule {
-          pname = "spr-api";
-          version = "0-unstable";
-          src = ../../api/code;
-          vendorHash = pins.vendorHash.spr-api;
-          env.CGO_ENABLED = "0";
-          ldflags = [ goLdflags ];
-          # tests write to /configs (not available in the build sandbox)
-          doCheck = false;
-          meta.description = "SPR REST API server";
+        # The same builds the docker install runs (fetch-images.sh): files
+        # (out path = path in the image), the dynamically linked ones (libs)
+        # relinked against nixpkgs
+        fromImage = { pname, image, files, libs ? [ ], description }: pkgs.stdenv.mkDerivation {
+          inherit pname;
+          version = sprImagesTag;
+          dontUnpack = true;
+          nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+          buildInputs = libs;
+          installPhase = pkgs.lib.concatStrings (pkgs.lib.mapAttrsToList (out: path: ''
+            install -D${if pkgs.lib.hasPrefix "bin/" out then "m755" else "m644"} ${sprImages}/${image}/${path} $out/${out}
+          '') files);
+          # as built: the Go binaries are stripped, the eBPF object must not be
+          dontStrip = true;
+          meta.description = description;
         };
 
-        spr-db = buildGoModule {
-          pname = "spr-db";
-          version = "0-unstable";
-          src = ../../db/code;
-          vendorHash = pins.vendorHash.spr-db;
-          env.CGO_ENABLED = "0";
-          ldflags = [ goLdflags ];
-          subPackages = [ "cmd/boltapi" ];
-          meta.description = "SPR database (BoltDB) service";
-          # go.mod: module boltapi, subPackage cmd/boltapi → binary: boltapi ✓
+        spr-api = fromImage {
+          pname = "spr-api"; image = "api";
+          files."bin/api" = "api";
+          description = "SPR REST API server";
         };
+        spr-sprbus-cli = fromImage {
+          pname = "spr-sprbus-cli"; image = "api";
+          files."bin/sprbus" = "sprbus";
+          description = "SPR sprbus debug CLI/TUI";
+        };
+        spr-db = fromImage {
+          pname = "spr-db"; image = "db";
+          files."bin/boltapi" = "boltapi";
+          description = "SPR database (BoltDB) service";
+        };
+        spr-dhcp = fromImage {
+          pname = "spr-dhcp"; image = "dhcp";
+          files = { "bin/coredhcpd" = "coredhcpd"; "bin/coredhcp_client" = "coredhcp_client"; };
+          description = "SPR CoreDHCP server (spr-networks fork)";
+        };
+        spr-dns = fromImage {
+          pname = "spr-dns"; image = "dns";
+          files."bin/coredns" = "coredns";
+          description = "SPR CoreDNS with custom plugins";
+        };
+        spr-dyndns = fromImage {
+          pname = "spr-dyndns"; image = "dyndns";
+          files."bin/dyndns_plugin" = "dyndns_plugin";
+          description = "SPR dynamic DNS plugin";
+        };
+        spr-godns = fromImage {
+          pname = "godns"; image = "dyndns";
+          files."bin/godns" = "godns";
+          description = "godns dynamic DNS client";
+        };
+        spr-multicast-proxy = fromImage {
+          pname = "spr-multicast-proxy"; image = "multicast_udp_proxy";
+          files."bin/multicastproxy" = "code/multicastproxy";
+          description = "SPR multicast UDP proxy";
+        };
+        spr-packet-logs = fromImage {
+          pname = "spr-packet-logs"; image = "packet_logs";
+          files."bin/packet_logs" = "packet_logs";
+          description = "SPR packet logging service";
+        };
+        spr-plugin-lookup = fromImage {
+          pname = "spr-plugin-lookup"; image = "plugin-lookup";
+          files."bin/lookup_plugin" = "lookup_plugin";
+          description = "SPR plugin lookup (IP/ASN) service";
+        };
+        spr-wireguard = fromImage {
+          pname = "spr-wireguard"; image = "wireguard";
+          files."bin/wireguard_plugin" = "wireguard_plugin";
+          description = "SPR WireGuard plugin";
+        };
+        # SPR's hostap fork, with wifid/code/hostapd_config
+        spr-hostapd = fromImage {
+          pname = "spr-hostapd"; image = "wifid";
+          files = { "bin/hostapd" = "usr/local/bin/hostapd"; "bin/hostapd_cli" = "usr/local/bin/hostapd_cli"; };
+          libs = with pkgs; [ openssl libnl ];
+          description = "SPR custom hostapd (spr-networks fork)";
+        };
+        spr-wifid-helper = fromImage {
+          pname = "spr-wifid-helper"; image = "wifid";
+          files."bin/hostap_dhcp_helper" = "hostap_dhcp_helper";
+          description = "SPR WiFi DHCP helper (nft dhcp_access manager)";
+        };
+        spr-wifid-ebpf = fromImage {
+          pname = "spr-wifid-ebpf"; image = "wifid";
+          files."lib/filter_dhcp_mismatch.o" = "code/filter_dhcp_mismatch.o";
+          description = "SPR eBPF DHCP mismatch filter";
+        };
+        # the image's Ubuntu wpasupplicant (wifi_uplink/Dockerfile), with the
+        # upstream socket paths wifi_uplink's scripts use
+        spr-wpa-supplicant = fromImage {
+          pname = "spr-wpa-supplicant"; image = "wifiuplink";
+          files = { "bin/wpa_supplicant" = "usr/sbin/wpa_supplicant"; "bin/wpa_cli" = "usr/sbin/wpa_cli"; };
+          libs = with pkgs; [ libnl pcsclite.lib openssl dbus.lib readline ];
+          description = "wpa_supplicant of the SPR WiFi uplink";
+        };
+        # the UI the docker install copies out of /app/build
+        spr-frontend = pkgs.runCommand "spr-frontend-${sprImagesTag}" {
+          meta.description = "SPR web frontend";
+        } ''
+          cp -r ${sprImages}/frontend/app/build $out
+        '';
 
-        spr-multicast-proxy = buildGoModule {
-          pname = "spr-multicast-proxy";
-          version = "0-unstable";
-          src = ../../multicast_udp_proxy/code;
-          vendorHash = pins.vendorHash.spr-multicast-proxy;
-          env.CGO_ENABLED = "0";
-          ldflags = [ goLdflags ];
-          # go.mod: module test → binary: test (WRONG)
-          # Dockerfile uses: go build ... multicastproxy.go
-          postInstall = ''
-            mv $out/bin/test $out/bin/multicastproxy
-          '';
-          meta.description = "SPR multicast UDP proxy";
-        };
-
-        spr-packet-logs = buildGoModule {
-          pname = "spr-packet-logs";
-          version = "0-unstable";
-          src = ../../packet_logs/code;
-          vendorHash = pins.vendorHash.spr-packet-logs;
-          env.CGO_ENABLED = "0";
-          ldflags = [ goLdflags ];
-          # go.mod: module github.com/spr-networks/super/packet_logs → binary: packet_logs ✓
-          meta.description = "SPR packet logging service";
-        };
-
-        spr-plugin-lookup = buildGoModule {
-          pname = "spr-plugin-lookup";
-          version = "0-unstable";
-          src = ../../plugin-lookup/code;
-          vendorHash = pins.vendorHash.spr-plugin-lookup;
-          env.CGO_ENABLED = "0";
-          ldflags = [ goLdflags ];
-          # Tests require data files (ip2asn-v4.tsv) not available at build time
-          doCheck = false;
-          meta.description = "SPR plugin lookup (IP/ASN) service";
-        };
-
-        spr-wireguard = buildGoModule {
-          pname = "spr-wireguard";
-          version = "0-unstable";
-          src = ../../wireguard/code;
-          vendorHash = pins.vendorHash.spr-wireguard;
-          env.CGO_ENABLED = "0";
-          ldflags = [ goLdflags ];
-          # go.mod: module sample_plugin → binary: sample_plugin; Dockerfile ships /wireguard_plugin
-          postInstall = ''
-            mv $out/bin/sample_plugin $out/bin/wireguard_plugin
-          '';
-          meta.description = "SPR WireGuard plugin";
-        };
+        # ================================================================
+        #  Built here
+        # ================================================================
 
         spr-superd = buildGoModule {
           pname = "spr-superd";
@@ -163,71 +208,6 @@
           # TODO: upstream has gopacket API mismatch (google/gopacket vs gopacket/gopacket)
           meta.broken = true;
           meta.description = "SPR flow gather service";
-        };
-
-        spr-wifid-helper = buildGoModule {
-          pname = "spr-wifid-helper";
-          version = "0-unstable";
-          src = ../../wifid/code;
-          vendorHash = null; # stdlib only, no external deps
-          env.CGO_ENABLED = "0";
-          ldflags = [ goLdflags ];
-          meta.description = "SPR WiFi DHCP helper (nft dhcp_access manager)";
-          # go.mod: module spr/wifid → binary: wifid (Dockerfile ships hostap_dhcp_helper)
-          postInstall = ''
-            mv $out/bin/wifid $out/bin/hostap_dhcp_helper
-          '';
-        };
-
-        # sprbus debug CLI/TUI (not a daemon), at SPRBUS_JSON_COMMIT
-        spr-sprbus-cli = buildGoModule {
-          pname = "spr-sprbus-cli";
-          version = "0-unstable";
-          src = sources.sprbus-json;
-          # cmd/go.mod has `replace github.com/spr-networks/sprbus-json => ..`
-          modRoot = "cmd";
-          vendorHash = pins.vendorHash.spr-sprbus-cli;
-          env.CGO_ENABLED = "0";
-          ldflags = [ goLdflags ];
-          # go.mod: module main → binary: main; Dockerfile ships /sprbus
-          postInstall = ''
-            mv $out/bin/main $out/bin/sprbus
-          '';
-          meta.description = "SPR sprbus debug CLI/TUI";
-        };
-
-        # ================================================================
-        #  Plugins shipped in this repo (dyndns, ppp, wifi_uplink)
-        # ================================================================
-
-        spr-dyndns = buildGoModule {
-          pname = "spr-dyndns";
-          version = "0-unstable";
-          src = ../../dyndns/code;
-          vendorHash = pins.vendorHash.spr-dyndns;
-          env.CGO_ENABLED = "0";
-          ldflags = [ goLdflags ];
-          meta.description = "SPR dynamic DNS plugin";
-          # go.mod: module dyndns_plugin → binary: dyndns_plugin ✓
-        };
-
-        # godns at GODNS_COMMIT in dyndns/Dockerfile, web UI stubbed out
-        spr-godns = buildGoModule {
-          pname = "godns";
-          version = "0-unstable";
-          src = sources.godns;
-          vendorHash = pins.vendorHash.spr-godns;
-          # same as the Dockerfile's `go generate` after stubbing web/out
-          postPatch = ''
-            mkdir -p web/out
-            echo 'godns web UI disabled' > web/out/index.html
-            cp -r web/out internal/server/out
-          '';
-          subPackages = [ "cmd/godns" ];
-          env.CGO_ENABLED = "0";
-          ldflags = [ goLdflags ];
-          doCheck = false;
-          meta.description = "godns dynamic DNS client";
         };
 
         # oxwifid release (OXWIFID_*), as in the wifid/ and wifi_uplink/ Dockerfiles:
@@ -257,124 +237,6 @@
           done
         '';
 
-        # ================================================================
-        #  External Go services (SPR forks)
-        # ================================================================
-
-        spr-dhcp = buildGoModule {
-          pname = "spr-dhcp";
-          version = "0-unstable";
-          src = sources.coredhcp;
-          vendorHash = pins.vendorHash.spr-dhcp;
-          env.CGO_ENABLED = "0";
-          subPackages = [ "cmds/coredhcp" "cmds/exdhcp/dhclient" ];
-          ldflags = [ goLdflags ];
-          postInstall = ''
-            mv $out/bin/coredhcp $out/bin/coredhcpd
-            mv $out/bin/dhclient $out/bin/coredhcp_client 2>/dev/null || true
-          '';
-          meta.description = "SPR CoreDHCP server (spr-networks fork)";
-        };
-
-        # CoreDNS with SPR plugins.
-        # Upstream Dockerfile does go get + sed on plugin.cfg.
-        # Nix sandbox has no network, so we use a fixed-output derivation
-        # to prepare a patched source with all deps resolved.
-        spr-dns-src = pkgs.stdenv.mkDerivation {
-          name = "spr-dns-patched-src";
-          nativeBuildInputs = [ go pkgs.git pkgs.cacert ];
-          # Fixed-output derivation: allows network access, verified by hash
-          outputHashMode = "recursive";
-          outputHashAlgo = "sha256";
-          outputHash = pins.src.spr-dns;
-          SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
-          GIT_SSL_CAINFO = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
-          phases = [ "buildPhase" "installPhase" ];
-          # same plugin.cfg and plugin commits (COREDNS_*) as dns/Dockerfile
-          buildPhase = ''
-            export HOME=$TMPDIR
-            export GOPATH=$TMPDIR/go
-            export GOTOOLCHAIN=local
-            cp -r ${sources.coredns} $TMPDIR/coredns
-            chmod -R u+w $TMPDIR/coredns
-            cd $TMPDIR/coredns
-
-            cp ${../../dns/plugin.cfg} plugin.cfg
-            go generate
-            go get github.com/spr-networks/coredns-jsonlog@${env.COREDNS_JSONLOG_COMMIT}
-            go get github.com/spr-networks/coredns-block@${env.COREDNS_BLOCK_COMMIT}
-            go get github.com/spr-networks/coredns-spr_cache@${env.COREDNS_SPR_CACHE_COMMIT}
-            go get github.com/spr-networks/coredns-spr_forward@${env.COREDNS_SPR_FORWARD_COMMIT}
-            go generate
-            go mod tidy
-          '';
-          installPhase = ''
-            cp -r $TMPDIR/coredns $out
-          '';
-        };
-
-        spr-dns = buildGoModule {
-          pname = "spr-dns";
-          version = "0-${builtins.substring 0 7 env.COREDNS_COMMIT}-spr";
-          src = spr-dns-src;
-          vendorHash = pins.vendorHash.spr-dns;
-          env.CGO_ENABLED = "0";
-          ldflags = [ goLdflags ];
-          # SPR's spr_forward plugin has a metrics init conflict in upstream tests
-          doCheck = false;
-          meta.description = "SPR CoreDNS with custom plugins";
-        };
-
-        # ================================================================
-        #  Custom hostapd (C build from SPR's hostap fork)
-        # ================================================================
-
-        spr-hostapd = pkgs.stdenv.mkDerivation {
-          pname = "spr-hostapd";
-          version = "0-unstable";
-          src = sources.hostap;
-          nativeBuildInputs = with pkgs; [ pkg-config ];
-          buildInputs = with pkgs; [ openssl libnl ];
-          configurePhase = ''
-            cp ${../../wifid/code/hostapd_config} hostapd/.config
-          '';
-          buildPhase = ''
-            cd hostapd
-            make -j$NIX_BUILD_CORES
-          '';
-          installPhase = ''
-            mkdir -p $out/bin
-            cp hostapd $out/bin/
-            cp hostapd_cli $out/bin/
-          '';
-          meta.description = "SPR custom hostapd (spr-networks fork)";
-        };
-
-        # ================================================================
-        #  eBPF filter + xdp-loader for wifid
-        # ================================================================
-
-        spr-wifid-ebpf = pkgs.stdenv.mkDerivation {
-          pname = "spr-wifid-ebpf";
-          version = "0-unstable";
-          src = ../../wifid/code;
-          nativeBuildInputs = [ pkgs.llvm ];
-          # Use unwrapped clang to avoid Nix hardening flags incompatible with BPF target.
-          # Include kernel headers and xdp-tools headers for BPF type definitions.
-          buildPhase = ''
-            ${pkgs.clang.cc}/bin/clang -O3 -target bpf -D __BPF_TRACING__ \
-              -I ${sources.xdp-tools}/headers/ \
-              -I ${pkgs.linuxHeaders}/include \
-              -I ${pkgs.libbpf}/include \
-              -c filter_dhcp_mismatch.c -o filter_dhcp_mismatch.o
-          '';
-          installPhase = ''
-            mkdir -p $out/lib
-            cp filter_dhcp_mismatch.o $out/lib/
-          '';
-          meta.description = "SPR eBPF DHCP mismatch filter";
-        };
-
         # xdp-tools from nixpkgs (provides xdp-loader)
         # wifid only needs xdp-loader (main's wifid image takes it from the
         # distro xdp-tools package); the full output pulls in gcc through
@@ -403,12 +265,28 @@
           makeWrapper $core/git $out/bin/git --set GIT_EXEC_PATH $core
         '';
 
-        # the API writes `plugin rp-pppoe.so` (ppp 2.4 name); ppp 2.5 calls it pppoe.so
-        spr-ppp = pkgs.ppp.overrideAttrs (old: {
-          postInstall = (old.postInstall or "") + ''
-            ln -s pppoe.so $out/lib/pppd/${old.version}/rp-pppoe.so
+        # pppd of the super_ppp image (Ubuntu's ppp, ppp/Dockerfile) and the
+        # PPPoE plugin the API configures (`plugin rp-pppoe.so`,
+        # api/code/uplink.go). pppd loads plugins from /usr/lib/pppd/<version>:
+        # spr-ppp's unit binds lib/pppd there.
+        spr-ppp = pkgs.stdenv.mkDerivation {
+          pname = "spr-ppp";
+          version = sprImagesTag;
+          dontUnpack = true;
+          nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+          buildInputs = with pkgs; [ openssl libxcrypt-legacy pam systemdLibs libpcap ];
+          installPhase = ''
+            install -Dm755 ${sprImages}/ppp/usr/sbin/pppd $out/bin/pppd
+            # Debian's soname for libpcap 1.x
+            patchelf --replace-needed libpcap.so.0.8 libpcap.so.1 $out/bin/pppd
+            for dir in ${sprImages}/ppp/usr/lib/pppd/*; do
+              mkdir -p $out/lib/pppd/$(basename $dir)
+              cp -L $dir/pppoe.so $dir/rp-pppoe.so $out/lib/pppd/$(basename $dir)/
+            done
           '';
-        });
+          dontStrip = true;
+          meta.description = "pppd of the SPR PPP uplink";
+        };
 
         # linux-firmware cut down to the hardware SPR supports:
         # Pi 4/5 + CM4/CM5 onboard WiFi/BT, ath12k, mt7915/mt7916/mt7996/mt7925,
@@ -481,33 +359,6 @@
             cp -rf mt7996/. $dst/mediatek/mt7996/)
           cp -f ${sources.mt76-mt7996}/firmware/mt7996/* $dst/mediatek/mt7996/
           chmod -R u+w $dst
-        '';
-
-        # ================================================================
-        #  Frontend (React)
-        # ================================================================
-
-        # The UI is the published super_frontend image, the same build the
-        # docker install copies out of /app/build (see docker-compose.yml)
-        # docker-compose.yml (pins.json: the latest SPR release's tag)
-        spr-frontend-image = pkgs.dockerTools.pullImage {
-          imageName = "ghcr.io/spr-networks/super_frontend";
-          imageDigest = pins.frontend.digest;
-          finalImageTag = pins.frontend.tag;
-          os = "linux";
-          arch = "arm64";
-          hash = pins.frontend.hash;
-        };
-        spr-frontend = pkgs.runCommand "spr-frontend-${pins.frontend.tag}" {
-          nativeBuildInputs = [ pkgs.jq ];
-          meta.description = "SPR web frontend";
-        } ''
-          mkdir image rootfs
-          tar -xf ${spr-frontend-image} -C image
-          for layer in $(jq -r '.[0].Layers[]' image/manifest.json); do
-            tar -xf image/$layer -C rootfs
-          done
-          cp -r rootfs/app/build $out
         '';
 
         # ================================================================
@@ -615,7 +466,8 @@
         spr-krun-runtime = import ./spr-krun-runtime.nix {
           inherit pkgs;
           inherit (pkgs) lib;
-          inherit (pins.krun) cargoHash;
+          deb = "${sprImages}/krun/spr-krun-runtime.deb";
+          version = pkgs.lib.removeSuffix "\n" (builtins.readFile "${sprImages}/krun/version");
         };
 
       in {
@@ -626,7 +478,7 @@
                   spr-wifid-helper spr-sprbus-cli spr-dhcp spr-dns spr-hostapd
                   spr-dyndns spr-godns spr-oxwifid
                   spr-firmware spr-ppp
-                  spr-wifid-ebpf spr-xdp-loader spr-git spr-frontend
+                  spr-wifid-ebpf spr-xdp-loader spr-git spr-frontend spr-wpa-supplicant
                   spr-kernel-prebuilt;
           default = spr-api;
         };
@@ -713,15 +565,19 @@
             router.succeed("systemctl is-active spr-db")
           '';
         };
-      }
-    ) // {
+      };
+    in
+    flake-utils.lib.eachSystem supportedSystems (system: sprFor (import nixpkgs { inherit system; })) // {
       # ==============================================================
       #  NixOS module
       # ==============================================================
       nixosModules.default = { config, lib, pkgs, ... }:
         let
           cfg = config.services.spr;
-          sprPkgs = self.packages.${pkgs.system};
+          sprPkgs = (sprFor pkgs).packages;
+          # the system's TLS roots (security.pki), for the services that
+          # bind or name a bundle themselves
+          cacert = pkgs.cacert.override { blacklist = config.security.pki.caCertificateBlacklist; };
 
           baseScriptsDir = ../../base/scripts;
           wifidScriptsDir = ../../wifid/scripts;
@@ -758,7 +614,7 @@
               "/dev/random"
               # name resolution and TLS roots, as the containers had
               "-/etc/resolv.conf"
-              "${pkgs.cacert}/etc/ssl:/etc/ssl"
+              "${cacert}/etc/ssl:/etc/ssl"
             ];
             PrivateDevices = true;
             PrivateTmp = true;
@@ -863,6 +719,13 @@
             # TODO: integrate SPR kernel modules at /lib/modules/<spr-ver>
             # so loadable modules match the running kernel.
 
+
+            # eMudhra CA compromise (CVE-2026-114406): the roots that
+            # cross-signed its intermediates, until nixpkgs' cacert drops them
+            security.pki.caCertificateBlacklist = [
+              "emSign ECC Root CA - G3"
+              "Comodo AAA Services root"
+            ];
 
             # -- System packages that SPR shell scripts call at runtime --
             environment.systemPackages = with pkgs; [
@@ -1384,7 +1247,7 @@
                         "network-online.target" "time-sync.target" ];
               requires = [ "spr-base.service" ];
               path = with pkgs; [ curl gzip gnugrep gawk coreutils ];
-              environment.SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+              environment.SSL_CERT_FILE = "${cacert}/etc/ssl/certs/ca-bundle.crt";
               serviceConfig = sprServiceConfig // {
                 Type = "simple";
                 Restart = "on-failure";
@@ -1439,6 +1302,7 @@
                 Restart = "on-failure";
                 RestartSec = 5;
                 BindPaths = [ "${d}/configs/ppp:/etc/ppp" ];
+                BindReadOnlyPaths = [ "${sprPkgs.spr-ppp}/lib/pppd:/usr/lib/pppd" ];
                 ExecStart = pkgs.runCommand "spr-ppp-startup" {} ''
                   substitute ${../../ppp/scripts/startup.sh} $out \
                     --replace-fail /usr/sbin/pppd ${sprPkgs.spr-ppp}/bin/pppd
@@ -1451,10 +1315,7 @@
             systemd.services.spr-wifi-uplink = {
               description = "SPR WiFi uplink";
               after = [ "spr-base.service" ];
-              # upstream socket paths, as in the docker image: nixpkgs' default
-              # build puts wpa_cli's client sockets in /run/wpa_supplicant/client
-              path = with pkgs; [ (wpa_supplicant.override { unprivileged = false; })
-                                  jq iproute2 bash coreutils procps ];
+              path = with pkgs; [ sprPkgs.spr-wpa-supplicant jq iproute2 bash coreutils procps ];
               serviceConfig = {
                 Type = "simple";
                 Restart = "on-failure";
@@ -1531,8 +1392,8 @@
                 SPR_CRUN = "${sprPkgs.spr-krun-runtime}/bin/crun";
                 SPR_KRUN = "${sprPkgs.spr-krun-runtime}/bin/krun";
                 SPR_INIT = "${pkgs.pkgsStatic.tini}/bin/tini";
-                SPR_VERSION = "v${pins.frontend.tag}";
-                SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+                SPR_VERSION = "v${lib.removeSuffix "-dev" sprImagesTag}";
+                SSL_CERT_FILE = "${cacert}/etc/ssl/certs/ca-bundle.crt";
                 # the Sigstore trust root for attestation checks is cached
                 # in $HOME/.sigstore
                 HOME = "/var/lib/spr-superd";
@@ -1629,7 +1490,6 @@
               (modulesPath + "/profiles/perlless.nix")
             ] ++ (with nixos-raspberrypi.nixosModules; [
               raspberry-pi-5.base
-              raspberry-pi-5.bluetooth
               raspberry-pi-5.display-vc4
             ]);
 
@@ -1637,7 +1497,7 @@
             # only the firmware for supported hardware (see spr-firmware)
             hardware.enableRedistributableFirmware = lib.mkForce false;
             hardware.firmware = [
-              self.packages.aarch64-linux.spr-firmware
+              (sprFor pkgs).packages.spr-firmware
               pkgs.wireless-regdb
             ];
             # boot partition: config.txt and a single (signable) boot.img
@@ -1665,23 +1525,7 @@
             programs.nano.enable = false;
             # systemd-importd (machine image downloads) pulls in gnupg
             systemd.suppressedSystemUnits = [ "systemd-importd.service" ];
-            # bluetooth stays installed but off, like the docker installers
-            # (systemctl start bluetooth to use it)
-            hardware.bluetooth.powerOnBoot = false;
-            systemd.services.bluetooth.wantedBy = lib.mkForce [ ];
-            # obexd (file transfer) is the only part of bluez that needs
-            # libical, which pulls in icu (~40 MiB)
-            nixpkgs.overlays = [ (final: prev: {
-              bluez = prev.bluez.overrideAttrs (old: {
-                configureFlags = old.configureFlags ++ [ "--disable-obex" ];
-                buildInputs = lib.remove prev.libical old.buildInputs;
-                postInstall = old.postInstall + ''
-                  rm $out/sbin/obexd
-                '';
-              });
-              # nix links boost, whose locale support pulls in icu (~40 MiB)
-              boost = prev.boost.override { enableIcu = false; };
-            }) ];
+            # no bluetooth: raspberry-pi-5.bluetooth (bluez) isn't imported
             security.sudo.enable = false;
             xdg.mime.enable = false;
 
@@ -1691,7 +1535,7 @@
             # to install on the FAT partition. We don't need a full package
             # set, just enough surface for that lookup.
             boot.kernelPackages = lib.mkForce (let
-              sprKernel = self.packages.aarch64-linux.spr-kernel-prebuilt // {
+              sprKernel = (sprFor pkgs).packages.spr-kernel-prebuilt // {
                 override = _: sprKernel;
               };
               kpkgs = {
@@ -1714,7 +1558,7 @@
             # boot.kernelPackages.kernel, but our minimal kpkgs shim doesn't
             # exercise that path. Force it manually.
             system.modulesTree = lib.mkForce
-              [ self.packages.aarch64-linux.spr-kernel-prebuilt ];
+              [ (sprFor pkgs).packages.spr-kernel-prebuilt ];
 
             # NixOS keeps modules in the store and exposes them via
             # /run/booted-system/kernel-modules. Out-of-tree tools (modprobe
@@ -1782,6 +1626,12 @@
             system.stateVersion = "24.11";
           })
         ];
+      };
+
+      # The same system cross-compiled on an x86_64 host, as CI builds it
+      # (build-image.sh): native speed instead of qemu emulation
+      nixosConfigurations.spr-aarch64-cross = self.nixosConfigurations.spr-aarch64.extendModules {
+        modules = [ { nixpkgs.buildPlatform = "x86_64-linux"; } ];
       };
 
       # ==============================================================

@@ -27,6 +27,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -174,6 +175,21 @@ func pluginComposeServices(composeFile string) []string {
 	return names
 }
 
+func composeServicesAllowed(target string, composeFiles []string) error {
+	declared := map[string]bool{}
+	for _, f := range composeFiles {
+		for _, name := range pluginComposeServices(f) {
+			declared[name] = true
+		}
+	}
+	for _, name := range strings.Fields(target) {
+		if !declared[name] {
+			return fmt.Errorf("service %q is not in %s", name, strings.Join(composeFiles, ", "))
+		}
+	}
+	return nil
+}
+
 var networkBridgeConflictRe = regexp.MustCompile(`conflicts with network ([0-9a-f]{64}) \(([^)]+)\): networks have same bridge name`)
 
 func parseNetworkBridgeConflict(detail string) (id string, name string, ok bool) {
@@ -248,6 +264,16 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 	if composeAllowed == false {
 		fmt.Println("Compose file path is not whitelisted")
 		return fmt.Errorf("compose file path is not whitelisted: %s", composeFile)
+	}
+
+	if target != "" {
+		serviceFiles := []string{composeFile}
+		if isVirtual() && composeFile != defaultCompose {
+			serviceFiles = append(serviceFiles, defaultCompose)
+		}
+		if err := composeServicesAllowed(target, serviceFiles); err != nil {
+			return err
+		}
 	}
 
 	krunOverride, policyErr := prepareKrunComposePolicy(composeFile)
@@ -345,17 +371,15 @@ func composeCommand(composeFileIN string, target string, command string, optiona
 		//docker.io, ever annoying, integrated compose as a subcommand.
 		// so now we need to handle both cases
 
+		composeArgs := append([]string{}, args...)
 		if haveOldDC {
-			args = append(d_args, "--entrypoint=/bin/bash",
-				"ghcr.io/spr-networks/super_superd",
-				"-c",
-				"docker-compose "+strings.Join(args, " "))
+			args = append(d_args, "--entrypoint=docker-compose",
+				"ghcr.io/spr-networks/super_superd")
 		} else {
-			args = append(d_args, "--entrypoint=/bin/bash",
-				"ghcr.io/spr-networks/super_superd",
-				"-c",
-				"docker compose "+strings.Join(args, " "))
+			args = append(d_args, "--entrypoint=docker",
+				"ghcr.io/spr-networks/super_superd", "compose")
 		}
+		args = append(args, composeArgs...)
 
 	}
 
@@ -731,6 +755,12 @@ func ghcr_auth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// the registry only has the one PLUS account
+	if username != plusRegistryUser {
+		http.Error(w, "invalid username", 400)
+		return
+	}
+
 	cmd := exec.Command("docker", "login", "containers.plus.supernetworks.org", "-u", username, "--password-stdin")
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -755,6 +785,8 @@ func ghcr_auth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+const plusRegistryUser = "lts-super-plus"
 
 var AddonsMtx sync.Mutex
 
@@ -1666,7 +1698,10 @@ func setup() {
 var sshKeyRe = regexp.MustCompile(`^[A-Za-z0-9.@_-]+ [A-Za-z0-9+/]+=*( [\x20-\x7E]*)?$`)
 
 const tplImage = "ghcr.io/spr-networks/container_template:latest"
-const authorizedKeysScript = "/home/spr/super/superd/scripts/install-authorized-keys.sh"
+
+func getAuthorizedKeysScript() string {
+	return filepath.Join(getHostSuperDir(), "superd/scripts/install-authorized-keys.sh")
+}
 
 func deployAuthorizedKeys(w http.ResponseWriter, r *http.Request) {
 	var keys []string
@@ -1684,7 +1719,7 @@ func deployAuthorizedKeys(w http.ResponseWriter, r *http.Request) {
 	}
 	cmd := exec.Command("docker", "run", "--rm", "-i",
 		"-v", "/home/ubuntu/.ssh:/host_ssh",
-		"-v", authorizedKeysScript+":/install.sh:ro",
+		"-v", getAuthorizedKeysScript()+":/install.sh:ro",
 		tplImage, "/install.sh")
 	cmd.Stdin = strings.NewReader(strings.Join(keys, "\n") + "\n")
 	out, err := cmd.CombinedOutput()
@@ -1773,8 +1808,14 @@ func main() {
 	unix_plugin_router.HandleFunc("/time/sync", syncTime).Methods("PUT")
 
 	os.Remove(UNIX_PLUGIN_LISTENER)
+	// root only (the API): created 0600, so it is never open to others
+	oldUmask := syscall.Umask(0177)
 	unixPluginListener, err := net.Listen("unix", UNIX_PLUGIN_LISTENER)
+	syscall.Umask(oldUmask)
 	if err != nil {
+		panic(err)
+	}
+	if err := os.Chmod(UNIX_PLUGIN_LISTENER, 0600); err != nil {
 		panic(err)
 	}
 	pluginServer := http.Server{Handler: logRequest(unix_plugin_router)}
