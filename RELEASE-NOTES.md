@@ -1,10 +1,19 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.2.15
+**Fixes*
+- Attempted fix for nixos upgrades with tryboot
+- Fix nixos interface renaming
+
+## v1.2.14
+**Fixes*
+- Setup interfaces should be cleared after setup
+
+
 ## v1.2.13
 **Fixes**
 - Fix rfkill on nixos
-- Setup interfaces should be cleared after setup
 
 ## v1.2.12
 **Improvements*

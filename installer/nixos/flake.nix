@@ -802,6 +802,8 @@
                   ${pkgs.iproute2}/bin/ip link set "$1" up
                 fi
               ''} %k"
+            '' + lib.optionalString cfg.enableWifi ''
+              ACTION=="add", SUBSYSTEM=="net", ENV{DEVTYPE}=="wlan", TAG+="systemd", ENV{SYSTEMD_WANTS}+="spr-wifi-names.service"
             '';
 
             # -- First-boot setup (LAN subnet detection, MAC fix, SSL certs) --
@@ -1114,6 +1116,7 @@
                   "${sprPkgs.spr-wifid-ebpf}/lib/filter_dhcp_mismatch.o:/code/filter_dhcp_mismatch.o"
                   "${sprPkgs.spr-xdp-loader}/bin/xdp-loader:/code/xdp-tools/xdp-loader/xdp-loader"
                   "${wifidScriptsDir}:/scripts"
+                  "${pkgs.writeShellScript "update_iface_names" "exit 0"}:/scripts/update_iface_names.sh"
                   # startup.sh runs the hostapd control plane as /hostap_dhcp_helper
                   "${sprPkgs.spr-wifid-helper}/bin/hostap_dhcp_helper:/hostap_dhcp_helper"
                   # startup-rust.sh (configs/wifi/enable_rust) runs the oxwifid AP
@@ -1369,6 +1372,19 @@
                 ];
                 ExecStart = "/scripts/client.sh";
               };
+            };
+
+            systemd.services.spr-wifi-names = lib.mkIf cfg.enableWifi {
+              description = "SPR WiFi interface names";
+              wantedBy = [ "multi-user.target" ];
+              before = [ "spr-wifid.service" "spr-wifid-setup.service" "spr-api.service" ];
+              path = with pkgs; [ iw iproute2 gawk gnugrep coreutils bash systemd ];
+              serviceConfig.Type = "oneshot";
+              script = ''
+                if bash ${wifidScriptsDir}/update_iface_names.sh | tee /dev/stderr | grep -q 'rename plan'; then
+                  systemctl --no-block try-restart spr-wifid.service
+                fi
+              '';
             };
 
             # wifid-setup/docker-compose.yml: the wifid image running setup.sh,

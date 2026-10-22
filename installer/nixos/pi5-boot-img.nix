@@ -4,6 +4,8 @@
 # The boot partition holds only:
 #   config.txt     boot_ramdisk=1: the firmware loads boot.img whole and
 #                  reads everything else from inside it
+#   tryboot.txt    the same: a tryboot reads tryboot.txt instead of
+#                  config.txt, and with boot_ramdisk=1 loads tryboot.img
 #   boot.img       FAT32 image: config.txt, cmdline.txt, kernel.img, initrd,
 #                  the bcm2712 device trees and overlays
 #   boot.sig       when signed: rpi-eeprom-digest signature of boot.img,
@@ -51,6 +53,8 @@ let
       cp "$system/kernel" "$stage/kernel.img"
       cp "$system/initrd" "$stage/initrd"
       cp "$system/boot-config.txt" "$stage/config.txt"
+      # a tryboot reads tryboot.txt in place of config.txt
+      cp "$system/boot-config.txt" "$stage/tryboot.txt"
       echo "$(cat "$system/kernel-params") init=$system/init" > "$stage/cmdline.txt"
       cp "$system"/dtbs/broadcom/bcm2712*.dtb "$stage/"
       mkdir "$stage/overlays"
@@ -85,7 +89,7 @@ let
   # system being installed
   installer = pkgs.writeShellApplication {
     name = "spr-install-boot-img";
-    runtimeInputs = with pkgs; [ coreutils ];
+    runtimeInputs = with pkgs; [ coreutils diffutils ];
     text = ''
       system=$(readlink -f "$1")
       name=$(basename "$system")
@@ -136,7 +140,9 @@ let
       }
 
       mkdir -p "${fw}"
-      if ! cmp -s ${outerConfig} "${fw}/config.txt"; then put ${outerConfig} config.txt; fi
+      for c in config.txt tryboot.txt; do
+        if ! cmp -s ${outerConfig} "${fw}/$c"; then put ${outerConfig} "$c"; fi
+      done
 
       current=$(sha256sum "${fw}/boot.img" 2>/dev/null | cut -d' ' -f1 || true)
       if [ "$sha" = "$current" ]; then
@@ -219,6 +225,7 @@ in
 
     sdImage.populateFirmwareCommands = lib.mkForce ''
       cp ${outerConfig} firmware/config.txt
+      cp ${outerConfig} firmware/tryboot.txt
       cp ${config.system.build.bootImg}/boot.img firmware/boot.img
       echo ${toplevel} > firmware/boot.system
     '';
