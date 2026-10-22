@@ -1,11 +1,16 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.2.13
+**Fixes**
+- Fix rfkill on nixos
+- Setup interfaces should be cleared after setup
+
 ## v1.2.12
 **Improvements*
 - Harden superd unix socket (pull/533)
 
-**Fix**
+**Fixes**
 - Fix nixos image builder
 - Security updates for dependencies
 
@@ -15,7 +20,7 @@
 - New nixos build for CM5/PI5
 - New TransparentSink setting for plugins
 
-**Fix**
+**Fixes**
 - Security updates with go 1.26.10
 - Update kernel
 - Fix rfkill during setup
