@@ -3132,6 +3132,8 @@ func finalizeSetup(w http.ResponseWriter, r *http.Request) {
 
 	writeFileAtomic(SetupDonePath, []byte("true"), 0600)
 
+	setupAPDone()
+
 	fmt.Fprintf(w, "{\"status\": \"done\"}")
 }
 

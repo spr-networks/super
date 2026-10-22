@@ -3227,6 +3227,15 @@ func setupAPInit() {
 
 }
 
+func setupAPDone() {
+	deleteSetupInterface(SetupAP)
+	deleteSetupDHCPInterface(SetupAP)
+
+	for _, iface := range getPhysicalInterfaces() {
+		deleteSetupInterface(iface)
+	}
+}
+
 func updateAddr(Router string, Ifname string) {
 	exec.Command("ip", "addr", "add", Router+"/30", "dev", Ifname).Run()
 }
