@@ -1100,6 +1100,8 @@
                 sprPkgs.spr-hostapd
                 sprPkgs.spr-xdp-loader
                 iw iproute2 lshw curl coreutils bash gnused gnugrep gawk procps nftables
+                # rfkill: startup.sh and setup.sh unblock WiFi on a Pi
+                util-linux
               ];
               # wifid volumes: configs/base/:ro, configs/wifi/, state/wifi/
               serviceConfig = sprServiceConfig // {
@@ -1124,6 +1126,9 @@
                   "/sys"
                   "/dev"
                 ];
+                # PrivateDevices' device policy denies /dev/rfkill even with
+                # /dev bound in; the scripts' rfkill unblock needs it
+                DeviceAllow = [ "/dev/rfkill rw" ];
                 # hostapd -B and hostapd_cli stay in the unit's cgroup, so a
                 # stop ends them without a pkill (which would match any
                 # process with "hostapd" in its command line)
