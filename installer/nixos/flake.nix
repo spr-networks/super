@@ -786,7 +786,7 @@
             # -- udev rules for Pi 5 / CM5 --
             services.udev.extraRules = ''
               # Pi 5 / CM5 PCIe ethernet
-              SUBSYSTEM=="net", ACTION=="add", DEVPATH=="*0001:01:00.0*", NAME="eth0"
+              SUBSYSTEM=="net", ACTION=="add", ENV{DEVTYPE}!="wlan", DEVPATH=="*0001:01:00.0*", NAME="eth0"
               SUBSYSTEM=="net", ACTION=="add", DEVPATH=="*0000:03:00.0*", NAME="eth1"
               # brcmfmac (onboard WiFi) → wlan0
               ACTION=="add", SUBSYSTEM=="net", SUBSYSTEMS=="sdio", DRIVERS=="brcmfmac", NAME!="wlan0", RUN+="${pkgs.writeShellScript "wlan0-swap" ''
@@ -1381,7 +1381,9 @@
               path = with pkgs; [ iw iproute2 gawk gnugrep coreutils bash systemd ];
               serviceConfig.Type = "oneshot";
               script = ''
-                if bash ${wifidScriptsDir}/update_iface_names.sh | tee /dev/stderr | grep -q 'rename plan'; then
+                out=$(bash ${wifidScriptsDir}/update_iface_names.sh)
+                echo "$out"
+                if grep -q 'rename plan' <<<"$out"; then
                   systemctl --no-block try-restart spr-wifid.service
                 fi
               '';
