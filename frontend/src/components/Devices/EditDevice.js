@@ -152,7 +152,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     disabled: 'Override all policies and groups, to disconnect device',
     'dns:family': 'Use family friendly DNS resolver',
     noapi: 'No API, SSH access (80, 443, 22 are blocked)',
-    dns_passthru: 'Let the device use its own DNS servers, no DNS redirect'
+    dns_passthru: 'Let the device use its own DNS servers'
   }
   const defaultGroups = props.groups || []
   const defaultTags = props.tags || []

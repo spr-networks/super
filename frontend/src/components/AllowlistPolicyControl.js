@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
+import { useNavigate } from 'react-router-dom'
 
 import {
   Checkbox,
   CheckboxIcon,
   CheckboxIndicator,
   CheckboxLabel,
-  HStack
+  HStack,
+  Link,
+  LinkText
 } from '@gluestack-ui/themed'
 import { Select } from 'components/Select'
 import {
@@ -19,6 +22,7 @@ const AllowlistPolicyControl = ({ policies, allowlistPolicies, onChange }) => {
   const selected = selectedAllowlistPolicy(policies)
   const hasWAN = policies.includes('wan')
   const [enabled, setEnabled] = useState(Boolean(selected))
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (selected) setEnabled(true)
@@ -42,8 +46,13 @@ const AllowlistPolicyControl = ({ policies, allowlistPolicies, onChange }) => {
         <CheckboxIndicator mr="$2">
           <CheckboxIcon />
         </CheckboxIndicator>
-        <CheckboxLabel>Whitelist</CheckboxLabel>
+        {enabled ? null : <CheckboxLabel>Whitelist</CheckboxLabel>}
       </Checkbox>
+      {enabled ? (
+        <Link onPress={() => navigate('/admin/firewall?tab=Whitelists')}>
+          <LinkText>Whitelist</LinkText>
+        </Link>
+      ) : null}
       {enabled ? (
         <Select
           w={280}
