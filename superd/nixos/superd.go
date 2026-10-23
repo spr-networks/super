@@ -479,9 +479,15 @@ func ghcr_auth(w http.ResponseWriter, r *http.Request) {
 }
 
 func remote_container_tags(w http.ResponseWriter, r *http.Request) {
-	// No-op on NixOS
+	// the release a system update would install, for SPR itself
+	tags := []string{}
+	if r.URL.Query().Get("container") == "super_base" {
+		if rel, err := systemRelease(); err == nil {
+			tags = append(tags, strings.TrimPrefix(rel.TagName, systemTagPrefix))
+		}
+	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(struct{ Tags []string }{Tags: []string{}})
+	json.NewEncoder(w).Encode(struct{ Tags []string }{Tags: tags})
 }
 
 func syncTime(w http.ResponseWriter, r *http.Request) {

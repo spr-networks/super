@@ -123,7 +123,8 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     'dns:family',
     'lan',
     'lan_upstream',
-    'noapi'
+    'noapi',
+    'dns_passthru'
   ]
 
   if (!isSimpleMode) {
@@ -138,7 +139,8 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
     quarantine: 'Quarantine',
     disabled: 'Disabled',
     'dns:family': 'Use Family DNS',
-    noapi: 'No API'
+    noapi: 'No API',
+    dns_passthru: 'DNS Passthru'
   }
   const policyTips = {
     wan: 'Allow Internet Access',
@@ -149,7 +151,8 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
       'Send all Traffic, DNS, to Quarantine Host if set else drop traffic',
     disabled: 'Override all policies and groups, to disconnect device',
     'dns:family': 'Use family friendly DNS resolver',
-    noapi: 'No API, SSH access (80, 443, 22 are blocked)'
+    noapi: 'No API, SSH access (80, 443, 22 are blocked)',
+    dns_passthru: 'Let the device use its own DNS servers'
   }
   const defaultGroups = props.groups || []
   const defaultTags = props.tags || []
