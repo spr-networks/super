@@ -133,7 +133,7 @@ type DeviceEntry struct {
 
 const DeviceTypeContainer = "Container"
 
-var ValidPolicyStrings = []string{"wan", "lan", "dns", "api", "lan_upstream", "noapi", "guestonly", "disabled", "quarantine", "dns:family"}
+var ValidPolicyStrings = []string{"wan", "lan", "dns", "api", "lan_upstream", "noapi", "guestonly", "disabled", "quarantine", "dns:family", "dns_passthru"}
 
 var BulkSettablePolicyStrings = []string{"wan", "lan", "dns", "dns:family", "lan_upstream", "noapi", "quarantine"}
 

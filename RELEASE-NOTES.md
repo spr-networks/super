@@ -1,6 +1,12 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.2.16
+**Improvements**
+- New dns passthru policy
+**Fixes*
+- More nixos fixes
+
 ## v1.2.15
 **Fixes*
 - Attempted fix for nixos upgrades with tryboot

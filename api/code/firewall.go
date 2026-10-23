@@ -212,6 +212,7 @@ var BASE_READY = TEST_PREFIX + "/state/base/ready"
 
 var DEVICE_POLICY_PERMIT_PRIVATE_UPSTREAM_ACCESS = "lan_upstream"
 var DEVICE_POLICY_NOAPI = "noapi"
+var DEVICE_POLICY_DNS_PASSTHRU = "dns_passthru"
 
 const firstOutboundRouteTable = 11
 
@@ -1309,6 +1310,43 @@ func applyNoAPI(device DeviceEntry) {
 	} else if !foundPolicy && inNoApi {
 		//if in the verdict map but does not have the policy, remove it
 		removeNoAPIAccess(IP)
+	}
+}
+
+func hasDNSPassthru(ip string) bool {
+	err := GetIPFromSet("inet", "nat", "dns_passthru", ip)
+	return err == nil
+}
+
+func addDNSPassthru(ip string) error {
+	err := AddIPToSet("inet", "nat", "dns_passthru", ip)
+	if err != nil {
+		log.Println("failed to add element to dns_passthru", err)
+	}
+	return err
+}
+
+func removeDNSPassthru(ip string) error {
+	err := DeleteIPFromSet("inet", "nat", "dns_passthru", ip)
+	if err != nil {
+		log.Println("failed to remove element from dns_passthru", err)
+	}
+	return err
+}
+
+func applyDNSPassthru(device DeviceEntry) {
+	IP := device.RecentIP
+	if IP == "" {
+		return
+	}
+
+	foundPolicy := slices.Contains(device.Policies, DEVICE_POLICY_DNS_PASSTHRU)
+	inPassthru := hasDNSPassthru(IP)
+
+	if foundPolicy && !inPassthru {
+		addDNSPassthru(IP)
+	} else if !foundPolicy && inPassthru {
+		removeDNSPassthru(IP)
 	}
 }
 
@@ -3088,6 +3126,8 @@ func populateVmapEntries(devices map[string]DeviceEntry, groups []GroupEntry, IP
 		case "noapi":
 		case "quarantine":
 		case "dns:family":
+		case "dns_passthru":
+			continue //handled in applyDNSPassthru below
 		case "guestonly":
 		default:
 			if _, ok := allowlistNameFromPolicy(policy_name); ok {
@@ -3100,6 +3140,7 @@ func populateVmapEntries(devices map[string]DeviceEntry, groups []GroupEntry, IP
 
 	//apply other policies
 	applyPrivateNetworkUpstreamDevice(val)
+	applyDNSPassthru(val)
 
 	if !strings.Contains(Iface, ExtraBSSPrefix) {
 		//no api was applied elsewhere.

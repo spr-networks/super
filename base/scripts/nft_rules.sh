@@ -607,6 +607,12 @@ table inet nat {
       type ipv4_addr : ipv4_addr
   }
 
+  # clients with the dns_passthru policy, their DNS is not redirected
+  set dns_passthru {
+    type ipv4_addr;
+    flags interval;
+  }
+
 
   map udpfwd {
     type ipv4_addr . inet_service : ipv4_addr . inet_service;
@@ -657,6 +663,7 @@ table inet nat {
 
 
     # Reroute external DNS to our own server
+    meta l4proto { tcp, udp } th dport 53 ip saddr @dns_passthru counter accept
     udp dport 53 jump DNS_DNAT
     tcp dport 53 jump DNS_DNAT
   }
