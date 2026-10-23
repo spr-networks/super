@@ -6,6 +6,7 @@
 - New dns passthru policy
 **Fixes*
 - More nixos fixes
+- Make sure that the web certificates regenerate upon expiry
 
 ## v1.2.15
 **Fixes*

@@ -15,9 +15,8 @@ if [ -f "/configs/auth/www-api.key" ] && [ -f "/configs/auth/www-api.crt" ]; the
         /scripts/generate-certificate.sh
     fi
 
-    # check if cert expire soon
-    #/scripts/generate-certificate.sh status > /dev/null
-    #test $? -eq 0 || /scripts/generate-certificate.sh
+    # check if cert expires soon
+    /scripts/generate-certificate.sh status > /dev/null || /scripts/generate-certificate.sh
 fi
 
 /api
