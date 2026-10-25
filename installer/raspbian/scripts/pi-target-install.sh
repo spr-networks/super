@@ -84,13 +84,30 @@ rm -f "$KRUN_DEB"
 
 # Mount boot firmware so kernel postinst hooks can update it
 mkdir -p /boot/firmware
-mount /dev/vda1 /boot/firmware
+mount /dev/vda1 /boot/firmware || exit 1
 
 # Install SPR custom kernel + headers from spr-debian-kernel, fetched and
 # provenance-verified on the build host by fetch-spr-kernel.sh
-pushd /var/cache/spr-kernel
-dpkg -i linux-image-*.deb linux-headers-*.deb linux-libc-dev_*.deb || exit 1
-popd
+# Read the exact versions from the selected packages, not from the distro's
+# other installed kernels. Each flavour has a separate module/header package.
+declare -A SPR_KVERS
+for flavor in pi4 pi5; do
+  mapfile -t KERNEL_DEBS < <(find "/var/cache/spr-kernel/$flavor" -maxdepth 1 -name 'linux-image-*.deb' -print)
+  if [ "${#KERNEL_DEBS[@]}" -ne 1 ]; then
+    echo "FATAL: expected one SPR kernel for $flavor" >&2
+    exit 1
+  fi
+  KERNEL_PACKAGE=$(dpkg-deb -f "${KERNEL_DEBS[0]}" Package) || exit 1
+  SPR_KVERS[$flavor]=${KERNEL_PACKAGE#linux-image-}
+done
+if [[ ! "${SPR_KVERS[pi4]}" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-v8\+$ ]] ||
+   [ "${SPR_KVERS[pi5]}" != "${BASH_REMATCH[1]}-v8-16k+" ]; then
+  echo "FATAL: missing or mismatched Pi 4/Pi 5 kernel versions" >&2
+  exit 1
+fi
+dpkg -i /var/cache/spr-kernel/{pi4,pi5}/linux-image-*.deb \
+  /var/cache/spr-kernel/{pi4,pi5}/linux-headers-*.deb \
+  /var/cache/spr-kernel/pi5/linux-libc-dev_*.deb || exit 1
 rm -rf /var/cache/spr-kernel
 
 useradd -m -s /bin/bash ubuntu
@@ -223,28 +240,22 @@ EOF
 
 chmod +x /etc/udev/wlan0-swap.sh
 
-KVER=$(ls /lib/modules/ | sort -V | tail -1)
-
-# regenerate initrd with udev rules in place before copying to firmware
-update-initramfs -u -k ${KVER:-all}
-
-# Install SPR kernel and DTBs
-if [ -n "$KVER" ]; then
-  cp /boot/vmlinuz-${KVER} /boot/firmware/kernel8.img
-  cp /boot/initrd.img-${KVER} /boot/firmware/initramfs8
-  # Pi 5 (2712)
-  cp /boot/vmlinuz-${KVER} /boot/firmware/kernel_2712.img
-  cp /boot/initrd.img-${KVER} /boot/firmware/initramfs_2712
-
-  cp /usr/lib/linux-image-${KVER}/broadcom/bcm27*.dtb /boot/firmware/
-  mkdir -p /boot/firmware/overlays
-  cp /usr/lib/linux-image-${KVER}/overlays/*.dtbo /boot/firmware/overlays/ 2>/dev/null || true
-fi
+# Regenerate both initrds after adding the udev rules. Missing boot files must
+# fail the build instead of being hidden by the later success marker.
+for KVER in "${SPR_KVERS[pi4]}" "${SPR_KVERS[pi5]}"; do
+  if [ -e "/boot/initrd.img-$KVER" ]; then
+    update-initramfs -u -k "$KVER" || exit 1
+  else
+    update-initramfs -c -k "$KVER" || exit 1
+  fi
+done
+bash /setup-spr-boot.sh "${SPR_KVERS[pi4]}" "${SPR_KVERS[pi5]}" || exit 1
 
 # we need the pcie-32bit-dma enabled for the mediatek cards
 # the other settings are to enable uart for the cm5
 if ! grep -q "dtoverlay=pcie-32bit-dma" /boot/firmware/config.txt; then
   cat << EOF >> /boot/firmware/config.txt
+[pi5]
 dtparam=pciex1
 enable_uart=1
 dtparam=uart0=on
@@ -253,6 +264,7 @@ dtparam=uart0_console
 pciex4_reset=0
 dtoverlay=pcie-32bit-dma
 dtoverlay=pciex1-compat-pi5,no-mip
+[all]
 EOF
 fi
 
@@ -321,7 +333,7 @@ spr-krun-runtime-configure --no-reload || exit 1
 
 
 # remove script
-rm /pi-target-install.sh
+rm /pi-target-install.sh /setup-spr-boot.sh
 
 # gracefully stop docker + containerd so image content store is flushed
 kill -TERM $DOCKERD_PID
