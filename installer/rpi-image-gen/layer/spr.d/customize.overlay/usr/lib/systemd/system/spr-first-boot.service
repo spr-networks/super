@@ -1,0 +1,12 @@
+[Unit]
+Description=SPR first-boot setup
+Before=spr-base.service
+ConditionPathExists=!/var/lib/spr/.spr-setup-done
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/spr/libexec/first-boot
+
+[Install]
+WantedBy=multi-user.target

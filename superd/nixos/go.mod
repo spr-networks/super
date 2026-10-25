@@ -93,6 +93,3 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 )
-
-// the rekor-tiles packages sigstore-go needs, without the gRPC service stubs
-replace github.com/sigstore/rekor-tiles/v2 => ./third_party/rekor-tiles

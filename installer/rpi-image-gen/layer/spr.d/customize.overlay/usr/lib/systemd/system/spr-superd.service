@@ -1,0 +1,20 @@
+# superd runs plugins as units of their own (superd/rpios/plugins.go): it
+# clones them into the data directory, unpacks their images, mounts overlays
+# and sets up their networks, so like the docker superd it has the whole host
+[Unit]
+Description=SPR supervisor daemon (systemd-native)
+After=spr-base.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+Environment=SUPERDIR=/var/lib/spr
+Environment=SPR_CRUN=/usr/lib/spr/bin/crun SPR_KRUN=/usr/lib/spr/bin/krun SPR_INIT=/usr/bin/tini-static
+# the Sigstore trust root for attestation checks is cached in $HOME/.sigstore
+Environment=HOME=/var/lib/spr-superd
+EnvironmentFile=/usr/lib/spr/environment
+ExecStart=/usr/lib/spr/bin/superd
+
+[Install]
+WantedBy=multi-user.target

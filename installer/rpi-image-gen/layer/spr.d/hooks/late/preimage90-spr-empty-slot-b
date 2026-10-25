@@ -1,0 +1,18 @@
+#!/bin/bash
+# image-rota writes the same boot and system images into both slots. Slot b
+# only matters once an update is written to it (superd/rpios), so leave it
+# out of the flashed image: the partitions keep their labels and sizes, but
+# hold nothing, and the image is the size of one slot. A tryboot into the
+# empty slot falls back to slot a.
+set -eu
+cfg=$2/genimage.cfg
+[ -f "$cfg" ] || { echo "no $cfg" >&2; exit 1; }
+awk -v boot="$IGconf_image_boot_part_size" -v sys="$IGconf_image_system_part_size" '
+   /^[ \t]*partition [a-z_]+ \{/ { part = $2 }
+   part == "boot_b"   && /^[ \t]*image = boot\.vfat$/    { sub(/image = boot\.vfat/, "size = " boot); n++ }
+   part == "system_b" && /^[ \t]*image = system\.erofs$/ { sub(/image = system\.erofs/, "size = " sys); n++ }
+   /^[ \t]*\}/ { part = "" }
+   { print }
+   END { if (n != 2) { print "slot b partitions not found in genimage.cfg" > "/dev/stderr"; exit 1 } }
+' "$cfg" > "$cfg.new"
+mv "$cfg.new" "$cfg"

@@ -1,0 +1,4 @@
+#!/bin/sh
+# sprbus CLI: it looks for $TEST_PREFIX/state/api/eventbus.sock
+export TEST_PREFIX="${TEST_PREFIX-/var/lib/spr}"
+exec /usr/lib/spr/bin/sprbus "$@"

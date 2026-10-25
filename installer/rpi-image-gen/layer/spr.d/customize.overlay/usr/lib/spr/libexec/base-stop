@@ -1,0 +1,4 @@
+#!/bin/bash
+nft flush ruleset
+ip link del sprloop 2>/dev/null || true
+rm -f /state/base/ready

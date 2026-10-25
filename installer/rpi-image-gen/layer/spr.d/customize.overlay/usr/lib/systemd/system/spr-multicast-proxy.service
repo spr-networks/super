@@ -1,0 +1,16 @@
+[Unit]
+Description=SPR multicast UDP proxy
+PartOf=spr-api.service
+Requires=spr-base.service
+After=spr-base.service spr-api.service
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5
+BindReadOnlyPaths=/var/lib/spr/configs/base:/configs/base /var/lib/spr/state/public:/state/public /var/lib/spr/state/plugins/mesh:/state/plugins/mesh
+BindReadOnlyPaths=/usr/lib/spr/scripts/multicast_udp_proxy:/scripts /usr/lib/spr/bin/multicastproxy:/code/multicastproxy
+ExecStart=/scripts/startup.sh
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,19 @@
+# wifid-setup/docker-compose.yml: the wifid image running setup.sh, which
+# brings up a setup AP on the onboard WiFi in setup mode. Started by the API
+# through superd.
+[Unit]
+Description=SPR WiFi setup AP
+After=spr-api.service
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=10
+BindReadOnlyPaths=/var/lib/spr/configs/base:/configs/base
+BindReadOnlyPaths=/usr/lib/spr/lib/filter_dhcp_mismatch.o:/code/filter_dhcp_mismatch.o /usr/sbin/xdp-loader:/code/xdp-tools/xdp-loader/xdp-loader
+BindReadOnlyPaths=/usr/lib/spr/scripts/wifid:/scripts /usr/lib/spr/libexec/iface-names-stub:/scripts/update_iface_names.sh
+BindReadOnlyPaths=/usr/lib/spr/bin/hostap_dhcp_helper:/hostap_dhcp_helper
+BindPaths=/var/lib/spr/configs/wifi:/configs/wifi /var/lib/spr/state/wifi:/state/wifi
+BindPaths=/sys /dev
+DeviceAllow=/dev/rfkill rw
+ExecStart=/scripts/setup.sh

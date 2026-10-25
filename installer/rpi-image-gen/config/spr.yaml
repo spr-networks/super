@@ -1,0 +1,27 @@
+# SPR on Raspberry Pi 5: trixie minbase with rpi-image-gen's A/B layout
+# (image-rota: read-only erofs root, boot/system slots, a persistent data
+# partition) and SPR's services as systemd units. For the CM5, override the
+# device: -- IGconf_device_layer=spr-cm5
+include:
+  file: trixie-minbase-ab.yaml
+
+device:
+  layer: spr-pi5
+  hostname: spr
+
+image:
+  name: spr-rpios
+  boot_part_size: 128M
+  system_part_size: 1G
+  data_part_size: 2G
+  # persistent in LUKS2, laid out as rpi-sb-provisioner does; a flashed
+  # image encrypts it on first boot (layer/spr.d/device/initramfs-tools/
+  # scripts/init-premount/spr-crypt-persistent)
+  pmap: cryptdata
+  # no provisioning description (rpi-sb-provisioner): its schema wants an
+  # image in every partition, and slot b ships empty
+  # (layer/spr.d/hooks/late/preimage90-spr-empty-slot-b)
+  idp_enable: n
+
+layer:
+  spr: spr

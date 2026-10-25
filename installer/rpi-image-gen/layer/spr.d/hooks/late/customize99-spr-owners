@@ -1,0 +1,7 @@
+#!/bin/bash
+# Nothing in the image may be owned by an id the build's user namespace
+# doesn't map (it shows as nobody): files copied from a source the build
+# user doesn't own. systemd-tmpfiles refuses paths under such directories.
+set -eu
+bad=$(find "$1" -xdev \( -path "$1/proc" -o -path "$1/dev" -o -path "$1/sys" -o -path "$1/run" \) -prune -o \( -uid 65534 -o -gid 65534 \) -print | head -20)
+[ -z "$bad" ] || { echo "owned by nobody in the image:" >&2; echo "$bad" >&2; exit 1; }

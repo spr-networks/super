@@ -1,0 +1,17 @@
+[Unit]
+Description=SPR DHCP server (CoreDHCP)
+Requires=spr-base.service
+After=spr-base.service
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5
+# dhcp volumes: configs/base/:ro, configs/dhcp/, state/dhcp/, state/plugins/mesh/:ro
+BindPaths=/var/lib/spr/configs/dhcp:/configs/dhcp /var/lib/spr/state/dhcp:/state/dhcp
+BindReadOnlyPaths=/var/lib/spr/configs/base:/configs/base /var/lib/spr/state/plugins/mesh:/state/plugins/mesh
+BindReadOnlyPaths=/usr/lib/spr/scripts/dhcp:/scripts /usr/lib/spr/bin/coredhcpd:/coredhcpd
+ExecStart=/scripts/startup.sh
+
+[Install]
+WantedBy=multi-user.target

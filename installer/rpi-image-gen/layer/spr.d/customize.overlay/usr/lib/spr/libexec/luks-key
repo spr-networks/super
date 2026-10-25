@@ -1,0 +1,19 @@
+#!/bin/sh
+# crypttab keyscript for persistent (userdata_crypt), and the key
+# spr-crypt-persistent formats it with: rpi-fastbootd's derivation, the hex
+# HMAC-SHA256 of the partition's block-device-id, with the all-zero key an
+# unprogrammed OTP holds, in software. Not secret: a placeholder until the
+# OTP key is programmed and the volume re-keyed to upstream's hwkey.
+# QEMU's vda has no id (block-device-id: MMC and NVMe only). POSIX sh with
+# no coreutils: it runs in the initramfs.
+dev=$(readlink -f "$CRYPTTAB_SOURCE")
+if ! id=$(block-device-id "$dev" 2>/dev/null); then
+   case $dev in
+      /dev/vda*) id=spr-vm ;;
+      *) echo "luks-key: no block-device-id for $dev" >&2; exit 1 ;;
+   esac
+fi
+set -- $(printf %s "$id" | openssl dgst -sha256 -r -mac HMAC \
+   -macopt hexkey:0000000000000000000000000000000000000000000000000000000000000000)
+[ ${#1} -eq 64 ] || exit 1
+printf %s "$1"

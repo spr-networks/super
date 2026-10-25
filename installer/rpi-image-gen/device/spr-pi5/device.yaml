@@ -1,0 +1,32 @@
+# METABEGIN
+# X-Env-Layer-Name: spr-pi5
+# X-Env-Layer-Category: device
+# X-Env-Layer-Desc: Raspberry Pi 5 specific device layer, with SPR's kernel
+# X-Env-Layer-Version: 3.0.0
+# X-Env-Layer-Requires: rpi-device-base,spr-linux-2712
+# X-Env-Layer-Provides: rpi-device,hw:device:rpi:pi5
+#
+# X-Env-VarPrefix: device
+#
+# X-Env-Var-class: pi5
+# X-Env-Var-class-Desc: Device class
+# X-Env-Var-class-Required: n
+# X-Env-Var-class-Valid: keywords:pi5
+# X-Env-Var-class-Set: y
+#
+# X-Env-Var-storage_type: sd
+# X-Env-Var-storage_type-Desc: Storage media the image is intended for, as seen
+#  by the OS.
+# X-Env-Var-storage_type-Required: n
+# X-Env-Var-storage_type-Valid: sd,nvme
+# X-Env-Var-storage_type-Set: y
+# X-Env-Var-storage_type-Conflicts:
+#  IGconf_device_storage_type == 'nvme' and not has('hw:storage:nvme')
+#
+# X-Env-Var-assetdir: ${DIRECTORY}
+# X-Env-Var-assetdir-Desc: Device specific asset directory
+# X-Env-Var-assetdir-Required: n
+# X-Env-Var-assetdir-Valid: dir
+# X-Env-Var-assetdir-Set: y
+# METAEND
+---

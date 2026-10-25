@@ -1,0 +1,89 @@
+#!/bin/sh
+# First boot of a flashed image: encrypt persistent as rpi-sb-provisioner
+# lays it out (rpi-fastbootd), so cryptroot (local-top) unlocks it as it
+# would a provisioned one. The partition grows to the end of the disk and
+# becomes a LUKS2 volume labelled USERDATA_CRYPT, keyed by luks-key, holding
+# a GPT with one partition, persistent, filling it; the ext4 that shipped
+# in the image is copied back onto it. Only an ext4 that was never mounted:
+# a device already in use (updated into this image) keeps its data as it
+# is. Before local-top, so before cryptroot. klibc tools only, and what the
+# spr-crypt-persistent hook adds.
+
+case $1 in
+   prereqs) echo ""; exit 0;;
+esac
+
+log() { echo "spr-crypt-persistent: $*" > /dev/kmsg 2>/dev/null || :; }
+
+# the boot disk: the one holding the active system slot. by-slot/persistent
+# is only made outside the initramfs (99-rpi-05-image.rules)
+i=0
+while [ ! -e /dev/disk/by-slot/active/system ] && [ $i -lt 100 ]; do
+   udevadm settle --timeout=1 2>/dev/null
+   sleep 0.2
+   i=$((i + 1))
+done
+sys=$(readlink -f /dev/disk/by-slot/active/system) || exit 0
+p=${sys#/dev/}
+[ -e "/sys/class/block/$p/partition" ] || exit 0
+disk=$(readlink -f "/sys/class/block/$p/..")
+disk=${disk##*/}
+part=
+for d in /sys/class/block/$disk/$disk*; do
+   n=${d##*/}
+   [ "$(blkid -s PARTLABEL -o value "/dev/$n" 2>/dev/null)" = persistent ] && part=/dev/$n
+done
+[ -n "$part" ] || exit 0
+[ "$(blkid -s TYPE -o value "$part")" = ext4 ] || exit 0
+[ "$(dumpe2fs -h "$part" 2>/dev/null | sed -n 's/^Last mount time: *//p')" = n/a ] || exit 0
+
+/scripts/local-premount/spr-grow-persistent
+p=${part#/dev/}
+disk=/dev/$disk
+read -r num < "/sys/class/block/$p/partition"
+label=$(blkid -s LABEL -o value "$part")
+bs=$(blkid -s BLOCK_SIZE -o value "$part")
+
+log "encrypting $part"
+mkdir -p /run/spr-persistent /run/spr-skel
+mount -t tmpfs -o size=50% tmpfs /run/spr-skel
+if ! mount -t ext4 -o ro "$part" /run/spr-persistent; then
+   umount /run/spr-skel
+   log "cannot mount $part, leaving it unencrypted"
+   exit 0
+fi
+/usr/lib/spr/initramfs/tar --xattrs --xattrs-include='*' --acls --numeric-owner -C /run/spr-persistent \
+   -cf /run/spr-skel/persistent.tar --exclude=./lost+found .
+ok=$?
+umount /run/spr-persistent
+if [ $ok -ne 0 ]; then
+   umount /run/spr-skel
+   log "cannot copy $part, leaving it unencrypted"
+   exit 0
+fi
+
+fail() { log "$*: persistent is lost, reflash"; exit 0; }
+CRYPTTAB_SOURCE=$part /usr/lib/spr/libexec/luks-key > /run/spr-skel/key || fail "no key"
+cryptsetup --batch-mode luksFormat --type luks2 --force-password \
+   --cipher aes-xts-plain64 --key-size 512 --hash sha256 --sector-size 512 \
+   --align-payload 2048 --label USERDATA_CRYPT --key-file /run/spr-skel/key "$part" ||
+   fail "luksFormat failed"
+cryptsetup open --key-file /run/spr-skel/key "$part" userdata_crypt || fail "cannot open the LUKS volume"
+printf 'label: gpt\nname=persistent, type=L\n' |
+   sfdisk -q --no-reread --no-tell-kernel /dev/mapper/userdata_crypt > /dev/null 2>&1 ||
+   fail "cannot partition the LUKS volume"
+kpartx -a -p p /dev/mapper/userdata_crypt && udevadm settle
+/usr/lib/spr/initramfs/mke2fs -q -t ext4 -F -L "$label" ${bs:+-b $bs} /dev/mapper/userdata_cryptp1 || fail "mke2fs failed"
+mount -t ext4 /dev/mapper/userdata_cryptp1 /run/spr-persistent || fail "cannot mount the new persistent"
+/usr/lib/spr/initramfs/tar --xattrs --xattrs-include='*' --acls --numeric-owner -C /run/spr-persistent \
+   --warning=no-timestamp -xf /run/spr-skel/persistent.tar || fail "cannot restore persistent"
+umount /run/spr-persistent
+umount /run/spr-skel
+kpartx -d -p p /dev/mapper/userdata_crypt
+cryptsetup close userdata_crypt
+
+sfdisk --no-reread --no-tell-kernel --part-label "$disk" "$num" USERDATA_CRYPT > /dev/null 2>&1
+udevadm trigger --action=change "/sys/class/block/$p"
+udevadm settle
+log "encrypted $part"
+exit 0

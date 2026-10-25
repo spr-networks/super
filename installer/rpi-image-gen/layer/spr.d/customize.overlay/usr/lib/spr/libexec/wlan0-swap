@@ -1,0 +1,14 @@
+#!/bin/bash
+# udev RUN: the onboard brcmfmac radio is always wlan0, swapping names with
+# whatever has it
+if ip link show wlan0 > /dev/null 2>&1; then
+  ip link set wlan0 down
+  ip link set wlan0 name wlan_tmp
+fi
+ip link set "$1" down
+ip link set "$1" name wlan0
+ip link set wlan0 up
+if ip link show wlan_tmp > /dev/null 2>&1; then
+  ip link set wlan_tmp name "$1"
+  ip link set "$1" up
+fi

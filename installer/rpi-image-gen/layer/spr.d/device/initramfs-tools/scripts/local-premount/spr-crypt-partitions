@@ -1,0 +1,11 @@
+#!/bin/sh
+# cryptroot (local-top) unlocked userdata_crypt: map its partitions, as
+# upstream's 10-rpi-partprobe does only while waiting for the root device,
+# which here is never on it
+
+case $1 in
+   prereqs) echo ""; exit 0;;
+esac
+
+[ -x /scripts/local-block/10-rpi-partprobe ] && /scripts/local-block/10-rpi-partprobe
+exit 0

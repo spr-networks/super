@@ -1,0 +1,16 @@
+#!/bin/sh
+
+case $1 in
+   prereqs) echo ""; exit 0;;
+esac
+
+. /usr/share/initramfs-tools/hook-functions
+
+copy_exec /usr/lib/spr/libexec/luks-key
+# GNU tar (xattrs, ACLs) and e2fsprogs' mke2fs: busybox's take their paths
+copy_exec /usr/bin/tar /usr/lib/spr/initramfs/tar
+copy_exec /usr/sbin/mke2fs /usr/lib/spr/initramfs/mke2fs
+copy_exec /usr/bin/openssl
+copy_exec /usr/sbin/dumpe2fs
+copy_exec /usr/sbin/kpartx
+copy_file config /etc/mke2fs.conf

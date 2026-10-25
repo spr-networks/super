@@ -1,0 +1,14 @@
+[Unit]
+Description=SPR root password (set at setup)
+DefaultDependencies=no
+After=local-fs.target
+Before=ssh.service systemd-user-sessions.service sysinit.target
+ConditionPathExists=/var/lib/spr-auth/shadow
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/mount --bind /var/lib/spr-auth/shadow /etc/shadow
+
+[Install]
+WantedBy=sysinit.target

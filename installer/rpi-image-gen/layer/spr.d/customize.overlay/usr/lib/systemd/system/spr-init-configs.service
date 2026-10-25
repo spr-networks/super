@@ -1,0 +1,8 @@
+[Unit]
+Description=SPR configuration setup
+Before=spr-base.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/spr/libexec/init-configs

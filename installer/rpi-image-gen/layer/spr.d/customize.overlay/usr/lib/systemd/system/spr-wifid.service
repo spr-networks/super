@@ -1,0 +1,27 @@
+[Unit]
+Description=SPR WiFi daemon (hostapd)
+Requires=spr-api.service spr-dhcp.service
+After=spr-api.service spr-dhcp.service
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=10
+# wifid volumes: configs/base/:ro, configs/wifi/, state/wifi/
+BindReadOnlyPaths=/var/lib/spr/configs/base:/configs/base
+# eBPF and xdp-loader at /code/ where the Go binary expects them
+BindReadOnlyPaths=/usr/lib/spr/lib/filter_dhcp_mismatch.o:/code/filter_dhcp_mismatch.o /usr/sbin/xdp-loader:/code/xdp-tools/xdp-loader/xdp-loader
+BindReadOnlyPaths=/usr/lib/spr/scripts/wifid:/scripts /usr/lib/spr/libexec/iface-names-stub:/scripts/update_iface_names.sh
+# startup.sh runs the hostapd control plane as /hostap_dhcp_helper
+BindReadOnlyPaths=/usr/lib/spr/bin/hostap_dhcp_helper:/hostap_dhcp_helper
+BindPaths=/var/lib/spr/configs/wifi:/configs/wifi /var/lib/spr/state/wifi:/state/wifi
+# /sys and /dev for hostapd's hardware access
+BindPaths=/sys /dev
+# PrivateDevices' device policy denies /dev/rfkill even with /dev bound in;
+# the scripts' rfkill unblock needs it
+DeviceAllow=/dev/rfkill rw
+# hostapd -B and hostapd_cli stay in the unit's cgroup, so a stop ends them
+ExecStart=/scripts/startup.sh
+
+[Install]
+WantedBy=multi-user.target

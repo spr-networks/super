@@ -1,0 +1,21 @@
+#!/bin/bash
+# first boot: a free LAN subnet, MAC fixes, the API's TLS certificate
+set -a
+. /etc/spr/config.sh
+cd /var/lib/spr
+
+/usr/lib/spr/scripts/base/find_lan_subnet.sh || true
+/usr/lib/spr/scripts/base/fix_mac_addresses.sh || true
+
+if [ ! -f /var/lib/spr/configs/auth/www-api.key ]; then
+  mkdir -p /var/lib/spr/configs/auth
+  openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
+    -keyout /var/lib/spr/configs/auth/www-api.key \
+    -out /var/lib/spr/configs/auth/www-api.crt \
+    -days 3650 -nodes -subj "/CN=spr"
+fi
+
+rfkill unblock wifi 2>/dev/null || true
+iw reg set US 2>/dev/null || true
+
+touch /var/lib/spr/.spr-setup-done

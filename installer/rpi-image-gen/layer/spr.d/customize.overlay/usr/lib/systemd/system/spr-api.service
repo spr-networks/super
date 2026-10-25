@@ -1,0 +1,27 @@
+[Unit]
+Description=SPR REST API
+Requires=spr-base.service
+After=spr-base.service spr-dns.service spr-dhcp.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+# api volumes: configs/{auth,base,devices,dns,plugins,ppp,wifi,wifi_uplink,wireguard,scripts,pfw}/
+#   state/{wifi,dhcp,dhcp-client,dns,api,backups,base,plugins,public}/, /ui/
+BindPaths=/var/lib/spr/configs/auth:/configs/auth /var/lib/spr/configs/base:/configs/base /var/lib/spr/configs/devices:/configs/devices
+BindPaths=/var/lib/spr/configs/dns:/configs/dns /var/lib/spr/configs/plugins:/configs/plugins /var/lib/spr/configs/wifi:/configs/wifi
+BindPaths=/var/lib/spr/configs/wireguard:/configs/wireguard /var/lib/spr/configs/scripts:/configs/scripts /var/lib/spr/configs/pfw:/configs/pfw
+BindPaths=/var/lib/spr/configs/ppp:/configs/ppp /var/lib/spr/configs/wifi_uplink:/configs/wifi_uplink
+BindPaths=/var/lib/spr/state/wifi:/state/wifi /var/lib/spr/state/dhcp:/state/dhcp /var/lib/spr/state/dns:/state/dns
+BindPaths=/var/lib/spr/state/api:/state/api /var/lib/spr/state/backups:/state/backups /var/lib/spr/state/base:/state/base
+BindPaths=/var/lib/spr/state/plugins:/state/plugins /var/lib/spr/state/public:/state/public /var/lib/spr/state/dhcp-client:/state/dhcp-client
+BindReadOnlyPaths=/usr/lib/spr/ui:/ui /usr/lib/spr/scripts/api:/scripts /usr/lib/spr/bin/api:/api
+# the DHCP filter the API attaches to KVM plugin bridges
+BindReadOnlyPaths=/usr/lib/spr/lib/filter_dhcp_mismatch.o:/code/filter_dhcp_mismatch.o
+# log viewer (journalctl) and crash reports
+BindReadOnlyPaths=-/var/log/journal -/var/lib/systemd/coredump:/coredump
+ExecStart=/scripts/startup.sh
+
+[Install]
+WantedBy=multi-user.target

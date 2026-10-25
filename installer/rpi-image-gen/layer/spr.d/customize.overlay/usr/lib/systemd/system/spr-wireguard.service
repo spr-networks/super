@@ -1,0 +1,19 @@
+[Unit]
+Description=SPR WireGuard VPN
+Requires=spr-base.service
+After=spr-base.service spr-dhcp.service spr-api.service
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5
+# wireguard volumes: configs/base/:ro, configs/wireguard/, state/plugins/wireguard/,
+#   state/dhcp/, state/plugins/mesh/:ro; /scripts/ for wg-json, up.sh, down.sh
+BindReadOnlyPaths=/var/lib/spr/configs/base:/configs/base /var/lib/spr/state/plugins/mesh:/state/plugins/mesh
+BindReadOnlyPaths=/usr/lib/spr/scripts/wireguard:/scripts /usr/lib/spr/bin/wireguard_plugin:/wireguard_plugin
+BindPaths=/var/lib/spr/configs/wireguard:/configs/wireguard /var/lib/spr/state/plugins/wireguard:/state/plugins/wireguard /var/lib/spr/state/dhcp:/state/dhcp
+ExecStart=/scripts/startup.sh
+ExecStopPost=-/usr/bin/ip link del wg0
+
+[Install]
+WantedBy=multi-user.target

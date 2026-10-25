@@ -1,0 +1,11 @@
+[Unit]
+Description=SPR A/B slot commit after a tryboot
+After=spr-api.service spr-base.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/spr/libexec/slot-commit
+
+[Install]
+WantedBy=multi-user.target
