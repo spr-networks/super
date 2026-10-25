@@ -1,6 +1,13 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.2.17
+**Improvements**
+- New experimental pi image build 
+**Fixes**
+- wifid: listen for events on each MLO link
+
+
 ## v1.2.16
 **Improvements**
 - New dns passthru policy
