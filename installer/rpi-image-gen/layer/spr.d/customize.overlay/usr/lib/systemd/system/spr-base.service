@@ -1,0 +1,21 @@
+[Unit]
+Description=SPR base network and firewall setup
+Requires=spr-init-configs.service
+After=spr-init-configs.service
+Before=spr-dhcp.service spr-dns.service spr-api.service
+
+[Service]
+Type=simple
+PrivateDevices=no
+# base volumes: configs/base/, state/base/, state/plugins/, plugins/
+BindReadOnlyPaths=/usr/lib/spr/scripts/base:/scripts /var/lib/spr/plugins:/plugins
+BindPaths=/var/lib/spr/configs/base:/configs/base /var/lib/spr/state/base:/state/base /var/lib/spr/state/plugins:/state/plugins
+# base/scripts/startup.sh, as the base container runs it: the LAN address,
+# firewall, accounting and tuning, then it holds state/base/ready, which the
+# API polls
+ExecStart=/scripts/startup.sh
+ExecStartPost=/usr/lib/spr/libexec/base-ready
+ExecStop=/usr/lib/spr/libexec/base-stop
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+[Unit]
+Description=SPR DNS server (CoreDNS)
+Requires=spr-base.service
+After=spr-base.service
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5
+# dns volumes: configs/dns/, state/api/, state/dns/, state/public/:ro, state/plugins/mesh/:ro
+BindPaths=/var/lib/spr/configs/dns:/configs/dns /var/lib/spr/state/api:/state/api /var/lib/spr/state/dns:/state/dns
+BindReadOnlyPaths=/var/lib/spr/state/public:/state/public /var/lib/spr/state/plugins/mesh:/state/plugins/mesh
+BindReadOnlyPaths=/usr/lib/spr/scripts/dns:/scripts /usr/lib/spr/bin/coredns:/coredns
+ExecStart=/scripts/startup.sh
+
+[Install]
+WantedBy=multi-user.target

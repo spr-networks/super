@@ -1,0 +1,7 @@
+#!/bin/bash
+# spr-base is up once startup.sh has loaded the rules and holds the lock
+while kill -0 $MAINPID 2>/dev/null; do
+  flock -n /state/base/ready true || exit 0
+  sleep 0.2
+done
+exit 1

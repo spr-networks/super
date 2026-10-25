@@ -1,0 +1,11 @@
+# ppp/docker-compose.yml: host network, privileged, configs/ppp as /etc/ppp
+[Unit]
+Description=SPR PPP uplink
+After=spr-base.service
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5
+BindPaths=/var/lib/spr/configs/ppp:/etc/ppp
+ExecStart=/usr/lib/spr/scripts/ppp/startup.sh

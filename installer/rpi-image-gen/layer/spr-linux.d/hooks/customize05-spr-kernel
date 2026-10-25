@@ -1,0 +1,41 @@
+#!/bin/bash
+# Install SPR's kernel package and put the kernel, device trees and overlays
+# where the Pi firmware loads them. raspi-firmware's own kernel hooks are off:
+# they name the kernel after the Raspberry Pi kernel flavours.
+
+set -eu
+
+debs=("${IGconf_spr_assets}"/kernel/linux-image-*.deb)
+[ -f "${debs[0]}" ] || { echo "no kernel package in ${IGconf_spr_assets}/kernel" >&2; exit 1; }
+[ ${#debs[@]} -eq 1 ] || { echo "expected one kernel package, found ${#debs[@]}" >&2; exit 1; }
+
+if [ -e "$1/etc/default/raspi-firmware" ]; then
+   sed -i -e 's|^#\?KERNEL=.*|KERNEL=no|' -e 's|^#\?INITRAMFS=.*|INITRAMFS=no|' \
+      "$1/etc/default/raspi-firmware"
+fi
+
+cp "${debs[0]}" "$1/tmp/"
+chroot "$1" dpkg -i "/tmp/$(basename "${debs[0]}")"
+rm -f "$1/tmp/$(basename "${debs[0]}")"
+
+KVER=$(basename "$(ls -d "$1"/usr/lib/modules/* | sort -V | tail -1)")
+echo "$KVER" > "$1/usr/lib/spr-kernel-version"
+
+mkdir -p "$1/boot/firmware/overlays"
+cp "$1/boot/vmlinuz-$KVER" "$1/boot/firmware/kernel_2712.img"
+cp "$1"/usr/lib/linux-image-"$KVER"/broadcom/bcm2712*.dtb "$1/boot/firmware/"
+cp "$1"/usr/lib/linux-image-"$KVER"/overlays/*.dtb* "$1/boot/firmware/overlays/"
+[ -e "$1/usr/lib/linux-image-$KVER/overlays/README" ] && cp "$1/usr/lib/linux-image-$KVER/overlays/README" "$1/boot/firmware/overlays/"
+
+# QEMU (the e2e tests) boots the same kernel on virtio-mmio
+for m in virtio_mmio virtio_blk virtio_net; do
+   echo "$m" >> "$1/etc/initramfs-tools/modules"
+done
+
+# never replaced by a distribution kernel
+mkdir -p "$1/etc/apt/preferences.d"
+cat > "$1/etc/apt/preferences.d/99-spr-kernel" <<EOF
+Package: linux-image-*
+Pin: release *
+Pin-Priority: -1
+EOF

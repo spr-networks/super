@@ -1,0 +1,13 @@
+# dyndns/docker-compose.yml: state/plugins/dyndns, configs/dyndns. Off until
+# enabled in the UI, which has superd start it.
+[Unit]
+Description=SPR dynamic DNS plugin
+After=spr-base.service spr-api.service
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5
+BindReadOnlyPaths=/usr/lib/spr/bin/godns:/godns /usr/lib/spr/bin/dyndns_plugin:/dyndns_plugin
+BindPaths=/var/lib/spr/state/plugins/dyndns:/state/plugins/dyndns /var/lib/spr/configs/dyndns:/configs/dyndns
+ExecStart=/dyndns_plugin

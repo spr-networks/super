@@ -1,0 +1,22 @@
+[Unit]
+Description=SPR IP/ASN lookup plugin
+PartOf=spr-api.service
+# downloads need the network and a sane clock for TLS
+Wants=network-online.target
+Requires=spr-base.service
+After=spr-base.service spr-dns.service spr-api.service network-online.target time-sync.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=60
+# plugin-lookup volumes: configs/plugins/plugin-lookup, state/api,
+# state/public:ro, state/plugins/plugin-lookup; data in /data
+BindReadOnlyPaths=/var/lib/spr/state/public:/state/public /usr/lib/spr/scripts/plugin-lookup:/scripts /usr/lib/spr/bin/lookup_plugin:/lookup_plugin
+BindPaths=/var/lib/spr/configs/plugins/plugin-lookup:/configs/plugins/plugin-lookup /var/lib/spr/state/api:/state/api
+BindPaths=/var/lib/spr/state/plugins/plugin-lookup:/state/plugins/plugin-lookup /var/lib/spr/state/plugins/plugin-lookup/data:/data
+ExecStartPre=/usr/lib/spr/libexec/plugin-lookup-data
+ExecStart=/scripts/startup.sh
+
+[Install]
+WantedBy=multi-user.target

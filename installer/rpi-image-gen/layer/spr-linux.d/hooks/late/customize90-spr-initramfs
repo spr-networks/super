@@ -1,0 +1,9 @@
+#!/bin/bash
+# The initramfs the builtin initramfs-tools hook generated, as the Pi
+# firmware loads it for kernel_2712.img (auto_initramfs=1)
+
+set -eu
+
+KVER=$(cat "$1/usr/lib/spr-kernel-version")
+[ -f "$1/boot/initrd.img-$KVER" ] || { echo "no initramfs for $KVER" >&2; exit 1; }
+cp "$1/boot/initrd.img-$KVER" "$1/boot/firmware/initramfs_2712"

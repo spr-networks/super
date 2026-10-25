@@ -1,0 +1,14 @@
+#!/bin/sh
+
+case $1 in
+   prereqs) echo ""; exit 0;;
+esac
+
+. /usr/share/initramfs-tools/hook-functions
+
+copy_exec /usr/sbin/sfdisk
+copy_exec /usr/bin/partx
+copy_exec /usr/sbin/blkid
+copy_exec /usr/sbin/e2fsck
+copy_exec /usr/sbin/resize2fs
+copy_exec /usr/bin/readlink

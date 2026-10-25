@@ -1,0 +1,8 @@
+#!/bin/bash
+# wifid's interface naming (update_iface_names.sh), run whenever a radio
+# appears; wifid restarts when names changed
+out=$(bash /usr/lib/spr/scripts/wifid/update_iface_names.sh)
+echo "$out"
+if grep -q 'rename plan' <<<"$out"; then
+  systemctl --no-block try-restart spr-wifid.service
+fi

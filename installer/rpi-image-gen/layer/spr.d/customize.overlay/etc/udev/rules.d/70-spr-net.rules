@@ -1,0 +1,6 @@
+# Pi 5 / CM5 PCIe ethernet
+SUBSYSTEM=="net", ACTION=="add", ENV{DEVTYPE}!="wlan", DEVPATH=="*0001:01:00.0*", NAME="eth0"
+SUBSYSTEM=="net", ACTION=="add", DEVPATH=="*0000:03:00.0*", NAME="eth1"
+# brcmfmac (onboard WiFi) → wlan0
+ACTION=="add", SUBSYSTEM=="net", SUBSYSTEMS=="sdio", DRIVERS=="brcmfmac", NAME!="wlan0", RUN+="/usr/lib/spr/libexec/wlan0-swap %k"
+ACTION=="add", SUBSYSTEM=="net", ENV{DEVTYPE}=="wlan", TAG+="systemd", ENV{SYSTEMD_WANTS}+="spr-wifi-names.service"

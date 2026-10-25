@@ -1,0 +1,16 @@
+[Unit]
+Description=SPR packet logging
+PartOf=spr-api.service
+After=spr-base.service spr-api.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+BindReadOnlyPaths=/var/lib/spr/configs/base:/configs/base /usr/lib/spr/scripts/packet_logs:/scripts /usr/lib/spr/bin/packet_logs:/packet_logs
+BindPaths=/var/lib/spr/state/api:/state/api /var/lib/spr/state/plugins/packet_logs:/state/plugins/packet_logs
+ExecStartPre=/usr/lib/spr/libexec/packet-logs-wait
+ExecStart=/scripts/startup.sh
+
+[Install]
+WantedBy=multi-user.target

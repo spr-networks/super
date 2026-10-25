@@ -1,0 +1,12 @@
+#!/bin/bash
+# first boot: the template configs; every boot: config.sh and lanip for the
+# services, copied as they run in mount namespaces without /etc/spr
+. /etc/spr/config.sh
+d=/var/lib/spr
+if [ ! -f $d/configs/dns/Corefile ]; then
+  echo "First boot: copying template configs..."
+  rsync -a --ignore-existing /usr/lib/spr/template_configs/ $d/configs/
+fi
+cp /etc/spr/config.sh $d/configs/base/config.sh
+chmod 0644 $d/configs/base/config.sh
+echo "$LANIP" > $d/configs/base/lanip

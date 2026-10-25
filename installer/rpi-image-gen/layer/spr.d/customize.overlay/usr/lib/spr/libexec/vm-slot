@@ -1,0 +1,16 @@
+#!/bin/sh
+# udev IMPORT for 98-spr-vm-slot.rules: the by-slot link of a slot
+# partition label. POSIX sh only: it also runs in the initramfs.
+slot=a
+read -r cmdline < /proc/cmdline
+for w in $cmdline; do
+   case $w in spr.vmslot=b) slot=b;; esac
+done
+other=b
+[ "$slot" = b ] && other=a
+case $1 in
+   boot_$slot)    echo "SLOT=disk/by-slot/active/boot" ;;
+   system_$slot)  echo "SLOT=disk/by-slot/active/system" ;;
+   boot_$other)   echo "SLOT=disk/by-slot/other/boot" ;;
+   system_$other) echo "SLOT=disk/by-slot/other/system" ;;
+esac

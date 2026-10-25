@@ -1,0 +1,125 @@
+#!/bin/bash
+# SPR's binaries, scripts and configs into the image, from what
+# build-image.sh fetched and verified (IGconf_spr_assets) and the repo
+# (IGconf_spr_src). Units and their helpers come with this layer's overlay.
+
+set -eu
+
+A=$IGconf_spr_assets
+SRC=$IGconf_spr_src
+R=$1
+S=$R/usr/lib/spr
+
+install -d "$S/bin" "$S/lib" "$S/scripts"
+
+# the super_* images' service binaries (fetch-images.sh)
+inst() { install -D -m "$1" "$A/images/$2" "$3"; }
+inst 755 api/api                         "$S/bin/api"
+inst 755 api/sprbus                      "$S/bin/sprbus"
+inst 755 db/boltapi                      "$S/bin/boltapi"
+inst 755 dhcp/coredhcpd                  "$S/bin/coredhcpd"
+inst 755 dhcp/coredhcp_client            "$S/bin/coredhcp_client"
+inst 755 dns/coredns                     "$S/bin/coredns"
+inst 755 dyndns/dyndns_plugin            "$S/bin/dyndns_plugin"
+inst 755 dyndns/godns                    "$S/bin/godns"
+inst 755 multicast_udp_proxy/code/multicastproxy "$S/bin/multicastproxy"
+inst 755 packet_logs/packet_logs         "$S/bin/packet_logs"
+inst 755 plugin-lookup/lookup_plugin     "$S/bin/lookup_plugin"
+inst 755 wireguard/wireguard_plugin      "$S/bin/wireguard_plugin"
+inst 755 wifid/hostap_dhcp_helper        "$S/bin/hostap_dhcp_helper"
+inst 644 wifid/code/filter_dhcp_mismatch.o "$S/lib/filter_dhcp_mismatch.o"
+# the paths the scripts run them by, as in the images: units see /usr
+# read-only, so these can't be bound in
+inst 755 wifid/usr/local/bin/hostapd     "$R/usr/local/bin/hostapd"
+inst 755 wifid/usr/local/bin/hostapd_cli "$R/usr/local/bin/hostapd_cli"
+inst 755 wifiuplink/usr/sbin/wpa_supplicant "$R/usr/sbin/wpa_supplicant"
+inst 755 wifiuplink/usr/sbin/wpa_cli     "$R/usr/sbin/wpa_cli"
+inst 755 ppp/usr/sbin/pppd               "$R/usr/sbin/pppd"
+for dir in "$A"/images/ppp/usr/lib/pppd/*; do
+   install -d "$R/usr/lib/pppd/$(basename "$dir")"
+   cp -L "$dir/pppoe.so" "$dir/rp-pppoe.so" "$R/usr/lib/pppd/$(basename "$dir")/"
+done
+# oxwifid: barely-ap (wifid's rust AP) and barely-cli (wifi_uplink)
+install -D -m 755 "$A/oxwifid/barely-ap"  "$R/usr/local/bin/barely-ap"
+install -D -m 755 "$A/oxwifid/barely-cli" "$R/usr/local/sbin/barely-cli"
+# the UI the API serves
+rm -rf "$S/ui"
+cp -r "$A/images/frontend/app/build" "$S/ui"
+
+# superd/rpios, built by build-image.sh
+install -D -m 755 "$A/superd" "$S/bin/superd"
+
+# the repo's scripts and configs, as the units bind them
+for c in base dhcp dns api wifid wireguard db packet_logs multicast_udp_proxy \
+         plugin-lookup wifi_uplink ppp; do
+   rm -rf "$S/scripts/$c"
+   cp -r "$SRC/$c/scripts" "$S/scripts/$c"
+done
+rm -rf "$S/template_configs" "$S/plugin-lookup-data"
+cp -r "$SRC/base/template_configs" "$S/template_configs"
+cp -r "$SRC/plugin-lookup/data" "$S/plugin-lookup-data"
+
+# KVM plugin runtime: the release's spr-krun-runtime .deb. crun picks its
+# libkrun handler when run as krun.
+cp "$A/krun/spr-krun-runtime.deb" "$R/tmp/"
+chroot "$R" dpkg -i /tmp/spr-krun-runtime.deb
+rm -f "$R/tmp/spr-krun-runtime.deb"
+ln -sf ../libexec/spr-krun-runtime/krun "$S/bin/krun"
+ln -sf ../libexec/spr-krun-runtime/krun "$S/bin/crun"
+
+echo "SPR_VERSION=v$(cat "$A/images/tag" | sed 's/-dev$//')" > "$S/environment"
+
+# openwrt's mt76 firmware over Debian's, then newer mt7996 firmware, and the
+# QCN9274 ath12k firmware, as on the raspbian image (pi-target-install.sh)
+fw=$R/usr/lib/firmware
+install -d "$fw/mediatek/mt7996" "$fw/ath12k/QCN9274/hw2.0"
+cp -f "$A"/mt76/firmware/mt7915* "$A"/mt76/firmware/mt7916* "$fw/mediatek/"
+cp -rf "$A"/mt76/firmware/mt7996/. "$fw/mediatek/mt7996/"
+cp -f "$A"/mt76-mt7996/firmware/mt7996/* "$fw/mediatek/mt7996/"
+cp -f "$SRC"/installer/raspbian/firmware/ath12k/* "$fw/ath12k/QCN9274/hw2.0/"
+
+# SPR owns the network: its own DHCP client, DNS and APs
+rm -f "$R"/etc/systemd/network/*.network
+for u in systemd-networkd.service systemd-networkd.socket \
+         systemd-networkd-wait-online.service systemd-resolved.service \
+         iwd.service wpa_supplicant.service dhcpcd.service NetworkManager.service \
+         userconfig.service; do
+   chroot "$R" systemctl mask "$u" >/dev/null
+done
+rm -f "$R/etc/resolv.conf"
+echo "nameserver 1.1.1.1" > "$R/etc/resolv.conf"
+
+# mount points of the units without a private root (ppp, wifi-uplink), on
+# the read-only root
+install -d "$R/scripts" "$R/configs/wifi_uplink" "$R/state/wifi_uplink" "$R/etc/ppp"
+# ip netns exec reads /etc/netns: keep it writable
+rm -rf "$R/etc/netns"
+ln -s /run/netns-etc "$R/etc/netns"
+# slot-shared paths need their mount points in the image
+install -d "$R/var/lib/spr" "$R/var/lib/spr-plugins" "$R/var/lib/spr-superd" "$R/var/lib/spr-krun" "$R/root"
+install -d -m 0700 "$R/var/lib/spr-auth"
+
+# persistent's LUKS key until the OTP key is programmed: upstream's hwkey
+# derivation with an all-zero HMAC key (luks-key)
+grep -q "keyscript=/lib/cryptsetup/keyscripts/hwkey" "$R/etc/crypttab"
+sed -i "s|keyscript=/lib/cryptsetup/keyscripts/hwkey|keyscript=/usr/lib/spr/libexec/luks-key|" "$R/etc/crypttab"
+
+# root logs in with "spr" until setup sets the admin password
+# (spr-setup-password), as on the other SPR images
+chroot "$R" usermod -p '$6$sprnixos$PQ5JL2bvnDErqzQzUsriOUoPswmLtcD3WSJqGhJirtn/RPcqnTgmfWklCoXt9EvYXXeTpGnQnpbIiiXiXN04l1' root
+
+# the units sandboxed like containers share one drop-in
+for u in base dhcp dns api wifid wifid-setup wireguard db packet-logs \
+         multicast-proxy plugin-lookup dyndns; do
+   install -d "$R/usr/lib/systemd/system/spr-$u.service.d"
+   ln -sf ../spr-sandbox.conf "$R/usr/lib/systemd/system/spr-$u.service.d/10-sandbox.conf"
+done
+
+chroot "$R" systemctl enable spr-first-boot spr-setup-password spr-shadow \
+   spr-base spr-dhcp spr-dns spr-api spr-wifid spr-wireguard spr-db \
+   spr-packet-logs spr-multicast-proxy spr-plugin-lookup spr-dhcp-client \
+   spr-wifi-names spr-superd spr-slot-commit >/dev/null
+
+# every dynamically linked binary resolves on this system
+missing=$(chroot "$R" sh -c 'for b in /usr/local/bin/hostapd /usr/local/bin/hostapd_cli /usr/sbin/wpa_supplicant /usr/sbin/wpa_cli /usr/sbin/pppd /usr/libexec/spr-krun-runtime/krun; do ldd "$b" | sed -n "s|^|$b: |; /not found/p"; done')
+[ -z "$missing" ] || { echo "$missing" >&2; exit 1; }

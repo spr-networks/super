@@ -1,0 +1,26 @@
+# METABEGIN
+# X-Env-Layer-Name: spr-linux-2712
+# X-Env-Layer-Category: kernel
+# X-Env-Layer-Desc: SPR's 2712 kernel (spr-debian-kernel, provenance-verified
+#  by build-image.sh) in place of the Raspberry Pi one: kernel_2712.img, its
+#  device trees and overlays, and the initramfs the A/B layout boots from.
+# X-Env-Layer-Version: 1.0.0
+# X-Env-Layer-Requires: rpi-linux-base
+# X-Env-Layer-AfterProvider: debian-base
+#
+# X-Env-VarPrefix: linux
+#
+# X-Env-Var-page_size: 16384
+# X-Env-Var-page_size-Desc: SPR's 2712 kernel uses a 16K page size
+# X-Env-Var-page_size-Valid: int:16384-16384
+# X-Env-Var-page_size-Set: force
+# METAEND
+---
+env:
+  INITRD: "No"
+mmdebstrap:
+  architectures:
+    - arm64
+  packages:
+    - initramfs-tools
+    - kmod

@@ -1,0 +1,47 @@
+# METABEGIN
+# X-Env-Layer-Name: spr-cm5
+# X-Env-Layer-Category: device
+# X-Env-Layer-Desc: Raspberry Pi CM5 specific device layer, with SPR's kernel
+# X-Env-Layer-Version: 3.0.0
+# X-Env-Layer-Requires: rpi-device-base,spr-linux-2712
+# X-Env-Layer-Provides: rpi-device,hw:device:rpi:cm5
+#
+# X-Env-VarPrefix: device
+#
+# X-Env-Var-class: cm5
+# X-Env-Var-class-Desc: Device class
+# X-Env-Var-class-Required: n
+# X-Env-Var-class-Valid: keywords:cm5
+# X-Env-Var-class-Set: y
+#
+# X-Env-Var-variant: 16G
+# X-Env-Var-variant-Desc: Device variant
+# X-Env-Var-variant-Required: n
+# X-Env-Var-variant-Valid: 16G,32G,64G,lite
+# X-Env-Var-variant-Set: lazy
+# X-Env-Var-variant-Conflicts:
+#  IGconf_device_variant == 'lite' and has('hw:storage:emmc')
+#  has('hw:storage:emmc') and has('hw:storage:sd')
+# X-Env-Var-variant-Triggers:
+#  when=has('hw:storage:sd') set IGconf_device_storage_type=sd policy=lazy
+#  when=has('hw:storage:sd') set IGconf_device_variant=lite policy=lazy
+#  when=has('hw:storage:emmc') set IGconf_device_storage_type=emmc policy=lazy
+#
+# X-Env-Var-storage_type: emmc
+# X-Env-Var-storage_type-Desc: Storage media the image is intended for, as seen
+#  by the OS.
+# X-Env-Var-storage_type-Required: n
+# X-Env-Var-storage_type-Valid: emmc,sd,nvme
+# X-Env-Var-storage_type-Set: lazy
+# X-Env-Var-storage_type-Conflicts:
+#  IGconf_device_storage_type == 'nvme' and not has('hw:storage:nvme')
+#  IGconf_device_storage_type == 'sd' and not has('hw:storage:sd')
+#  IGconf_device_storage_type == 'emmc' and not has('hw:storage:emmc')
+#
+# X-Env-Var-assetdir: ${DIRECTORY}
+# X-Env-Var-assetdir-Desc: Device specific asset directory
+# X-Env-Var-assetdir-Required: n
+# X-Env-Var-assetdir-Valid: dir
+# X-Env-Var-assetdir-Set: y
+# METAEND
+---

@@ -1,0 +1,3 @@
+#!/bin/bash
+# the image's /data files, as the plugin-lookup image has them
+cp -f /usr/lib/spr/plugin-lookup-data/* /data/

@@ -1,0 +1,24 @@
+# dhcp_client container: dhcp/scripts/client.sh runs coredhcp_client on
+# enabled uplinks and records gateways for the API
+[Unit]
+Description=SPR WAN DHCP client
+After=spr-base.service
+Wants=network-pre.target
+Before=network-online.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+TemporaryFileSystem=/:ro
+MountAPIVFS=yes
+BindReadOnlyPaths=/usr /usr/bin:/bin /usr/sbin:/sbin /usr/lib:/lib /etc /run
+BindReadOnlyPaths=/var/lib/spr/configs/base:/configs/base /var/lib/spr/state/wifi_uplink:/state/wifi_uplink
+BindReadOnlyPaths=/usr/lib/spr/scripts/dhcp:/scripts /usr/lib/spr/bin/coredhcp_client:/coredhcp_client
+# coredhcp_client writes resolv.conf before it adds the default route, and
+# gives up if it can't; in docker that is the container's own file
+BindPaths=/var/lib/spr/state/dhcp-client:/state/dhcp-client /var/lib/spr/state/dhcp-client/resolv.conf:/etc/resolv.conf
+ExecStart=/scripts/client.sh
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,3 @@
+#!/bin/bash
+# spr-api is Type=simple: wait for its sprbus socket
+for i in $(seq 60); do [ -S /state/api/eventbus.sock ] && break; sleep 1; done

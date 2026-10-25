@@ -15,6 +15,18 @@ is_valid_ifname() {
     return 0
 }
 
+start_hostapd_cli() {
+  local dir="/state/wifi/control_$1" links link
+  links=$(ls "$dir" 2>/dev/null | grep -E "^$1_link[0-9]+$")
+  if [ -z "$links" ]; then
+    hostapd_cli -B -p "$dir" -a /scripts/action.sh
+    return
+  fi
+  for link in $links; do
+    hostapd_cli -B -p "$dir" -i "$link" -a /scripts/action.sh
+  done
+}
+
 # Pi firmware can leave WLAN soft blocked, including after a reboot.
 # Clear it before either hostapd or rustAP initializes a radio.
 if grep -q "Raspberry Pi" /proc/cpuinfo; then
@@ -94,7 +106,7 @@ do
     echo "Warning: Invalid interface name '$IFACE' from API, skipping" >&2
     continue
   fi
-  hostapd_cli -B -p "/state/wifi/control_${IFACE}" -a /scripts/action.sh
+  start_hostapd_cli "$IFACE"
 done
 
 for IFACE in $IFACES_VIRTUAL
@@ -147,7 +159,7 @@ check_status() {
                     sleep 5
                     if iw dev "$IFACE" info | grep -q ssid; then
                         echo "MLO interface $IFACE recovered on restart attempt ${attempt}"
-                        hostapd_cli -B -p "/state/wifi/control_${IFACE}" -a /scripts/action.sh
+                        start_hostapd_cli "$IFACE"
                         mlo_recovered=true
                         break
                     fi

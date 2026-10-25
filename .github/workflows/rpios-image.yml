@@ -1,0 +1,120 @@
+name: RPiOS Image Installer
+
+on:
+  # after PI ISO Installer on main (itself after Docker Image CI, as the
+  # other images), which publishes the release's spr-krun-runtime .deb that
+  # this image ships (fetch-assets.sh)
+  workflow_run:
+    workflows: ["PI ISO Installer"]
+    types:
+      - completed
+    branches: [ main ]
+  workflow_dispatch:
+  # dev: on changes to the image, with the <version>-dev images Docker Image
+  # CI last published (workflow_run and dispatch need this file on main)
+  push:
+    branches: [ dev ]
+    paths:
+      - "installer/rpi-image-gen/**"
+      - "superd/rpios/**"
+      - ".github/workflows/rpios-image.yml"
+
+permissions:
+  id-token: write
+  attestations: write
+  contents: write
+
+jobs:
+  build_image:
+    # rpi-image-gen builds natively on arm64 only: the NixOS job's runner
+    runs-on: spr-nixos-arm64
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    env:
+      # a workflow_run run is on the default branch: build and release
+      # what the triggering run built
+      BUILD_BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
+      # this run's own work volume, removed at the end
+      SPR_WORK_VOLUME: spr-rig-work-${{ github.run_id }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: '0'
+      - name: Fetch tags
+        run:  git fetch --tags
+      # tag names go into GITHUB_ENV, which sets variables for every later
+      # step: take only one exact release version, never other tag text
+      - name: Get version from git
+        run: |
+          version=$(git tag --contains "$(git rev-parse HEAD)" | grep -xE 'v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?' || true)
+          if [ "$(printf '%s' "$version" | grep -c .)" -gt 1 ]; then
+            echo "more than one release version tag contains HEAD" >&2
+            exit 1
+          fi
+          echo "RELEASE_VERSION_TAG=$version" >> "$GITHUB_ENV"
+      # SPR's services come from the images Docker Image CI built from this
+      # commit: the release's, or <version>-dev as it tags them on dev; krun
+      # from the release (fetch-assets.sh verifies each)
+      - name: Build image and update bundle
+        run: |
+          if [ -n "$RELEASE_VERSION_TAG" ]; then
+            export SPR_IMAGE_TAG="${RELEASE_VERSION_TAG#v}"
+          elif [ "$BUILD_BRANCH" = dev ]; then
+            export SPR_IMAGE_TAG="$(git describe --tags --abbrev=0 | grep -Eo '[0-9]+\.[0-9]+.[0-9]+')-dev"
+          fi
+          ./installer/rpi-image-gen/build-image.sh
+      # xz for Raspberry Pi Imager, in a container: the runner needs neither
+      # apt nor sudo
+      - name: Name the artifacts
+        run: |
+          docker run --rm -v "$PWD/installer/rpi-image-gen/output:/out" -w /out alpine sh -c \
+            "apk add -q zstd xz && zstd -dc spr-rpios.img.zst | xz -T 0 -9 -z > spr-rpios.img.xz && chown $(id -u):$(id -g) spr-rpios.img.xz"
+          mv installer/rpi-image-gen/output/filesystem-*.sbom.zst installer/rpi-image-gen/output/spr-rpios.sbom.zst
+      - name: Attest Image Provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: "./installer/rpi-image-gen/output/spr-rpios.img.xz"
+          subject-name: "spr-rpios.img.xz"
+      # devices update from this: superd verifies the attestation against
+      # this workflow on main before it writes a slot (superd/rpios/sysupdate.go)
+      - name: Attest Update Bundle Provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: "./installer/rpi-image-gen/output/spr-rpios.update.tar.zst"
+          subject-name: "spr-rpios.update.tar.zst"
+      - name: Attest SBOM Provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: "./installer/rpi-image-gen/output/spr-rpios.sbom.zst"
+          subject-name: "spr-rpios.sbom.zst"
+      - name: Upload dev image
+        if: ${{ env.BUILD_BRANCH != 'main' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: spr-rpios
+          path: |
+            installer/rpi-image-gen/output/spr-rpios.img.xz
+            installer/rpi-image-gen/output/spr-rpios.update.tar.zst
+            installer/rpi-image-gen/output/spr-rpios.sbom.zst
+          if-no-files-found: error
+      # after the attestations, so nothing is published unattested;
+      # --target: a new tag on the commit built
+      - name: Create Release and Upload Images
+        if: ${{ env.BUILD_BRANCH == 'main' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          : "${RELEASE_VERSION_TAG:?no release version tag contains HEAD}"
+          gh release create "rpios-$RELEASE_VERSION_TAG" \
+            --title "RPiOS Release $RELEASE_VERSION_TAG" \
+            --target "$(git rev-parse HEAD)" \
+            --prerelease \
+            ./installer/rpi-image-gen/output/spr-rpios.img.xz \
+            ./installer/rpi-image-gen/output/spr-rpios.update.tar.zst \
+            ./installer/rpi-image-gen/output/spr-rpios.sbom.zst
+      - name: Remove image and work volume
+        if: ${{ always() }}
+        run: |
+          rm -rf ./installer/rpi-image-gen/output
+          docker volume rm -f "$SPR_WORK_VOLUME" >/dev/null 2>&1 || true

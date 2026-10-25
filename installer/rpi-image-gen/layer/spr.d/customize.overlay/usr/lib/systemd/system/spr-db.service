@@ -1,0 +1,18 @@
+[Unit]
+Description=SPR database (BoltDB)
+# holds a long-lived sprbus connection; the API recreates the bus socket
+# when it restarts, so restart with it
+PartOf=spr-api.service
+After=spr-api.service
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5
+# db volumes: configs/base/:ro, configs/db/, state/api/, state/plugins/db/
+BindReadOnlyPaths=/var/lib/spr/configs/base:/configs/base /usr/lib/spr/scripts/db:/scripts /usr/lib/spr/bin/boltapi:/boltapi
+BindPaths=/var/lib/spr/configs/db:/configs/db /var/lib/spr/state/api:/state/api /var/lib/spr/state/plugins/db:/state/plugins/db
+ExecStart=/scripts/startup.sh
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,122 @@
+# METABEGIN
+# X-Env-Layer-Name: spr
+# X-Env-Layer-Category: app
+# X-Env-Layer-Desc: SPR's services as systemd units, as in the NixOS image
+#  (installer/nixos/flake.nix): the binaries of the published super_* images,
+#  the repo's scripts and template configs, superd/rpios for plugins (crun),
+#  and SPR owning the network: no networkd, resolved, iwd or dhcpcd.
+# X-Env-Layer-Version: 1.0.0
+# X-Env-Layer-Requires: systemd-min,openssh-server
+#
+# X-Env-VarPrefix: spr
+#
+# X-Env-Var-assets:
+# X-Env-Var-assets-Desc: Directory build-image.sh fetched and verified SPR's
+#  binaries, kernel and firmware into
+# X-Env-Var-assets-Required: y
+# X-Env-Var-assets-Valid: dir
+# X-Env-Var-assets-Set: y
+#
+# X-Env-Var-src:
+# X-Env-Var-src-Desc: The SPR repository: scripts and template configs
+# X-Env-Var-src-Required: y
+# X-Env-Var-src-Valid: dir
+# X-Env-Var-src-Set: y
+# METAEND
+---
+mmdebstrap:
+  packages:
+    # what SPR's scripts and the API exec (the NixOS module's paths)
+    - nftables
+    - iptables
+    - iproute2
+    - conntrack
+    - ethtool
+    - jq
+    - curl
+    - wireguard-tools
+    - iw
+    - lshw
+    - procps
+    - util-linux
+    # wifid's startup.sh and setup.sh: rfkill unblock wifi (its own package
+    # on Debian, not util-linux)
+    - rfkill
+    - psmisc
+    - gawk
+    - rsync
+    - openssl
+    - inotify-tools
+    - passwd
+    - net-tools
+    - tar
+    - gzip
+    - zstd
+    - macchanger
+    - git
+    - openssh-client
+    - xdp-tools
+    - tini
+    - ca-certificates
+    - wireless-regdb
+    # the image libraries hostapd, wpa_supplicant and pppd link against
+    - libnl-3-200
+    - libnl-genl-3-200
+    - libnl-route-3-200
+    - libssl3t64
+    - libpcsclite1
+    - libdbus-1-3
+    - libreadline8t64
+    - libpcap0.8t64
+    - libpam0g
+    - libcrypt1
+    # spr-krun-runtime's Depends
+    - libseccomp2
+    - libcap2
+    - libjson-c5
+    - libyajl2
+    # A/B updates (superd/rpios): Android sparse slot images
+    - android-sdk-libsparse-utils
+    # sfdisk: the initramfs grows the persistent partition to the disk
+    - fdisk
+    # WiFi, Bluetooth and NIC firmware, cut down below
+    - firmware-misc-nonfree
+    - firmware-realtek
+    - firmware-iwlwifi
+    - firmware-atheros
+  # firmware for the hardware SPR supports, as the NixOS image's
+  # spr-firmware: Pi 4/5 + CM4/CM5 onboard WiFi/BT, ath12k, mt7915/mt7916/
+  # mt7996/mt7925, mt76 USB, r8125, iwlwifi AX210/BE200
+  dpkgopts:
+    - path-exclude=/usr/lib/firmware/*
+    # the directories too, which the pattern above also matches
+    - path-include=/usr/lib/firmware/brcm
+    - path-include=/usr/lib/firmware/cypress
+    - path-include=/usr/lib/firmware/mediatek
+    - path-include=/usr/lib/firmware/rtl_nic
+    - path-include=/usr/lib/firmware/intel
+    - path-include=/usr/lib/firmware/regulatory.db*
+    - path-include=/usr/lib/firmware/brcm/brcmfmac43455*
+    - path-include=/usr/lib/firmware/brcm/brcmfmac43456*
+    - path-include=/usr/lib/firmware/brcm/BCM4345C0*
+    - path-include=/usr/lib/firmware/brcm/BCM4345C5*
+    - path-include=/usr/lib/firmware/cypress/cyfmac43455*
+    - path-include=/usr/lib/firmware/cypress/cyfmac43456*
+    - path-include=/usr/lib/firmware/ath12k/*
+    - path-include=/usr/lib/firmware/mediatek/mt7915_*
+    - path-include=/usr/lib/firmware/mediatek/mt7916_*
+    - path-include=/usr/lib/firmware/mediatek/mt7996/*
+    - path-include=/usr/lib/firmware/mediatek/mt7925/*
+    - path-include=/usr/lib/firmware/mediatek/WIFI_MT7961_*
+    - path-include=/usr/lib/firmware/mediatek/WIFI_RAM_CODE_MT7961_*
+    - path-include=/usr/lib/firmware/mediatek/BT_RAM_CODE_MT7961_*
+    - path-include=/usr/lib/firmware/mediatek/mt7610*
+    - path-include=/usr/lib/firmware/mediatek/mt7662u*
+    - path-include=/usr/lib/firmware/mediatek/mt7663*
+    - path-include=/usr/lib/firmware/mediatek/mt7601u.bin
+    - path-include=/usr/lib/firmware/mt7601u.bin
+    - path-include=/usr/lib/firmware/rtl_nic/rtl8125*
+    - path-include=/usr/lib/firmware/intel/ibt-0041-0041.*
+    - path-include=/usr/lib/firmware/intel/ibt-0291-0291.*
+    - path-include=/usr/lib/firmware/iwlwifi-ty-a0-gf-a0*
+    - path-include=/usr/lib/firmware/iwlwifi-gl-c0-fm-c0*

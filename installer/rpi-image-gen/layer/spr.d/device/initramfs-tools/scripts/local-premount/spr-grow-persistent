@@ -1,0 +1,47 @@
+#!/bin/sh
+# Grow the persistent partition to the end of the boot disk, and its
+# filesystem with it: the image ships it at its build size. Before the root
+# is mounted, and before an eMMC's partition table is write protected
+# (image-rota's init-bottom emmc-wp.sh). Only the boot disk: the one holding
+# the active system slot.
+
+case $1 in
+   prereqs) echo "90-rpi-ab-root"; exit 0;;
+esac
+
+log() { echo "spr-grow-persistent: $*" > /dev/kmsg 2>/dev/null || :; }
+
+sys=$(readlink -f /dev/disk/by-slot/active/system) || exit 0
+p=${sys#/dev/}
+[ -e "/sys/class/block/$p/partition" ] || exit 0
+disk=$(readlink -f "/sys/class/block/$p/..")
+disk=${disk##*/}
+
+part=
+for d in /sys/class/block/$disk/$disk*; do
+   n=${d##*/}
+   [ "$(blkid -s PARTLABEL -o value "/dev/$n" 2>/dev/null)" = persistent ] && part=$n
+done
+[ -n "$part" ] || exit 0
+
+read -r dsize < "/sys/class/block/$disk/size"
+read -r start < "/sys/class/block/$part/start"
+read -r psize < "/sys/class/block/$part/size"
+read -r num < "/sys/class/block/$part/partition"
+# 512-byte sectors: grow only when there is more than 16 MiB to gain
+[ $((dsize - start - psize)) -gt 32768 ] || exit 0
+
+log "growing /dev/$part to the end of /dev/$disk"
+sfdisk --relocate gpt-bak-std "/dev/$disk" > /dev/null 2>&1
+if ! echo ", +" | sfdisk --no-reread --no-tell-kernel -N "$num" "/dev/$disk" > /dev/null 2>&1; then
+   log "sfdisk failed, leaving /dev/$part as it is"
+   exit 0
+fi
+partx -u "/dev/$disk" > /dev/null 2>&1
+e2fsck -fy "/dev/$part" > /dev/null 2>&1
+if resize2fs "/dev/$part" > /dev/null 2>&1; then
+   log "grew /dev/$part"
+else
+   log "resize2fs failed on /dev/$part"
+fi
+exit 0

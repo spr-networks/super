@@ -1,0 +1,26 @@
+#!/bin/bash
+# After a tryboot into the other slot (superd/rpios sysupdate.go): once SPR
+# is up, make the running slot the default. Until then, a power cycle or
+# reboot goes back to the old slot.
+set -eu
+cfg=/bootfs/autoboot.txt
+[ -f "$cfg" ] || exit 0
+# booted by the Pi firmware, which tryboots (not QEMU)
+[ -e /proc/device-tree/chosen/bootloader/boot-mode ] || exit 0
+part() { sed -n '/^\[all\]/,/^\[/s/^boot_partition=//p' | head -1; }
+want=$(rpi-slot-tryboot)
+[ "$(part < "$cfg")" != "$(part <<<"$want")" ] || exit 0
+
+for i in $(seq 60); do
+  systemctl is-active -q spr-api && [ -e /var/lib/spr/state/base/ready ] && break
+  sleep 5
+done
+if ! systemctl is-active -q spr-api; then
+  echo "SPR did not come up on this slot: not making it the default"
+  exit 1
+fi
+printf '%s\n' "$want" > "$cfg.new"
+sync
+mv "$cfg.new" "$cfg"
+sync
+echo "committed boot partition $(part <<<"$want")"

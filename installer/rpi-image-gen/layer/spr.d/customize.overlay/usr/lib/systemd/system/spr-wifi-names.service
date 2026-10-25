@@ -1,0 +1,10 @@
+[Unit]
+Description=SPR WiFi interface names
+Before=spr-wifid.service spr-wifid-setup.service spr-api.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/spr/libexec/wifi-names
+
+[Install]
+WantedBy=multi-user.target

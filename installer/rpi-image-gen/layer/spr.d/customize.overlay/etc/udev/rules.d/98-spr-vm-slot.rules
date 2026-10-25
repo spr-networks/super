@@ -1,0 +1,8 @@
+# QEMU (the e2e tests): the disk is vda, which rpi-image-gen's slot mapper
+# doesn't know, and there is no Pi firmware to say which slot booted. Map
+# the slot partitions by label instead: slot a, or spr.vmslot=b. No Pi has
+# a vda.
+SUBSYSTEM=="block", KERNEL=="vda[0-9]*", ACTION=="add|change", ENV{RPI_ONBOOTDEV}="1"
+SUBSYSTEM=="block", KERNEL=="dm-*", ENV{DM_NAME}=="userdata_crypt*", TEST=="/sys/block/vda", ACTION=="add|change", ENV{RPI_ONBOOTDEV}="1"
+SUBSYSTEM=="block", KERNEL=="vda[0-9]*", ENV{ID_PART_ENTRY_NAME}=="?*", ACTION=="add|change", \
+  IMPORT{program}="/usr/lib/spr/libexec/vm-slot $env{ID_PART_ENTRY_NAME}", SYMLINK+="$env{SLOT}"

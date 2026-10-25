@@ -1,0 +1,12 @@
+# wifi_uplink/docker-compose.yml: host network, privileged
+[Unit]
+Description=SPR WiFi uplink
+After=spr-base.service
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5
+BindPaths=/var/lib/spr/configs/wifi_uplink:/configs/wifi_uplink /var/lib/spr/state/wifi_uplink:/state/wifi_uplink
+BindReadOnlyPaths=/usr/lib/spr/scripts/wifi_uplink:/scripts
+ExecStart=/scripts/startup.sh
