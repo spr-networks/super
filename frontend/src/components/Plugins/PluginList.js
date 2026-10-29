@@ -508,7 +508,7 @@ const PluginList = ({ list, deleteListItem, notifyChange, ...props }) => {
         }
       })
       .catch((err) => {
-        alertState.error('Failed to update plugin state: ' + err.message)
+        alertState.error('Failed to update plugin state', err)
       })
   }
 
@@ -519,7 +519,7 @@ const PluginList = ({ list, deleteListItem, notifyChange, ...props }) => {
         alertState.success(`Restarted plugin: ${plugin.Name}`)
       })
       .catch((err) => {
-        alertState.error('Failed to restart plugin: ' + err.message)
+        alertState.error('Failed to restart plugin', err)
       })
   }
 

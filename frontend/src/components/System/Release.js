@@ -520,7 +520,7 @@ const ReleaseInfo = ({ showModal, ...props }) => {
             <CheckboxLabel size="sm">Auto-Check for Updates</CheckboxLabel>
           </Checkbox>
 
-          <Button size="sm" onPress={checkUpdate}>
+          <Button size="sm" onPress={() => checkUpdate()}>
             <ButtonText>Check</ButtonText>
             <ButtonSpinner
               ml="$1"

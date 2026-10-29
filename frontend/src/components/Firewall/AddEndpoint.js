@@ -144,7 +144,7 @@ class AddEndpointImpl extends React.Component {
     }
 
     const fail = (err) => {
-      this.props.alertContext.error('Firewall API Failure' + err.message)
+      this.props.alertContext.error('Firewall API Failure', err)
       this.setState({ isLoading: false })
     }
 

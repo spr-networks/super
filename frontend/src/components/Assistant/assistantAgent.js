@@ -51,6 +51,61 @@ const needsFirewallSnapshot = (userText) => {
   )
 }
 
+const IPV4_PATTERN = /\b\d{1,3}(?:\.\d{1,3}){3}\b/
+
+const needsDeviceAddresses = (userText) =>
+  /\b(forward|forwarding|block|port|ports|rule|firewall|endpoint)\b/i.test(
+    userText
+  ) &&
+  !needsFirewallSnapshot(userText) &&
+  !IPV4_PATTERN.test(userText)
+
+const recentUserText = (history, userText) =>
+  [
+    ...history
+      .filter(({ role }) => role === 'user')
+      .slice(-2)
+      .map(({ content }) => content),
+    userText
+  ].join('\n')
+
+const deviceAddressGuidance = (devices) =>
+  devices
+    .map((device) =>
+      device.RecentIP
+        ? `${device.Name} is at ${device.RecentIP}: use ${device.RecentIP}, not the name "${device.Name}", in SrcIP, DstIP, or IP.`
+        : `${device.Name} has no RecentIP: ask the user for its address.`
+    )
+    .join(' ') +
+  ' A source of "public internet" or "the Internet" means SrcIP 0.0.0.0/0.' +
+  ' If only one port is given, use it as both SrcPort and DstPort.' +
+  ' RuleName is optional; if the user gave none, create a short one.' +
+  ' Do not ask for details these rules already supply.'
+
+const withDeviceAddresses = (arguments_, toolResults) => {
+  const devices =
+    [...toolResults]
+      .reverse()
+      .find(
+        ({ tool, result }) => tool === 'list_devices' && Array.isArray(result)
+      )?.result || []
+  const rule = arguments_?.rule
+  if (!devices.length || !rule || typeof rule !== 'object') return arguments_
+
+  const resolved = { ...rule }
+  ;['SrcIP', 'DstIP', 'IP'].forEach((field) => {
+    const name = String(resolved[field] || '').toLowerCase()
+    if (!name) return
+    const matches = devices.filter(
+      (device) => String(device.Name || '').toLowerCase() === name
+    )
+    if (matches.length === 1 && matches[0].RecentIP) {
+      resolved[field] = matches[0].RecentIP
+    }
+  })
+  return { ...arguments_, rule: resolved }
+}
+
 const isDeviceReachabilityQuestion = (userText) =>
   /\b(can|could|does|is|will)\b[\s\S]*\b(access|communicate|connect|reach|talk)\b/i.test(
     userText
@@ -301,22 +356,21 @@ const inferReadTool = (userText) => {
   const mutation = MUTATION_PATTERN.test(text)
   if (mutation) return null
 
-  if (
-    /\b(device|devices|client|clients|host|hosts)\b/.test(text) &&
-    /\b(address|connected|inventory|ip|list|name|network|show|what|which)\b/.test(
-      text
-    )
-  ) {
+  if (/\b(device|devices|client|clients|host|hosts)\b/.test(text)) {
     return 'list_devices'
   }
 
   if (
     /\b(firewall|rule|rules|port forward|port forwarding)\b/.test(text) &&
-    /\b(config|configuration|current|existing|list|show|summarize|what|which)\b/.test(
+    /\b(audit|check|config|configuration|current|existing|list|my|review|show|summarize|what|which)\b/.test(
       text
     )
   ) {
     return 'get_firewall_config'
+  }
+
+  if (/\b(mac|ip|ips|address|addresses)\b/.test(text)) {
+    return 'list_devices'
   }
 
   return null
@@ -324,6 +378,19 @@ const inferReadTool = (userText) => {
 
 const isMutationRequest = (userText) =>
   MUTATION_PATTERN.test(userText.toLowerCase())
+
+const answersFromReadResult = (userText) =>
+  /\b(how many|list|show|inventory|connected|address|addresses|ip|ips|mac|name|names)\b/i.test(
+    userText
+  ) || /\b(what|which)\s+(devices|clients|hosts|rules)\b/i.test(userText)
+
+const readActivity = (tool) =>
+  tool === 'list_devices'
+    ? 'Reading devices from SPR…'
+    : 'Reading firewall configuration from SPR…'
+
+const toolNamedIn = (content) =>
+  ['list_devices', 'get_firewall_config'].find((tool) => content.includes(tool))
 
 const valuesMatch = (actual, expected) =>
   Array.isArray(expected)
@@ -452,16 +519,39 @@ const validatedDeviceDecision = (arguments_, toolResults, userText) => {
   })
 }
 
-const formatReadToolResult = (tool, result) => {
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+const mentionedDevices = (userText, devices) => {
+  const text = userText.toLowerCase()
+  return devices.filter((device) => {
+    const name = String(device.Name || '').toLowerCase()
+    return (
+      name &&
+      new RegExp(
+        `(^|[^\\p{L}\\p{N}])${escapeRegExp(name)}($|[^\\p{L}\\p{N}])`,
+        'u'
+      ).test(text)
+    )
+  })
+}
+
+const formatReadToolResult = (tool, result, userText = '') => {
   if (tool === 'list_devices' && Array.isArray(result)) {
     if (!result.length) return 'No devices were returned by the SPR API.'
+    if (/\bhow many\b/i.test(userText)) {
+      return `${result.length} ${
+        result.length === 1 ? 'device is' : 'devices are'
+      } configured.`
+    }
+    const named = mentionedDevices(userText, result)
+    const showMAC = named.length > 0 || /\bmac\b/i.test(userText)
     return [
-      'Devices on your network:',
-      ...result.map(
+      named.length ? 'Matching devices:' : 'Devices on your network:',
+      ...(named.length ? named : result).map(
         (device) =>
           `- ${device.Name || 'Unnamed device'} — ${
             device.RecentIP || 'no recent IP'
-          }`
+          }${showMAC ? ` — ${device.MAC || 'no MAC'}` : ''}`
       )
     ].join('\n')
   }
@@ -676,23 +766,22 @@ export const runAssistantTurn = async ({
 
   const inferredReadTool = inferReadTool(userText)
   if (inferredReadTool) {
-    onActivity(
-      inferredReadTool === 'list_devices'
-        ? 'Reading devices from SPR…'
-        : 'Reading firewall configuration from SPR…'
-    )
+    onActivity(readActivity(inferredReadTool))
     const result = await executeReadTool(inferredReadTool, {})
-    return {
-      kind: 'message',
-      message: formatReadToolResult(inferredReadTool, result),
-      rawGenerations
+    if (answersFromReadResult(userText)) {
+      return {
+        kind: 'message',
+        message: formatReadToolResult(inferredReadTool, result, userText),
+        rawGenerations
+      }
     }
+    toolResults.push({ tool: inferredReadTool, result })
   }
 
   if (!isMutationRequest(userText)) {
     try {
       onActivity('Thinking locally…')
-      const chatResponse = await requestChatMessage({
+      let chatResponse = await requestChatMessage({
         engine,
         history,
         userText,
@@ -700,6 +789,24 @@ export const runAssistantTurn = async ({
         systemPrompt: chatSystemPrompt
       })
       rawGenerations.push(chatResponse.rawGeneration)
+      const requestedTool =
+        !toolResults.length && toolNamedIn(chatResponse.message)
+      if (requestedTool) {
+        onActivity(readActivity(requestedTool))
+        toolResults.push({
+          tool: requestedTool,
+          result: await executeReadTool(requestedTool, {})
+        })
+        onActivity('Thinking locally…')
+        chatResponse = await requestChatMessage({
+          engine,
+          history,
+          userText,
+          toolResults,
+          systemPrompt: chatSystemPrompt
+        })
+        rawGenerations.push(chatResponse.rawGeneration)
+      }
       return {
         kind: 'message',
         message: chatResponse.message,
@@ -753,6 +860,23 @@ export const runAssistantTurn = async ({
       }
     }
 
+    if (!isLikelyDeviceMutation(userText) && needsDeviceAddresses(userText)) {
+      onActivity('Reading devices from SPR…')
+      const result = await executeReadTool('list_devices', {})
+      toolResults.push({ tool: 'list_devices', result })
+      const named = Array.isArray(result)
+        ? mentionedDevices(recentUserText(history, userText), result)
+        : []
+      if (named.length) {
+        messages.push({
+          role: 'user',
+          content:
+            `TRUSTED TOOL RESULT for list_devices:\n${JSON.stringify(named)}\n` +
+            `${deviceAddressGuidance(named)}\nReturn the next JSON object.`
+        })
+      }
+    }
+
     if (needsFirewallSnapshot(userText)) {
       onActivity('Reading firewall configuration from SPR…')
       const result = await executeReadTool('get_firewall_config', {})
@@ -798,17 +922,18 @@ export const runAssistantTurn = async ({
       }
 
       if (decision.tool === 'propose_firewall_change') {
-        const exactRule = exactExistingRule(
+        const proposalArguments = withDeviceAddresses(
           decision.arguments,
           toolResults
         )
+        const exactRule = exactExistingRule(proposalArguments, toolResults)
         try {
-          if (incompleteExistingRule(decision.arguments, exactRule)) {
+          if (incompleteExistingRule(proposalArguments, exactRule)) {
             throw new Error('Every field from the existing rule is required')
           }
           return {
             kind: 'proposal',
-            proposal: validateProposal(decision.arguments),
+            proposal: validateProposal(proposalArguments),
             rawGenerations
           }
         } catch (error) {
@@ -819,8 +944,8 @@ export const runAssistantTurn = async ({
             content: retryActionMessage({
               error,
               exactRule,
-              operation: decision.arguments?.operation,
-              proposedRule: decision.arguments?.rule
+              operation: proposalArguments?.operation,
+              proposedRule: proposalArguments?.rule
             })
           })
           continue

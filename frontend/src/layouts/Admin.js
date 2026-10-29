@@ -214,7 +214,7 @@ const AdminLayout = ({
       body.response
         .text()
         .then((data) => {
-          alertFunc(type, title, data)
+          alertFunc(type, title, data || String(body.message))
         })
         .catch((err) => {
           alertFunc(type, title, JSON.stringify(body))
@@ -222,7 +222,8 @@ const AdminLayout = ({
     } else {
       //handle if react elems or not
       if (body && typeof body == 'object' && !body?.props) {
-        body = body.toString()
+        body =
+          body.message !== undefined ? String(body.message) : body.toString()
       }
 
       alertFunc(type, title, body)

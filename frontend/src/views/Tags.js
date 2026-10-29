@@ -43,7 +43,7 @@ const Tags = (props) => {
         setTags(tags)
       })
       .catch((error) => {
-        context.error('API Failure: ' + error.message)
+        context.error('API Failure', error)
       })
   }
 

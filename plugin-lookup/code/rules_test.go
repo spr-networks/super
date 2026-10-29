@@ -162,6 +162,44 @@ func TestShippedDBRealDevices(t *testing.T) {
 			confidence: "High",
 		},
 		{
+			// macOS 12+ is an AirPlay receiver, which must not outvote its own model
+			name: "mac advertising airplay receiver",
+			signals: DeviceSignals{
+				MAC:          "aa:bb:cc:dd:ee:05",
+				Hostname:     "Mac",
+				ParamReqList: "1,121,3,6,15,114,119,162,252,95,44,46",
+				Services:     []string{"_airplay._tcp.", "_companion-link._tcp.", "_raop._tcp."},
+				TXT:          map[string]string{"am": "Mac14,5", "md": "0,1,2", "model": "Mac14,5", "protovers": "1.1", "srcvers": "960.13.1"},
+			},
+			category:   "laptop",
+			vendor:     "Apple",
+			confidence: "High",
+		},
+		{
+			name: "apple tv",
+			signals: DeviceSignals{
+				MAC:      "aa:bb:cc:dd:ee:06",
+				Services: []string{"_airplay._tcp.", "_companion-link._tcp.", "_raop._tcp."},
+				TXT:      map[string]string{"model": "AppleTV11,1"},
+			},
+			category:   "tv",
+			vendor:     "Apple",
+			confidence: "High",
+		},
+		{
+			// busybox udhcp is embedded linux, never a phone, even behind a randomized MAC
+			name: "busybox udhcp with randomized mac",
+			signals: DeviceSignals{
+				MAC:         "12:11:11:aa:bb:cc",
+				RandomMAC:   true,
+				Hostname:    "rpi4",
+				VendorClass: "udhcp 1.36",
+				Domains:     []string{"api.balena-cloud.com"},
+			},
+			category:   "iot-sensor",
+			confidence: "Medium",
+		},
+		{
 			name: "home assistant",
 			signals: DeviceSignals{
 				MAC:       "20:f8:3b:dd:ee:02",

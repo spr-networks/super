@@ -33,7 +33,7 @@ const DNSBlockListTabs = (props) => {
       if ([404, 502].includes(error.message)) {
         setEnabled(false)
       } else {
-        context.error('API Failure: ' + error.message)
+        context.error('API Failure', error)
       }
     }
   }

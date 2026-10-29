@@ -1,6 +1,11 @@
 #!/bin/bash
 # udev RUN: the onboard brcmfmac radio is always wlan0, swapping names with
 # whatever has it
+# Never swap AP/VLAN children (including ones named wlanN) or wlan0 itself.
+[ "$#" -eq 1 ] || exit 1
+[[ "$1" =~ ^wlan[0-9]+$ && "$1" != wlan0 ]] || exit 0
+info=$(iw dev "$1" info 2>/dev/null) || exit 0
+[[ "$info" =~ [[:space:]]type[[:space:]]+(managed|AP)([[:space:]]|$) ]] || exit 0
 if ip link show wlan0 > /dev/null 2>&1; then
   ip link set wlan0 down
   ip link set wlan0 name wlan_tmp

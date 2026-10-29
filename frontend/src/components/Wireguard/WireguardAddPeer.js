@@ -89,7 +89,7 @@ export default class WireguardAddPeer extends React.Component {
           this.setState({ config })
         })
         .catch((error) => {
-          this.context.error('API Failure: ' + error.message)
+          this.context.error('API Failure', error)
         })
     }
 
@@ -121,18 +121,14 @@ export default class WireguardAddPeer extends React.Component {
               deviceAPI
                 .updatePolicies(peer.PublicKey, this.state.policies)
                 .catch((error) =>
-                  this.context.error(
-                    '[API] updateDevice error: ' + error.message
-                  )
+                  this.context.error('[API] updateDevice error', error)
                 )
 
               if (this.state.deviceName != '') {
                 deviceAPI
                   .updateName(peer.PublicKey, this.state.deviceName)
                   .catch((error) =>
-                    this.context.error(
-                      '[API] updateDevice error: ' + error.message
-                    )
+                    this.context.error('[API] updateDevice error', error)
                   )
               }
 

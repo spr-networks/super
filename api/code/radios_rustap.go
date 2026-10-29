@@ -1055,6 +1055,21 @@ func syncHostapdRadioFromRustap(conf map[string]interface{}) error {
 	}
 
 	mainData := updateExtraBSS(iface, string(hostapdConfigData(hostapd)), "")
+	caps, err := radioSecurityForInterface(iface)
+	if err != nil {
+		return err
+	}
+	mainData, err = constrainHostapdSecurity(mainData, caps)
+	if err != nil {
+		return err
+	}
+	if mld {
+		checked, err := constrainHostapdSecurity(string(sidecarData), caps)
+		if err != nil {
+			return err
+		}
+		sidecarData = []byte(checked)
+	}
 	if mld {
 		if err := writeFileAtomic(sidecarPath, sidecarData, 0600); err != nil {
 			return fmt.Errorf("write hostapd MLD fallback for %s: %w", iface, err)

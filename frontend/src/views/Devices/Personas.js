@@ -449,7 +449,7 @@ const Personas = () => {
       await syncDeviceTags(original, persona, selected)
       await syncDevicePolicies(original, selected, limitData.DNSFamily)
     } catch (err) {
-      context.error('Failed to save persona: ' + err.message)
+      context.error('Failed to save persona', err)
     }
 
     if (original) {
@@ -478,7 +478,7 @@ const Personas = () => {
       }
       await parentalAPI.deletePersona({ Name: persona.Label })
     } catch (err) {
-      context.error('Failed to delete persona: ' + err.message)
+      context.error('Failed to delete persona', err)
     }
 
     refresh()

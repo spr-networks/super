@@ -32,7 +32,12 @@ module.exports = {
     rules: [
       {
         test: /\.(js|jsx)$/,
-        exclude: /node_modules/,
+        // The vendored LFM3 runtime is prebuilt ES2022 that the React Native
+        // Babel preset cannot parse, and WebGPU browsers run it natively.
+        exclude: [
+          /node_modules/,
+          /Assistant\/lfm3\/Lfm3ForCausalLM\.js$/
+        ],
         use: {
           loader: 'babel-loader'
         }
@@ -46,7 +51,7 @@ module.exports = {
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Qwen SPR Assistant Evaluation</title>
+    <title>SPR Assistant Model Evaluation</title>
     <style>
       body { font: 15px/1.45 system-ui, sans-serif; margin: 32px auto; max-width: 960px; padding: 0 20px; color: #172033; }
       pre { background: #f4f6f8; border-radius: 8px; overflow: auto; padding: 16px; }
@@ -56,7 +61,7 @@ module.exports = {
     </style>
   </head>
   <body>
-    <h1>Qwen SPR Assistant Evaluation</h1>
+    <h1>SPR Assistant Model Evaluation</h1>
     <p id="status">Starting…</p>
     <div id="results"></div>
   </body>

@@ -223,12 +223,32 @@ func configureInterface(interfaceType string, subType string, name string, MACRa
 			configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+name)
 			configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+name)
 
+			configData, err = prepareHostapdSecurity(name, configData)
+			if err != nil {
+				return err
+			}
 			err = writeFileAtomic(path, []byte(configData), 0600)
 			if err != nil {
 				fmt.Println("Error creating", path)
 				return err
 			}
 
+		} else if err != nil {
+			return err
+		} else {
+			input, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			checked, err := prepareHostapdSecurity(name, string(input))
+			if err != nil {
+				return err
+			}
+			if checked != string(input) {
+				if err := writeFileAtomic(path, []byte(checked), 0600); err != nil {
+					return err
+				}
+			}
 		}
 
 	}
@@ -529,7 +549,7 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 	if changed {
 		err := writeInterfacesConfigLocked(interfaces)
 
-		restart_wifid := refreshInterfaceOverridesLocked()
+		restart_wifid := refreshInterfaceOverridesLocked("")
 
 		//reset with previous settings
 		resetInterface(interfaces, iconfig.Name, prev_type, prev_subtype, prev_enabled, reset_random)
@@ -895,7 +915,7 @@ func refreshInterfaceOverrides() {
 	Interfacesmtx.Lock()
 	defer Interfacesmtx.Unlock()
 
-	restart_wifid := refreshInterfaceOverridesLocked()
+	restart_wifid := refreshInterfaceOverridesLocked("")
 
 	// when setting an override the interface could have been brought down
 	//which can kill the route
@@ -907,10 +927,13 @@ func refreshInterfaceOverrides() {
 	}
 }
 
-func refreshInterfaceOverridesLocked() bool {
+func refreshInterfaceOverridesLocked(only string) bool {
 	do_restart_wifid := false
 	interfaces := loadInterfacesConfigLocked()
 	for _, ifconfig := range interfaces {
+		if only != "" && ifconfig.Name != only {
+			continue
+		}
 		if ifconfig.MACRandomize == true {
 			target := generateRandomMAC(ifconfig.MACCloak)
 			exec.Command("ip", "link", "set", "dev", ifconfig.Name, "down").Run()

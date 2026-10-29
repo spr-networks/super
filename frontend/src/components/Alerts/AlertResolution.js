@@ -13,7 +13,6 @@ import {
   HStack,
   Icon,
   Input,
-  InputField,
   Modal,
   ModalBackdrop,
   ModalBody,
@@ -31,6 +30,7 @@ import { AlertContext, AppContext } from 'AppContext'
 import AddEndpoint from 'components/Firewall/AddEndpoint'
 import { isAlertResolved } from 'components/Alerts/AlertStateUtil'
 import { normalizeTextInput } from 'utils/normalizeTextInput'
+import WifiPasswordField from 'components/WifiPasswordField'
 
 const AlertResolution = ({ item, resolution, onResolved }) => {
   const context = useContext(AlertContext)
@@ -204,9 +204,7 @@ const AlertResolution = ({ item, resolution, onResolved }) => {
                       </FormControlLabelText>
                     </FormControlLabel>
                     <Input>
-                      <InputField
-                        type="password"
-                        autoComplete="new-password"
+                      <WifiPasswordField
                         value={password}
                         onChangeText={(value) => {
                           setPassword(normalizeTextInput(value))

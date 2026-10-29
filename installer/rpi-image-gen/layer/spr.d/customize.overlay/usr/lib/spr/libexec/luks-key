@@ -4,14 +4,25 @@
 # HMAC-SHA256 of the partition's block-device-id, with the all-zero key an
 # unprogrammed OTP holds, in software. Not secret: a placeholder until the
 # OTP key is programmed and the volume re-keyed to upstream's hwkey.
-# QEMU's vda has no id (block-device-id: MMC and NVMe only). POSIX sh with
-# no coreutils: it runs in the initramfs.
+# The id is read as block-device-id reads it: the disk's MMC CID, else an
+# NVMe disk's controller serial. QEMU's vda has neither. POSIX sh with no
+# coreutils but cat: it runs in the initramfs, and on NixOS
+# (installer/nixos/persistent.nix).
 dev=$(readlink -f "$CRYPTTAB_SOURCE")
-if ! id=$(block-device-id "$dev" 2>/dev/null); then
-   case $dev in
-      /dev/vda*) id=spr-vm ;;
-      *) echo "luks-key: no block-device-id for $dev" >&2; exit 1 ;;
+s=/sys/class/block/${dev##*/}
+[ -e "$s/partition" ] && s=$(readlink -f "$s/..")
+id=
+if [ -e "$s/device/cid" ]; then
+   id=$(cat "$s/device/cid")
+else
+   case ${s##*/} in
+      nvme*) id=$(cat "$s/device/serial" 2>/dev/null) ;;
+      vda) id=spr-vm ;;
    esac
+fi
+if [ -z "$id" ]; then
+   echo "luks-key: no device id for $dev" >&2
+   exit 1
 fi
 set -- $(printf %s "$id" | openssl dgst -sha256 -r -mac HMAC \
    -macopt hexkey:0000000000000000000000000000000000000000000000000000000000000000)

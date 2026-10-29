@@ -25,8 +25,11 @@ services:
       - "${SUPERDIR}/state/plugins/dyndns/:/state/plugins/dyndns/"
       - "${SUPERDIR}/configs/dyndns/:/configs/dyndns/"
 
+# Note, if updating the bridge name, also update NetworkCapabilities
+# in plugin.json and gDyndnsNetworkCapabilities in api/code/plugins.go
 networks:
   dyndns_net:
     driver: bridge
     driver_opts:
       com.docker.network.bridge.enable_icc: "false"
+      com.docker.network.bridge.name: spr-dyndns

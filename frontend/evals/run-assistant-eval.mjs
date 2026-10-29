@@ -162,7 +162,7 @@ chrome.on('exit', (code) => {
 })
 
 const timeout = setTimeout(() => {
-  finishError(new Error('The Qwen evaluation timed out after 15 minutes.'))
+  finishError(new Error('The model evaluation timed out after 15 minutes.'))
 }, 15 * 60 * 1000)
 
 let report
@@ -181,7 +181,7 @@ if (report.error) {
 
 console.log('')
 console.log(
-  `Qwen raw score: ${report.rawPassed}/${report.rawTotal} ` +
+  `Raw model score: ${report.rawPassed}/${report.rawTotal} ` +
     `(${Math.round((report.rawPassed / report.rawTotal) * 100)}%)`
 )
 console.log(

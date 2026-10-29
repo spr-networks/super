@@ -55,6 +55,9 @@ import {
   SYSTEM_PROMPT
 } from 'components/Assistant/assistantPrompt'
 import {
+  contextLabel,
+  DEFAULT_MODEL_KEY,
+  getContextTokens,
   getModel,
   isWebLLMModelCached,
   loadWebLLM,
@@ -70,8 +73,10 @@ const INITIAL_MESSAGE = {
 
 const ACTION_PROMPT_STORAGE_KEY = 'spr-assistant/action-system-prompt-v2'
 const CHAT_PROMPT_STORAGE_KEY = 'spr-assistant/chat-system-prompt-v2'
+const MODEL_STORAGE_KEY = 'spr-assistant/model-v1'
+const CONTEXT_STORAGE_KEY = 'spr-assistant/context-tokens-v1'
 
-const storedPrompt = (key, fallback) => {
+const storedValue = (key, fallback) => {
   try {
     return window.localStorage.getItem(key) || fallback
   } catch (error) {
@@ -79,7 +84,15 @@ const storedPrompt = (key, fallback) => {
   }
 }
 
-const saveStoredPrompt = (key, value) => {
+const storedContextSizes = () => {
+  try {
+    return JSON.parse(window.localStorage.getItem(CONTEXT_STORAGE_KEY)) || {}
+  } catch (error) {
+    return {}
+  }
+}
+
+const saveStoredValue = (key, value) => {
   try {
     window.localStorage.setItem(key, value)
   } catch (error) {
@@ -216,7 +229,7 @@ const JsonChange = ({ prefix, title, value, tone }) => {
         bg={isRemove ? '$red50' : '$green50'}
         sx={{
           _dark: {
-            bg: isRemove ? '$red950' : '$green950',
+            bg: '$backgroundContentDark',
             borderColor: isRemove ? '$red800' : '$green800'
           }
         }}
@@ -225,7 +238,13 @@ const JsonChange = ({ prefix, title, value, tone }) => {
         rounded="$md"
         p="$3"
       >
-        <Text fontFamily="$mono" size="xs" selectable>
+        <Text
+          fontFamily="$mono"
+          size="xs"
+          color="$textLight900"
+          sx={{ _dark: { color: '$textDark100' } }}
+          selectable
+        >
           {JSON.stringify(value, null, 2)}
         </Text>
       </Box>
@@ -243,7 +262,7 @@ const ProposalReview = ({ proposal, isApplying, onAccept, onReject }) => {
       bg="$amber50"
       sx={{
         _dark: {
-          bg: '$amber950',
+          bg: '$backgroundCardDark',
           borderColor: '$amber700'
         }
       }}
@@ -307,6 +326,7 @@ const ProposalReview = ({ proposal, isApplying, onAccept, onReject }) => {
 
 const ModelCard = ({
   model,
+  contextTokens,
   selected,
   onSelect,
   isDisabled,
@@ -353,7 +373,7 @@ const ModelCard = ({
           color="$textLight500"
           sx={{ _dark: { color: '$textDark400' } }}
         >
-          {model.size} · {model.context}
+          {model.size} · {contextLabel(contextTokens)}
         </Text>
       </HStack>
       {isLoaded || isCached ? (
@@ -384,8 +404,13 @@ const Assistant = () => {
   const cancelRef = useRef(null)
   const promptCancelRef = useRef(null)
 
-  const [selectedModelKey, setSelectedModelKey] = useState('qwen3-1.7b')
+  const [preferredModelKey] = useState(
+    () => getModel(storedValue(MODEL_STORAGE_KEY, DEFAULT_MODEL_KEY)).key
+  )
+  const [selectedModelKey, setSelectedModelKey] = useState(preferredModelKey)
   const [loadedModelKey, setLoadedModelKey] = useState(null)
+  const [contextSizes, setContextSizes] = useState(storedContextSizes)
+  const [loadedContextTokens, setLoadedContextTokens] = useState(null)
   const [showConsent, setShowConsent] = useState(false)
   const [loadState, setLoadState] = useState('idle')
   const [cacheState, setCacheState] = useState('checking')
@@ -393,10 +418,10 @@ const Assistant = () => {
   const [cachedModelKeys, setCachedModelKeys] = useState([])
   const [loadProgress, setLoadProgress] = useState({ progress: 0, text: '' })
   const [systemPrompt, setSystemPrompt] = useState(() =>
-    storedPrompt(ACTION_PROMPT_STORAGE_KEY, SYSTEM_PROMPT)
+    storedValue(ACTION_PROMPT_STORAGE_KEY, SYSTEM_PROMPT)
   )
   const [chatSystemPrompt, setChatSystemPrompt] = useState(() =>
-    storedPrompt(CHAT_PROMPT_STORAGE_KEY, CHAT_SYSTEM_PROMPT)
+    storedValue(CHAT_PROMPT_STORAGE_KEY, CHAT_SYSTEM_PROMPT)
   )
   const [systemPromptDraft, setSystemPromptDraft] = useState(systemPrompt)
   const [chatSystemPromptDraft, setChatSystemPromptDraft] =
@@ -418,6 +443,12 @@ const Assistant = () => {
   const isReady = Boolean(loadedModelKey && engineRef.current)
   const isModelTransitioning = ['loading', 'switching'].includes(loadState)
   const selectedModelIsCached = cachedModelKeys.includes(selectedModel.key)
+  const contextTokensFor = (model) =>
+    getContextTokens(model, contextSizes[model.key])
+  const selectedContextTokens = contextTokensFor(selectedModel)
+  const selectedModelIsLoaded = isReady && loadedModelKey === selectedModelKey
+  const selectedModelIsCurrent =
+    selectedModelIsLoaded && loadedContextTokens === selectedContextTokens
   const loadingModelIsCached =
     loadingModelKey && cachedModelKeys.includes(loadingModelKey)
   const loadPercent = Math.round((loadProgress.progress || 0) * 100)
@@ -426,8 +457,7 @@ const Assistant = () => {
         loadPercent ? ` · ${loadPercent}%` : ''
       }`
     : 'Preparing local model…'
-  const promptContextTokens =
-    loadedModel?.contextTokens || selectedModel.contextTokens
+  const promptContextTokens = loadedContextTokens || selectedContextTokens
   const promptTokenEstimate = approximateTokens(systemPromptDraft)
   const promptWindowPercent = Math.round(
     (promptTokenEstimate / promptContextTokens) * 100
@@ -494,8 +524,8 @@ const Assistant = () => {
     if (!nextSystemPrompt || !nextChatSystemPrompt) return
     setSystemPrompt(nextSystemPrompt)
     setChatSystemPrompt(nextChatSystemPrompt)
-    saveStoredPrompt(ACTION_PROMPT_STORAGE_KEY, nextSystemPrompt)
-    saveStoredPrompt(CHAT_PROMPT_STORAGE_KEY, nextChatSystemPrompt)
+    saveStoredValue(ACTION_PROMPT_STORAGE_KEY, nextSystemPrompt)
+    saveStoredValue(CHAT_PROMPT_STORAGE_KEY, nextChatSystemPrompt)
     setShowPromptEditor(false)
     addMessage(
       'assistant',
@@ -509,10 +539,18 @@ const Assistant = () => {
     setChatSystemPromptDraft(CHAT_SYSTEM_PROMPT)
   }
 
-  const activateEngine = ({ engine, model }) => {
+  const selectContextSize = (tokens) => {
+    const next = { ...contextSizes, [selectedModelKey]: tokens }
+    setContextSizes(next)
+    saveStoredValue(CONTEXT_STORAGE_KEY, JSON.stringify(next))
+  }
+
+  const activateEngine = ({ engine, model, contextTokens }) => {
     const previousEngine = engineRef.current
     engineRef.current = engine
     setLoadedModelKey(model.key)
+    setLoadedContextTokens(contextTokens)
+    saveStoredValue(MODEL_STORAGE_KEY, model.key)
     setCachedModelKeys((current) => [...new Set([...current, model.key])])
     setLoadingModelKey(null)
     setLoadState('ready')
@@ -522,7 +560,10 @@ const Assistant = () => {
     }
   }
 
-  const loadModel = async (modelToLoad) => {
+  const loadModel = async (
+    modelToLoad,
+    contextTokens = contextTokensFor(modelToLoad)
+  ) => {
     setShowConsent(false)
     setLoadState('loading')
     setLoadingModelKey(modelToLoad.key)
@@ -534,19 +575,23 @@ const Assistant = () => {
     })
 
     try {
-      const engine = await loadWebLLM(modelToLoad, (report) => {
-        setLoadProgress(report)
-      })
+      const engine = await loadWebLLM(
+        modelToLoad,
+        (report) => {
+          setLoadProgress(report)
+        },
+        contextTokens
+      )
 
       if (isThinkingRef.current) {
-        stagedEngineRef.current = { engine, model: modelToLoad }
+        stagedEngineRef.current = { engine, model: modelToLoad, contextTokens }
         setLoadState('switching')
         setLoadProgress({
           progress: 1,
           text: `Download complete. Switching after the current ${loadedModel?.name || 'model'} response…`
         })
       } else {
-        activateEngine({ engine, model: modelToLoad })
+        activateEngine({ engine, model: modelToLoad, contextTokens })
       }
     } catch (error) {
       setLoadingModelKey(null)
@@ -565,14 +610,14 @@ const Assistant = () => {
       autoLoadAttemptedRef.current ||
       isReady ||
       isModelTransitioning ||
-      !cachedModelKeys.includes('qwen3-1.7b')
+      !cachedModelKeys.includes(preferredModelKey)
     ) {
       return
     }
 
     autoLoadAttemptedRef.current = true
-    setSelectedModelKey('qwen3-1.7b')
-    loadModel(getModel('qwen3-1.7b'))
+    setSelectedModelKey(preferredModelKey)
+    loadModel(getModel(preferredModelKey))
   }, [cachedModelKeys])
 
   const sendMessage = async () => {
@@ -626,6 +671,12 @@ const Assistant = () => {
           'The local generation could not be parsed. Expand the raw generation below for debugging.',
           false,
           error.rawGenerations
+        )
+      } else {
+        addMessage(
+          'assistant',
+          `The local model could not answer: ${error?.message || String(error)}`,
+          false
         )
       }
       alertContext.error(
@@ -1011,17 +1062,7 @@ const Assistant = () => {
           }}
         >
           <AlertDialogHeader>
-            <VStack>
-              <Heading size="lg">Assistant settings</Heading>
-              <Text
-                size="xs"
-                color="$textLight600"
-                sx={{ _dark: { color: '$textDark400' } }}
-              >
-                Browser-local and editable. The approval gate remains enforced
-                by application code.
-              </Text>
-            </VStack>
+            <Heading size="lg">Assistant settings</Heading>
             <AlertDialogCloseButton aria-label="Close system prompt editor">
               <Icon as={CloseIcon} />
             </AlertDialogCloseButton>
@@ -1040,6 +1081,7 @@ const Assistant = () => {
                     <ModelCard
                       key={model.key}
                       model={model}
+                      contextTokens={contextTokensFor(model)}
                       selected={selectedModelKey === model.key}
                       onSelect={() => setSelectedModelKey(model.key)}
                       isDisabled={isModelTransitioning}
@@ -1047,6 +1089,32 @@ const Assistant = () => {
                       isLoaded={loadedModelKey === model.key}
                     />
                   ))}
+
+                  <VStack space="xs">
+                    <Text size="sm" bold>
+                      Context size
+                    </Text>
+                    <HStack space="sm" flexWrap="wrap">
+                      {selectedModel.contextSizes.map((tokens) => {
+                        const isSelected = tokens === selectedContextTokens
+                        return (
+                          <Button
+                            key={tokens}
+                            size="xs"
+                            variant={isSelected ? 'solid' : 'outline'}
+                            action={isSelected ? 'primary' : 'secondary'}
+                            onPress={() => selectContextSize(tokens)}
+                            isDisabled={isModelTransitioning}
+                            role="radio"
+                            accessibilityState={{ selected: isSelected }}
+                            accessibilityLabel={contextLabel(tokens)}
+                          >
+                            <ButtonText>{`${tokens / 1024}K`}</ButtonText>
+                          </Button>
+                        )
+                      })}
+                    </HStack>
+                  </VStack>
 
                   <Pressable
                     onPress={() =>
@@ -1113,19 +1181,18 @@ const Assistant = () => {
                       setShowPromptEditor(false)
                       setShowConsent(true)
                     }}
-                    isDisabled={
-                      isModelTransitioning ||
-                      (isReady && loadedModelKey === selectedModelKey)
-                    }
+                    isDisabled={isModelTransitioning || selectedModelIsCurrent}
                   >
                     <ButtonText>
-                      {isReady && loadedModelKey === selectedModelKey
+                      {selectedModelIsCurrent
                         ? 'Model loaded'
-                        : selectedModelIsCached
-                          ? 'Load stored model'
-                          : loadedModel
-                            ? 'Review model switch'
-                            : 'Review download'}
+                        : selectedModelIsLoaded
+                          ? 'Reload with new context size'
+                          : selectedModelIsCached
+                            ? 'Load stored model'
+                            : loadedModel
+                              ? 'Review model switch'
+                              : 'Review download'}
                     </ButtonText>
                     <ButtonIcon as={DownloadIcon} ml="$2" />
                   </Button>
@@ -1138,7 +1205,8 @@ const Assistant = () => {
                         color="$green700"
                         sx={{ _dark: { color: '$green300' } }}
                       >
-                        Chat is using {loadedModel.name}
+                        Chat is using {loadedModel.name} with{' '}
+                        {contextLabel(loadedContextTokens)}
                       </Text>
                     </HStack>
                   ) : null}
@@ -1158,14 +1226,6 @@ const Assistant = () => {
                     {promptContextTokens.toLocaleString()}
                   </Text>
                 </HStack>
-                <Text
-                  size="xs"
-                  color="$textLight600"
-                  sx={{ _dark: { color: '$textDark400' } }}
-                >
-                  Defines SPR, selects read tools, and prepares reviewed rule
-                  proposals.
-                </Text>
                 <Textarea
                   minHeight={280}
                   bg="$backgroundContentLight"

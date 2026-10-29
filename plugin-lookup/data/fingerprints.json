@@ -157,10 +157,16 @@
     },
     {
       "SignalType": "mdns_service",
-      "Pattern": "_googlecast\\._tcp|_airplay\\._tcp|_raop\\._tcp",
+      "Pattern": "_googlecast\\._tcp",
       "Category": "tv",
       "Weight": 4,
       "Decisive": true
+    },
+    {
+      "SignalType": "mdns_service",
+      "Pattern": "_airplay\\._tcp|_raop\\._tcp",
+      "Category": "tv",
+      "Weight": 2
     },
     {
       "SignalType": "mdns_service",
@@ -229,6 +235,14 @@
       "Pattern": "^model=Mac",
       "Vendor": "Apple",
       "Category": "laptop",
+      "Weight": 4,
+      "Decisive": true
+    },
+    {
+      "SignalType": "mdns_txt",
+      "Pattern": "^model=AppleTV",
+      "Vendor": "Apple",
+      "Category": "tv",
       "Weight": 4,
       "Decisive": true
     },
@@ -356,7 +370,7 @@
       "SignalType": "vendor_class",
       "Pattern": "^udhcp",
       "Category": "iot-sensor",
-      "Weight": 1
+      "Weight": 2
     },
     {
       "SignalType": "vendor_class",

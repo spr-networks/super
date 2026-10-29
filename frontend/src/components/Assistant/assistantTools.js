@@ -89,6 +89,10 @@ const READ_TOOLS = ['get_firewall_config', 'list_devices']
 const READ_TOOL_TIMEOUT_MS = 10000
 const DEVICE_ARRAY_FIELDS = ['Groups', 'Policies', 'DeviceTags']
 const DEVICE_STRING_FIELDS = ['Name', 'RecentIP', 'VLANTag']
+const ADDRESS_FIELDS = ['SrcIP', 'DstIP', 'IP']
+
+const isAddress = (value) =>
+  /^(\d{1,3}(\.\d{1,3}){3}|[0-9a-f.]*:[0-9a-f:.]*)(\/\d{1,3})?$/i.test(value)
 
 const isPlainObject = (value) =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -147,6 +151,14 @@ const normalizeRule = (rule, spec) => {
       throw new Error('Protocol must be tcp or udp')
     }
   }
+
+  ADDRESS_FIELDS.forEach((field) => {
+    if (normalized[field] && !isAddress(normalized[field])) {
+      throw new Error(
+        `${field} must be an IP address or CIDR, not ${JSON.stringify(normalized[field])}`
+      )
+    }
+  })
 
   return normalized
 }

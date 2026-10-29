@@ -15,15 +15,13 @@ export default class Dhcp extends Component {
       (await nfmapAPI.getNFVerdictMap('ethernet_filter').catch((error) => {
         //404 = no clients in map yet
         if (error.message !== 404) {
-          this.context.error(
-            'API Failure for: ethernet_filter ' + error.message
-          )
+          this.context.error('API Failure for: ethernet_filter', error)
         }
       })) || []
 
     const arp =
       (await wifiAPI.arp().catch((error) => {
-        this.context.error('API Failure:' + error.message)
+        this.context.error('API Failure', error)
       })) || []
 
     let ipMap = {}
@@ -33,7 +31,7 @@ export default class Dhcp extends Component {
 
     const devices =
       (await deviceAPI.list().catch((error) => {
-        this.context.error('API Failure getDevices: ' + error.message)
+        this.context.error('API Failure getDevices', error)
       })) || {}
 
     let group = { Name: 'Connected Clients', Members: [] }
@@ -84,7 +82,7 @@ export default class Dhcp extends Component {
     groupAPI.deleteGroup(name).then(() => {
       this.refreshList()
     }).catch((err) => {
-      this.context.error('API Failure, failed to delete group ' + err.message)
+      this.context.error('API Failure, failed to delete group', err)
     })
   }
 

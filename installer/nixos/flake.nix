@@ -788,8 +788,13 @@
               # Pi 5 / CM5 PCIe ethernet
               SUBSYSTEM=="net", ACTION=="add", ENV{DEVTYPE}!="wlan", DEVPATH=="*0001:01:00.0*", NAME="eth0"
               SUBSYSTEM=="net", ACTION=="add", DEVPATH=="*0000:03:00.0*", NAME="eth1"
-              # brcmfmac (onboard WiFi) → wlan0
-              ACTION=="add", SUBSYSTEM=="net", SUBSYSTEMS=="sdio", DRIVERS=="brcmfmac", NAME!="wlan0", RUN+="${pkgs.writeShellScript "wlan0-swap" ''
+              # Only name the base radio; AP/VLAN children share its SDIO parent.
+              ACTION=="add", SUBSYSTEM=="net", SUBSYSTEMS=="sdio", DRIVERS=="brcmfmac", KERNEL=="wlan[0-9]*", KERNEL!="*.*", KERNEL!="wlan0", RUN+="${pkgs.writeShellScript "wlan0-swap" ''
+                # Never swap AP/VLAN children (including ones named wlanN) or wlan0 itself.
+                [ "$#" -eq 1 ] || exit 1
+                [[ "$1" =~ ^wlan[0-9]+$ && "$1" != wlan0 ]] || exit 0
+                info=$(${pkgs.iw}/bin/iw dev "$1" info 2>/dev/null) || exit 0
+                [[ "$info" =~ [[:space:]]type[[:space:]]+(managed|AP)([[:space:]]|$) ]] || exit 0
                 if ${pkgs.iproute2}/bin/ip link show wlan0 > /dev/null 2>&1; then
                   ${pkgs.iproute2}/bin/ip link set wlan0 down
                   ${pkgs.iproute2}/bin/ip link set wlan0 name wlan_tmp
@@ -1507,6 +1512,7 @@
           self.nixosModules.default
           nixos-raspberrypi.nixosModules.sd-image
           ./pi5-boot-img.nix
+          ./persistent.nix
           ({ config, pkgs, lib, modulesPath, ... }: {
             imports = [
               # no perl at runtime: userborn, /etc overlay, systemd initrd

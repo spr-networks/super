@@ -268,7 +268,7 @@ const DNSBlocklist = ({ config, ...props }) => {
         setRecommendedList(recommendedList)
       })
       .catch((error) => {
-        context.error('API Failure: ' + error.message)
+        context.error('API Failure', error)
       })
   }
 
@@ -297,7 +297,7 @@ const DNSBlocklist = ({ config, ...props }) => {
         notifyChange('blocklists')
       })
       .catch((error) => {
-        context.error('API Failure: ' + error.message)
+        context.error('API Failure', error)
       })
   }
 
@@ -328,7 +328,7 @@ const DNSBlocklist = ({ config, ...props }) => {
         notifyChange('blocklists')
       })
       .catch((error) => {
-        context.error('API Failure: ' + error.message)
+        context.error('API Failure', error)
       })
   }
 
@@ -352,7 +352,7 @@ const DNSBlocklist = ({ config, ...props }) => {
         notifyChange('blocklists')
       })
       .catch((error) => {
-        context.error('API Failure: ' + error.message)
+        context.error('API Failure', error)
       })
   }
 
@@ -369,7 +369,7 @@ const DNSBlocklist = ({ config, ...props }) => {
         notifyChange('blocklists')
       })
       .catch((error) => {
-        context.error('API Failure: ' + error.message)
+        context.error('API Failure', error)
       })
   }
 
@@ -387,7 +387,7 @@ const DNSBlocklist = ({ config, ...props }) => {
         notifyChange('blocklists')
       })
       .catch((error) => {
-        context.error('API Failure: ' + error.message)
+        context.error('API Failure', error)
       })
   }
 
@@ -400,7 +400,7 @@ const DNSBlocklist = ({ config, ...props }) => {
         notifyChange('blocklists')
       })
       .catch((error) => {
-        context.error('API Failure: ' + error.message)
+        context.error('API Failure', error)
       })
   }
 

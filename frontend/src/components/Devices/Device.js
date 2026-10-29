@@ -184,7 +184,7 @@ const Device = React.memo(({ device, notifyChange, showMenu, isSelected, onSelec
       .deleteDevice(id)
       .then(notifyChange)
       .catch((error) =>
-        context.error('[API] deleteDevice error: ' + error.message)
+        context.error('[API] deleteDevice error', error)
       )
   }
 

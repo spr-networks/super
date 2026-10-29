@@ -72,7 +72,7 @@ const DNSBlock = (props) => {
       if ([404, 502].includes(error.message)) {
         setEnabled(false)
       } else {
-        context.error('API Failure: ' + error.message)
+        context.error('API Failure', error)
       }
     }
   }
@@ -110,7 +110,7 @@ const DNSBlock = (props) => {
         notifyChange('config')
       })
       .catch((error) => {
-        context.error('API Failure: ' + error.message)
+        context.error('API Failure', error)
       })
   }
 
@@ -162,7 +162,7 @@ const DNSBlock = (props) => {
         notifyChange('config')
       })
       .catch((error) => {
-        context.error('API Failure: ' + error.message)
+        context.error('API Failure', error)
       })
   }
 
@@ -214,7 +214,7 @@ const DNSBlock = (props) => {
                         .putOverrideList(curList.Name, updatedList)
                         .then(() => notifyChange('config'))
                         .catch((error) =>
-                          context.error('API Failure: ' + error.message)
+                          context.error('API Failure', error)
                         )
                     }}
                   />

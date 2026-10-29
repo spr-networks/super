@@ -42,6 +42,7 @@ import {
 import { ListHeader } from 'components/List'
 import DeviceExpiry from './DeviceExpiry'
 import AllowlistPolicyControl from 'components/AllowlistPolicyControl'
+import WifiPasswordField from 'components/WifiPasswordField'
 import {
   normalizeInternetPolicySelection,
   allowlistPolicyValues
@@ -355,10 +356,7 @@ const AddDevice = (props) => {
               <FormControlLabelText>Passphrase</FormControlLabelText>
             </FormControlLabel>
             <Input size="md">
-              <InputField
-                type="password"
-                autoComplete="new-password"
-                autoCorrect={false}
+              <WifiPasswordField
                 onChangeText={(value) => handleChange('psk', value)}
               />
             </Input>

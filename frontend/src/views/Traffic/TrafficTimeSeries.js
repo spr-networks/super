@@ -26,9 +26,7 @@ const TrafficTimeSeries = ({ ...props }) => {
       traffic_data = cached_traffic_data = await trafficAPI
         .history()
         .catch((error) => {
-          alertContext.error(
-            'API Failure get traffic history: ' + error.message
-          )
+          alertContext.error('API Failure get traffic history', error)
         })
     }
 

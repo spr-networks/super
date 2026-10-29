@@ -10,14 +10,6 @@ on:
       - completed
     branches: [ main ]
   workflow_dispatch:
-  # dev: on changes to the image, with the <version>-dev images Docker Image
-  # CI last published (workflow_run and dispatch need this file on main)
-  push:
-    branches: [ dev ]
-    paths:
-      - "installer/rpi-image-gen/**"
-      - "superd/rpios/**"
-      - ".github/workflows/rpios-image.yml"
 
 permissions:
   id-token: write

@@ -60,7 +60,7 @@ const AddAuthToken = (props) => {
       .then((token) => {
         props.notifyChange()
       })
-      .catch((err) => context.error('' + err))
+      .catch((err) => context.error('Failed to add API token', err))
   }
 
   return (

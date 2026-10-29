@@ -3659,12 +3659,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mlc-ai/web-llm@npm:0.2.84":
-  version: 0.2.84
-  resolution: "@mlc-ai/web-llm@npm:0.2.84"
+"@mlc-ai/web-llm@npm:0.2.86":
+  version: 0.2.86
+  resolution: "@mlc-ai/web-llm@npm:0.2.86"
   dependencies:
     loglevel: "npm:^1.9.1"
-  checksum: 10c0/d03898f78a16ee572306633cff1824ea68ac41d8cd7321cc8f20cf2567f703d3f55fa25425f900fee7c9bafe32bd95fa2cce3cd9df8e80cd3418a43b50f863af
+  checksum: 10c0/6946b41414850b56f946cf38850c8c34b0a6e0964d6ff4893d7386e566a20a53e30ef4d88f8effc1f8d9d38f024864da9d9829972c9c3d42d409261955769863
   languageName: node
   linkType: hard
 
@@ -19787,7 +19787,7 @@ __metadata:
     "@gluestack-style/react": "npm:1.0.45"
     "@gluestack-ui/config": "npm:1.1.2"
     "@gluestack-ui/themed": "npm:1.1.3"
-    "@mlc-ai/web-llm": "npm:0.2.84"
+    "@mlc-ai/web-llm": "npm:0.2.86"
     "@react-aria/ssr": "npm:^3.10.1"
     "@react-native-async-storage/async-storage": "npm:^1.24.0"
     "@react-native-clipboard/clipboard": "npm:^1.16.3"

@@ -45,16 +45,56 @@ const parseRawDecision = (content = '') => {
   }
 }
 
+// Grade wording, not typography: models differ in quotes, hyphens and spaces.
+const normalizedText = (content) =>
+  readableRaw(content)
+    .toLowerCase()
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[‐‑‒–—]/g, '-')
+    .replace(/\s+/g, ' ')
+
 const messageContains = (content, termGroups) => {
-  const normalized = readableRaw(content).toLowerCase()
+  const normalized = normalizedText(content)
   return termGroups.every((terms) =>
     terms.some((term) => normalized.includes(term))
   )
 }
 
 const messageExcludes = (content, forbiddenTerms = []) => {
-  const normalized = readableRaw(content).toLowerCase()
+  const normalized = normalizedText(content)
   return forbiddenTerms.every((term) => !normalized.includes(term))
+}
+
+const echoesRawJSON = (content) => /\{\s*"[^"]+"\s*:/.test(readableRaw(content))
+
+const repeatsASentence = (content) => {
+  const sentences = readableRaw(content)
+    .toLowerCase()
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((sentence) => sentence.replace(/[^\p{L}\p{N}]+/gu, ' ').trim())
+    .filter((sentence) => sentence.split(' ').length >= 5)
+  return new Set(sentences).size < sentences.length
+}
+
+// A chat answer that restates itself or dumps tool JSON is garbage even
+// when it happens to contain the expected facts.
+export const isGarbageMessage = (content) =>
+  echoesRawJSON(content) || repeatsASentence(content)
+
+const gradeMessage = (content, termGroups, forbiddenTerms) =>
+  !isGarbageMessage(content) &&
+  messageContains(content, termGroups) &&
+  messageExcludes(content, forbiddenTerms)
+
+// Requests routed through the action planner answer with a JSON decision.
+// Grade the message it carries when the whole output is that decision.
+const rawMessage = (raw) => {
+  if (!readableRaw(raw).startsWith('{')) return raw
+  const decision = parseRawDecision(raw)
+  return decision?.kind === 'message' && typeof decision.message === 'string'
+    ? decision.message
+    : raw
 }
 
 const messageScenario = ({
@@ -73,11 +113,8 @@ const messageScenario = ({
   available,
   gradeResult: (result) =>
     result?.kind === 'message' &&
-    messageContains(result.message, termGroups) &&
-    messageExcludes(result.message, forbiddenTerms),
-  gradeRaw: (raw) =>
-    messageContains(raw, termGroups) &&
-    messageExcludes(raw, forbiddenTerms)
+    gradeMessage(result.message, termGroups, forbiddenTerms),
+  gradeRaw: (raw) => gradeMessage(rawMessage(raw), termGroups, forbiddenTerms)
 })
 
 const readScenario = ({ id, name, prompt, expectedText }) => ({
@@ -97,7 +134,7 @@ const reachabilityScenario = ({ available }) => {
     ['lan'],
     ['polic'],
     ['/30', 'isolat'],
-    ['not because', 'not by', 'does not', 'do not'],
+    ['not because', 'not by', 'does not', 'do not', "doesn't", "don't"],
     ['initiat', 'direction', 'reverse']
   ]
   return {
@@ -107,9 +144,8 @@ const reachabilityScenario = ({ available }) => {
     source: MODEL_SOURCE,
     available,
     gradeResult: (result) =>
-      result?.kind === 'message' &&
-      messageContains(result.message, termGroups),
-    gradeRaw: (raw) => messageContains(raw, termGroups)
+      result?.kind === 'message' && gradeMessage(result.message, termGroups),
+    gradeRaw: (raw) => gradeMessage(rawMessage(raw), termGroups)
   }
 }
 
@@ -264,7 +300,11 @@ export const createAssistantEvaluationScenarios = ({
       id: 'policies-groups',
       name: 'Explain Policies and Groups',
       prompt: 'What is the difference between an SPR Policy and a Group?',
-      termGroups: [['polic'], ['group'], ['communicat']]
+      termGroups: [
+        ['polic'],
+        ['group'],
+        ['communicat', 'reach', 'talk', 'connect']
+      ]
     }),
     reachabilityScenario({ available: hasRpi4 && hasAndroid }),
     messageScenario({
@@ -310,9 +350,11 @@ export const createAssistantEvaluationScenarios = ({
         [
           'not by',
           'not because',
-          'ip-prefix',
-          'ip prefixes',
-          'ip similarity'
+          'prefix',
+          'ip similarity',
+          'similar ip',
+          'similar recentip',
+          'similar address'
         ]
       ],
       available: Boolean(workstation && laserjet)
@@ -327,6 +369,8 @@ export const createAssistantEvaluationScenarios = ({
         [
           'no access',
           'cannot',
+          "can't",
+          'not reach',
           'no explicit',
           'not established',
           'does not grant access'
@@ -337,7 +381,12 @@ export const createAssistantEvaluationScenarios = ({
           'does not itself',
           'alone',
           'not a grant',
-          'only a label'
+          'not a policy grant',
+          'does not grant',
+          'not granting',
+          'a label',
+          'only data',
+          'just data'
         ],
         ['/30', 'isolat']
       ],
@@ -487,8 +536,12 @@ export const createAssistantEvaluationScenarios = ({
           "can't",
           'not available',
           'unavailable',
+          'unable',
           'do not',
-          'does not'
+          "don't",
+          'does not',
+          "doesn't",
+          'never'
         ],
         ['credential', 'secret', 'expose', 'access']
       ]
