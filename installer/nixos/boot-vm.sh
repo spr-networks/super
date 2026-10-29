@@ -41,9 +41,9 @@ prepare() {
   if [ ! -f "$RAW" ] || [ "$ZST" -nt "$RAW" ]; then
     echo "Decompressing image..."
     zstd -d -f -o "$RAW" "$ZST"
-    # free space after the root partition, like an SD card, so the
-    # first-boot root expansion has room to grow
-    truncate -s +2G "$RAW"
+    # an 8G disk, like a small SD card: the first boot grows the root to
+    # 4G and makes the encrypted persistent from the rest (persistent.nix)
+    truncate -s 8G "$RAW"
   fi
 
   # Extract boot.img from the FAT partition, then the kernel, initrd and

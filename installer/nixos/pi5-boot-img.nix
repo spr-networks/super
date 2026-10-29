@@ -223,6 +223,10 @@ in
       ln -s ${toplevel} $out/system
     '';
 
+    # boot.img and, while an update waits, tryboot.img: nixos-raspberrypi's
+    # 1 GiB is for a kernel and initrd per generation
+    sdImage.firmwareSize = lib.mkForce 256;
+
     sdImage.populateFirmwareCommands = lib.mkForce ''
       cp ${outerConfig} firmware/config.txt
       cp ${outerConfig} firmware/tryboot.txt

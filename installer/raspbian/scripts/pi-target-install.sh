@@ -203,7 +203,8 @@ SSHEOF
 systemctl enable ssh
 
 cat > /etc/udev/rules.d/10-network.rules << EOF
-ACTION=="add", SUBSYSTEM=="net", SUBSYSTEMS=="sdio", DRIVERS=="brcmfmac", NAME!="wlan0", RUN+="/etc/udev/wlan0-swap.sh %k"
+# Only name the base radio; AP/VLAN children share its SDIO parent.
+ACTION=="add", SUBSYSTEM=="net", SUBSYSTEMS=="sdio", DRIVERS=="brcmfmac", KERNEL=="wlan[0-9]*", KERNEL!="*.*", KERNEL!="wlan0", RUN+="/etc/udev/wlan0-swap.sh %k"
 EOF
 
 cat > /etc/udev/wlan0-swap.sh << 'EOF'
@@ -214,6 +215,11 @@ if [ "$#" -ne 1 ]; then
   echo "Usage: $0 interface_name"
   exit 1
 fi
+
+# Never swap AP/VLAN children (including ones named wlanN) or wlan0 itself.
+[[ "$1" =~ ^wlan[0-9]+$ && "$1" != wlan0 ]] || exit 0
+info=$(iw dev "$1" info 2>/dev/null) || exit 0
+[[ "$info" =~ [[:space:]]type[[:space:]]+(managed|AP)([[:space:]]|$) ]] || exit 0
 
 # Check if the wlan0 interface exists
 if ip link show wlan0 > /dev/null 2>&1; then

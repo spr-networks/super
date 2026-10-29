@@ -186,7 +186,25 @@ check_status() {
 
             touch "/state/wifi/failsafe_${IFACE}" #mark failsafe started
             FAILSAFE_CONF="/configs/wifi/hostapd_failsafe_${IFACE}.conf"
-            cp "$FAILSAFE_TEMPLATE" "$FAILSAFE_CONF"
+            # Keep the API's per-radio security choices when changing channels
+            # for recovery. The generic template may enable unsupported ciphers
+            # or SAE, or weaken an SAE-only network to transition mode.
+            if ! awk '
+                function security(line) {
+                    return line ~ /^(wpa|wpa_key_mgmt|rsn_pairwise|wpa_pairwise|group_cipher|ieee80211w|beacon_prot|wpa_psk_file|wpa_passphrase|wpa_psk|sae_[a-z_]+)=/
+                }
+                FILENAME == ARGV[1] {
+                    if ($0 ~ /^(#spr-gen-bss|bss=)/) done = 1
+                    if (!done && security($0)) settings = settings $0 "\n"
+                    if (!done && $0 ~ /^wpa_key_mgmt=/) found = 1
+                    next
+                }
+                !security($0) { print }
+                END { if (!found) exit 1; printf "%s", settings }
+            ' "$CONF" "$FAILSAFE_TEMPLATE" > "$FAILSAFE_CONF"; then
+                echo "Missing security settings for $IFACE, skipping failsafe"
+                continue
+            fi
 
             sed -i "s/wlan0/${IFACE}/g" "$FAILSAFE_CONF"
 
