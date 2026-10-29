@@ -31,6 +31,13 @@ import {
 } from '@gluestack-ui/themed'
 
 import { ListHeader } from 'components/List'
+import { Select } from 'components/Select'
+
+// godns only accepts IPv4 or IPv6 here, anything else (e.g. "4") makes it
+// loop forever looking up the public IP and never update the provider
+const ipTypes = ['IPv4', 'IPv6']
+const normalizeIpType = (value) =>
+  ['IPV6', '6'].includes(String(value || '').toUpperCase()) ? 'IPv6' : 'IPv4'
 
 const Subdomain = ({ entry, domain, updateSubdomain, deleteSubdomain }) => (
   <HStack space="md" my="$2">
@@ -78,6 +85,7 @@ export default class DynDns extends Component {
     dyndnsAPI
       .config()
       .then((config) => {
+        config.ip_type = normalizeIpType(config.ip_type)
         this.setState({ config })
       })
       .catch((err) => {
@@ -101,6 +109,10 @@ export default class DynDns extends Component {
       ? ip_urls
       : normalizeTextInput(ip_urls).split(',')
     ).map((e) => e.trim())
+    this.state.config['ip_type'] = normalizeIpType(this.state.config['ip_type'])
+    //text inputs store strings, the plugin expects an int
+    this.state.config['interval'] =
+      parseInt(this.state.config['interval'], 10) || 0
     dyndnsAPI.setConfig(this.state.config).then(done, (e) => {
       this.context.error('API Failure: ' + e.message)
     })
@@ -286,14 +298,33 @@ export default class DynDns extends Component {
                                 {niceLabel(label)}
                               </FormControlLabelText>
                             </FormControlLabel>
-                            <Input flex={2} variant="underlined">
-                              <InputField
-                                value={this.state.config[label]}
-                                onChangeText={(value) =>
-                                  handleChange(label, value)
-                                }
-                              />
-                            </Input>
+                            {label == 'ip_type' ? (
+                              <Box flex={2}>
+                                <Select
+                                  selectedValue={this.state.config[label]}
+                                  onValueChange={(value) =>
+                                    handleChange(label, value)
+                                  }
+                                >
+                                  {ipTypes.map((ipType) => (
+                                    <Select.Item
+                                      key={ipType}
+                                      label={ipType}
+                                      value={ipType}
+                                    />
+                                  ))}
+                                </Select>
+                              </Box>
+                            ) : (
+                              <Input flex={2} variant="underlined">
+                                <InputField
+                                  value={this.state.config[label]}
+                                  onChangeText={(value) =>
+                                    handleChange(label, value)
+                                  }
+                                />
+                              </Input>
+                            )}
                           </HStack>
                         </FormControl>
                       ))}

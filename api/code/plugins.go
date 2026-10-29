@@ -236,6 +236,12 @@ func pluginWithRuntimeAvailability(plugin PluginConfig) PluginConfig {
 	return plugin
 }
 
+// Interface matches the bridge name in dyndns/docker-compose.yml
+var gDyndnsNetworkCapabilities = NetworkCapabilities{
+	Interface: "spr-dyndns",
+	Policies:  []string{"wan", "dns"},
+}
+
 var gPluginTemplates = []PluginConfig{
 	{
 		Name:     "dns-block-extension",
@@ -262,11 +268,12 @@ var gPluginTemplates = []PluginConfig{
 		Enabled:  true,
 	},
 	{
-		Name:            "dyndns",
-		URI:             "dyndns",
-		UnixPath:        "/state/plugins/dyndns/dyndns_plugin",
-		Enabled:         false,
-		ComposeFilePath: "dyndns/docker-compose.yml",
+		Name:                "dyndns",
+		URI:                 "dyndns",
+		UnixPath:            "/state/plugins/dyndns/dyndns_plugin",
+		Enabled:             false,
+		ComposeFilePath:     "dyndns/docker-compose.yml",
+		NetworkCapabilities: gDyndnsNetworkCapabilities,
 	},
 	{
 		Name:     "db",
@@ -317,6 +324,11 @@ func updateConfigPluginDefaults(config *APIConfig) bool {
 		if entry.Name == "dyndns" {
 			if entry.ComposeFilePath == "" {
 				config.Plugins[i].ComposeFilePath = "dyndns/docker-compose.yml"
+				update = true
+			}
+			//dyndns runs on its own bridge, without a rule it has no internet
+			if entry.NetworkCapabilities.Interface == "" {
+				config.Plugins[i].NetworkCapabilities = gDyndnsNetworkCapabilities
 				update = true
 			}
 		}

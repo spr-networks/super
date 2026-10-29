@@ -183,8 +183,10 @@ func validateConfig(config GodyndnsConfig) error {
 		}
 	}
 
-	if config.IpType != "" && !validCommand(config.IpType) {
-		return fmt.Errorf("invalid IpType")
+	// godns spins forever fetching the public IP unless this is IPv4 or IPv6
+	ipType := strings.ToUpper(config.IpType)
+	if ipType != "IPV4" && ipType != "IPV6" {
+		return fmt.Errorf("invalid IpType, expected IPv4 or IPv6")
 	}
 
 	if config.Socks5Proxy != "" {
@@ -233,6 +235,11 @@ func setConfiguration(w http.ResponseWriter, r *http.Request) {
 		Socks5Proxy: apiConfig.Socks5Proxy,
 		Resolver:    apiConfig.Resolver,
 		RunOnce:     apiConfig.RunOnce,
+	}
+
+	// godns has no default for ip_type
+	if config.IpType == "" {
+		config.IpType = "IPv4"
 	}
 
 	err = validateConfig(config)
