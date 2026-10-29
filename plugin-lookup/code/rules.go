@@ -252,6 +252,8 @@ func classifyDevice(signals *DeviceSignals, db *FingerprintDB) Classification {
 			if rule.Model != "" && result.Model == "" {
 				result.Model = rule.Model
 			}
+			// a rule counts once per device: _airplay + _raop matching one pattern is one signal, not two
+			break
 		}
 	}
 
