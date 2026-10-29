@@ -9,6 +9,7 @@ import React, {
 } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppContext } from 'AppContext'
+import { firewallAPI } from 'api'
 import { normalizeTextInput } from 'utils/normalizeTextInput'
 
 import {
@@ -29,7 +30,7 @@ import {
   ScrollView
 } from '@gluestack-ui/themed'
 
-import { SearchIcon, SlashIcon } from 'lucide-react-native'
+import { ContainerIcon, SearchIcon, SlashIcon } from 'lucide-react-native'
 
 import { GlobalHotKeys, HotKeys } from 'react-hotkeys'
 import { Platform } from 'react-native'
@@ -37,6 +38,8 @@ import { Platform } from 'react-native'
 const keyMap = { SHOW_SEARCH: 'shift+/' }
 
 const ipv4Pattern = /^(\d{1,3}\.){0,3}\d{0,3}$/
+
+const interfacesTab = 'Custom Interface Access'
 
 const rowSx = {
   ':hover': { borderColor: '$primary400' },
@@ -74,15 +77,59 @@ const flattenRoutes = (routes) =>
     return [{ name: r.name, path: r.path, icon: r.icon }]
   })
 
+const macQuery = (value) => {
+  const mac = value.replace(/-/g, ':')
+  if (/^[0-9a-f]{0,2}(:[0-9a-f]{0,2})+$/.test(mac)) {
+    return { mac, compact: false }
+  }
+  if (/^[0-9a-f]{4,12}$/.test(mac)) {
+    return { mac, compact: true }
+  }
+  return null
+}
+
+const matchMAC = (MAC, query) => {
+  if (!query || !MAC) return false
+  const mac = MAC.toLowerCase()
+  return (query.compact ? mac.replace(/:/g, '') : mac).includes(query.mac)
+}
+
 const matchItem = (item, value) =>
   !item.name || item.name.toLowerCase().includes(value)
 
-const matchDevice = (device, value, isIP) => {
+const matchDevice = (device, value, isIP, mac) => {
+  if (matchMAC(device.MAC, mac)) {
+    return true
+  }
+
   if (isIP) {
     return (device.RecentIP || '').includes(value)
   }
 
   return !!device.Name && device.Name.toLowerCase().includes(value)
+}
+
+const matchInterface = (rule, value, isIP) => {
+  if (isIP) {
+    return (rule.SrcIP || '').includes(value)
+  }
+
+  return [rule.Interface, rule.RuleName].some(
+    (name) => !!name && name.toLowerCase().includes(value)
+  )
+}
+
+export const searchJump = ({ items, devices, interfaces }, query) => {
+  const value = query.toLowerCase()
+  const isIP = ipv4Pattern.test(value)
+  const mac = macQuery(value)
+
+  return {
+    items: items.filter((item) => matchItem(item, value)),
+    devices: devices.filter((device) => matchDevice(device, value, isIP, mac)),
+    interfaces: interfaces.filter((rule) => matchInterface(rule, value, isIP)),
+    isMAC: !!mac
+  }
 }
 
 const RouteRow = memo(({ item, onPress }) => (
@@ -102,7 +149,7 @@ const RouteRow = memo(({ item, onPress }) => (
   </Pressable>
 ))
 
-const DeviceRow = memo(({ device, onPress }) => (
+const DeviceRow = memo(({ device, showMAC, onPress }) => (
   <Pressable
     onPress={() => onPress(device)}
     borderWidth="$1"
@@ -118,6 +165,33 @@ const DeviceRow = memo(({ device, onPress }) => (
         {device.RecentIP}
       </Text>
     </HStack>
+    {showMAC ? (
+      <Text size="xs" color="$muted500">
+        {device.MAC}
+      </Text>
+    ) : null}
+  </Pressable>
+))
+
+const InterfaceRow = memo(({ rule, onPress }) => (
+  <Pressable
+    onPress={() => onPress(rule)}
+    borderWidth="$1"
+    borderColor="$primary200"
+    px="$4"
+    py="$2"
+    rounded="$md"
+    sx={rowSx}
+  >
+    <HStack justifyContent="space-between">
+      <HStack>
+        <Icon as={ContainerIcon} mr="$2" size={18} />
+        <Text size="sm">{rule.Interface}</Text>
+      </HStack>
+      <Text bold size="sm">
+        {rule.SrcIP}
+      </Text>
+    </HStack>
   </Pressable>
 ))
 
@@ -130,6 +204,7 @@ const RouteJump = ({ ...props }) => {
   } = useContext(AppContext)
   const [isOpen, setIsOpen] = useState(false)
   const [devices, setDevices] = useState([])
+  const [interfaces, setInterfaces] = useState([])
   const [filterText, setFilterText] = useState('')
   const query = useDeferredValue(filterText)
   const navigate = useNavigate()
@@ -146,20 +221,21 @@ const RouteJump = ({ ...props }) => {
       .catch(() => {})
   }, [routes])
 
-  const matchedItems = useMemo(() => {
-    const value = query.toLowerCase()
-    return items.filter((item) => matchItem(item, value))
-  }, [items, query])
-
-  const matchedDevices = useMemo(() => {
-    const value = query.toLowerCase()
-    const isIP = ipv4Pattern.test(value)
-    return devices.filter((device) => matchDevice(device, value, isIP))
-  }, [devices, query])
+  const matches = useMemo(
+    () => searchJump({ items, devices, interfaces }, query),
+    [items, devices, interfaces, query]
+  )
 
   const onPress = useCallback(() => {
     setIsOpen(true)
     refInput.current?.focus()
+
+    firewallAPI
+      .config()
+      .then((config) => {
+        setInterfaces(config?.CustomInterfaceRules || [])
+      })
+      .catch(() => {})
   }, [])
 
   const trigger = (triggerProps) => (
@@ -211,7 +287,6 @@ const RouteJump = ({ ...props }) => {
     [navigate, setActiveSidebarItem]
   )
 
-  //navigate and reset form
   const navigateItem = useCallback(
     (item) => {
       setIsOpen(false)
@@ -224,18 +299,31 @@ const RouteJump = ({ ...props }) => {
     [navigate, setActiveSidebarItem]
   )
 
-  const onSubmitEditing = () => {
-    const value = filterText.toLowerCase()
+  const navigateInterface = useCallback(
+    (rule) => {
+      setIsOpen(false)
+      navigate(`/admin/firewall?tab=${encodeURIComponent(interfacesTab)}`)
+      setActiveSidebarItem('firewall')
 
-    const item = items.find((r) => r.path && matchItem(r, value))
+      setFilterText('')
+    },
+    [navigate, setActiveSidebarItem]
+  )
+
+  const onSubmitEditing = () => {
+    const found = searchJump({ items, devices, interfaces }, filterText)
+
+    const item = found.items.find((r) => r.path)
     if (item) {
       return navigateItem(item)
     }
 
-    const isIP = ipv4Pattern.test(value)
-    const device = devices.find((d) => matchDevice(d, value, isIP))
-    if (device) {
-      return navigateDevice(device)
+    if (found.devices.length) {
+      return navigateDevice(found.devices[0])
+    }
+
+    if (found.interfaces.length) {
+      return navigateInterface(found.interfaces[0])
     }
   }
 
@@ -284,7 +372,7 @@ const RouteJump = ({ ...props }) => {
               </FormControl>
               <ScrollView maxHeight={520} showsVerticalScrollIndicator={false}>
                 <VStack space="sm" justifyContent="flex-start">
-                  {matchedItems.map((item) => (
+                  {matches.items.map((item) => (
                     <RouteRow
                       key={`${item.name}:${item.path}`}
                       item={item}
@@ -292,7 +380,7 @@ const RouteJump = ({ ...props }) => {
                     />
                   ))}
 
-                  {matchedDevices.length ? (
+                  {matches.devices.length ? (
                     <HStack>
                       <Text bold size="xs">
                         Devices
@@ -300,7 +388,7 @@ const RouteJump = ({ ...props }) => {
                     </HStack>
                   ) : null}
 
-                  {matchedDevices.map((device) => (
+                  {matches.devices.map((device) => (
                     <DeviceRow
                       key={
                         device.MAC ||
@@ -308,7 +396,24 @@ const RouteJump = ({ ...props }) => {
                         `${device.Name}:${device.RecentIP}`
                       }
                       device={device}
+                      showMAC={matches.isMAC}
                       onPress={navigateDevice}
+                    />
+                  ))}
+
+                  {matches.interfaces.length ? (
+                    <HStack>
+                      <Text bold size="xs">
+                        Container Interfaces
+                      </Text>
+                    </HStack>
+                  ) : null}
+
+                  {matches.interfaces.map((rule) => (
+                    <InterfaceRow
+                      key={`${rule.RuleName}:${rule.Interface}:${rule.SrcIP}`}
+                      rule={rule}
+                      onPress={navigateInterface}
                     />
                   ))}
                 </VStack>

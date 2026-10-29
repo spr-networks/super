@@ -126,7 +126,11 @@ const FirewallTabView = (props) => {
   const initialIndex = tabs.findIndex((t) => t.title == tabParam)
 
   return (
-    <TabView tabs={tabs} initialIndex={initialIndex > 0 ? initialIndex : 0} />
+    <TabView
+      key={tabParam || ''}
+      tabs={tabs}
+      initialIndex={initialIndex > 0 ? initialIndex : 0}
+    />
   )
 }
 
