@@ -28,8 +28,10 @@ REACT_APP_API=mock yarn start
 ## Assistant WebLLM evaluation
 
 The Assistant has a dedicated real-model evaluation runner. It tests
-`Qwen3-1.7B-q4f16_1-MLC` without starting the SPR admin UI or connecting to an
-SPR backend.
+`LFM3-1.7B-Q4_K_M.gguf` from
+[LiquidAI/LFM3-1.7B-GGUF](https://huggingface.co/LiquidAI/LFM3-1.7B-GGUF)
+without starting the SPR admin UI or connecting to an SPR backend. The weights
+run on the WebGPU runtime vendored in `src/components/Assistant/lfm3/`.
 
 The Assistant UI is available only when the `webllm` feature flag is enabled
 under **System → Feature Flags**. When disabled, the navigation and jump-search
@@ -37,7 +39,7 @@ entries are hidden and direct `/admin/assistant` access redirects to Home.
 
 The runner builds a small evaluation-only page, serves it on localhost, and
 launches Chrome or Chromium with WebGPU enabled. A browser runtime is still
-required because WebLLM executes the model through WebGPU, but the test does
+required because the model executes through WebGPU, but the test does
 not use interactive browser automation.
 
 Run the evaluation from this directory:
@@ -90,7 +92,7 @@ The suite runs twenty-one common Assistant requests:
 
 The report separates three values:
 
-- **Raw Qwen score:** whether each of the eighteen model-generated responses
+- **Raw model score:** whether each of the eighteen model-generated responses
   contains the expected answer or exact structured tool call.
 - **Guarded pipeline score:** whether the final Assistant result is correct
   after parsing and application guardrails. This covers all twenty-one
@@ -109,14 +111,17 @@ The evaluation supplies only `list_devices` and `get_firewall_config`. It does
 not expose or invoke any mutation API, and it never accepts or applies a
 proposal.
 
-The first run downloads the approximately 1 GB model from Hugging Face. WebLLM
-persists it in browser storage and reuses existing Cache API or IndexedDB
-downloads on later visits to the same origin. Browser storage is scoped by
-origin and profile, so different ports or browsers have separate model caches.
-The evaluation download is stored in a temporary Chrome profile named
+The first run downloads the approximately 1.1 GB model from Hugging Face. The
+runtime persists the weights in IndexedDB and reuses them on later visits to
+the same origin. Browser storage is scoped by origin and profile, so different
+ports or browsers have separate model caches. The evaluation download is
+stored in a temporary Chrome profile named
 `spr-assistant-webllm-eval-profile` under the operating system's temporary
 directory. No model files are written to this repository. Later runs reuse
-that profile's WebLLM cache.
+that profile's model cache.
+
+The weights are licensed under the
+[LFM Open License v1.0](https://huggingface.co/LiquidAI/LFM3-1.7B-GGUF/blob/main/LICENSE).
 
 Chrome or Chromium and a WebGPU-compatible GPU are required. Set `CHROME_BIN`
 when the browser executable is not in a standard location:
@@ -141,7 +146,7 @@ The fast Jest tests remain separate:
   with mocked generations.
 - `src/__tests__/AssistantEvaluation.js` tests scenario definitions and
   grading behavior.
-- `yarn eval:assistant` is the test that actually loads and scores Qwen.
+- `yarn eval:assistant` is the test that actually loads and scores LFM3.
 
 iOS version:
 ```bash

@@ -73,28 +73,28 @@ test('links the unloaded model status to model download settings', async () => {
   expect(screen.getByRole('button', { name: 'Review download' })).toBeTruthy()
 })
 
-test('automatically initializes a cached Qwen3 1.7B model', async () => {
+test('automatically initializes a cached LFM3 1.7B model', async () => {
   const engine = {
     unload: jest.fn().mockResolvedValue(),
     resetChat: jest.fn().mockResolvedValue()
   }
   mockIsModelCached.mockImplementation((model) =>
-    Promise.resolve(model.key === 'qwen3-1.7b')
+    Promise.resolve(model.key === 'lfm3-1.7b')
   )
   mockLoadWebLLM.mockResolvedValue(engine)
 
   render(<Assistant />)
 
   expect(
-    await screen.findByText('Qwen3 1.7B ready')
+    await screen.findByText('LFM3 1.7B ready')
   ).toBeTruthy()
   expect(
     screen.queryByText(
-      'Qwen3 1.7B is ready. Inference stays in this browser.'
+      'LFM3 1.7B is ready. Inference stays in this browser.'
     )
   ).toBeNull()
   expect(mockLoadWebLLM).toHaveBeenCalledWith(
-    expect.objectContaining({ key: 'qwen3-1.7b' }),
+    expect.objectContaining({ key: 'lfm3-1.7b' }),
     expect.any(Function)
   )
 })
@@ -106,7 +106,7 @@ test('shows progress while a cached model initializes', async () => {
   }
   let finishLoading
   mockIsModelCached.mockImplementation((model) =>
-    Promise.resolve(model.key === 'qwen3-1.7b')
+    Promise.resolve(model.key === 'lfm3-1.7b')
   )
   mockLoadWebLLM.mockImplementation(
     () =>
@@ -117,10 +117,10 @@ test('shows progress while a cached model initializes', async () => {
 
   render(<Assistant />)
 
-  expect(await screen.findByText('Loading Qwen3 1.7B')).toBeTruthy()
+  expect(await screen.findByText('Loading LFM3 1.7B')).toBeTruthy()
 
   await act(async () => finishLoading())
-  expect(await screen.findByText('Qwen3 1.7B ready')).toBeTruthy()
+  expect(await screen.findByText('LFM3 1.7B ready')).toBeTruthy()
 })
 
 test('shows raw generations only when expanded', () => {

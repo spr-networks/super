@@ -4,9 +4,12 @@ import {
 } from 'components/Assistant/assistantPrompt'
 import { runAssistantEvaluation } from 'components/Assistant/assistantEvaluation'
 import {
+  DEFAULT_MODEL_KEY,
   getModel,
   loadWebLLM
 } from 'components/Assistant/webllmModels.web'
+
+const model = getModel(DEFAULT_MODEL_KEY)
 
 const devices = [
   {
@@ -195,19 +198,19 @@ const renderReport = (report) => {
     .join('')
 
   results.innerHTML = `
-    <h2>Qwen raw: ${report.rawPassed}/${report.rawTotal}</h2>
+    <h2>${model.name} raw: ${report.rawPassed}/${report.rawTotal}</h2>
     <h2>Guarded pipeline: ${report.appPassed}/${report.appTotal}</h2>
     <p>${report.appRouted} requests were routed deterministically by the app.</p>
     <table>
-      <thead><tr><th>#</th><th>Request</th><th>Raw Qwen</th><th>Guarded</th><th>Error</th></tr></thead>
+      <thead><tr><th>#</th><th>Request</th><th>Raw ${model.name}</th><th>Guarded</th><th>Error</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     <details><summary>JSON report</summary><pre>${JSON.stringify(report, null, 2)}</pre></details>`
 }
 
 const serializableReport = (summary) => ({
-  model: 'Qwen3-1.7B-q4f16_1-MLC',
-  contextTokens: 8192,
+  model: model.record.url,
+  contextTokens: model.contextTokens,
   rawPassed: summary.rawPassed,
   rawTotal: summary.rawTotal,
   appPassed: summary.appPassed,
@@ -238,14 +241,15 @@ const finish = async (report) => {
 
 const run = async () => {
   try {
-    const model = getModel('qwen3-1.7b')
-    reportProgress('Loading cached Qwen model or downloading it once…')
+    reportProgress(`Loading cached ${model.name} or downloading it once…`)
     let lastPercent = -1
     const engine = await loadWebLLM(model, (progress) => {
       const percent = Math.round((progress.progress || 0) * 100)
       if (percent !== lastPercent && percent % 5 === 0) {
         lastPercent = percent
-        reportProgress(`Loading Qwen: ${percent}% ${progress.text || ''}`)
+        reportProgress(
+          `Loading ${model.name}: ${percent}% ${progress.text || ''}`
+        )
       }
     })
     const summary = await runAssistantEvaluation({

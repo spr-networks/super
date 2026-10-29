@@ -55,6 +55,7 @@ import {
   SYSTEM_PROMPT
 } from 'components/Assistant/assistantPrompt'
 import {
+  DEFAULT_MODEL_KEY,
   getModel,
   isWebLLMModelCached,
   loadWebLLM,
@@ -384,7 +385,7 @@ const Assistant = () => {
   const cancelRef = useRef(null)
   const promptCancelRef = useRef(null)
 
-  const [selectedModelKey, setSelectedModelKey] = useState('qwen3-1.7b')
+  const [selectedModelKey, setSelectedModelKey] = useState(DEFAULT_MODEL_KEY)
   const [loadedModelKey, setLoadedModelKey] = useState(null)
   const [showConsent, setShowConsent] = useState(false)
   const [loadState, setLoadState] = useState('idle')
@@ -565,14 +566,14 @@ const Assistant = () => {
       autoLoadAttemptedRef.current ||
       isReady ||
       isModelTransitioning ||
-      !cachedModelKeys.includes('qwen3-1.7b')
+      !cachedModelKeys.includes(DEFAULT_MODEL_KEY)
     ) {
       return
     }
 
     autoLoadAttemptedRef.current = true
-    setSelectedModelKey('qwen3-1.7b')
-    loadModel(getModel('qwen3-1.7b'))
+    setSelectedModelKey(DEFAULT_MODEL_KEY)
+    loadModel(getModel(DEFAULT_MODEL_KEY))
   }, [cachedModelKeys])
 
   const sendMessage = async () => {
