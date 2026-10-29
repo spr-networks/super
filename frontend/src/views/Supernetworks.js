@@ -56,7 +56,7 @@ const Supernetworks = (props) => {
         context.success('Updated supernetworks')
         fetchConfig()
       })
-      .catch((err) => context.error('' + err))
+      .catch((err) => context.error('Failed to update supernetworks', err))
   }
 
   const addTinyNet = () => {
@@ -112,6 +112,7 @@ const Supernetworks = (props) => {
                     action="negative"
                     variant="link"
                     alignSelf="center"
+                    accessibilityLabel={`Delete ${item}`}
                     onPress={() => deleteListItem(index)}
                   >
                     <ButtonIcon as={CloseIcon} color="$red700" />
@@ -132,7 +133,7 @@ const Supernetworks = (props) => {
                 </Button>
               </HStack>
             )}
-            keyExtractor={(item) => `${item.Address}`}
+            keyExtractor={(item, index) => `${index}`}
           />
         </FormControl>
 
@@ -155,7 +156,7 @@ const Supernetworks = (props) => {
             action="primary"
             variant="solid"
             rounded="$none"
-            onPress={handleUpdate}
+            onPress={() => handleUpdate()}
             isDisabled={!isUnsaved}
           >
             <ButtonText>

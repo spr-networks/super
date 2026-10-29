@@ -640,7 +640,7 @@ const DNSLogHistoryList = (props) => {
               size="xs"
               action="primary"
               variant="solid"
-              onPress={refreshList}
+              onPress={() => refreshList()}
             >
               <ButtonIcon as={RefreshCwIcon} />
             </Button>
