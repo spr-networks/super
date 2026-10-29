@@ -131,6 +131,7 @@ make -C "$LIBKRUNFW_DIR/$LIBKRUNFW_KERNEL_VERSION" olddefconfig
         "$BUILD_DIR/spr-network.config" \
         "$SCRIPT_DIR/kernel-net.config"
     make olddefconfig
+    grep -qx '# CONFIG_UAPI_HEADER_TEST is not set' .config
     for option in \
         CONFIG_IP_ADVANCED_ROUTER \
         CONFIG_IP_MULTIPLE_TABLES \
