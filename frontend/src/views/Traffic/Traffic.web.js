@@ -108,7 +108,7 @@ export default (props) => {
 
     if (do_time_series) {
       let traffic_series = await trafficAPI.history().catch((error) => {
-        context.error('API Failure get traffic history: ' + error.message)
+        context.error('API Failure get traffic history', error)
       })
 
       let recent_reading = traffic_series[0]

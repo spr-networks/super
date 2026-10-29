@@ -287,7 +287,7 @@ const AllowlistPane = () => {
           .then(setStatus)
           .catch(() => {})
       })
-      .catch((error) => context.error('API Failure: ' + error.message))
+      .catch((error) => context.error('API Failure', error))
 
   const createAllowlist = () => {
     const Name = newName.trim().toLowerCase()
@@ -318,7 +318,7 @@ const AllowlistPane = () => {
       })
       .catch((error) => {
         setRefreshing(false)
-        context.error('API Failure: ' + error.message)
+        context.error('API Failure', error)
       })
   }
 

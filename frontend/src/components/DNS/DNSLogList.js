@@ -67,7 +67,7 @@ const DNSLogList = ({ title, description, ...props }) => {
 
       setList(list)
     } catch (error) {
-      context.error('API Failure: ' + error.message)
+      context.error('API Failure', error)
     }
   }
 
@@ -96,7 +96,7 @@ const DNSLogList = ({ title, description, ...props }) => {
           setList(listNew)
         })
         .catch((error) => {
-          context.error('API Failure: ' + error.message)
+          context.error('API Failure', error)
         })
     }
   }

@@ -138,7 +138,7 @@ const GeoBlockPane = () => {
           .then(setStatus)
           .catch(() => {})
       })
-      .catch((err) => context.error('API Failure: ' + err.message))
+      .catch((err) => context.error('API Failure', err))
   }
 
   const refreshNow = () => {
@@ -154,7 +154,7 @@ const GeoBlockPane = () => {
       })
       .catch((err) => {
         setRefreshing(false)
-        context.error('API Failure: ' + err.message)
+        context.error('API Failure', err)
       })
   }
 
@@ -173,7 +173,7 @@ const GeoBlockPane = () => {
         context.success(`Unblocked ${countryName(cc)}`)
         refreshGeo()
       })
-      .catch((err) => context.error('API Failure: ' + err.message))
+      .catch((err) => context.error('API Failure', err))
   }
 
   const onChangeCountryQuery = (q) => {
@@ -191,7 +191,7 @@ const GeoBlockPane = () => {
         setCountrySuggestions([])
         refreshGeo()
       })
-      .catch((err) => context.error('API Failure: ' + err.message))
+      .catch((err) => context.error('API Failure', err))
   }
 
   const submitCountryQuery = () => {
@@ -211,7 +211,7 @@ const GeoBlockPane = () => {
         context.success(`Unblocked AS${a.ASN}`)
         refreshGeo()
       })
-      .catch((err) => context.error('API Failure: ' + err.message))
+      .catch((err) => context.error('API Failure', err))
   }
 
   const onChangeAsnQuery = (q) => {
@@ -244,7 +244,7 @@ const GeoBlockPane = () => {
         setAsnSuggestions([])
         refreshGeo()
       })
-      .catch((err) => context.error('API Failure: ' + err.message))
+      .catch((err) => context.error('API Failure', err))
   }
 
   const handleListSwitch = (item, value) => {

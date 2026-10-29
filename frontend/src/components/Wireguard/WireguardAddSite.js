@@ -76,7 +76,7 @@ export default class WireguardAddSite extends React.Component {
         }
       })
       .catch((error) => {
-        this.context.error('API Failure: ' + error.message)
+        this.context.error('API Failure', error)
       })
   }
 

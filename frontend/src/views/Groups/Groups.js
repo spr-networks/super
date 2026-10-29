@@ -29,7 +29,7 @@ export default (props) => {
       groups = await groupAPI.list()
       devices = await deviceAPI.list()
     } catch (error) {
-      context.error('API Failure: ' + error.message)
+      context.error('API Failure', error)
     }
 
     let members = {}
@@ -59,7 +59,7 @@ export default (props) => {
           .catch((error) => {
             //404 = no clients in map yet
             if (error.message !== 404) {
-              context.error('API Failure for: ' + v.Name + ' ' + error.message)
+              context.error('API Failure for: ' + v.Name, error)
             }
           })
 
@@ -77,7 +77,7 @@ export default (props) => {
         refreshGroups()
       })
       .catch((err) => {
-        context.error('API Failure, failed to delete group ' + err.message)
+        context.error('API Failure, failed to delete group', err)
       })
   }
 

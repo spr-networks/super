@@ -493,7 +493,7 @@ const DeviceDetail = ({ ip, minutes, devicesByIp, navigate }) => {
     trafficInsightsAPI
       .device(ip, minutes)
       .then(setData)
-      .catch((err) => context.error('API Failure: ' + err.message))
+      .catch((err) => context.error('API Failure', err))
   }
 
   useEffect(() => {
@@ -630,7 +630,7 @@ const TrafficInsights = (props) => {
     trafficInsightsAPI
       .overview(minutes)
       .then(setOverview)
-      .catch((err) => context.error('API Failure: ' + err.message))
+      .catch((err) => context.error('API Failure', err))
   }
 
   const fetchDevices = (forceFetch = false) => {
@@ -709,7 +709,7 @@ const TrafficInsights = (props) => {
         }
         refreshGeo()
       })
-      .catch((err) => context.error('API Failure: ' + err.message))
+      .catch((err) => context.error('API Failure', err))
   }
 
   const onBlockToggleCountry = (item) => {

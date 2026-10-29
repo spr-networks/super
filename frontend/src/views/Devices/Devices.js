@@ -434,9 +434,9 @@ const Devices = ({ showContainers = false }) => {
     (id) => {
       deviceAPI
         .deleteDevice(id)
-        .then(refreshDevices)
+        .then(() => refreshDevices())
         .catch((error) =>
-          context.error('[API] deleteDevice error: ' + error.message)
+          context.error('[API] deleteDevice error', error)
         )
     },
     [refreshDevices]

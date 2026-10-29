@@ -139,7 +139,7 @@ const CoreDns = (props) => {
         alertState.success('Updated DNS Settings')
       },
       (e) => {
-        alertState.error('API Failure: ' + e.message)
+        alertState.error('API Failure', e)
       }
     )
 
@@ -148,7 +148,7 @@ const CoreDns = (props) => {
         alertState.success('Updated DNS Settings')
       },
       (e) => {
-        alertState.error('API Failure: ' + e.message)
+        alertState.error('API Failure', e)
       }
     )
 
@@ -164,7 +164,7 @@ const CoreDns = (props) => {
           )
         },
         (e) => {
-          alertState.error('Failed to set System DNS override: ' + e.message)
+          alertState.error('Failed to set System DNS override', e)
         }
       )
     }

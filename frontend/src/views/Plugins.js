@@ -144,7 +144,7 @@ const Plugins = (props) => {
           refreshList()
         })
         .catch((err) => {
-          alertState.error('Failed to install PLUS token: ' + err.message)
+          alertState.error('Failed to install PLUS token', err)
         })
     }
   }

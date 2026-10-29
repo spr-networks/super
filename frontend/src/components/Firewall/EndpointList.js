@@ -53,7 +53,7 @@ const EndpointList = (props) => {
         }
       })
       .catch((error) =>
-        context.error('[API] firewall Endpoints error: ' + error.message)
+        context.error('[API] firewall Endpoints error', error)
       )
   }
 
@@ -64,7 +64,7 @@ const EndpointList = (props) => {
         refreshList()
       })
       .catch((error) =>
-        context.error('[API] deleteEndpoint error: ' + error.message)
+        context.error('[API] deleteEndpoint error', error)
       )
   }
 

@@ -147,7 +147,7 @@ export default class DNSAddOverride extends React.Component {
         this.props.notifyChange(this.state.Type)
       })
       .catch((error) => {
-        this.context.error('API Failure: ' + error.message)
+        this.context.error('API Failure', error)
       })
   }
 

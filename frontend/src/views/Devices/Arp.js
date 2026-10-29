@@ -41,7 +41,7 @@ const Arp = (props) => {
 
   const refreshList = async () => {
     let arp = await wifiAPI.arp().catch((error) => {
-      this.alertContext.error('API Failure: ' + error.message)
+      this.alertContext.error('API Failure', error)
     })
 
     arp = arp.sort((a, b) => {

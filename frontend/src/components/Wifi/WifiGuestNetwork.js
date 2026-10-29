@@ -317,7 +317,7 @@ const WifiGuestNetwork = (props) => {
           context.success(`${iface} config updated`)
         })
         .catch((e) => {
-          context.error('API Failure: ' + e.message)
+          context.error('API Failure', e)
         })
     }
 
@@ -340,7 +340,7 @@ const WifiGuestNetwork = (props) => {
         updateChannelInfo(r)
       })
       .catch((e) => {
-        context.error('API Failure: ' + e.message)
+        context.error('API Failure', e)
       })
   }
 
@@ -379,7 +379,7 @@ const WifiGuestNetwork = (props) => {
           }
         }
       })
-    }).catch((e) => context.error('Failed to save guest network: ' + e.message))
+    }).catch((e) => context.error('Failed to save guest network', e))
   }
 
   const deleteExtraBSS = (iface) => {
@@ -394,7 +394,7 @@ const WifiGuestNetwork = (props) => {
           }
         }
       })
-    }).catch((e) => context.error('Failed to disable guest network: ' + e.message))
+    }).catch((e) => context.error('Failed to disable guest network', e))
   }
 
   const triggerBtn = (triggerProps) => (

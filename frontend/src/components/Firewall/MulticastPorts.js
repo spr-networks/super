@@ -139,11 +139,11 @@ const MulticastPorts = (props) => {
             refreshList()
           })
           .catch((error) => {
-            alertState.error('API Failure: ' + error.message)
+            alertState.error('API Failure', error)
           })
       })
       .catch((error) => {
-        alertState.error('API Failure: ' + error.message)
+        alertState.error('API Failure', error)
       })
   }
 

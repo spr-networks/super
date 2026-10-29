@@ -505,7 +505,7 @@ const WifiHostapd = (props) => {
           context.success(`${iface} RustAP config updated`)
         })
         .catch((error) => {
-          context.error('API Failure: ' + error.message)
+          context.error('API Failure', error)
         })
       return
     }
@@ -540,7 +540,7 @@ const WifiHostapd = (props) => {
           context.success(`${iface} config updated`)
         })
         .catch((e) => {
-          context.error('API Failure: ' + e.message)
+          context.error('API Failure', e)
         })
     }
 
@@ -563,7 +563,7 @@ const WifiHostapd = (props) => {
         updateChannelInfo(r)
       })
       .catch((e) => {
-        context.error('API Failure: ' + e.message)
+        context.error('API Failure', e)
       })
   }
 

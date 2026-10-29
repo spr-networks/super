@@ -233,7 +233,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
       .updateGroups(device.MAC || device.WGPubKey, groups)
       .then(notifyChange)
       .catch((error) =>
-        context.error('[API] updateDevice error: ' + error.message)
+        context.error('[API] updateDevice error', error)
       )
   }
 
@@ -249,7 +249,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
       .updatePolicies(device.MAC || device.WGPubKey, nextPolicies)
       .then(notifyChange)
       .catch((error) =>
-        context.error('[API] updateDevice error: ' + error.message)
+        context.error('[API] updateDevice error', error)
       )
   }
 
@@ -264,7 +264,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
       .updateTags(device.MAC || device.WGPubKey, tags)
       .then(notifyChange)
       .catch((error) =>
-        context.error('[API] updateDevice error: ' + error.message)
+        context.error('[API] updateDevice error', error)
       )
   }
 
@@ -300,7 +300,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         notifyChange()
       })
       .catch((error) =>
-        context.error('[API] apply classification error: ' + error.message)
+        context.error('[API] apply classification error', error)
       )
   }
 
@@ -335,7 +335,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         context.success('Classification saved')
       })
       .catch((error) =>
-        context.error('[API] classification correction error: ' + error.message)
+        context.error('[API] classification correction error', error)
       )
   }
 
@@ -358,7 +358,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         context.success('Brand saved')
       })
       .catch((error) =>
-        context.error('[API] classification correction error: ' + error.message)
+        context.error('[API] classification correction error', error)
       )
   }
 
@@ -385,7 +385,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         context.success('Classification reset to automatic')
       })
       .catch((error) =>
-        context.error('[API] classification reset error: ' + error.message)
+        context.error('[API] classification reset error', error)
       )
   }
 
@@ -622,7 +622,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         .updateName(id, name)
         .then(notifyChange)
         .catch((error) =>
-          context.error('[API] updateName error: ' + error.message)
+          context.error('[API] updateName error', error)
         )
     }
 
@@ -630,13 +630,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
       deviceAPI
         .updateIP(id, ip)
         .then(notifyChange)
-        .catch((error) =>
-          context.error(
-            '[API] updateIP error: ' +
-              error.message +
-              '. IP not in range or not a valid Supernetwork Device IP'
-          )
-        )
+        .catch((error) => context.error('[API] updateIP error', error))
     }
 
     if (
@@ -657,7 +651,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
           .update(id, { DNSCustom: toSend })
           .then(notifyChange)
           .catch((error) =>
-            context.error('[API] update DNS error: ' + error.message)
+            context.error('[API] update DNS error', error)
           )
       } catch (e) {
         context.error('Invalid Custom DNS Server')
@@ -683,7 +677,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
         .updateVLANTag(id, vlantag == '' ? '0' : vlantag)
         .then(notifyChange)
         .catch((error) =>
-          context.error('[API] update VLAN Tag error: ' + error.message)
+          context.error('[API] update VLAN Tag error', error)
         )
     }
 
@@ -695,7 +689,7 @@ const EditDevice = ({ device, notifyChange, ...props }) => {
           .update(id, { PSKEntry: { Psk: psk, Type: pskType } })
           .then(notifyChange)
           .catch((error) =>
-            context.error('[API] update PSK error: ' + error.message)
+            context.error('[API] update PSK error', error)
           )
       } else if (pskType != '') {
         context.error('[API] Unexpected PSK Type: ' + pskType)

@@ -54,7 +54,7 @@ export default class DNSAddBlocklist extends React.Component {
         this.props.notifyChange('blocklists')
       })
       .catch((error) => {
-        this.context.error('API Failure: ' + error.message)
+        this.context.error('API Failure', error)
       })
 
     /*setTimeout(() => {

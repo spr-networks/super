@@ -114,7 +114,7 @@ export default class DynDns extends Component {
     this.state.config['interval'] =
       parseInt(this.state.config['interval'], 10) || 0
     dyndnsAPI.setConfig(this.state.config).then(done, (e) => {
-      this.context.error('API Failure: ' + e.message)
+      this.context.error('API Failure', e)
     })
   }
 
