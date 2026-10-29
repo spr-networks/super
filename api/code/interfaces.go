@@ -549,7 +549,7 @@ func updateInterfaceConfig(iconfig InterfaceConfig) error {
 	if changed {
 		err := writeInterfacesConfigLocked(interfaces)
 
-		restart_wifid := refreshInterfaceOverridesLocked()
+		restart_wifid := refreshInterfaceOverridesLocked("")
 
 		//reset with previous settings
 		resetInterface(interfaces, iconfig.Name, prev_type, prev_subtype, prev_enabled, reset_random)
@@ -915,7 +915,7 @@ func refreshInterfaceOverrides() {
 	Interfacesmtx.Lock()
 	defer Interfacesmtx.Unlock()
 
-	restart_wifid := refreshInterfaceOverridesLocked()
+	restart_wifid := refreshInterfaceOverridesLocked("")
 
 	// when setting an override the interface could have been brought down
 	//which can kill the route
@@ -927,10 +927,13 @@ func refreshInterfaceOverrides() {
 	}
 }
 
-func refreshInterfaceOverridesLocked() bool {
+func refreshInterfaceOverridesLocked(only string) bool {
 	do_restart_wifid := false
 	interfaces := loadInterfacesConfigLocked()
 	for _, ifconfig := range interfaces {
+		if only != "" && ifconfig.Name != only {
+			continue
+		}
 		if ifconfig.MACRandomize == true {
 			target := generateRandomMAC(ifconfig.MACCloak)
 			exec.Command("ip", "link", "set", "dev", ifconfig.Name, "down").Run()
