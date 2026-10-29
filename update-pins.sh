@@ -22,7 +22,7 @@ CONTAINER_TEMPLATE_TAG=ghcr.io/spr-networks/container_template:latest
 NIX_TAG=nixos/nix:2.35.3
 QEMU_USER_STATIC_TAG=multiarch/qemu-user-static:7.2.0-1
 GO_MINOR=1.26
-OXWIFID_VERSION=0.1.8
+OXWIFID_VERSION=0.1.9
 
 say() { echo "  $*" >&2; }
 mdigest() { docker buildx imagetools inspect "$1" --format '{{.Manifest.Digest}}'; }

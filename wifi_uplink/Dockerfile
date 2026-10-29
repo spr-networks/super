@@ -5,10 +5,10 @@ ARG SOURCE_DATE_EPOCH
 
 FROM ${ALPINE_REF} AS rust-client
 ARG TARGETARCH
-ARG OXWIFID_VERSION=0.1.8
-ARG OXWIFID_ARM64_URL=https://github.com/spr-networks/oxwifid/releases/download/v0.1.8/barely-ap-v0.1.8-aarch64-unknown-linux-musl.tar.gz
-ARG OXWIFID_ARM64_ARCHIVE_SHA256=7c015bb4597382e465572e25449afc3fed23791d87f8e711b6935084aae3f5c5
-ARG OXWIFID_BARELY_CLI_ARM64_SHA256=7de462777921ee22ad3c4a9298ed4e299521333399bdb65180a19617238927de
+ARG OXWIFID_VERSION=0.1.9
+ARG OXWIFID_ARM64_URL=https://github.com/spr-networks/oxwifid/releases/download/v0.1.9/barely-ap-v0.1.9-aarch64-unknown-linux-musl.tar.gz
+ARG OXWIFID_ARM64_ARCHIVE_SHA256=2003c200ca53fcbd4806dc3d99394f42df4b22a5750c34e6f2e74fadba79b52d
+ARG OXWIFID_BARELY_CLI_ARM64_SHA256=11440c3df813e584c7c7b3de21aa03824c9a6c12ff501964e00b57a5fdae35ea
 RUN set -eux; \
     case "${TARGETARCH}" in \
       arm64) \

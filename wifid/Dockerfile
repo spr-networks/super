@@ -12,10 +12,10 @@ FROM ${ALPINE_REF} AS cacerts
 # its Rust feature marker is enabled.
 FROM ${ALPINE_REF} AS rust-ap
 ARG TARGETARCH
-ARG OXWIFID_VERSION=0.1.8
-ARG OXWIFID_ARM64_URL=https://github.com/spr-networks/oxwifid/releases/download/v0.1.8/barely-ap-v0.1.8-aarch64-unknown-linux-musl.tar.gz
-ARG OXWIFID_ARM64_ARCHIVE_SHA256=7c015bb4597382e465572e25449afc3fed23791d87f8e711b6935084aae3f5c5
-ARG OXWIFID_BARELY_AP_ARM64_SHA256=fff3dc4b7a7ad747772813a5f2dfa1c26a3d0e61bfdff2e8f48948d4db3164ef
+ARG OXWIFID_VERSION=0.1.9
+ARG OXWIFID_ARM64_URL=https://github.com/spr-networks/oxwifid/releases/download/v0.1.9/barely-ap-v0.1.9-aarch64-unknown-linux-musl.tar.gz
+ARG OXWIFID_ARM64_ARCHIVE_SHA256=2003c200ca53fcbd4806dc3d99394f42df4b22a5750c34e6f2e74fadba79b52d
+ARG OXWIFID_BARELY_AP_ARM64_SHA256=8ddee66dd1cb6aa03d49c2eb22b128e2a15183387e802181d4b53a90aa6a58ea
 RUN set -eux; \
     case "${TARGETARCH}" in \
       arm64) \
