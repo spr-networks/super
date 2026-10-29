@@ -4,6 +4,7 @@ import { deviceAPI } from 'api'
 import { AlertContext } from 'layouts/Admin'
 import { WifiConnect } from 'views/Devices/ConnectDevice'
 import { normalizeTextInput } from 'utils/normalizeTextInput'
+import WifiPasswordField from 'components/WifiPasswordField'
 
 import {
   Box,
@@ -19,7 +20,6 @@ import {
   FormControlErrorText,
   HStack,
   Input,
-  InputField,
   RadioGroup,
   Radio,
   RadioIndicator,
@@ -216,11 +216,8 @@ const AddDevice = ({ disabled, onClose, onConnect, ...props }) => {
             <FormControlLabelText>Passphrase</FormControlLabelText>
           </FormControlLabel>
           <Input size="md">
-            <InputField
+            <WifiPasswordField
               autoFocus
-              type="password"
-              autoComplete="new-password"
-              autoCorrect={false}
               onChangeText={(value) => handleChange('psk', value)}
             />
           </Input>

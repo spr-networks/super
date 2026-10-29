@@ -1,8 +1,13 @@
-import { getWebLLMRuntime } from './webllmRuntime.web'
+import { getLfm3Runtime, getWebLLMRuntime } from './webllmRuntime.web'
 
 const LFM_3_REPO = 'https://huggingface.co/LiquidAI/LFM3-1.7B-GGUF'
 const LFM_3_REVISION = '4b423c332fd97961416f2e8b69467758fd27370d'
 const LFM_3_FILE = 'LFM3-1.7B-Q4_K_M.gguf'
+
+const QWEN_3_REPO = 'https://huggingface.co/mlc-ai/Qwen3-1.7B-q4f16_1-MLC'
+const QWEN_3_REVISION = '80b3abcec6c3b3f5355dc0cc99cc4fb578f192bc'
+const WEBLLM_MODEL_LIB_BASE =
+  'https://raw.githubusercontent.com/mlc-ai/binary-mlc-llm-libs/00fe7a40e57e5e8eb9fef87526a4bf28ad5846c0/web-llm-models/v0_2_86/base'
 
 const revisionURL = (repo, revision, path = '') =>
   `${repo}/resolve/${revision}/${path}`
@@ -10,11 +15,12 @@ const revisionURL = (repo, revision, path = '') =>
 export const MODEL_CATALOG = [
   {
     key: 'lfm3-1.7b',
+    runtime: 'lfm3',
     name: 'LFM3 1.7B',
     detail: 'Browser-local SPR chat and action model',
     size: 'about 1.1 GB',
-    context: '8K WebGPU context',
-    contextTokens: 8192,
+    contextTokens: 16384,
+    contextSizes: [4096, 8192, 16384, 32768, 65536, 131072],
     source: 'Official Liquid AI GGUF on Hugging Face',
     sourceURL: LFM_3_REPO,
     caution:
@@ -24,6 +30,29 @@ export const MODEL_CATALOG = [
       // The runtime keys its weight cache by this URL.
       url: revisionURL(LFM_3_REPO, LFM_3_REVISION, LFM_3_FILE)
     }
+  },
+  {
+    key: 'qwen3-1.7b',
+    runtime: 'webllm',
+    name: 'Qwen3 1.7B',
+    detail: 'Browser-local SPR chat and action model',
+    size: 'about 968 MB',
+    contextTokens: 8192,
+    contextSizes: [4096, 8192, 16384, 32768],
+    source: 'Official mlc-ai MLC artifact on Hugging Face',
+    sourceURL: QWEN_3_REPO,
+    caution:
+      'The MLC artifact is official. Contexts above the compiled default are experimental and need more GPU memory.',
+    promptFormat:
+      'Qwen3 chat template via WebLLM system/user roles · non-thinking mode',
+    promptSuffix: '/no_think',
+    record: {
+      model: revisionURL(QWEN_3_REPO, QWEN_3_REVISION),
+      model_id: 'Qwen3-1.7B-q4f16_1-MLC',
+      model_lib: `${WEBLLM_MODEL_LIB_BASE}/Qwen3-1.7B-q4f16_1_cs1k-webgpu.wasm`,
+      vram_required_MB: 2036.66,
+      low_resource_required: true
+    }
   }
 ]
 
@@ -31,6 +60,14 @@ export const DEFAULT_MODEL_KEY = MODEL_CATALOG[0].key
 
 export const getModel = (key) =>
   MODEL_CATALOG.find((model) => model.key === key) || MODEL_CATALOG[0]
+
+export const contextLabel = (tokens) =>
+  tokens >= 1024 ? `${Math.round(tokens / 1024)}K context` : `${tokens} context`
+
+export const getContextTokens = (model, tokens) =>
+  model.contextSizes.includes(Number(tokens))
+    ? Number(tokens)
+    : model.contextTokens
 
 // The vendored runtime stores downloaded GGUF byte ranges in IndexedDB:
 // `meta` is keyed by weight URL and `chunks` by [url, begin, end].
@@ -73,7 +110,7 @@ const coveredBytes = (chunkKeys) => {
   return covered
 }
 
-export const isWebLLMModelCached = async (model) => {
+const isLfm3ModelCached = async (model) => {
   const db = await openGGUFCache()
   if (!db) return false
 
@@ -102,6 +139,68 @@ export const isWebLLMModelCached = async (model) => {
     db.close()
   }
 }
+
+export const WEBLLM_CACHE_BACKENDS = ['cache', 'indexeddb']
+const CACHE_PROBE_TIMEOUT_MS = 5000
+
+export const getWebLLMAppConfig = (
+  model,
+  cacheBackend = 'cache',
+  contextTokens = model.contextTokens
+) => ({
+  cacheBackend,
+  model_list: [
+    {
+      ...model.record,
+      overrides: { context_window_size: contextTokens }
+    }
+  ]
+})
+
+export const getCachedWebLLMBackend = async (model, runtime) => {
+  const { hasModelInCache } = runtime || (await getWebLLMRuntime())
+  const pendingProbes = WEBLLM_CACHE_BACKENDS.map((cacheBackend) => {
+    let settle
+    const promise = new Promise((resolve) => {
+      let timeout
+      let settled = false
+      settle = (cached) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timeout)
+        resolve(Boolean(cached))
+      }
+      timeout = setTimeout(() => settle(false), CACHE_PROBE_TIMEOUT_MS)
+      Promise.resolve(
+        hasModelInCache(
+          model.record.model_id,
+          getWebLLMAppConfig(model, cacheBackend)
+        )
+      ).then(settle, () => settle(false))
+    })
+
+    return {
+      cancel: () => settle(false),
+      promise: promise.then((cached) => {
+        if (cached) return cacheBackend
+        throw new Error(`${cacheBackend} cache miss`)
+      })
+    }
+  })
+
+  try {
+    return await Promise.any(pendingProbes.map(({ promise }) => promise))
+  } catch (error) {
+    return null
+  } finally {
+    pendingProbes.forEach(({ cancel }) => cancel())
+  }
+}
+
+export const isWebLLMModelCached = async (model) =>
+  model.runtime === 'webllm'
+    ? Boolean(await getCachedWebLLMBackend(model))
+    : isLfm3ModelCached(model)
 
 export const checkWebGPUSupport = async (model) => {
   if (!window.isSecureContext) {
@@ -279,13 +378,59 @@ const createEngine = (model) => {
   }
 }
 
-export const loadWebLLM = async (model, onProgress) => {
+const loadMLCEngine = async (model, onProgress, contextTokens) => {
+  const runtime = await getWebLLMRuntime()
+  const cachedBackend = await getCachedWebLLMBackend(model, runtime)
+  const appConfig = getWebLLMAppConfig(
+    model,
+    cachedBackend || 'cache',
+    contextTokens
+  )
+
+  if (!cachedBackend) {
+    const modelBase = model.record.model.endsWith('/')
+      ? model.record.model
+      : `${model.record.model}/`
+    const configURL = new URL('mlc-chat-config.json', modelBase).href
+    const configResponse = await fetch(configURL, { cache: 'no-store' })
+    if (!configResponse.ok) {
+      throw new Error(
+        `Model configuration request failed (${configResponse.status}) at ${configURL}`
+      )
+    }
+    const configText = await configResponse.text()
+    try {
+      JSON.parse(configText)
+    } catch (error) {
+      throw new Error(`Model configuration is not valid JSON at ${configURL}`)
+    }
+    if ('caches' in window) {
+      const configCache = await window.caches.open('webllm/config')
+      await configCache.delete(configURL)
+    }
+  }
+
+  return runtime.CreateMLCEngine(model.record.model_id, {
+    appConfig,
+    initProgressCallback: onProgress
+  })
+}
+
+export const loadWebLLM = async (
+  model,
+  onProgress,
+  contextTokens = model.contextTokens
+) => {
   await checkWebGPUSupport(model)
-  const { Lfm3ForCausalLM } = await getWebLLMRuntime()
+  if (model.runtime === 'webllm') {
+    return loadMLCEngine(model, onProgress, contextTokens)
+  }
+
+  const { Lfm3ForCausalLM } = await getLfm3Runtime()
   // from_pretrained rejects an unsupported GPU after reading the GGUF
   // header and before streaming any weights.
   const lfm3 = await Lfm3ForCausalLM.from_pretrained(model.record.url, {
-    maxLength: model.contextTokens,
+    maxLength: contextTokens,
     onProgress: progressReporter(onProgress)
   })
   return createEngine(lfm3)

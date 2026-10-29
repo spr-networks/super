@@ -59,6 +59,37 @@ test('normalizes and limits proposed rule fields', () => {
   expect(proposal.rule.Unexpected).toBeUndefined()
 })
 
+test('rejects device names and other non-addresses in IP fields', () => {
+  const proposal = (rule) =>
+    validateProposal({
+      operation: 'add',
+      ruleType: 'port_forward',
+      rule: {
+        Protocol: 'tcp',
+        SrcIP: '0.0.0.0/0',
+        DstIP: '192.168.2.20',
+        ...rule
+      }
+    })
+
+  expect(() => proposal({ DstIP: 'k13' })).toThrow(
+    'DstIP must be an IP address or CIDR, not "k13"'
+  )
+  expect(() => proposal({ SrcIP: 'internet' })).toThrow(
+    'SrcIP must be an IP address or CIDR'
+  )
+  expect(() =>
+    validateProposal({
+      operation: 'add',
+      ruleType: 'endpoint',
+      rule: { IP: 'nas', Protocol: 'tcp', Port: '443' }
+    })
+  ).toThrow('IP must be an IP address or CIDR')
+  expect(proposal({ DstIP: '192.168.2.50' }).rule.DstIP).toBe('192.168.2.50')
+  expect(proposal({ SrcIP: '10.0.0.0/8' }).rule.SrcIP).toBe('10.0.0.0/8')
+  expect(proposal({ DstIP: 'fd00::50' }).rule.DstIP).toBe('fd00::50')
+})
+
 test('building the review does not call a mutation API', () => {
   const review = proposalDiff({
     operation: 'add',

@@ -44,6 +44,15 @@ const printer = {
   DeviceTags: ['printer']
 }
 
+const k13 = {
+  Name: 'k13',
+  MAC: '13:13:13:13:13:13',
+  RecentIP: '192.168.2.50',
+  Policies: ['wan', 'dns'],
+  Groups: [],
+  DeviceTags: []
+}
+
 const rpi4 = {
   Name: 'rpi4',
   MAC: '11:11:11:11:11:11',
@@ -192,6 +201,124 @@ const TYPICAL_REQUESTS = [
       kind: 'message',
       message: 'Devices on your network:\n- Printer — 192.168.2.30',
       modelCalls: 0,
+      readCalls: [['list_devices', {}]]
+    }
+  },
+  {
+    name: 'answers the MAC address of a named device',
+    userText: 'what is the mac address of rpi4',
+    toolResults: { list_devices: [printer, rpi4, android] },
+    expected: {
+      kind: 'message',
+      message: 'Matching devices:\n- rpi4 — 192.168.2.101 — 11:11:11:11:11:11',
+      modelCalls: 0,
+      readCalls: [['list_devices', {}]]
+    }
+  },
+  {
+    name: 'answers the IP address of a named device',
+    userText: "What's Printer's IP?",
+    toolResults: { list_devices: [printer, rpi4] },
+    expected: {
+      kind: 'message',
+      message:
+        'Matching devices:\n- Printer — 192.168.2.30 — 00:11:22:33:44:55',
+      modelCalls: 0,
+      readCalls: [['list_devices', {}]]
+    }
+  },
+  {
+    name: 'lists MAC addresses when no device is named',
+    userText: 'what is the mac address of k13',
+    toolResults: { list_devices: [printer, rpi4] },
+    expected: {
+      kind: 'message',
+      message:
+        'Devices on your network:\n- Printer — 192.168.2.30 — 00:11:22:33:44:55\n- rpi4 — 192.168.2.101 — 11:11:11:11:11:11',
+      modelCalls: 0,
+      readCalls: [['list_devices', {}]]
+    }
+  },
+  {
+    name: 'forwards a public port to a device named in the request',
+    userText: 'port forward public internet Destination tcp port 4040 to k13',
+    responses: [
+      structuredResponse({
+        kind: 'tool_call',
+        tool: 'propose_firewall_change',
+        arguments: {
+          operation: 'add',
+          ruleType: 'port_forward',
+          rule: {
+            RuleName: 'forward-4040',
+            Protocol: 'tcp',
+            SrcIP: '0.0.0.0/0',
+            SrcPort: '4040',
+            DstIP: 'k13',
+            DstPort: '4040'
+          },
+          reason: 'Forward public TCP 4040 to k13'
+        }
+      })
+    ],
+    toolResults: { list_devices: [printer, k13] },
+    expected: {
+      kind: 'proposal',
+      modelCalls: 1,
+      readCalls: [['list_devices', {}]],
+      proposal: {
+        operation: 'add',
+        ruleType: 'port_forward',
+        rule: {
+          RuleName: 'forward-4040',
+          Protocol: 'tcp',
+          SrcIP: '0.0.0.0/0',
+          SrcPort: '4040',
+          DstIP: '192.168.2.50',
+          DstPort: '4040'
+        }
+      }
+    }
+  },
+  {
+    name: 'counts configured devices without the model',
+    userText: 'how many devices are configured',
+    toolResults: { list_devices: [printer, rpi4, android] },
+    expected: {
+      kind: 'message',
+      message: '3 devices are configured.',
+      modelCalls: 0,
+      readCalls: [['list_devices', {}]]
+    }
+  },
+  {
+    name: 'reviews devices with the device list in context',
+    userText: 'review all of devices for improvements',
+    responses: [
+      textResponse(
+        'rpi4 has the broad lan Policy; prefer a narrow Group if it only needs one device.'
+      )
+    ],
+    toolResults: { list_devices: [printer, rpi4] },
+    expected: {
+      kind: 'message',
+      messageContains: 'rpi4 has the broad lan Policy',
+      modelCalls: 1,
+      readCalls: [['list_devices', {}]]
+    }
+  },
+  {
+    name: 'runs a read tool that the chat reply asks for',
+    userText: 'yes?',
+    responses: [
+      textResponse('I need to call `list_devices` to count them.'),
+      textResponse('You have 2 devices: Printer and rpi4.')
+    ],
+    toolResults: { list_devices: [printer, rpi4] },
+    expected: {
+      kind: 'message',
+      message: 'You have 2 devices: Printer and rpi4.',
+      modelCalls: 2,
       readCalls: [['list_devices', {}]]
     }
   },

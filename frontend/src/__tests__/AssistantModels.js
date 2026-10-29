@@ -1,20 +1,31 @@
 import {
+  contextLabel,
   DEFAULT_MODEL_KEY,
   firstJSONObject,
   freshReplyLength,
+  getCachedWebLLMBackend,
+  getContextTokens,
   getGenerationOptions,
   getModel,
+  getWebLLMAppConfig,
   isWebLLMModelCached,
-  loadWebLLM
+  loadWebLLM,
+  MODEL_CATALOG
 } from 'components/Assistant/webllmModels.web'
 
 const mockFromPretrained = jest.fn()
+const mockCreateMLCEngine = jest.fn()
+const mockHasModelInCache = jest.fn()
 
 jest.mock('components/Assistant/webllmRuntime.web', () => ({
-  getWebLLMRuntime: jest.fn().mockResolvedValue({
+  getLfm3Runtime: jest.fn().mockResolvedValue({
     Lfm3ForCausalLM: {
       from_pretrained: (...arguments_) => mockFromPretrained(...arguments_)
     }
+  }),
+  getWebLLMRuntime: jest.fn().mockResolvedValue({
+    CreateMLCEngine: (...arguments_) => mockCreateMLCEngine(...arguments_),
+    hasModelInCache: (...arguments_) => mockHasModelInCache(...arguments_)
   })
 }))
 
@@ -198,7 +209,7 @@ test('loads the pinned weights with the catalog context and progress', async () 
   const engine = await loadWebLLM(model, onProgress)
 
   expect(mockFromPretrained).toHaveBeenCalledWith(model.record.url, {
-    maxLength: 8192,
+    maxLength: 16384,
     onProgress: expect.any(Function)
   })
   expect(onProgress.mock.calls.map(([report]) => report)).toEqual([
@@ -339,9 +350,7 @@ test('leaves non-JSON chat replies untouched', async () => {
   })
 
   expect(session.generate.mock.results[0].value.cancelled).toBe(false)
-  expect(response.choices[0].message.content).toBe(
-    'SPR is a router. {not json'
-  )
+  expect(response.choices[0].message.content).toBe('SPR is a router. {not json')
 })
 
 test('cuts chat replies that repeat themselves or echo JSON', async () => {
@@ -372,12 +381,8 @@ test('cuts chat replies that repeat themselves or echo JSON', async () => {
 })
 
 test('keeps only the first JSON object and closes unfinished ones', () => {
-  expect(firstJSONObject('{"a":{"b":"}"}}}\n{"c":1}')).toBe(
-    '{"a":{"b":"}"}}'
-  )
-  expect(firstJSONObject('{"a":{"b":["c","d"]},')).toBe(
-    '{"a":{"b":["c","d"]}}'
-  )
+  expect(firstJSONObject('{"a":{"b":"}"}}}\n{"c":1}')).toBe('{"a":{"b":"}"}}')
+  expect(firstJSONObject('{"a":{"b":["c","d"]},')).toBe('{"a":{"b":["c","d"]}}')
   expect(firstJSONObject('{"a":"unterminated')).toBe('{"a":"unterminated')
   expect(firstJSONObject('no object')).toBe('no object')
 })
@@ -403,4 +408,130 @@ test('resets the session and releases the model on unload', async () => {
   await engine.unload()
   expect(session.dispose).toHaveBeenCalled()
   expect(lfm3.dispose).toHaveBeenCalled()
+})
+
+test('offers LFM3 and Qwen3, with LFM3 as the default', () => {
+  expect(MODEL_CATALOG.map(({ key, runtime }) => [key, runtime])).toEqual([
+    ['lfm3-1.7b', 'lfm3'],
+    ['qwen3-1.7b', 'webllm']
+  ])
+  expect(DEFAULT_MODEL_KEY).toBe('lfm3-1.7b')
+})
+
+test('only accepts context sizes the model offers', () => {
+  const lfm3 = getModel('lfm3-1.7b')
+  const qwen3 = getModel('qwen3-1.7b')
+
+  expect(getContextTokens(lfm3, undefined)).toBe(16384)
+  expect(getContextTokens(lfm3, 131072)).toBe(131072)
+  expect(getContextTokens(lfm3, '32768')).toBe(32768)
+  expect(getContextTokens(lfm3, 5000)).toBe(16384)
+  expect(getContextTokens(qwen3, undefined)).toBe(8192)
+  expect(getContextTokens(qwen3, 131072)).toBe(8192)
+  expect(getContextTokens(qwen3, 32768)).toBe(32768)
+  expect(contextLabel(16384)).toBe('16K context')
+})
+
+test('loads LFM3 with the requested context size', async () => {
+  const { lfm3 } = createModel()
+  mockFromPretrained.mockResolvedValue(lfm3)
+
+  await loadWebLLM(model, jest.fn(), 131072)
+
+  expect(mockFromPretrained).toHaveBeenCalledWith(model.record.url, {
+    maxLength: 131072,
+    onProgress: expect.any(Function)
+  })
+  expect(mockCreateMLCEngine).not.toHaveBeenCalled()
+})
+
+describe('Qwen3 on WebLLM', () => {
+  const qwen3 = getModel('qwen3-1.7b')
+
+  test('checks both persistent cache backends', async () => {
+    mockHasModelInCache.mockImplementation((modelId, appConfig) =>
+      Promise.resolve(appConfig.cacheBackend === 'indexeddb')
+    )
+
+    await expect(isWebLLMModelCached(qwen3)).resolves.toBe(true)
+    expect(mockHasModelInCache).toHaveBeenCalledWith(
+      qwen3.record.model_id,
+      getWebLLMAppConfig(qwen3, 'cache')
+    )
+    expect(mockHasModelInCache).toHaveBeenCalledWith(
+      qwen3.record.model_id,
+      getWebLLMAppConfig(qwen3, 'indexeddb')
+    )
+    await expect(getCachedWebLLMBackend(qwen3)).resolves.toBe('indexeddb')
+  })
+
+  test('does not let a stalled Cache API probe block IndexedDB autoload', async () => {
+    mockHasModelInCache.mockImplementation((modelId, appConfig) =>
+      appConfig.cacheBackend === 'cache'
+        ? new Promise(() => {})
+        : Promise.resolve(true)
+    )
+
+    await expect(getCachedWebLLMBackend(qwen3)).resolves.toBe('indexeddb')
+  })
+
+  test('loads cached weights with the requested context and no preflight', async () => {
+    const engine = { chat: {} }
+    const fetchBefore = global.fetch
+    global.fetch = jest.fn()
+    mockHasModelInCache.mockResolvedValue(true)
+    mockCreateMLCEngine.mockResolvedValue(engine)
+
+    await expect(loadWebLLM(qwen3, jest.fn(), 16384)).resolves.toBe(engine)
+
+    expect(global.fetch).not.toHaveBeenCalled()
+    expect(mockFromPretrained).not.toHaveBeenCalled()
+    expect(mockCreateMLCEngine).toHaveBeenCalledWith(qwen3.record.model_id, {
+      appConfig: getWebLLMAppConfig(qwen3, 'cache', 16384),
+      initProgressCallback: expect.any(Function)
+    })
+    expect(
+      mockCreateMLCEngine.mock.calls[0][1].appConfig.model_list[0]
+    ).toEqual(
+      expect.objectContaining({
+        model_id: 'Qwen3-1.7B-q4f16_1-MLC',
+        overrides: { context_window_size: 16384 }
+      })
+    )
+    global.fetch = fetchBefore
+  })
+
+  test('reuses an existing IndexedDB download at the default context', async () => {
+    const engine = { chat: {} }
+    mockHasModelInCache.mockImplementation((modelId, appConfig) =>
+      Promise.resolve(appConfig.cacheBackend === 'indexeddb')
+    )
+    mockCreateMLCEngine.mockResolvedValue(engine)
+
+    await expect(loadWebLLM(qwen3, jest.fn())).resolves.toBe(engine)
+
+    expect(mockCreateMLCEngine).toHaveBeenCalledWith(qwen3.record.model_id, {
+      appConfig: getWebLLMAppConfig(qwen3, 'indexeddb', 8192),
+      initProgressCallback: expect.any(Function)
+    })
+  })
+
+  test('checks the model configuration before a first download', async () => {
+    const engine = { chat: {} }
+    const fetchBefore = global.fetch
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve('{}')
+    })
+    mockHasModelInCache.mockResolvedValue(false)
+    mockCreateMLCEngine.mockResolvedValue(engine)
+
+    await expect(loadWebLLM(qwen3, jest.fn())).resolves.toBe(engine)
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      `${qwen3.record.model}mlc-chat-config.json`,
+      { cache: 'no-store' }
+    )
+    global.fetch = fetchBefore
+  })
 })

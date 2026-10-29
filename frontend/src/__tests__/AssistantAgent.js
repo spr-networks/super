@@ -665,3 +665,105 @@ test('hides Qwen reasoning wrappers from the answer but keeps raw output', async
   expect(result.message).toBe('SPR is a local router.')
   expect(result.rawGenerations[0].content).toBe(raw)
 })
+
+test('gives the planner the address of a device named for a firewall change', async () => {
+  const devices = [
+    { Name: 'Printer', MAC: '00:11:22:33:44:55', RecentIP: '192.168.2.30' },
+    { Name: 'k13', MAC: '13:13:13:13:13:13', RecentIP: '192.168.2.50' }
+  ]
+  const executeReadTool = jest.fn(() => Promise.resolve(devices))
+  const engine = mockEngine(
+    response({
+      kind: 'tool_call',
+      tool: 'propose_firewall_change',
+      arguments: {
+        operation: 'add',
+        ruleType: 'port_forward',
+        rule: {
+          RuleName: 'forward-4040',
+          Protocol: 'tcp',
+          SrcIP: '0.0.0.0/0',
+          SrcPort: '4040',
+          DstIP: '192.168.2.50',
+          DstPort: '4040'
+        },
+        reason: 'Forward public TCP 4040 to k13'
+      }
+    })
+  )
+
+  const result = await runAssistantTurn({
+    engine,
+    history: [
+      {
+        role: 'user',
+        content: 'port forward public internet Destination tcp port 4040 to k13'
+      },
+      {
+        role: 'assistant',
+        content: 'Please provide the exact destination IP for k13.'
+      }
+    ],
+    userText: 'rule name is forward 4040',
+    executeReadTool
+  })
+
+  expect(executeReadTool.mock.calls).toEqual([['list_devices', {}]])
+  const { messages } = engine.chat.completions.create.mock.calls[0][0]
+  const guidance = messages.at(-1).content
+  expect(guidance).toContain('TRUSTED TOOL RESULT for list_devices')
+  expect(guidance).toContain('k13 is at 192.168.2.50')
+  expect(guidance).toContain('SrcIP 0.0.0.0/0')
+  expect(guidance).toContain('use it as both SrcPort and DstPort')
+  expect(guidance).not.toContain('Printer')
+  expect(result.kind).toBe('proposal')
+  expect(result.proposal.rule.DstIP).toBe('192.168.2.50')
+})
+
+test('does not read devices for a firewall change that already has addresses', async () => {
+  const executeReadTool = jest.fn()
+  const engine = mockEngine(
+    response({ kind: 'message', message: 'Which port?' })
+  )
+
+  await runAssistantTurn({
+    engine,
+    history: [],
+    userText: 'Block 203.0.113.5 from reaching the router at 192.168.2.1.',
+    executeReadTool
+  })
+
+  expect(executeReadTool).not.toHaveBeenCalled()
+})
+
+test('answers device questions from the device list instead of guessing', async () => {
+  const devices = [
+    {
+      Name: 'rpi4',
+      MAC: '11:11:11:11:11:11',
+      RecentIP: '192.168.2.101',
+      Policies: ['lan', 'dns']
+    }
+  ]
+  const executeReadTool = jest.fn(() => Promise.resolve(devices))
+  const engine = mockEngine(textResponse('rpi4 has the broad lan Policy.'))
+
+  const result = await runAssistantTurn({
+    engine,
+    history: [],
+    userText: 'review all of devices for improvements',
+    executeReadTool
+  })
+
+  const { messages } = engine.chat.completions.create.mock.calls[0][0]
+  expect(messages[0].content).toBe(CHAT_SYSTEM_PROMPT)
+  expect(messages.at(-1).content).toBe(
+    `Trusted SPR API result from list_devices:\n${JSON.stringify(devices)}`
+  )
+  expect(result).toEqual(
+    expect.objectContaining({
+      kind: 'message',
+      message: 'rpi4 has the broad lan Policy.'
+    })
+  )
+})
