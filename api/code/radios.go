@@ -715,9 +715,13 @@ func readHostapdConfigFile(path string) (map[string]interface{}, error) {
 		return nil, err
 	}
 
+	return parseHostapdConfig(string(data)), nil
+}
+
+func parseHostapdConfig(data string) map[string]interface{} {
 	conf := map[string]interface{}{}
 
-	for _, line := range strings.Split(string(data), "\n") {
+	for _, line := range strings.Split(data, "\n") {
 		if strings.Contains(line, "#spr-gen-bss") {
 			//ignore rest of config
 			break
@@ -737,7 +741,7 @@ func readHostapdConfigFile(path string) (map[string]interface{}, error) {
 		}
 	}
 
-	return conf, nil
+	return conf
 }
 
 func hostapdFailsafeStatus(w http.ResponseWriter, r *http.Request) {
@@ -800,14 +804,15 @@ func hostapdConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateExtraBSSLocked(iface, data, MACOverride string) string {
+	return renderExtraBSS(iface, data, MACOverride, loadInterfacesConfigLocked())
+}
+
+func renderExtraBSS(iface, data, MACOverride string, config []InterfaceConfig) string {
 	// skip previous generation
 	idx := strings.Index(data, "#spr-gen-bss")
 	if idx != -1 {
 		data = data[:idx]
 	}
-	//read theinterfaces configuration
-	config := loadInterfacesConfigLocked()
-
 	// the mac80211_mt76 manual claims 0x00 for the first AP
 	//however on the mt7915e cards it was observed that 0x00 blocks
 	// multi bss from working and we should start with 0x02.
@@ -910,9 +915,18 @@ func transition6e(conf map[string]interface{}) {
 }
 
 func relax6e(conf map[string]interface{}) {
-	//relax PMF to transitional again and more compatibility
+	// Preserve an explicitly configured AKM list on ordinary radio updates.
+	// In particular, do not weaken SAE-only or re-enable SAE on WPA2-only APs.
+	if hostapdStr(conf, "wpa_key_mgmt") == "" {
+		conf["wpa_key_mgmt"] = "WPA-PSK WPA-PSK-SHA256 SAE"
+	}
 	conf["ieee80211w"] = 1
-	conf["wpa_key_mgmt"] = "WPA-PSK WPA-PSK-SHA256 SAE"
+	for _, akm := range strings.Fields(hostapdStr(conf, "wpa_key_mgmt")) {
+		if !isSAEKeyMgmt(akm) {
+			return
+		}
+	}
+	conf["ieee80211w"] = 2
 }
 
 func getHostapdMloConfigPath(iface string) string {
@@ -1420,14 +1434,20 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	// if extra BSS is configured for the interface, enable it.
 	data = updateExtraBSS(iface, data, "")
 
-	err = writeFileAtomic(getHostapdConfigPath(iface), []byte(data), 0600)
+	caps, err := radioSecurityForInterface(iface)
 	if err != nil {
-		fmt.Println(err)
-		http.Error(w, err.Error(), 400)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	data, err = constrainHostapdSecurity(data, caps)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	conf = parseHostapdConfig(data)
 
 	mloPath := getHostapdMloConfigPath(iface)
+	var mloData string
 	if mldEnabled {
 		var secondaryLink MldLinkConfig
 		for _, link := range mldLinks {
@@ -1437,7 +1457,19 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		existingLinkConf, _ := readHostapdConfigFile(mloPath)
-		mloData := generateHostapdMldLinkConfig(conf, iface, secondaryLink, existingLinkConf)
+		mloData, err = constrainHostapdSecurity(generateHostapdMldLinkConfig(conf, iface, secondaryLink, existingLinkConf), caps)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	// Check both links before replacing either saved config.
+	err = writeFileAtomic(getHostapdConfigPath(iface), []byte(data), 0600)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if mldEnabled {
 		err = writeFileAtomic(mloPath, []byte(mloData), 0600)
 		if err != nil {
 			fmt.Println(err)
@@ -1560,6 +1592,11 @@ func UpdateHostapMACs(Iface, MAC string) {
 	}
 
 	dataString := updateExtraBSSLocked(Iface, string(data), MAC)
+	dataString, err = prepareHostapdSecurity(Iface, dataString)
+	if err != nil {
+		log.Printf("Error checking hostapd security: %v", err)
+		return
+	}
 	err = writeFileAtomic(path, []byte(dataString), 0600)
 	if err != nil {
 		log.Printf("Error writing extrabss in new hostapd conf: %v", err)
@@ -1711,15 +1748,18 @@ func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Error reading hostapd conf: %v", err)
 		http.Error(w, "can't read hostapd config", http.StatusBadRequest)
+		return
 	}
 
-	// if anything is configured for the interface, enable it.
-	dataString := updateExtraBSS(iface, string(data), "")
-
-	err = writeFileAtomic(path, []byte(dataString), 0600)
+	caps, err := radioSecurityForInterface(iface)
 	if err != nil {
-		log.Printf("Error writing extrabss in new hostapd conf: %v", err)
-		http.Error(w, "can't write extrabss in new hostapd config", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	extra.WpaKeyMgmt, _, err = filterSecurityTokens(extra.WpaKeyMgmt, func(token string) bool { return isSAEKeyMgmt(token) && !caps.SAE })
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	Interfacesmtx.Lock()
@@ -1743,6 +1783,16 @@ func hostapdEnableExtraBSS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Render the newly requested BSS, not the previously saved interfaces list.
+	dataString, err := constrainHostapdSecurity(renderExtraBSS(iface, string(data), "", config), caps)
+	if err == nil {
+		err = writeFileAtomic(path, []byte(dataString), 0600)
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		Interfacesmtx.Unlock()
+		return
+	}
 	writeInterfacesConfigLocked(config)
 
 	Interfacesmtx.Unlock()
@@ -1830,7 +1880,14 @@ func hostapdResetInterface(w http.ResponseWriter, r *http.Request) {
 	rmac, cmac := getRandomizeBSSIDState(iface)
 
 	//with the file renamed, configureInterface will write a default config
-	configureInterface("AP", "", iface, rmac, cmac)
+	if err := configureInterface("AP", "", iface, rmac, cmac); err != nil {
+		// Preserve the old configuration if capability discovery/reset fails.
+		if restoreErr := os.Rename(path+".bak", path); restoreErr != nil && !os.IsNotExist(restoreErr) {
+			log.Printf("Failed to restore hostapd config: %v", restoreErr)
+		}
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	//toggle will also kick off the restart
 	err = toggleInterface(iface, true)

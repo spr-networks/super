@@ -223,12 +223,32 @@ func configureInterface(interfaceType string, subType string, name string, MACRa
 			configData = matchInterfaceAP.ReplaceAllString(configData, "$1="+name)
 			configData = matchControl.ReplaceAllString(configData, "$1="+"/state/wifi/control_"+name)
 
+			configData, err = prepareHostapdSecurity(name, configData)
+			if err != nil {
+				return err
+			}
 			err = writeFileAtomic(path, []byte(configData), 0600)
 			if err != nil {
 				fmt.Println("Error creating", path)
 				return err
 			}
 
+		} else if err != nil {
+			return err
+		} else {
+			input, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			checked, err := prepareHostapdSecurity(name, string(input))
+			if err != nil {
+				return err
+			}
+			if checked != string(input) {
+				if err := writeFileAtomic(path, []byte(checked), 0600); err != nil {
+					return err
+				}
+			}
 		}
 
 	}
