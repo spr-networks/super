@@ -36,7 +36,11 @@
    "URI": "dyndns",
    "UnixPath": "/state/plugins/dyndns/dyndns_plugin",
    "Enabled": false,
-   "ComposeFilePath": "dyndns/docker-compose.yml"
+   "ComposeFilePath": "dyndns/docker-compose.yml",
+   "NetworkCapabilities": {
+    "Interface": "spr-dyndns",
+    "Policies": ["wan", "dns"]
+   }
   },
   {
    "Name": "db",
