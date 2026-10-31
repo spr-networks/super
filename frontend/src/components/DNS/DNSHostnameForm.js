@@ -116,17 +116,15 @@ const DNSHostnameForm = ({ item, notifyChange }) => {
           <FormControlError>
             <FormControlErrorText>{nameError}</FormControlErrorText>
           </FormControlError>
-        ) : (
+        ) : item || name ? (
           <FormControlHelper>
             <FormControlHelperText>
               {item
                 ? 'To use a different name, add a new record'
-                : name
-                  ? `Resolves as ${name}`
-                  : 'A name without a domain gets .lan'}
+                : `Resolves as ${name}`}
             </FormControlHelperText>
           </FormControlHelper>
-        )}
+        ) : null}
       </FormControl>
 
       <FormControl isInvalid={submitted && !!ipError}>

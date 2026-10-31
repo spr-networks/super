@@ -189,13 +189,55 @@ func writeDNSHostnameMappingsLocked(mappings []DNSHostnameMapping) error {
 	return os.Rename(tmpName, LocalMappingsPath)
 }
 
-// dnsHostname exposes one split-horizon DNS record at a time. Plugin install
-// tokens can be scoped to /dns/hostnames:rw without receiving access to the
-// complete local mappings collection or broader DNS configuration.
+func localMappingsPinnedPath() string {
+	return LocalMappingsPath + ".pinned"
+}
+
+func readPinnedDNSHostnamesLocked() (map[string]bool, error) {
+	pinned := map[string]bool{}
+	data, err := os.ReadFile(localMappingsPinnedPath())
+	if err != nil {
+		if os.IsNotExist(err) {
+			return pinned, nil
+		}
+		return nil, err
+	}
+	var hostnames []string
+	if err := json.Unmarshal(data, &hostnames); err != nil {
+		return nil, err
+	}
+	for _, hostname := range hostnames {
+		pinned[hostname] = true
+	}
+	return pinned, nil
+}
+
+func writePinnedDNSHostnamesLocked(pinned map[string]bool) error {
+	hostnames := make([]string, 0, len(pinned))
+	for hostname := range pinned {
+		hostnames = append(hostnames, hostname)
+	}
+	sort.Strings(hostnames)
+	return saveFileJSON(localMappingsPinnedPath(), hostnames)
+}
+
+func pinDNSHostnameLocked(hostname string) error {
+	pinned, err := readPinnedDNSHostnamesLocked()
+	if err != nil {
+		return err
+	}
+	if pinned[hostname] {
+		return nil
+	}
+	pinned[hostname] = true
+	return writePinnedDNSHostnamesLocked(pinned)
+}
+
 type DNSHostnameListEntry struct {
 	DNSHostnameMapping
 	DeviceName string `json:",omitempty"`
 	Reserved   bool   `json:",omitempty"`
+	Pinned     bool   `json:",omitempty"`
 }
 
 func deviceNameForHostname(devices map[string]DeviceEntry, mapping DNSHostnameMapping) string {
@@ -222,26 +264,99 @@ func dnsHostnames(w http.ResponseWriter, r *http.Request) {
 
 	LocalMappingsmtx.Lock()
 	mappings, err := readDNSHostnameMappingsLocked()
+	var pinned map[string]bool
+	if err == nil {
+		pinned, err = readPinnedDNSHostnamesLocked()
+	}
 	LocalMappingsmtx.Unlock()
 	if err != nil {
 		http.Error(w, "failed to read local DNS mappings", http.StatusInternalServerError)
 		return
 	}
 
-	entries := make([]DNSHostnameListEntry, 0, len(mappings))
+	entries := make([]DNSHostnameListEntry, 0, len(mappings)+len(pinned))
+	listed := map[string]bool{}
 	for _, mapping := range mappings {
-		entry := DNSHostnameListEntry{DNSHostnameMapping: mapping, Reserved: isReservedDNSHostname(mapping.Hostname)}
-		if !entry.Reserved {
-			entry.DeviceName = deviceNameForHostname(devices, mapping)
-		}
-		entries = append(entries, entry)
+		listed[mapping.Hostname] = true
+		entries = append(entries, DNSHostnameListEntry{DNSHostnameMapping: mapping, Pinned: pinned[mapping.Hostname]})
 	}
+	for hostname := range pinned {
+		if !listed[hostname] {
+			entries = append(entries, DNSHostnameListEntry{DNSHostnameMapping: DNSHostnameMapping{Hostname: hostname}, Pinned: true})
+		}
+	}
+	for i := range entries {
+		entries[i].Reserved = isReservedDNSHostname(entries[i].Hostname)
+		if !entries[i].Reserved {
+			entries[i].DeviceName = deviceNameForHostname(devices, entries[i].DNSHostnameMapping)
+		}
+	}
+	sort.SliceStable(entries, func(i, j int) bool { return entries[i].Hostname < entries[j].Hostname })
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(entries)
 }
 
+func dnsHostnameReset(w http.ResponseWriter, r *http.Request) {
+	hostname, err := normalizeDNSHostname(mux.Vars(r)["hostname"])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	Devicesmtx.Lock()
+	defer Devicesmtx.Unlock()
+	devices := getDevicesJson()
+
+	LocalMappingsmtx.Lock()
+	pinned, err := readPinnedDNSHostnamesLocked()
+	found := err == nil && pinned[hostname]
+	if found {
+		delete(pinned, hostname)
+		err = writePinnedDNSHostnamesLocked(pinned)
+	}
+	LocalMappingsmtx.Unlock()
+	if err != nil {
+		http.Error(w, "failed to update pinned hostnames", http.StatusInternalServerError)
+		return
+	}
+	if !found {
+		http.Error(w, "hostname is not pinned", http.StatusNotFound)
+		return
+	}
+
+	keys := make([]string, 0, len(devices))
+	for key := range devices {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		device := devices[key]
+		if label := localMappingLabel(device.Name); label != "" && label+".lan" == hostname {
+			updateDeviceLocalMappings(devices, deviceLocalMappingUpdate{
+				Key:          key,
+				PreviousName: device.Name,
+				Name:         device.Name,
+				IP:           device.RecentIP,
+			})
+			break
+		}
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// dnsHostname exposes one split-horizon DNS record at a time. Plugin install
+// tokens can be scoped to /dns/hostnames:rw without receiving access to the
+// complete local mappings collection or broader DNS configuration.
 func dnsHostname(w http.ResponseWriter, r *http.Request) {
+	serveDNSHostname(w, r, false)
+}
+
+func dnsHostnameOverride(w http.ResponseWriter, r *http.Request) {
+	serveDNSHostname(w, r, true)
+}
+
+func serveDNSHostname(w http.ResponseWriter, r *http.Request, pin bool) {
 	w.Header().Set("Content-Type", "application/json")
 	hostname, err := normalizeDNSHostname(mux.Vars(r)["hostname"])
 	if err != nil {
@@ -301,6 +416,12 @@ func dnsHostname(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		if pin {
+			if err := pinDNSHostnameLocked(hostname); err != nil {
+				http.Error(w, "failed to update pinned hostnames", http.StatusInternalServerError)
+				return
+			}
+		}
 		updated := upsertDNSHostnameMapping(mappings, desired)
 		if err := writeDNSHostnameMappingsLocked(updated); err != nil {
 			http.Error(w, "failed to write local DNS mappings", http.StatusInternalServerError)
@@ -337,6 +458,12 @@ func dnsHostname(w http.ResponseWriter, r *http.Request) {
 		if !found {
 			http.Error(w, "hostname mapping not found", http.StatusNotFound)
 			return
+		}
+		if pin && !isReservedDNSHostname(hostname) {
+			if err := pinDNSHostnameLocked(hostname); err != nil {
+				http.Error(w, "failed to update pinned hostnames", http.StatusInternalServerError)
+				return
+			}
 		}
 		if err := writeDNSHostnameMappingsLocked(updated); err != nil {
 			http.Error(w, "failed to write local DNS mappings", http.StatusInternalServerError)

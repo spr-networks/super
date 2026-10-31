@@ -303,14 +303,14 @@ type deviceLocalMappingUpdate struct {
 	IP           string
 }
 
-func applyDeviceLocalMappings(mappings []DNSHostnameMapping, devices map[string]DeviceEntry, update deviceLocalMappingUpdate) []DNSHostnameMapping {
+func applyDeviceLocalMappings(mappings []DNSHostnameMapping, devices map[string]DeviceEntry, pinned map[string]bool, update deviceLocalMappingUpdate) []DNSHostnameMapping {
 	ownedByDevice := func(IP string) bool {
 		return IP == update.IP || (update.PreviousIP != "" && IP == update.PreviousIP)
 	}
 
 	label := localMappingLabel(update.Name)
 
-	if previousLabel := localMappingLabel(update.PreviousName); previousLabel != "" && previousLabel != label {
+	if previousLabel := localMappingLabel(update.PreviousName); previousLabel != "" && previousLabel != label && !pinned[previousLabel+".lan"] {
 		hostname := previousLabel + ".lan"
 		kept := make([]DNSHostnameMapping, 0, len(mappings))
 		for _, mapping := range mappings {
@@ -326,7 +326,7 @@ func applyDeviceLocalMappings(mappings []DNSHostnameMapping, devices map[string]
 	}
 
 	claim := func(hostname string, takeOver func(current DNSHostnameMapping) bool) {
-		if isReservedDNSHostname(hostname) {
+		if isReservedDNSHostname(hostname) || pinned[hostname] {
 			return
 		}
 		current, exists := findDNSHostnameMapping(mappings, hostname)
@@ -372,7 +372,12 @@ func updateDeviceLocalMappings(devices map[string]DeviceEntry, update deviceLoca
 		log.Println("failed to read local DNS mappings", err)
 		return
 	}
-	updated := applyDeviceLocalMappings(mappings, devices, update)
+	pinned, err := readPinnedDNSHostnamesLocked()
+	if err != nil {
+		log.Println("failed to read pinned DNS hostnames", err)
+		return
+	}
+	updated := applyDeviceLocalMappings(mappings, devices, pinned, update)
 	if slices.Equal(updated, mappings) {
 		return
 	}

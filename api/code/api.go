@@ -3485,6 +3485,8 @@ func main() {
 
 	external_router_authenticated.HandleFunc("/dnsSettings", dnsSettings).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/dnsHostnames", dnsHostnames).Methods("GET")
+	external_router_authenticated.HandleFunc("/dnsHostnames/{hostname}", dnsHostnameOverride).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/dnsHostnames/{hostname}/reset", dnsHostnameReset).Methods("PUT")
 	external_router_authenticated.HandleFunc("/dns/hostnames/{hostname}", dnsHostname).Methods("GET", "PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/multicastSettings", multicastSettings).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/customThemes", customThemes).Methods("GET", "PUT")

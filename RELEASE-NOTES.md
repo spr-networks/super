@@ -1,6 +1,13 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.2.20
+**Improvemens**
+- Assistant experiment has a new model option
+**Fixes**
+- Fix support for brcmfmac with AP/VLAN
+- Fix UI issues, saving supernetworks regression, other error messages
+
 ## 1.2.19
 **Improvemens**
 - Assistant experiment has a new model option

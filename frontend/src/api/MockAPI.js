@@ -4744,31 +4744,67 @@ export default function MockAPI(props = null) {
 
       this.get('/dnsHostnames', () => mockDNSHostnames)
 
-      this.put('/dns/hostnames/:hostname', (schema, request) => {
+      const isReservedHostname = (Hostname) =>
+        Hostname == 'spr.lan' || Hostname.endsWith('.spr.lan')
+      const setMockHostname = (Hostname, attrs) => {
+        let current = mockDNSHostnames.find((e) => e.Hostname == Hostname)
+        mockDNSHostnames = [
+          ...mockDNSHostnames.filter((e) => e.Hostname != Hostname),
+          { ...current, Hostname, ...attrs }
+        ].sort((a, b) => a.Hostname.localeCompare(b.Hostname))
+      }
+
+      this.put('/dnsHostnames/:hostname', (schema, request) => {
         let Hostname = request.params.hostname
         let { IPAddress, PreviousIPAddress, CreateOnly } = JSON.parse(
           request.requestBody
         )
         let current = mockDNSHostnames.find((e) => e.Hostname == Hostname)
-        if (Hostname == 'spr.lan' || Hostname.endsWith('.spr.lan')) {
+        if (isReservedHostname(Hostname)) {
           return new Response(403, {}, 'hostname is reserved')
         }
-        if (CreateOnly && current) {
+        if (CreateOnly && current?.IPAddress) {
           return new Response(409, {}, 'hostname mapping already exists')
         }
         if (PreviousIPAddress && current?.IPAddress != PreviousIPAddress) {
           return new Response(409, {}, 'hostname mapping changed')
         }
-        mockDNSHostnames = [
-          ...mockDNSHostnames.filter((e) => e.Hostname != Hostname),
-          { Hostname, IPAddress }
-        ].sort((a, b) => a.Hostname.localeCompare(b.Hostname))
+        setMockHostname(Hostname, { IPAddress, Pinned: true })
         return { Hostname, IPAddress }
       })
 
-      this.delete('/dns/hostnames/:hostname', (schema, request) => {
+      this.delete('/dnsHostnames/:hostname', (schema, request) => {
         let Hostname = request.params.hostname
-        mockDNSHostnames = mockDNSHostnames.filter((e) => e.Hostname != Hostname)
+        let current = mockDNSHostnames.find((e) => e.Hostname == Hostname)
+        if (!current?.IPAddress) {
+          return new Response(404, {}, 'hostname mapping not found')
+        }
+        if (isReservedHostname(Hostname)) {
+          mockDNSHostnames = mockDNSHostnames.filter(
+            (e) => e.Hostname != Hostname
+          )
+        } else {
+          setMockHostname(Hostname, { IPAddress: '', Pinned: true })
+        }
+        return new Response(204)
+      })
+
+      this.put('/dnsHostnames/:hostname/reset', (schema, request) => {
+        let Hostname = request.params.hostname
+        let current = mockDNSHostnames.find((e) => e.Hostname == Hostname)
+        if (!current?.Pinned) {
+          return new Response(404, {}, 'hostname is not pinned')
+        }
+        let device = { 'laptop.lan': '192.168.2.102', 'rpi4.lan': '192.168.2.101' }
+        if (device[Hostname]) {
+          setMockHostname(Hostname, { IPAddress: device[Hostname], Pinned: false })
+        } else if (current.IPAddress) {
+          setMockHostname(Hostname, { Pinned: false })
+        } else {
+          mockDNSHostnames = mockDNSHostnames.filter(
+            (e) => e.Hostname != Hostname
+          )
+        }
         return new Response(204)
       })
 

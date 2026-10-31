@@ -12,7 +12,7 @@ import {
   Text,
   VStack
 } from '@gluestack-ui/themed'
-import { PencilIcon } from 'lucide-react-native'
+import { PencilIcon, RotateCcwIcon } from 'lucide-react-native'
 
 import { AlertContext } from 'layouts/Admin'
 import { AppContext } from 'AppContext'
@@ -24,9 +24,9 @@ import DNSHostnameForm, {
   hostnameErrorMessage
 } from 'components/DNS/DNSHostnameForm'
 
-const DNSHostnameListItem = ({ item, onEdit, onDelete }) => {
+const DNSHostnameListItem = ({ item, onEdit, onDelete, onReset }) => {
   const context = useContext(AppContext)
-  const editable = !item.DeviceName && !item.Reserved
+  const removed = !item.IPAddress
 
   return (
     <ListItem>
@@ -39,12 +39,13 @@ const DNSHostnameListItem = ({ item, onEdit, onDelete }) => {
           <Text bold>{item.Hostname}</Text>
           {item.DeviceName ? (
             <Text size="xs" color="$muted500">
-              From the name of device {item.DeviceName}. Rename the device to
-              change it.
+              Device {item.DeviceName}
             </Text>
           ) : null}
         </VStack>
-        <Text flex={1}>{item.IPAddress}</Text>
+        <Text flex={1} color={removed ? '$muted500' : undefined}>
+          {removed ? 'Removed' : item.IPAddress}
+        </Text>
         <HStack flex={2}>
           <DeviceItem
             item={context.getDevice(item.IPAddress, 'RecentIP')}
@@ -58,12 +59,22 @@ const DNSHostnameListItem = ({ item, onEdit, onDelete }) => {
           <Badge action="error" variant="outline">
             <BadgeText>Reserved</BadgeText>
           </Badge>
-        ) : item.DeviceName ? (
-          <Badge action="muted" variant="outline">
-            <BadgeText>Device</BadgeText>
+        ) : null}
+        {item.Pinned ? (
+          <Badge action="info" variant="outline">
+            <BadgeText>Pinned</BadgeText>
           </Badge>
         ) : null}
-        {editable ? (
+        {item.Pinned ? (
+          <Button
+            variant="link"
+            accessibilityLabel={`Reset ${item.Hostname}`}
+            onPress={() => onReset(item)}
+          >
+            <ButtonIcon as={RotateCcwIcon} color="$muted500" />
+          </Button>
+        ) : null}
+        {!item.Reserved && !removed ? (
           <Button
             variant="link"
             accessibilityLabel={`Edit ${item.Hostname}`}
@@ -72,7 +83,7 @@ const DNSHostnameListItem = ({ item, onEdit, onDelete }) => {
             <ButtonIcon as={PencilIcon} color="$muted500" />
           </Button>
         ) : null}
-        {!item.DeviceName ? (
+        {!removed ? (
           <Button
             variant="link"
             accessibilityLabel={`Delete ${item.Hostname}`}
@@ -134,12 +145,21 @@ const DNSHostnames = () => {
       })
   }
 
+  const onReset = (item) => {
+    CoreDNS.resetHostname(item.Hostname)
+      .then(refresh)
+      .catch(async (error) => {
+        context.error(
+          'Could not reset hostname',
+          await hostnameErrorMessage(error, true)
+        )
+        refresh()
+      })
+  }
+
   return (
     <ScrollView h="$full">
-      <ListHeader
-        title="Hostnames"
-        description="Names served by SPR's DNS, like nas.lan. Names that come from a device follow the device."
-      >
+      <ListHeader title="Hostnames" description="Set lan DNS entries">
         <ModalForm
           title="Add Hostname"
           triggerText="Add Hostname"
@@ -171,6 +191,7 @@ const DNSHostnames = () => {
               item={item}
               onEdit={onEdit}
               onDelete={onDelete}
+              onReset={onReset}
             />
           )}
         />
