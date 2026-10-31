@@ -5,8 +5,15 @@ import { MemoryRouter } from 'react-router-dom'
 
 import DNSHostnames from 'views/DNS/DNSHostnames'
 import { saveLogin } from 'api'
+import MockAPI from 'api/MockAPI'
 
-beforeAll(() => saveLogin('admin', 'admin'))
+beforeAll(() => {
+  saveLogin('admin', 'admin')
+  // answer mock requests immediately: each add/edit/delete waits on a
+  // write and a list refresh, and the default 400ms per request is what
+  // pushed the delete check past its timeout on slower CI runners
+  MockAPI().timing = 0
+})
 
 const setup = async () => {
   const utils = render(
