@@ -148,8 +148,8 @@ func meshMACsecWifiAllowed(s MeshMACsecState, iface string, apIfaces []string) b
 	return false
 }
 
-var errMeshMACsecPinned = errors.New("device is pinned to a MACsec mesh link, refusing it on another interface")
-var errMeshMACsecPlaintext = errors.New("Wi-Fi stations may not use plaintext wired links while mesh MACsec is enforced")
+var errMeshMACsecPinned = errors.New("Mesh node detected on non MACsec link")
+var errMeshMACsecPlaintext = errors.New("MACsec is enforced, reject plaintext ethernet")
 
 func meshMACsecCheckDHCP(s MeshMACsecState, mac string, recentIP string, iface string, wifi bool, apIfaces []string) error {
 	if s.Role != "main" {
