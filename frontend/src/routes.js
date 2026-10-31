@@ -19,6 +19,7 @@ import Groups from 'views/Groups/Groups'
 import Tags from 'views/Tags'
 import DNSBlock from 'views/DNS/DNSBlock'
 import DNSOverride from 'views/DNS/DNSOverride'
+import DNSHostnames from 'views/DNS/DNSHostnames'
 import DNSLog from 'views/DNS/DNSLog'
 import DNSLogEdit from 'views/DNS/DNSLogEdit'
 import DynDns from 'views/DNS/DynDns'
@@ -79,6 +80,7 @@ import {
   SettingsIcon,
   ShuffleIcon,
   SignalIcon,
+  SignpostIcon,
   Table2Icon,
   TableIcon,
   TagsIcon,
@@ -292,6 +294,13 @@ const routes = [
         name: 'Blocklists/Ad-Block',
         icon: BanIcon,
         component: DNSBlock,
+        layout: 'admin'
+      },
+      {
+        path: 'dnsHostnames',
+        name: 'Hostnames',
+        icon: SignpostIcon,
+        component: DNSHostnames,
         layout: 'admin'
       },
       {

@@ -266,6 +266,159 @@ func normalizeName(Name string) string {
 	return trimLower(re.ReplaceAllString(Name, "-"))
 }
 
+const dhcpMissingHostname = "defaultmissingname"
+
+func localMappingLabel(name string) string {
+	label := strings.Trim(normalizeName(name), "-")
+	if len(label) > 63 {
+		label = strings.TrimRight(label[:63], "-")
+	}
+	return label
+}
+
+func labelOwnedByOtherDevice(devices map[string]DeviceEntry, key string, label string, IP string) bool {
+	for otherKey, other := range devices {
+		if otherKey == key || localMappingLabel(other.Name) != label {
+			continue
+		}
+		if IP == "" || other.RecentIP == IP {
+			return true
+		}
+	}
+	return false
+}
+
+func isUntrustedDHCPHostnameDevice(device DeviceEntry) bool {
+	return device.DeviceDisabled || slices.ContainsFunc(device.Policies, func(policy string) bool {
+		return policy == "guestonly" || policy == "quarantine" || policy == "disabled"
+	})
+}
+
+type deviceLocalMappingUpdate struct {
+	Key          string
+	PreviousName string
+	Name         string
+	DHCPName     string
+	PreviousIP   string
+	IP           string
+}
+
+func applyDeviceLocalMappings(mappings []DNSHostnameMapping, devices map[string]DeviceEntry, update deviceLocalMappingUpdate) []DNSHostnameMapping {
+	ownedByDevice := func(IP string) bool {
+		return IP == update.IP || (update.PreviousIP != "" && IP == update.PreviousIP)
+	}
+
+	label := localMappingLabel(update.Name)
+
+	if previousLabel := localMappingLabel(update.PreviousName); previousLabel != "" && previousLabel != label {
+		hostname := previousLabel + ".lan"
+		kept := make([]DNSHostnameMapping, 0, len(mappings))
+		for _, mapping := range mappings {
+			if mapping.Hostname != hostname || !ownedByDevice(mapping.IPAddress) {
+				kept = append(kept, mapping)
+			}
+		}
+		mappings = kept
+	}
+
+	if update.IP == "" {
+		return mappings
+	}
+
+	claim := func(hostname string, takeOver func(current DNSHostnameMapping) bool) {
+		if isReservedDNSHostname(hostname) {
+			return
+		}
+		current, exists := findDNSHostnameMapping(mappings, hostname)
+		if exists && !ownedByDevice(current.IPAddress) && !takeOver(current) {
+			return
+		}
+		mappings = upsertDNSHostnameMapping(mappings, DNSHostnameMapping{Hostname: hostname, IPAddress: update.IP})
+	}
+
+	if label != "" {
+		claim(label+".lan", func(current DNSHostnameMapping) bool {
+			return !labelOwnedByOtherDevice(devices, update.Key, label, current.IPAddress)
+		})
+	}
+
+	dhcpLabel := localMappingLabel(update.DHCPName)
+	if dhcpLabel != "" && dhcpLabel != dhcpMissingHostname && dhcpLabel != label &&
+		!isUntrustedDHCPHostnameDevice(devices[update.Key]) &&
+		!labelOwnedByOtherDevice(devices, update.Key, dhcpLabel, "") {
+		claim(dhcpLabel+".lan", func(DNSHostnameMapping) bool { return false })
+	}
+
+	return mappings
+}
+
+func updateDeviceLocalMappings(devices map[string]DeviceEntry, update deviceLocalMappingUpdate) {
+	for _, IP := range []*string{&update.IP, &update.PreviousIP} {
+		if ip := net.ParseIP(*IP); ip != nil {
+			*IP = ip.String()
+		} else {
+			*IP = ""
+		}
+	}
+	if update.IP == "" && update.PreviousIP == "" {
+		return
+	}
+
+	LocalMappingsmtx.Lock()
+	defer LocalMappingsmtx.Unlock()
+
+	mappings, err := readDNSHostnameMappingsLocked()
+	if err != nil {
+		log.Println("failed to read local DNS mappings", err)
+		return
+	}
+	updated := applyDeviceLocalMappings(mappings, devices, update)
+	if slices.Equal(updated, mappings) {
+		return
+	}
+	if err := writeDNSHostnameMappingsLocked(updated); err != nil {
+		log.Println("failed to write local DNS mappings", err)
+	}
+}
+
+func removeDeletedDeviceLocalMappings(devices map[string]DeviceEntry, deleted []DeviceEntry) {
+	IPs := map[string]bool{}
+	for _, device := range deleted {
+		if ip := net.ParseIP(device.RecentIP); ip != nil {
+			IPs[ip.String()] = true
+		}
+	}
+	for _, device := range devices {
+		if ip := net.ParseIP(device.RecentIP); ip != nil {
+			delete(IPs, ip.String())
+		}
+	}
+	if len(IPs) == 0 {
+		return
+	}
+
+	LocalMappingsmtx.Lock()
+	defer LocalMappingsmtx.Unlock()
+
+	mappings, err := readDNSHostnameMappingsLocked()
+	if err != nil {
+		log.Println("failed to read local DNS mappings", err)
+		return
+	}
+	kept := make([]DNSHostnameMapping, 0, len(mappings))
+	for _, mapping := range mappings {
+		if !IPs[mapping.IPAddress] {
+			kept = append(kept, mapping)
+		}
+	}
+	if len(kept) == len(mappings) {
+		return
+	}
+	if err := writeDNSHostnameMappingsLocked(kept); err != nil {
+		log.Println("failed to write local DNS mappings", err)
+	}
+}
+
 var SetupDHCPIPv4 = map[string]string{}
 var SetupAP = "wlan0"
 
@@ -319,6 +472,11 @@ func handleDHCPResult(MAC string, IP string, Router string, Name string, Iface s
 		}
 	}
 
+	previousIP := ""
+	if exists {
+		previousIP = val.RecentIP
+	}
+
 	if !exists {
 		//create a new device entry
 		newDevice := DeviceEntry{}
@@ -368,12 +526,15 @@ func handleDHCPResult(MAC string, IP string, Router string, Name string, Iface s
 		}
 	}
 
-	if Name != "" {
-		// update local mappings file for DNS
-		updateLocalMappings(IP, normalizeName(val.Name))
-		// and the DHCP name also
-		updateLocalMappings(IP, Name)
-	}
+	// update local mappings file for DNS
+	updateDeviceLocalMappings(devices, deviceLocalMappingUpdate{
+		Key:          MAC,
+		PreviousName: val.Name,
+		Name:         val.Name,
+		DHCPName:     Name,
+		PreviousIP:   previousIP,
+		IP:           IP,
+	})
 }
 
 func dhcpRequest(w http.ResponseWriter, r *http.Request) {

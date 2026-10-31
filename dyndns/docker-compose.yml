@@ -26,7 +26,7 @@ services:
       - "${SUPERDIR}/configs/dyndns/:/configs/dyndns/"
 
 # Note, if updating the bridge name, also update NetworkCapabilities
-# in plugin.json and gDyndnsNetworkCapabilities in api/code/plugins.go
+# in base/template_configs/base/api.json and gDyndnsNetworkCapabilities in api/code/plugins.go
 networks:
   dyndns_net:
     driver: bridge

@@ -60,6 +60,12 @@ const installModelArtifactFetch = (mockServer) => {
 const r = (n) => parseInt(Math.random() * n)
 const rpick = (l) => l[parseInt(r(l.length))]
 
+let mockDNSHostnames = [
+  { Hostname: 'laptop.lan', IPAddress: '192.168.2.102', DeviceName: 'laptop' },
+  { Hostname: 'printer.lan', IPAddress: '192.168.2.110' },
+  { Hostname: 'rpi4.lan', IPAddress: '192.168.2.101', DeviceName: 'rpi4' },
+  { Hostname: 'vault.home.example.com', IPAddress: '192.168.2.123' }
+]
 let mockCustomFingerprints = []
 let mockPlusToken = ''
 let mockDbBuckets = {}
@@ -4734,6 +4740,36 @@ export default function MockAPI(props = null) {
 
       this.get('/dnsSettings', (schema, request) => {
         return { UpstreamTLSHost: '', UpstreamIPAddress: '', TlsDisable: false }
+      })
+
+      this.get('/dnsHostnames', () => mockDNSHostnames)
+
+      this.put('/dns/hostnames/:hostname', (schema, request) => {
+        let Hostname = request.params.hostname
+        let { IPAddress, PreviousIPAddress, CreateOnly } = JSON.parse(
+          request.requestBody
+        )
+        let current = mockDNSHostnames.find((e) => e.Hostname == Hostname)
+        if (Hostname == 'spr.lan' || Hostname.endsWith('.spr.lan')) {
+          return new Response(403, {}, 'hostname is reserved')
+        }
+        if (CreateOnly && current) {
+          return new Response(409, {}, 'hostname mapping already exists')
+        }
+        if (PreviousIPAddress && current?.IPAddress != PreviousIPAddress) {
+          return new Response(409, {}, 'hostname mapping changed')
+        }
+        mockDNSHostnames = [
+          ...mockDNSHostnames.filter((e) => e.Hostname != Hostname),
+          { Hostname, IPAddress }
+        ].sort((a, b) => a.Hostname.localeCompare(b.Hostname))
+        return { Hostname, IPAddress }
+      })
+
+      this.delete('/dns/hostnames/:hostname', (schema, request) => {
+        let Hostname = request.params.hostname
+        mockDNSHostnames = mockDNSHostnames.filter((e) => e.Hostname != Hostname)
+        return new Response(204)
       })
 
       this.get('/logs', (schema, request) => {

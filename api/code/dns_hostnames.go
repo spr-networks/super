@@ -62,6 +62,10 @@ func normalizeDNSHostnameMapping(mapping DNSHostnameMapping) (DNSHostnameMapping
 	return DNSHostnameMapping{Hostname: hostname, IPAddress: ip.String()}, nil
 }
 
+func isReservedDNSHostname(hostname string) bool {
+	return hostname == "spr.lan" || strings.HasSuffix(hostname, ".spr.lan")
+}
+
 func isDNSHostnameCGNAT(ip net.IP) bool {
 	ip4 := ip.To4()
 	return ip4 != nil && ip4[0] == 100 && ip4[1] >= 64 && ip4[1] <= 127
@@ -88,6 +92,18 @@ func findDNSHostnameMapping(mappings []DNSHostnameMapping, hostname string) (DNS
 		}
 	}
 	return DNSHostnameMapping{}, false
+}
+
+func upsertDNSHostnameMapping(mappings []DNSHostnameMapping, mapping DNSHostnameMapping) []DNSHostnameMapping {
+	updated := make([]DNSHostnameMapping, 0, len(mappings)+1)
+	for _, existing := range mappings {
+		if existing.Hostname != mapping.Hostname {
+			updated = append(updated, existing)
+		}
+	}
+	updated = append(updated, mapping)
+	sort.Slice(updated, func(i, j int) bool { return updated[i].Hostname < updated[j].Hostname })
+	return updated
 }
 
 func readDNSHostnameMappingsLocked() ([]DNSHostnameMapping, error) {
@@ -176,6 +192,55 @@ func writeDNSHostnameMappingsLocked(mappings []DNSHostnameMapping) error {
 // dnsHostname exposes one split-horizon DNS record at a time. Plugin install
 // tokens can be scoped to /dns/hostnames:rw without receiving access to the
 // complete local mappings collection or broader DNS configuration.
+type DNSHostnameListEntry struct {
+	DNSHostnameMapping
+	DeviceName string `json:",omitempty"`
+	Reserved   bool   `json:",omitempty"`
+}
+
+func deviceNameForHostname(devices map[string]DeviceEntry, mapping DNSHostnameMapping) string {
+	name := ""
+	for _, device := range devices {
+		label := localMappingLabel(device.Name)
+		if label == "" || label+".lan" != mapping.Hostname {
+			continue
+		}
+		if device.RecentIP == mapping.IPAddress {
+			return device.Name
+		}
+		if name == "" || device.Name < name {
+			name = device.Name
+		}
+	}
+	return name
+}
+
+func dnsHostnames(w http.ResponseWriter, r *http.Request) {
+	Devicesmtx.Lock()
+	devices := getDevicesJson()
+	Devicesmtx.Unlock()
+
+	LocalMappingsmtx.Lock()
+	mappings, err := readDNSHostnameMappingsLocked()
+	LocalMappingsmtx.Unlock()
+	if err != nil {
+		http.Error(w, "failed to read local DNS mappings", http.StatusInternalServerError)
+		return
+	}
+
+	entries := make([]DNSHostnameListEntry, 0, len(mappings))
+	for _, mapping := range mappings {
+		entry := DNSHostnameListEntry{DNSHostnameMapping: mapping, Reserved: isReservedDNSHostname(mapping.Hostname)}
+		if !entry.Reserved {
+			entry.DeviceName = deviceNameForHostname(devices, mapping)
+		}
+		entries = append(entries, entry)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(entries)
+}
+
 func dnsHostname(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	hostname, err := normalizeDNSHostname(mux.Vars(r)["hostname"])
@@ -202,6 +267,10 @@ func dnsHostname(w http.ResponseWriter, r *http.Request) {
 		}
 		_ = json.NewEncoder(w).Encode(current)
 	case http.MethodPut:
+		if isReservedDNSHostname(hostname) {
+			http.Error(w, "hostname is reserved", http.StatusForbidden)
+			return
+		}
 		request, err := decodeDNSHostnameMutation(w, r)
 		if err != nil {
 			http.Error(w, "invalid request body", http.StatusBadRequest)
@@ -232,14 +301,7 @@ func dnsHostname(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		updated := make([]DNSHostnameMapping, 0, len(mappings)+1)
-		for _, existing := range mappings {
-			if existing.Hostname != desired.Hostname {
-				updated = append(updated, existing)
-			}
-		}
-		updated = append(updated, desired)
-		sort.Slice(updated, func(i, j int) bool { return updated[i].Hostname < updated[j].Hostname })
+		updated := upsertDNSHostnameMapping(mappings, desired)
 		if err := writeDNSHostnameMappingsLocked(updated); err != nil {
 			http.Error(w, "failed to write local DNS mappings", http.StatusInternalServerError)
 			return

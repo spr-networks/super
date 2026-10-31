@@ -242,6 +242,18 @@ var gDyndnsNetworkCapabilities = NetworkCapabilities{
 	Policies:  []string{"wan", "dns"},
 }
 
+func dyndnsNetworkCapabilitiesMissing(capabilities NetworkCapabilities) bool {
+	if capabilities.Interface != gDyndnsNetworkCapabilities.Interface {
+		return true
+	}
+	for _, policy := range gDyndnsNetworkCapabilities.Policies {
+		if !slices.Contains(capabilities.Policies, policy) {
+			return true
+		}
+	}
+	return false
+}
+
 var gPluginTemplates = []PluginConfig{
 	{
 		Name:     "dns-block-extension",
@@ -327,7 +339,7 @@ func updateConfigPluginDefaults(config *APIConfig) bool {
 				update = true
 			}
 			//dyndns runs on its own bridge, without a rule it has no internet
-			if entry.NetworkCapabilities.Interface == "" {
+			if dyndnsNetworkCapabilitiesMissing(entry.NetworkCapabilities) {
 				config.Plugins[i].NetworkCapabilities = gDyndnsNetworkCapabilities
 				update = true
 			}
