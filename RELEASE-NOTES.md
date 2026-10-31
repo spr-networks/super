@@ -1,6 +1,14 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.3.0
+**Improvements**
+- Mesh backhaul MACsec support for capable kernels
+**Fixes**
+- Support udp for transparent sinks
+- Hostname overrides for .lan
+- Fix UI glitch with slashes on domain search
+
 ## v1.2.20
 **Improvements**
 - New hostnames page
