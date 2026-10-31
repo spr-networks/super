@@ -3747,6 +3747,8 @@ func systemDNSOverride(w http.ResponseWriter, r *http.Request) {
 	saveFirewallRulesLocked()
 }
 
+var firewallLoopsOnce sync.Once
+
 func initFirewallRules() {
 	loadFirewallRules()
 
@@ -3770,11 +3772,12 @@ func initFirewallRules() {
 
 	refreshDownlinks()
 
-	// dynamic route refresh
-	go dynamicRouteLoop()
+	firewallLoopsOnce.Do(func() {
+		// dynamic route refresh
+		go dynamicRouteLoop()
 
-	// check on outbound interfaces and
-	// update their routes
-	go updateOutboundRoutes()
-
+		// check on outbound interfaces and
+		// update their routes
+		go updateOutboundRoutes()
+	})
 }
