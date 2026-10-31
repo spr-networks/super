@@ -518,10 +518,11 @@ table inet filter {
   }
 
   chain DROP_MAC_SPOOF {
-    # A PFW-routed TCP reply may use the remote host's IP. Require the
-    # declared MAC and the original flow's live PFW route to this interface.
-    iifname @transparent_sink_interfaces ct direction reply ct state established meta l4proto tcp iifname . ether saddr @dhcp_access ct original ip saddr . ct original ip daddr . ct original proto-dst . iifname vmap @site_forward_tcp_port
-    iifname @transparent_sink_interfaces ct direction reply ct state established meta l4proto tcp iifname . ether saddr @dhcp_access ct original ip saddr . ct original ip daddr . iifname vmap @site_forward
+    # For transparent sinks they must support transparent forwarding, and allow many source IPs 
+    # A sink may never answer as an address inside SPR's own supernetworks.
+    iifname @transparent_sink_interfaces ip saddr != @supernetworks ct direction reply ct state established meta l4proto tcp iifname . ether saddr @dhcp_access ct original ip saddr . ct original ip daddr . ct original proto-dst . iifname vmap @site_forward_tcp_port
+    iifname @transparent_sink_interfaces ip saddr != @supernetworks ct direction reply ct state established meta l4proto udp iifname . ether saddr @dhcp_access ct original ip saddr . ct original ip daddr . ct original proto-dst . iifname vmap @site_forward_udp_port
+    iifname @transparent_sink_interfaces ip saddr != @supernetworks ct direction reply ct state established meta l4proto { tcp, udp, icmp } iifname . ether saddr @dhcp_access ct original ip saddr . ct original ip daddr . iifname vmap @site_forward
     counter ip saddr . iifname . ether saddr vmap @ethernet_filter
     log prefix "drop:mac " group 1
     counter drop

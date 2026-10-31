@@ -57,6 +57,16 @@
     "Name": "WIFIUPLINK",
     "Enabled": false,
     "ComposeFilePath": "wifi_uplink/docker-compose.yml"
+  },
+  {
+   "Name": "PFW",
+   "URI": "pfw",
+   "UnixPath": "/state/plugins/pfw/socket",
+   "Enabled": true,
+   "Plus": true,
+   "GitURL": "github.com/spr-networks/pfw_extension",
+   "ComposeFilePath": "plugins/plus/pfw_extension/docker-compose.yml",
+   "HasTopology": true
   }
  ]
 }

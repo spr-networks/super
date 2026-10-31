@@ -37,6 +37,7 @@ var PlusAuthGitURL = PlusGitHost + "/spr-networks/plus-auth"
 var MeshdSocketPath = TEST_PREFIX + "/state/plugins/mesh/socket"
 var DbSocketPath = TEST_PREFIX + "/state/plugins/db/socket"
 var CustomComposeAllowPath = TEST_PREFIX + "/configs/base/custom_compose_paths.json"
+var PfwRulesPath = TEST_PREFIX + "/configs/pfw/rules.json"
 var extensionStartMtx sync.Mutex
 var pluginNetworkReconcileOnce sync.Once
 var pluginDHCPXDPMtx sync.Mutex
@@ -1027,13 +1028,12 @@ func ghcrSuperdLogin() bool {
 
 func generatePFWAPIToken() {
 	//install API token for PLUS
-	var pfwConfigFile = TEST_PREFIX + "/configs/pfw/rules.json"
 	pfw_token, err := generateOrGetToken("PLUS-API-Token", []string{})
 
 	//now save the rules.json with this token
 	pfw_config := make(map[string]interface{})
 
-	data, err := os.ReadFile(pfwConfigFile)
+	data, err := os.ReadFile(PfwRulesPath)
 	if err == nil {
 		//read existing configuration
 		_ = json.Unmarshal(data, &pfw_config)
@@ -1043,11 +1043,20 @@ func generatePFWAPIToken() {
 	pfw_config["APIToken"] = pfw_token.Token
 
 	file, _ := json.MarshalIndent(pfw_config, "", " ")
-	err = writeFileAtomic(pfwConfigFile, file, 0600)
+	err = writeFileAtomic(PfwRulesPath, file, 0600)
 	if err != nil {
 		fmt.Println("failed to write pfw configuration", err)
 	}
 
+}
+
+func pfwProvisioned() bool {
+	data, err := os.ReadFile(PfwRulesPath)
+	if err != nil {
+		return false
+	}
+	var rules struct{ APIToken string }
+	return json.Unmarshal(data, &rules) == nil && rules.APIToken != ""
 }
 
 func downloadExtension(user string, secret string, gitURL string, Plus bool, AutoConfig bool) (bool, bool) {
@@ -2086,6 +2095,13 @@ func startExtensionServices() error {
 
 	for _, entry := range config.Plugins {
 		if entry.ComposeFilePath != "" && entry.Enabled == true {
+			if entry.Name == "PFW" && entry.Plus && extensionTokenSatisfied(entry) && !pfwProvisioned() {
+				if !downloadPlusExtension(entry.GitURL) {
+					fmt.Println("Could not download Extension " + entry.GitURL)
+					failed = append(failed, entry.Name)
+					continue
+				}
+			}
 			started := runPluginStartWithNetworkPrepared(entry, func() bool {
 				if entry.Plus == true && extensionTokenSatisfied(entry) {
 					if !updateExtension(entry.ComposeFilePath) {

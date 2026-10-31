@@ -39,6 +39,7 @@ export const useTopologyController = ({ navigate }) => {
   const [connectChoice, setConnectChoice] = useState('')
   const [classifications, setClassifications] = useState({})
   const [routes, setRoutes] = useState([])
+  const [pfwAvailable, setPfwAvailable] = useState(true)
   const [deviceFilter, setDeviceFilter] = useState({
     status: [],
     groups: [],
@@ -75,8 +76,11 @@ export const useTopologyController = ({ navigate }) => {
 
     pfwAPI
       .config()
-      .then((config) => setRoutes(config?.ForwardingRules || []))
-      .catch(() => {})
+      .then((config) => {
+        setRoutes(config?.ForwardingRules || [])
+        setPfwAvailable(true)
+      })
+      .catch(() => setPfwAvailable(false))
   }
 
   useEffect(() => {
@@ -618,6 +622,7 @@ export const useTopologyController = ({ navigate }) => {
     deviceFilter,
     setDeviceFilter,
     routes,
+    pfwAvailable,
     requestSeqRef,
     pollErrorRef,
     fittedRef,

@@ -263,7 +263,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
             size="md"
             bold
             onPress={() =>
-              navigate(`/admin/dnsLog/${remoteIP}/${item.FirstName}`)
+              navigate(`/admin/dnsLog/${remoteIP}/${encodeURIComponent(item.FirstName)}`)
             }
           >
             {item.FirstName}
@@ -283,7 +283,7 @@ const PrettyItem = ({ item, selected, showJSON, setIsParsable, ...props }) => {
             size="md"
             bold
             onPress={() =>
-              navigate(`/admin/dnsLog/${item.ClientIP}/${item.Name}`)
+              navigate(`/admin/dnsLog/${item.ClientIP}/${encodeURIComponent(item.Name)}`)
             }
           >
             {item.Name}

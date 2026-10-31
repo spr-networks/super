@@ -1,5 +1,6 @@
 import React, { useContext, useState } from 'react'
 import { Platform } from 'react-native'
+import { useNavigate } from 'react-router-dom'
 import { AppContext } from 'AppContext'
 import { normalizeTextInput } from 'utils/normalizeTextInput'
 
@@ -16,6 +17,8 @@ import {
   Icon,
   Input,
   InputField,
+  Link,
+  LinkText,
   Pressable,
   ScrollView,
   Text,
@@ -492,7 +495,25 @@ export const StyleEditor = ({ initialIcon, initialColor, onChange }) => {
 
 // route a device's outbound traffic to an advertised sink: pick a sink, scope
 // the rule with a CIDR + optional port, optionally rewrite plaintext DNS
-const RouteSinkSection = ({ sinks, routes, onAdd, onRemoveRoute }) => {
+export const EnablePfwHint = () => {
+  const navigate = useNavigate()
+  return (
+    <HStack flexWrap="wrap" alignItems="center">
+      <Link onPress={() => navigate('/admin/plugins')}>
+        <LinkText size="sm">Enable PFW</LinkText>
+      </Link>
+      <Text size="sm"> to route devices through plugins.</Text>
+    </HStack>
+  )
+}
+
+const RouteSinkSection = ({
+  sinks,
+  routes,
+  pfwAvailable,
+  onAdd,
+  onRemoveRoute
+}) => {
   const appContext = useContext(AppContext)
   const [sinkID, setSinkID] = useState(null)
   const [cidr, setCidr] = useState('0.0.0.0/0')
@@ -500,6 +521,10 @@ const RouteSinkSection = ({ sinks, routes, onAdd, onRemoveRoute }) => {
   const [dns, setDns] = useState('')
 
   const sink = sinks.find((s) => s.ID == sinkID)
+
+  if (pfwAvailable === false) {
+    return <EnablePfwHint />
+  }
 
   if (appContext.isPlusDisabled) {
     return null
@@ -618,6 +643,7 @@ export const DetailPanel = ({
   sinks,
   onAddRoute,
   routes,
+  pfwAvailable,
   onRemoveRoute
 }) => {
   const fields = ['IP', 'TinyNet', 'VLANTag', 'MAC', 'SSID', 'Iface', 'ConnType'].filter(
@@ -857,6 +883,7 @@ export const DetailPanel = ({
             <RouteSinkSection
               sinks={sinks}
               routes={deviceRoutes}
+              pfwAvailable={pfwAvailable}
               onAdd={(sink, scope) => onAddRoute(node, sink, scope)}
               onRemoveRoute={onRemoveRoute}
             />
