@@ -23,6 +23,7 @@ import {
 
 import ModalForm from 'components/ModalForm'
 import AddLeafRouter from 'components/Mesh/AddLeafRouter'
+import { MACsecSwitch, useMACsecLinks } from 'components/Mesh/MeshMACsec'
 import { ListHeader, ListItem } from 'components/List'
 import TokenItem from 'components/TokenItem'
 
@@ -34,6 +35,7 @@ import APIMesh from 'api/mesh'
 
 const Mesh = (props) => {
   const [leafRouters, setLeafRouters] = useState([])
+  const [macsecLinks, refreshMACsec] = useMACsecLinks()
   const [isLeafMode, setIsLeafMode] = useState([])
   const [config, setConfig] = useState({})
   const [leafToken, setLeafToken] = useState('')
@@ -320,6 +322,7 @@ const Mesh = (props) => {
                   <Heading size="sm">Router IP</Heading>
                   <Heading size="sm">Status</Heading>
                   <Heading size="sm">SPR Version</Heading>
+                  <Heading size="sm">MACsec</Heading>
                   <Heading size="sm">Token</Heading>
                   <Text></Text>
                 </HStack>
@@ -330,6 +333,15 @@ const Mesh = (props) => {
                 <Text flex={2}>{item.IP}</Text>
                 <Text flex={3}>{item.status}</Text>
                 <Text flex={2}>{item.version}</Text>
+                <MACsecSwitch
+                  flex={2}
+                  leaf={item}
+                  link={macsecLinks[item.IP]}
+                  onChange={() => {
+                    refreshLeaves()
+                    refreshMACsec()
+                  }}
+                />
                 <TokenItem flex={2} token={item.APIToken} />
                 <Button
                   size="sm"

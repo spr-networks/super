@@ -11,6 +11,10 @@ import api, {api as xapi, devices, authAPI, meshAPI, wifiAPI, setAuthReturn } fr
 import {
   Button,
   ButtonText,
+  Checkbox,
+  CheckboxIcon,
+  CheckboxIndicator,
+  CheckboxLabel,
   FormControl,
   FormControlLabel,
   FormControlLabelText,
@@ -26,6 +30,7 @@ class AddLeafRouterImpl extends React.Component {
   state = {
     APIToken: '',
     IP: '',
+    MACsec: true,
     Spinning: false,
   }
 
@@ -152,7 +157,7 @@ class AddLeafRouterImpl extends React.Component {
         }
 
         meshAPI
-          .addLeafRouter(leaf)
+          .addLeafRouter({ ...leaf, MACsecPending: this.state.MACsec })
           .then(() => {})
           .catch((err) => {
             this.props.alertContext.error('Mesh API Failure', err)
@@ -233,6 +238,18 @@ class AddLeafRouterImpl extends React.Component {
             </FormControlHelperText>
           </FormControlHelper>
         </FormControl>
+
+        <Checkbox
+          value="macsec"
+          isChecked={this.state.MACsec}
+          onChange={(value) => this.handleChange('MACsec', value)}
+          accessibilityLabel="Encrypt wired link (MACsec)"
+        >
+          <CheckboxIndicator mr="$2">
+            <CheckboxIcon />
+          </CheckboxIndicator>
+          <CheckboxLabel>Encrypt wired link (MACsec)</CheckboxLabel>
+        </Checkbox>
 
         <Button action="primary" size="md" onPress={this.handleSubmit}>
           <ButtonText>Save</ButtonText>

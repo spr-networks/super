@@ -2584,6 +2584,7 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 	if is_mesh {
 		mesh_downlink = meshPluginDownlink()
 	}
+	macsecStrict := meshMACsecSnapshot().Strict
 
 	//check for IP in custom dns entries, and remove from there
 	entries := getCustomDNSVerdictMap()
@@ -2613,12 +2614,8 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 
 			//when in mesh mode, dont flush the downlink
 			//for faster transitions
-			if !disabled {
-				if is_mesh && name == "ethernet_filter" {
-					if entry.ifname == mesh_downlink {
-						continue
-					}
-				}
+			if meshKeepDownlinkEntry(is_mesh, macsecStrict, disabled, name, entry.ifname, mesh_downlink) {
+				continue
 			}
 
 			if Ifname == "" {
@@ -2645,6 +2642,31 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 			}
 		}
 	}
+}
+
+func enforceMeshMACsecRoute(state MeshMACsecState, entry DeviceEntry, candidate string, established string, apIfaces []string, snap *MapSnapshot) (string, bool) {
+	iface, ok := meshMACsecRouteIface(state, entry.MAC, entry.RecentIP, candidate, meshMACsecWifiDevice(entry), apIfaces)
+	if ok {
+		return iface, true
+	}
+	stale := established
+	if stale == "" {
+		stale = candidate
+	}
+	if stale != "" && entry.MAC != "" && snap.HasMAC("ethernet_filter", entry.MAC) {
+		flushVmaps(entry.RecentIP, entry.MAC, stale, getVerdictMapNames(), false, true, snap)
+	}
+	if entry.MAC != "" {
+		FWmtx.Lock()
+		if recent := RecentDHCPIface[entry.MAC]; recent != "" && !meshMACsecWifiAllowed(state, recent, apIfaces) {
+			delete(RecentDHCPIface, entry.MAC)
+		}
+		FWmtx.Unlock()
+	}
+	if established != "" {
+		flushRouteFromArp(entry.MAC)
+	}
+	return "", false
 }
 
 func flushRouteFromArp(MAC string) {
@@ -3462,6 +3484,9 @@ func dynamicRouteLoop() {
 			//add wg0 as a valid sink
 			downlinks = append(downlinks, "wg0")
 
+			macsecState := meshMACsecSnapshot()
+			downlinks = append(downlinks, macsecState.linkIfaces()...)
+
 			lanif := getFirstDownlink()
 			lanif_vlan_trunk := false
 
@@ -3473,6 +3498,7 @@ func dynamicRouteLoop() {
 			Interfacesmtx.Lock()
 			interfaces := loadInterfacesConfigLocked()
 			Interfacesmtx.Unlock()
+			apIfaces := meshMACsecAPInterfaces(interfaces)
 
 			for _, ifconfig := range interfaces {
 				if ifconfig.Name == lanif {
@@ -3593,6 +3619,12 @@ func dynamicRouteLoop() {
 						continue
 					}
 				}
+
+				macsecIface, macsecOK := enforceMeshMACsecRoute(macsecState, entry, new_iface, established_route_device, apIfaces, vmapSnap)
+				if !macsecOK {
+					continue
+				}
+				new_iface = macsecIface
 
 				//update the iface map with the designated interface
 				newIfaceMap[entry.RecentIP] = new_iface
@@ -3773,6 +3805,8 @@ func initFirewallRules() {
 	refreshDownlinks()
 
 	firewallLoopsOnce.Do(func() {
+		go meshMACsecPoller()
+
 		// dynamic route refresh
 		go dynamicRouteLoop()
 

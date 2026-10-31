@@ -620,6 +620,14 @@ func dhcpRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	macsecState := meshMACsecSnapshot()
+	var apIfaces []string
+	if macsecState.Role == "main" {
+		Interfacesmtx.Lock()
+		apIfaces = meshMACsecAPInterfaces(loadInterfacesConfigLocked())
+		Interfacesmtx.Unlock()
+	}
+
 	Groupsmtx.Lock()
 	defer Groupsmtx.Unlock()
 
@@ -634,6 +642,18 @@ func dhcpRequest(w http.ResponseWriter, r *http.Request) {
 
 	devices := getDevicesJson()
 	val, exists := devices[dhcp.MAC]
+
+	if err := meshMACsecCheckDHCP(macsecState, dhcp.MAC, val.RecentIP, dhcp.Iface, exists && meshMACsecWifiDevice(val), apIfaces); err != nil {
+		SprbusPublish("dhcp:spoof", DHCPFail{
+			Iface:      dhcp.Iface,
+			MAC:        dhcp.MAC,
+			Identifier: dhcp.Identifier,
+			Name:       dhcp.Name,
+			Reason:     err.Error(),
+		})
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
 
 	if exists {
 		if strings.Contains(dhcp.Iface, ExtraBSSPrefix) {

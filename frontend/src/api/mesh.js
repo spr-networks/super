@@ -42,6 +42,14 @@ export default class APIMesh extends API {
     return this.put(`syncOTP`, null);
   }
 
+  macsecStatus() {
+    return this.get(`macsec/status`);
+  }
+
+  setLeafMACsec(data) {
+    return this.put(`leafRouter/macsec`, data);
+  }
+
   meshIter(protocb) {
     return this.leafRouters().then((routers) => {
       if (routers == null) {

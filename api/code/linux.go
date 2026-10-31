@@ -233,3 +233,11 @@ func openFileNoSymlinks(path string, flags int, perm os.FileMode) (*os.File, err
 	}
 	return os.NewFile(uintptr(fd), path), nil
 }
+
+func isMACsecInterface(name string) bool {
+	link, err := netlink.LinkByName(name)
+	if err != nil {
+		return false
+	}
+	return link.Type() == "macsec"
+}
