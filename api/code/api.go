@@ -1499,6 +1499,7 @@ func deleteDeviceLocked(devices map[string]DeviceEntry, groups []GroupEntry, ide
 	SprbusPublish("device:delete", scrubDevice(val))
 
 	deleteDNSBucketForIP(val.RecentIP)
+	removeDeletedDeviceLocalMappings(devices, []DeviceEntry{val})
 }
 
 func handleDeleteDevices(w http.ResponseWriter, r *http.Request) {
@@ -1566,6 +1567,7 @@ func handleDeleteDevices(w http.ResponseWriter, r *http.Request) {
 			SprbusPublish("device:delete", scrubDevice(val))
 			deleteDNSBucketForIP(val.RecentIP)
 		}
+		removeDeletedDeviceLocalMappings(devices, deletedVals)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -1865,6 +1867,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 	if exists {
 		//updating an existing entry. Check what was requested
 		previousRecentIP := val.RecentIP
+		previousName := val.Name
 
 		if dev.Name != "" {
 			val.Name = dev.Name
@@ -1969,6 +1972,16 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 
 		devices[identity] = val
 		saveDevicesJson(devices)
+
+		if val.Name != previousName || val.RecentIP != previousRecentIP {
+			updateDeviceLocalMappings(devices, deviceLocalMappingUpdate{
+				Key:          identity,
+				PreviousName: previousName,
+				Name:         val.Name,
+				PreviousIP:   previousRecentIP,
+				IP:           val.RecentIP,
+			})
+		}
 
 		if pskModified {
 			//psks updated -- update hostapd
@@ -3471,6 +3484,9 @@ func main() {
 	external_router_authenticated.HandleFunc("/setup_done", finalizeSetup).Methods("PUT")
 
 	external_router_authenticated.HandleFunc("/dnsSettings", dnsSettings).Methods("GET", "PUT")
+	external_router_authenticated.HandleFunc("/dnsHostnames", dnsHostnames).Methods("GET")
+	external_router_authenticated.HandleFunc("/dnsHostnames/{hostname}", dnsHostnameOverride).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/dnsHostnames/{hostname}/reset", dnsHostnameReset).Methods("PUT")
 	external_router_authenticated.HandleFunc("/dns/hostnames/{hostname}", dnsHostname).Methods("GET", "PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/multicastSettings", multicastSettings).Methods("GET", "PUT")
 	external_router_authenticated.HandleFunc("/customThemes", customThemes).Methods("GET", "PUT")

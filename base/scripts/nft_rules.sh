@@ -31,6 +31,14 @@ nft flush ruleset
 
 nft -f - << EOF
 
+# CVE-2026-98432 hardening: drop TCP SYNs that carry IPv4 options
+table inet cve2026_98432 {
+  chain prerouting {
+    type filter hook prerouting priority raw; policy accept;
+    ip hdrlength > 5 tcp flags & (fin | syn | rst | ack) == syn counter drop
+  }
+}
+
 table inet filter {
   # this set contains uplink interfaces wired or wireless even
   # dynamically updated for multi-wan

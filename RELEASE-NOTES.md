@@ -1,6 +1,14 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.2.20
+**Improvements**
+- New hostnames page
+**Fixes**
+- Fix UI loading for LFS
+- Make DHCP names sticky
+- Workaround for IPv4 UAF in linux
+
 ## 1.2.19
 **Improvemens**
 - Assistant experiment has a new model option
