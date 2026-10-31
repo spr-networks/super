@@ -464,10 +464,11 @@ const DNSLogHistoryList = (props) => {
   }
 
   useEffect(() => {
+    let text = filterText ? encodeURIComponent(filterText) : ':text'
     if (filterIps.length) {
-      navigate(`/admin/dnsLog/${filterIps.join(',')}/${filterText || ':text'}`)
+      navigate(`/admin/dnsLog/${filterIps.join(',')}/${text}`)
     } else {
-      navigate(`/admin/dnsLog/:ips/${filterText || ':text'}`)
+      navigate(`/admin/dnsLog/:ips/${text}`)
     }
   }, [filterIps, filterText])
 
