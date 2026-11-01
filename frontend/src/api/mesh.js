@@ -46,8 +46,12 @@ export default class APIMesh extends API {
     return this.get(`macsec/status`);
   }
 
-  setLeafMACsec(data) {
-    return this.put(`leafRouter/macsec`, data);
+  setLeafBackhaul(data) {
+    return this.put(`leafRouter/backhaul`, data);
+  }
+
+  testLeafMTU(data) {
+    return this.put(`leafRouter/backhaul/mtu`, data);
   }
 
   meshIter(protocb) {

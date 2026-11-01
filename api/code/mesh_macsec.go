@@ -19,6 +19,7 @@ type MeshMACsecLink struct {
 	Interface string
 	Parent    string
 	LeafMAC   string
+	Mode      string `json:",omitempty"`
 	Secured   bool
 	Pending   bool `json:",omitempty"`
 }
@@ -33,7 +34,7 @@ var MeshMACsecmtx sync.RWMutex
 var gMeshMACsec MeshMACsecState
 var MeshMACsecStateFile = TEST_PREFIX + "/state/api/mesh_macsec.json"
 
-var meshMACsecIsSecY = isMACsecInterface
+var meshMACsecIsSecY = isMeshBackhaulInterface
 var meshMACsecFetch = fetchMeshMACsecStatus
 var meshMACsecPluginEnabled = func() bool { return PluginEnabled("MESH") }
 var meshMACsecApplySets = applyMeshMACsecInterfaceSets
@@ -71,6 +72,9 @@ func sanitizeMeshMACsecState(raw MeshMACsecState) MeshMACsecState {
 		if mac, ok := normalizeMeshMAC(link.LeafMAC); ok {
 			clean.LeafMAC = mac
 		}
+		if link.Mode == "wireguard" || link.Mode == "macsec" {
+			clean.Mode = link.Mode
+		}
 		if !clean.Secured || clean.Interface == "" {
 			clean.Secured = false
 		}
@@ -101,22 +105,44 @@ func (s MeshMACsecState) isLinkIface(iface string) bool {
 	return false
 }
 
-func (s MeshMACsecState) pinnedIface(mac string, ip string) (iface string, pinned bool) {
+func (s MeshMACsecState) pinnedLink(mac string, ip string) (MeshMACsecLink, bool) {
 	if mac, ok := normalizeMeshMAC(mac); ok {
 		for _, link := range s.Links {
 			if link.LeafMAC == mac {
-				return link.Interface, true
+				return link, true
 			}
 		}
 	}
 	if addr := net.ParseIP(ip); addr != nil {
 		for _, link := range s.Links {
 			if link.LeafIP != "" && link.LeafIP == addr.String() {
-				return link.Interface, true
+				return link, true
 			}
 		}
 	}
-	return "", false
+	return MeshMACsecLink{}, false
+}
+
+func meshLinkLabel(mode string) string {
+	if mode == "wireguard" {
+		return "Encrypted Link (WireGuard)"
+	}
+	return "Encrypted Link (MACsec)"
+}
+
+func (s MeshMACsecState) linkLabel() string {
+	label := ""
+	for _, link := range s.Links {
+		next := meshLinkLabel(link.Mode)
+		if label != "" && label != next {
+			return "Encrypted Link"
+		}
+		label = next
+	}
+	if label == "" {
+		return "Encrypted Link"
+	}
+	return label
 }
 
 func meshMACsecAPInterfaces(interfaces []InterfaceConfig) []string {
@@ -148,21 +174,29 @@ func meshMACsecWifiAllowed(s MeshMACsecState, iface string, apIfaces []string) b
 	return false
 }
 
-var errMeshMACsecPinned = errors.New("Mesh node detected on non MACsec link")
-var errMeshMACsecPlaintext = errors.New("MACsec is enforced, reject plaintext ethernet")
+var errMeshMACsecPinned = errors.New("Mesh node detected on non Encrypted Link")
+var errMeshMACsecPlaintext = errors.New("Encrypted Link is enforced, reject plaintext ethernet")
+
+type meshLinkError struct {
+	err  error
+	text string
+}
+
+func (e meshLinkError) Error() string { return e.text }
+func (e meshLinkError) Unwrap() error { return e.err }
 
 func meshMACsecCheckDHCP(s MeshMACsecState, mac string, recentIP string, iface string, wifi bool, apIfaces []string) error {
 	if s.Role != "main" {
 		return nil
 	}
-	if pinned, ok := s.pinnedIface(mac, recentIP); ok {
-		if pinned == "" || pinned != iface {
-			return errMeshMACsecPinned
+	if pinned, ok := s.pinnedLink(mac, recentIP); ok {
+		if pinned.Interface == "" || pinned.Interface != iface {
+			return meshLinkError{errMeshMACsecPinned, "Mesh node detected on non " + meshLinkLabel(pinned.Mode)}
 		}
 		return nil
 	}
 	if s.Strict && wifi && !meshMACsecWifiAllowed(s, iface, apIfaces) {
-		return errMeshMACsecPlaintext
+		return meshLinkError{errMeshMACsecPlaintext, s.linkLabel() + " is enforced, reject plaintext ethernet"}
 	}
 	return nil
 }
@@ -171,8 +205,8 @@ func meshMACsecRouteIface(s MeshMACsecState, mac string, ip string, candidate st
 	if s.Role != "main" {
 		return candidate, true
 	}
-	if pinned, ok := s.pinnedIface(mac, ip); ok {
-		return pinned, pinned != ""
+	if pinned, ok := s.pinnedLink(mac, ip); ok {
+		return pinned.Interface, pinned.Interface != ""
 	}
 	if s.Strict && wifi && !meshMACsecWifiAllowed(s, candidate, apIfaces) {
 		return "", false

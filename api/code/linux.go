@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/vishvananda/netlink"
@@ -234,10 +235,16 @@ func openFileNoSymlinks(path string, flags int, perm os.FileMode) (*os.File, err
 	return os.NewFile(uintptr(fd), path), nil
 }
 
-func isMACsecInterface(name string) bool {
+func isMeshBackhaulInterface(name string) bool {
 	link, err := netlink.LinkByName(name)
 	if err != nil {
 		return false
 	}
-	return link.Type() == "macsec"
+	switch link.Type() {
+	case "macsec":
+		return true
+	case "vxlan":
+		return strings.HasPrefix(name, "mshvx")
+	}
+	return false
 }

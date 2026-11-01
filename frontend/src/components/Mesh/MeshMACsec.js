@@ -2,10 +2,11 @@ import React, { useContext, useEffect, useState } from 'react'
 
 import {
   Box,
+  Button,
+  ButtonText,
   FlatList,
   Heading,
   HStack,
-  Switch,
   Text,
   VStack
 } from '@gluestack-ui/themed'
@@ -13,6 +14,7 @@ import {
 import { AlertContext } from 'AppContext'
 import { meshAPI } from 'api'
 import { ListHeader, ListItem } from 'components/List'
+import { Select } from 'components/Select'
 
 export const useMACsecLinks = () => {
   const [links, setLinks] = useState({})
@@ -39,45 +41,107 @@ export const useMACsecLinks = () => {
   return [links, refresh]
 }
 
-const macsecLabel = (leaf, link) => {
+const backhaulOptions = [
+  { label: 'Off', value: 'off' },
+  { label: 'WireGuard', value: 'wireguard' },
+  { label: 'MACsec', value: 'macsec' }
+]
+
+const backhaulValue = (leaf) => {
+  if (leaf.MACsec?.Enabled) {
+    return leaf.MACsec.Mode == 'wireguard' ? 'wireguard' : 'macsec'
+  }
+  return leaf.MACsecPending ? 'wireguard' : 'off'
+}
+
+const statusLabel = (leaf, link) => {
   if (link?.Error) {
     return link.Error
   }
   if (leaf.MACsec?.Enabled) {
-    return link?.Secured ? 'Encrypted' : 'Negotiating'
+    if (!link?.Secured) {
+      return 'Negotiating'
+    }
+    return link.Underlay ? `Encrypted, MTU ${link.Underlay}` : 'Encrypted'
   }
   return leaf.MACsecPending ? 'Pending' : 'Off'
 }
 
-export const MACsecSwitch = ({ leaf, link, onChange, ...props }) => {
+const errorText = async (err) => {
+  let msg = err?.message
+  try {
+    msg = (await err?.response?.text()) || msg
+  } catch (e) {}
+  return msg
+}
+
+export const BackhaulControl = ({ leaf, link, onChange, ...props }) => {
   const context = useContext(AlertContext)
   const [busy, setBusy] = useState(false)
-  const enabled = !!leaf.MACsec?.Enabled || !!leaf.MACsecPending
+  const value = backhaulValue(leaf)
 
-  const toggle = () => {
+  const done = () => {
+    setBusy(false)
+    if (onChange) onChange()
+  }
+
+  const select = (next) => {
+    if (next == value) {
+      return
+    }
+    setBusy(true)
+    const data =
+      next == 'off'
+        ? { IP: leaf.IP, Enable: false }
+        : { IP: leaf.IP, Enable: true, Mode: next }
+    meshAPI
+      .setLeafBackhaul(data)
+      .then(done)
+      .catch(async (err) => {
+        context.error('Wired encryption update failed', await errorText(err))
+        done()
+      })
+  }
+
+  const testJumbo = () => {
     setBusy(true)
     meshAPI
-      .setLeafMACsec({ IP: leaf.IP, Enable: !enabled })
-      .then(() => {
-        setBusy(false)
-        if (onChange) onChange()
+      .testLeafMTU({ IP: leaf.IP })
+      .then((result) => {
+        if (result?.Jumbo) {
+          context.success(`Jumbo frames supported, MTU ${result.UnderlayMTU}`)
+        } else {
+          context.info(`Jumbo frames not supported, MTU ${result?.UnderlayMTU}`)
+        }
+        done()
       })
       .catch(async (err) => {
-        setBusy(false)
-        let msg = err?.message
-        try {
-          msg = (await err?.response?.text()) || msg
-        } catch (e) {}
-        context.error('MACsec update failed', msg)
-        if (onChange) onChange()
+        context.error('Jumbo frame test failed', await errorText(err))
+        done()
       })
   }
 
   return (
-    <HStack space="sm" alignItems="center" {...props}>
-      <Switch value={enabled} isDisabled={busy} onValueChange={toggle} />
-      <Text size="sm">{macsecLabel(leaf, link)}</Text>
-    </HStack>
+    <VStack space="xs" {...props}>
+      <HStack space="sm" alignItems="center">
+        <Select selectedValue={value} isDisabled={busy} onValueChange={select}>
+          {backhaulOptions.map((opt) => (
+            <Select.Item key={opt.value} label={opt.label} value={opt.value} />
+          ))}
+        </Select>
+        {leaf.MACsec?.Enabled ? (
+          <Button
+            size="xs"
+            variant="outline"
+            isDisabled={busy}
+            onPress={testJumbo}
+          >
+            <ButtonText>Test jumbo frames</ButtonText>
+          </Button>
+        ) : null}
+      </HStack>
+      <Text size="sm">{statusLabel(leaf, link)}</Text>
+    </VStack>
   )
 }
 
@@ -119,7 +183,7 @@ export const MeshLinks = () => {
           Interface
         </Heading>
         <Heading size="sm" flex={3}>
-          MACsec
+          Wired Encryption
         </Heading>
       </HStack>
       <FlatList
@@ -143,7 +207,7 @@ export const MeshLinks = () => {
                   </Text>
                 ) : null}
               </VStack>
-              <MACsecSwitch
+              <BackhaulControl
                 flex={3}
                 leaf={item}
                 link={link}

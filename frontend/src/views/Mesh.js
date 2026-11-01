@@ -23,7 +23,7 @@ import {
 
 import ModalForm from 'components/ModalForm'
 import AddLeafRouter from 'components/Mesh/AddLeafRouter'
-import { MACsecSwitch, useMACsecLinks } from 'components/Mesh/MeshMACsec'
+import { BackhaulControl, useMACsecLinks } from 'components/Mesh/MeshMACsec'
 import { ListHeader, ListItem } from 'components/List'
 import TokenItem from 'components/TokenItem'
 
@@ -322,7 +322,7 @@ const Mesh = (props) => {
                   <Heading size="sm">Router IP</Heading>
                   <Heading size="sm">Status</Heading>
                   <Heading size="sm">SPR Version</Heading>
-                  <Heading size="sm">MACsec</Heading>
+                  <Heading size="sm">Wired Encryption</Heading>
                   <Heading size="sm">Token</Heading>
                   <Text></Text>
                 </HStack>
@@ -333,7 +333,7 @@ const Mesh = (props) => {
                 <Text flex={2}>{item.IP}</Text>
                 <Text flex={3}>{item.status}</Text>
                 <Text flex={2}>{item.version}</Text>
-                <MACsecSwitch
+                <BackhaulControl
                   flex={2}
                   leaf={item}
                   link={macsecLinks[item.IP]}

@@ -52,8 +52,8 @@ func TestSanitizeMeshMACsecState(t *testing.T) {
 		t.Fatalf("non-main role kept: %+v", got)
 	}
 	raw := MeshMACsecState{Role: "main", Strict: true, Links: []MeshMACsecLink{
-		{LeafIP: "192.168.2.10", Interface: "macsec0", Parent: "eth1", LeafMAC: "00:11:22:33:44:AA", Secured: true},
-		{LeafIP: "192.168.2.11", Interface: "eth1", Parent: "eth2", LeafMAC: "00:11:22:33:44:bb", Secured: true},
+		{LeafIP: "192.168.2.10", Interface: "macsec0", Parent: "eth1", LeafMAC: "00:11:22:33:44:AA", Mode: "wireguard", Secured: true},
+		{LeafIP: "192.168.2.11", Interface: "eth1", Parent: "eth2", LeafMAC: "00:11:22:33:44:bb", Mode: "wireguard; x", Secured: true},
 		{LeafIP: "192.168.2.12", Interface: "macsec1;reboot", Parent: "eth1", LeafMAC: "00:11:22:33:44:cc", Secured: true},
 		{LeafIP: "192.168.2.13", Interface: "macsec0", Parent: "eth1", LeafMAC: "00:11:22:33:44:dd", Secured: true},
 		{LeafIP: "not-an-ip", Interface: "macsec2", Parent: "eth1;x", LeafMAC: "bogus", Secured: true},
@@ -64,7 +64,7 @@ func TestSanitizeMeshMACsecState(t *testing.T) {
 		t.Fatalf("got %+v", got)
 	}
 	want := []MeshMACsecLink{
-		{LeafIP: "192.168.2.10", Interface: "macsec0", Parent: "eth1", LeafMAC: "00:11:22:33:44:aa", Secured: true},
+		{LeafIP: "192.168.2.10", Interface: "macsec0", Parent: "eth1", LeafMAC: "00:11:22:33:44:aa", Mode: "wireguard", Secured: true},
 		{LeafIP: "192.168.2.11", Interface: "", Parent: "eth2", LeafMAC: "00:11:22:33:44:bb"},
 		{LeafIP: "192.168.2.12", Interface: "", Parent: "eth1", LeafMAC: "00:11:22:33:44:cc"},
 		{LeafIP: "192.168.2.13", Interface: "", Parent: "eth1", LeafMAC: "00:11:22:33:44:dd"},
@@ -122,6 +122,33 @@ func TestMeshMACsecCheckDHCP(t *testing.T) {
 	for _, c := range cases {
 		if got := meshMACsecCheckDHCP(c.state, c.mac, c.recentIP, c.iface, c.wifi, testAPIfaces); !errors.Is(got, c.want) {
 			t.Errorf("%s: got %v want %v", c.name, got, c.want)
+		}
+	}
+}
+
+func TestMeshMACsecErrorsNameTheLink(t *testing.T) {
+	wg := strictMeshState()
+	for i := range wg.Links {
+		wg.Links[i].Mode = "wireguard"
+	}
+	mixed := strictMeshState()
+	mixed.Links[0].Mode = "wireguard"
+	mixed.Links[1].Mode = "macsec"
+	cases := []struct {
+		state MeshMACsecState
+		mac   string
+		wifi  bool
+		want  string
+	}{
+		{strictMeshState(), testLeafMAC, false, "Mesh node detected on non Encrypted Link (MACsec)"},
+		{wg, testLeafMAC, false, "Mesh node detected on non Encrypted Link (WireGuard)"},
+		{strictMeshState(), testStationMAC, true, "Encrypted Link (MACsec) is enforced, reject plaintext ethernet"},
+		{wg, testStationMAC, true, "Encrypted Link (WireGuard) is enforced, reject plaintext ethernet"},
+		{mixed, testStationMAC, true, "Encrypted Link is enforced, reject plaintext ethernet"},
+	}
+	for _, c := range cases {
+		if got := meshMACsecCheckDHCP(c.state, c.mac, "", "eth1", c.wifi, testAPIfaces); got == nil || got.Error() != c.want {
+			t.Errorf("got %v want %q", got, c.want)
 		}
 	}
 }

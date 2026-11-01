@@ -4418,8 +4418,12 @@ export default function MockAPI(props = null) {
         return { Role: 'main', Strict: false, Links: [] }
       })
 
-      this.put('/plugins/mesh/leafRouter/macsec', (schema, request) => {
+      this.put('/plugins/mesh/leafRouter/backhaul', (schema, request) => {
         return { Role: 'main', Strict: false, Links: [] }
+      })
+
+      this.put('/plugins/mesh/leafRouter/backhaul/mtu', (schema, request) => {
+        return { UnderlayMTU: 9000, Jumbo: true, LinkMTU: 1500 }
       })
 
       this.get('/release', (schema, request) => {

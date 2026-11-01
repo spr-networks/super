@@ -448,6 +448,6 @@ func openFileNoSymlinks(path string, flags int, perm os.FileMode) (*os.File, err
 	return os.OpenFile(path, flags|syscall.O_NOFOLLOW, perm)
 }
 
-func isMACsecInterface(name string) bool {
+func isMeshBackhaulInterface(name string) bool {
 	return false
 }

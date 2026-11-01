@@ -1,7 +1,9 @@
 import 'react-native'
 import React from 'react'
-import { render, waitFor, fireEvent } from 'test-utils'
-import { MeshLinks, MACsecSwitch } from 'components/Mesh/MeshMACsec'
+import { act, render, waitFor, fireEvent } from 'test-utils'
+import { MeshLinks, BackhaulControl } from 'components/Mesh/MeshMACsec'
+import { Select } from 'components/Select'
+import { AlertContext } from 'AppContext'
 import { meshAPI } from 'api'
 
 jest.mock('api', () => ({
@@ -9,15 +11,30 @@ jest.mock('api', () => ({
     leafMode: jest.fn(),
     leafRouters: jest.fn(),
     macsecStatus: jest.fn(),
-    setLeafMACsec: jest.fn()
+    setLeafBackhaul: jest.fn(),
+    testLeafMTU: jest.fn()
   }
 }))
 
 const leaves = [
-  { IP: '192.168.2.10', MACsec: { Enabled: true, Parent: 'eth1' } },
+  {
+    IP: '192.168.2.10',
+    MACsec: { Enabled: true, Mode: 'wireguard', Parent: 'eth1' }
+  },
   { IP: '192.168.2.14', MACsecPending: true },
   { IP: '192.168.2.18' }
 ]
+
+const alerts = () => ({ error: jest.fn(), success: jest.fn(), info: jest.fn() })
+
+const renderControl = (leaf, link, alertsValue = alerts()) => {
+  const view = render(
+    <AlertContext.Provider value={alertsValue}>
+      <BackhaulControl leaf={leaf} link={link} />
+    </AlertContext.Provider>
+  )
+  return { ...view, alerts: alertsValue }
+}
 
 beforeEach(() => {
   jest.clearAllMocks()
@@ -28,21 +45,24 @@ beforeEach(() => {
     Links: [
       {
         LeafIP: '192.168.2.10',
-        Interface: 'macsec0',
+        Interface: 'mshvx2',
         Parent: 'eth1',
+        Mode: 'wireguard',
+        Underlay: 9000,
         Secured: true
       },
       { LeafIP: '192.168.2.14', Pending: true }
     ]
   })
-  meshAPI.setLeafMACsec.mockResolvedValue({})
+  meshAPI.setLeafBackhaul.mockResolvedValue({})
 })
 
-it('lists mesh links and their MACsec state in link settings', async () => {
+it('lists mesh links and their wired encryption state in link settings', async () => {
   const { findByText, getByText } = render(<MeshLinks />)
   await findByText('Mesh Links')
-  await findByText('Encrypted')
-  expect(getByText('macsec0')).toBeTruthy()
+  await findByText('Encrypted, MTU 9000')
+  expect(getByText('Wired Encryption')).toBeTruthy()
+  expect(getByText('mshvx2')).toBeTruthy()
   expect(getByText('Pending')).toBeTruthy()
   expect(getByText('Off')).toBeTruthy()
 })
@@ -62,42 +82,74 @@ it('hides mesh links without the mesh plugin', async () => {
   expect(queryByText('Mesh Links')).toBeNull()
 })
 
-it('enables MACsec for a leaf', async () => {
-  const onChange = jest.fn()
-  const { getByRole } = render(
-    <MACsecSwitch leaf={{ IP: '192.168.2.18' }} onChange={onChange} />
-  )
-  fireEvent(getByRole('switch'), 'valueChange', true)
-  await waitFor(() =>
-    expect(meshAPI.setLeafMACsec).toHaveBeenCalledWith({
-      IP: '192.168.2.18',
-      Enable: true
-    })
-  )
-  await waitFor(() => expect(onChange).toHaveBeenCalled())
+it('switches a mesh node between off, WireGuard and MACsec', async () => {
+  const { UNSAFE_getByType } = renderControl({ IP: '192.168.2.18' })
+  const select = UNSAFE_getByType(Select)
+  expect(select.props.selectedValue).toBe('off')
+  await act(async () => select.props.onValueChange('wireguard'))
+  expect(meshAPI.setLeafBackhaul).toHaveBeenLastCalledWith({
+    IP: '192.168.2.18',
+    Enable: true,
+    Mode: 'wireguard'
+  })
+  await act(async () => select.props.onValueChange('macsec'))
+  expect(meshAPI.setLeafBackhaul).toHaveBeenLastCalledWith({
+    IP: '192.168.2.18',
+    Enable: true,
+    Mode: 'macsec'
+  })
 })
 
-it('disables MACsec and cancels a pending request', async () => {
-  const { getByRole } = render(
-    <MACsecSwitch leaf={{ IP: '192.168.2.14', MACsecPending: true }} />
-  )
-  fireEvent(getByRole('switch'), 'valueChange', false)
-  await waitFor(() =>
-    expect(meshAPI.setLeafMACsec).toHaveBeenCalledWith({
-      IP: '192.168.2.14',
-      Enable: false
-    })
-  )
+it('turns encryption off', async () => {
+  const { UNSAFE_getByType } = renderControl({
+    IP: '192.168.2.10',
+    MACsec: { Enabled: true, Mode: 'wireguard' }
+  })
+  const select = UNSAFE_getByType(Select)
+  expect(select.props.selectedValue).toBe('wireguard')
+  await act(async () => select.props.onValueChange('off'))
+  expect(meshAPI.setLeafBackhaul).toHaveBeenLastCalledWith({
+    IP: '192.168.2.10',
+    Enable: false
+  })
 })
 
 it('shows the error reported for the link', () => {
-  const { getByText } = render(
-    <MACsecSwitch
-      leaf={{ IP: '192.168.2.14', MACsecPending: true }}
-      link={{ Error: 'kernel MACsec support (macsec module) is unavailable' }}
-    />
+  const { getByText } = renderControl(
+    { IP: '192.168.2.14', MACsecPending: true },
+    { Error: 'Encrypted Link (WireGuard) not up on eth1' }
   )
-  expect(
-    getByText('kernel MACsec support (macsec module) is unavailable')
-  ).toBeTruthy()
+  expect(getByText('Encrypted Link (WireGuard) not up on eth1')).toBeTruthy()
+})
+
+it('tests jumbo frames for an encrypted mesh node', async () => {
+  meshAPI.testLeafMTU.mockResolvedValueOnce({
+    UnderlayMTU: 9000,
+    Jumbo: true,
+    LinkMTU: 1500
+  })
+  const { getByText, alerts: a } = renderControl({
+    IP: '192.168.2.10',
+    MACsec: { Enabled: true, Mode: 'wireguard' }
+  })
+  fireEvent.press(getByText('Test jumbo frames'))
+  await waitFor(() =>
+    expect(a.success).toHaveBeenCalledWith('Jumbo frames supported, MTU 9000')
+  )
+  expect(meshAPI.testLeafMTU).toHaveBeenCalledWith({ IP: '192.168.2.10' })
+
+  meshAPI.testLeafMTU.mockResolvedValueOnce({
+    UnderlayMTU: 1500,
+    Jumbo: false,
+    LinkMTU: 1390
+  })
+  fireEvent.press(getByText('Test jumbo frames'))
+  await waitFor(() =>
+    expect(a.info).toHaveBeenCalledWith('Jumbo frames not supported, MTU 1500')
+  )
+})
+
+it('offers the jumbo frame test only when encryption is on', () => {
+  const { queryByText } = renderControl({ IP: '192.168.2.18' })
+  expect(queryByText('Test jumbo frames')).toBeNull()
 })

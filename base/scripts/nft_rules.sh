@@ -294,6 +294,8 @@ table inet filter {
 
     #jump USERDEF_INPUT
     iif lo counter accept
+    iifname != @uplink_interfaces ip daddr 169.254.83.1 udp dport 51821 counter accept
+    iifname "wgmesh" ip daddr 169.254.84.1 udp dport 4789 counter accept
 
     # block lan ranges from uplink interfaces
     iifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGINP

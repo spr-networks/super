@@ -243,12 +243,12 @@ class AddLeafRouterImpl extends React.Component {
           value="macsec"
           isChecked={this.state.MACsec}
           onChange={(value) => this.handleChange('MACsec', value)}
-          accessibilityLabel="Encrypt wired link (MACsec)"
+          accessibilityLabel="Encrypt wired link"
         >
           <CheckboxIndicator mr="$2">
             <CheckboxIcon />
           </CheckboxIndicator>
-          <CheckboxLabel>Encrypt wired link (MACsec)</CheckboxLabel>
+          <CheckboxLabel>Encrypt wired link</CheckboxLabel>
         </Checkbox>
 
         <Button action="primary" size="md" onPress={this.handleSubmit}>
