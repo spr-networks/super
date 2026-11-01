@@ -2,7 +2,7 @@
 # check=skip=InvalidDefaultArgInFrom
 ARG ALPINE_REF=alpine@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
 ARG UBUNTU_REF=ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852
-ARG CONTAINER_TEMPLATE_REF=ghcr.io/spr-networks/container_template@sha256:f49c51e1c57cafd60f4137f0810e3edfc7392f92cf5d106ed61a66c04d9277af
+ARG CONTAINER_TEMPLATE_REF=ghcr.io/spr-networks/container_template@sha256:1a79b53baae1d2bd9470ea9029b9680580147b872fb224880ed5e91312c12167
 ARG SOURCE_DATE_EPOCH
 
 FROM ${ALPINE_REF} AS cacerts
@@ -34,7 +34,7 @@ RUN set -eux; \
 
 FROM ${UBUNTU_REF} AS builder
 ENV DEBIAN_FRONTEND=noninteractive
-ARG UBUNTU_SNAPSHOT=20261028T000000Z
+ARG UBUNTU_SNAPSHOT=20261101T000000Z
 ARG GO_VERSION=1.26.10
 ARG GO_SHA256_AMD64=ccfe7ae822d2c2f41f4fe7c956199967a4dac22d0ee0d2b2bfdb440aab3b20c5
 ARG GO_SHA256_ARM64=3f4227ce7b206a513e794f1393adb473a07b46e94d18bd15d1c684bbb7319797
@@ -98,7 +98,7 @@ RUN make install
 
 FROM ${CONTAINER_TEMPLATE_REF}
 ENV DEBIAN_FRONTEND=noninteractive
-ARG UBUNTU_SNAPSHOT=20261028T000000Z
+ARG UBUNTU_SNAPSHOT=20261101T000000Z
 RUN set -eux; \
     printf 'Types: deb\nURIs: https://snapshot.ubuntu.com/ubuntu/%s\nSuites: noble noble-updates noble-security\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' "${UBUNTU_SNAPSHOT}" > /etc/apt/sources.list.d/ubuntu.sources; \
     printf 'APT::Install-Recommends "false";\nAcquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99reproducible

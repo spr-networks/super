@@ -1,10 +1,10 @@
 {
   "kernel": {
-    "release": "v6.18.59-1",
+    "release": "v6.18.59-2",
     "version": "6.18.59",
     "modDirVersion": "6.18.59-v8-16k+",
-    "url": "https://github.com/spr-networks/spr-debian-kernel/releases/download/v6.18.59-1/linux-image-6.18.59-v8-16k%2B_1.rpi.trixie_arm64.deb",
-    "hash": "sha256-R9wTOwjZ0dTORsXioTl4+rzL2Nd6EQtQ8dBmQPte92I="
+    "url": "https://github.com/spr-networks/spr-debian-kernel/releases/download/v6.18.59-2/linux-image-6.18.59-v8-16k%2B_2.rpi.trixie_arm64.deb",
+    "hash": "sha256-EmOOnwMnDCdIytIPOGw5nQqWwXm4grfUgy/eRbeITQw="
   },
   "go": "sha256-/WPog7ovK/ypPBZGsx6+9j4rHk0rMXyXidl2po2B828=",
   "src": {
