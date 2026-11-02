@@ -123,24 +123,28 @@ export const BackhaulControl = ({ leaf, link, onChange, ...props }) => {
 
   return (
     <VStack space="xs" {...props}>
-      <HStack space="sm" alignItems="center">
-        <Select selectedValue={value} isDisabled={busy} onValueChange={select}>
-          {backhaulOptions.map((opt) => (
-            <Select.Item key={opt.value} label={opt.label} value={opt.value} />
-          ))}
-        </Select>
-        {leaf.MACsec?.Enabled ? (
-          <Button
-            size="xs"
-            variant="outline"
-            isDisabled={busy}
-            onPress={testJumbo}
-          >
-            <ButtonText>Test jumbo frames</ButtonText>
-          </Button>
-        ) : null}
-      </HStack>
+      <Select
+        selectedValue={value}
+        selectedLabel={backhaulOptions.find((opt) => opt.value == value)?.label}
+        isDisabled={busy}
+        onValueChange={select}
+      >
+        {backhaulOptions.map((opt) => (
+          <Select.Item key={opt.value} label={opt.label} value={opt.value} />
+        ))}
+      </Select>
       <Text size="sm">{statusLabel(leaf, link)}</Text>
+      {leaf.MACsec?.Enabled ? (
+        <Button
+          size="xs"
+          variant="link"
+          alignSelf="flex-start"
+          isDisabled={busy}
+          onPress={testJumbo}
+        >
+          <ButtonText>Test jumbo frames</ButtonText>
+        </Button>
+      ) : null}
     </VStack>
   )
 }

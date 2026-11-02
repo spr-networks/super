@@ -86,6 +86,7 @@ it('switches a mesh node between off, WireGuard and MACsec', async () => {
   const { UNSAFE_getByType } = renderControl({ IP: '192.168.2.18' })
   const select = UNSAFE_getByType(Select)
   expect(select.props.selectedValue).toBe('off')
+  expect(select.props.selectedLabel).toBe('Off')
   await act(async () => select.props.onValueChange('wireguard'))
   expect(meshAPI.setLeafBackhaul).toHaveBeenLastCalledWith({
     IP: '192.168.2.18',
@@ -107,6 +108,7 @@ it('turns encryption off', async () => {
   })
   const select = UNSAFE_getByType(Select)
   expect(select.props.selectedValue).toBe('wireguard')
+  expect(select.props.selectedLabel).toBe('WireGuard')
   await act(async () => select.props.onValueChange('off'))
   expect(meshAPI.setLeafBackhaul).toHaveBeenLastCalledWith({
     IP: '192.168.2.10',
