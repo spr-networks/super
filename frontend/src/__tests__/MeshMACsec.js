@@ -3,6 +3,7 @@ import React from 'react'
 import { act, render, waitFor, fireEvent } from 'test-utils'
 import { MeshLinks, BackhaulControl } from 'components/Mesh/MeshMACsec'
 import { Select } from 'components/Select'
+import { Switch } from '@gluestack-ui/themed'
 import { AlertContext } from 'AppContext'
 import { meshAPI } from 'api'
 
@@ -12,7 +13,7 @@ jest.mock('api', () => ({
     leafRouters: jest.fn(),
     macsecStatus: jest.fn(),
     setLeafBackhaul: jest.fn(),
-    testLeafMTU: jest.fn()
+    setLeafJumbo: jest.fn()
   }
 }))
 
@@ -55,6 +56,7 @@ beforeEach(() => {
     ]
   })
   meshAPI.setLeafBackhaul.mockResolvedValue({})
+  meshAPI.setLeafJumbo.mockResolvedValue({})
 })
 
 it('lists mesh links and their wired encryption state in link settings', async () => {
@@ -124,34 +126,43 @@ it('shows the error reported for the link', () => {
   expect(getByText('Encrypted Link (WireGuard) not up on eth1')).toBeTruthy()
 })
 
-it('tests jumbo frames for an encrypted mesh node', async () => {
-  meshAPI.testLeafMTU.mockResolvedValueOnce({
-    UnderlayMTU: 9000,
-    Jumbo: true,
-    LinkMTU: 1500
-  })
-  const { getByText, alerts: a } = renderControl({
+it('turns jumbo frames on and off for an encrypted mesh node', async () => {
+  const { UNSAFE_getByType, getByText } = renderControl({
     IP: '192.168.2.10',
     MACsec: { Enabled: true, Mode: 'wireguard' }
   })
-  fireEvent.press(getByText('Test jumbo frames'))
-  await waitFor(() =>
-    expect(a.success).toHaveBeenCalledWith('Jumbo frames supported, MTU 9000')
-  )
-  expect(meshAPI.testLeafMTU).toHaveBeenCalledWith({ IP: '192.168.2.10' })
-
-  meshAPI.testLeafMTU.mockResolvedValueOnce({
-    UnderlayMTU: 1500,
-    Jumbo: false,
-    LinkMTU: 1390
+  expect(getByText('Jumbo frames')).toBeTruthy()
+  const toggle = UNSAFE_getByType(Switch)
+  expect(toggle.props.value).toBe(false)
+  await act(async () => toggle.props.onValueChange(true))
+  expect(meshAPI.setLeafJumbo).toHaveBeenLastCalledWith({
+    IP: '192.168.2.10',
+    Jumbo: true
   })
-  fireEvent.press(getByText('Test jumbo frames'))
+})
+
+it('shows jumbo frames as on and reports a failed change', async () => {
+  meshAPI.setLeafJumbo.mockRejectedValueOnce({ message: 'leaf unreachable' })
+  const { UNSAFE_getByType, alerts: a } = renderControl({
+    IP: '192.168.2.10',
+    MACsec: { Enabled: true, Mode: 'wireguard', Jumbo: true }
+  })
+  const toggle = UNSAFE_getByType(Switch)
+  expect(toggle.props.value).toBe(true)
+  await act(async () => toggle.props.onValueChange(false))
+  expect(meshAPI.setLeafJumbo).toHaveBeenLastCalledWith({
+    IP: '192.168.2.10',
+    Jumbo: false
+  })
   await waitFor(() =>
-    expect(a.info).toHaveBeenCalledWith('Jumbo frames not supported, MTU 1500')
+    expect(a.error).toHaveBeenCalledWith(
+      'Jumbo frames update failed',
+      'leaf unreachable'
+    )
   )
 })
 
-it('offers the jumbo frame test only when encryption is on', () => {
+it('offers jumbo frames only when encryption is on', () => {
   const { queryByText } = renderControl({ IP: '192.168.2.18' })
-  expect(queryByText('Test jumbo frames')).toBeNull()
+  expect(queryByText('Jumbo frames')).toBeNull()
 })

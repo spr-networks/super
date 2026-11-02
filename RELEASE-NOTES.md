@@ -5,6 +5,7 @@
 **Improvements**
 - Mesh backhaul MACsec support for capable kernels
 **Fixes**
+- Hostap: Fix MLO VLAN handling which could leave old VIFs around, breaking connectivity 
 - Support udp for transparent sinks
 - Hostname overrides for .lan
 - Fix UI glitch with slashes on domain search

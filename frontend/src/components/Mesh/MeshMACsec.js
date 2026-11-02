@@ -2,11 +2,10 @@ import React, { useContext, useEffect, useState } from 'react'
 
 import {
   Box,
-  Button,
-  ButtonText,
   FlatList,
   Heading,
   HStack,
+  Switch,
   Text,
   VStack
 } from '@gluestack-ui/themed'
@@ -103,20 +102,13 @@ export const BackhaulControl = ({ leaf, link, onChange, ...props }) => {
       })
   }
 
-  const testJumbo = () => {
+  const setJumbo = (on) => {
     setBusy(true)
     meshAPI
-      .testLeafMTU({ IP: leaf.IP })
-      .then((result) => {
-        if (result?.Jumbo) {
-          context.success(`Jumbo frames supported, MTU ${result.UnderlayMTU}`)
-        } else {
-          context.info(`Jumbo frames not supported, MTU ${result?.UnderlayMTU}`)
-        }
-        done()
-      })
+      .setLeafJumbo({ IP: leaf.IP, Jumbo: on })
+      .then(done)
       .catch(async (err) => {
-        context.error('Jumbo frame test failed', await errorText(err))
+        context.error('Jumbo frames update failed', await errorText(err))
         done()
       })
   }
@@ -135,15 +127,15 @@ export const BackhaulControl = ({ leaf, link, onChange, ...props }) => {
       </Select>
       <Text size="sm">{statusLabel(leaf, link)}</Text>
       {leaf.MACsec?.Enabled ? (
-        <Button
-          size="xs"
-          variant="link"
-          alignSelf="flex-start"
-          isDisabled={busy}
-          onPress={testJumbo}
-        >
-          <ButtonText>Test jumbo frames</ButtonText>
-        </Button>
+        <HStack space="sm" alignItems="center">
+          <Switch
+            size="sm"
+            value={!!leaf.MACsec.Jumbo}
+            isDisabled={busy}
+            onValueChange={setJumbo}
+          />
+          <Text size="sm">Jumbo frames</Text>
+        </HStack>
       ) : null}
     </VStack>
   )

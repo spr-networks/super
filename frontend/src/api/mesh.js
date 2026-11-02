@@ -50,8 +50,8 @@ export default class APIMesh extends API {
     return this.put(`leafRouter/backhaul`, data);
   }
 
-  testLeafMTU(data) {
-    return this.put(`leafRouter/backhaul/mtu`, data);
+  setLeafJumbo(data) {
+    return this.put(`leafRouter/backhaul/jumbo`, data);
   }
 
   meshIter(protocb) {
