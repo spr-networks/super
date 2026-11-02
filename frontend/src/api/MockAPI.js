@@ -4414,6 +4414,18 @@ export default function MockAPI(props = null) {
         return true
       })
 
+      this.get('/plugins/mesh/macsec/status', (schema, request) => {
+        return { Role: 'main', Strict: false, Links: [] }
+      })
+
+      this.put('/plugins/mesh/leafRouter/backhaul', (schema, request) => {
+        return { Role: 'main', Strict: false, Links: [] }
+      })
+
+      this.put('/plugins/mesh/leafRouter/backhaul/jumbo', (schema, request) => {
+        return { Role: 'main', Strict: false, Links: [] }
+      })
+
       this.get('/release', (schema, request) => {
         return {
           CustomChannel: '-dev',

@@ -125,6 +125,7 @@ type DeviceEntry struct {
 	DHCPFirstTime     string
 	DHCPLastTime      string
 	DHCPLastInterface string
+	DHCPHostname      string `json:",omitempty"`
 	Style             DeviceStyle
 	DeviceExpiration  int64
 	DeleteExpiration  bool
@@ -2546,30 +2547,23 @@ func updateArp(Ifname string, IP string, MAC string) {
 var LocalMappingsmtx sync.Mutex
 
 func updateLocalMappings(IP string, Name string) {
+	mapping, err := normalizeDNSHostnameMapping(DNSHostnameMapping{Hostname: Name + ".lan", IPAddress: IP})
+	if err != nil {
+		log.Println("refusing local DNS mapping", IP, err)
+		return
+	}
 
 	LocalMappingsmtx.Lock()
 	defer LocalMappingsmtx.Unlock()
 
-	data, err := ioutil.ReadFile(LocalMappingsPath)
+	mappings, err := readDNSHostnameMappingsLocked()
 	if err != nil {
-		data = []byte{}
+		log.Println("failed to read local DNS mappings", err)
+		return
 	}
-	entryName := Name + ".lan"
-	new_data := ""
-	for _, line := range strings.Split(string(data), "\n") {
-		pieces := strings.Split(line, " ")
-		if len(pieces) < 2 {
-			continue
-		}
-		ip := pieces[0]
-		hostname := pieces[1]
-		if entryName == hostname {
-			continue
-		}
-		new_data += ip + " " + hostname + "\n"
+	if err := writeDNSHostnameMappingsLocked(upsertDNSHostnameMapping(mappings, mapping)); err != nil {
+		log.Println("failed to write local DNS mappings", err)
 	}
-	new_data += IP + " " + entryName + "\n"
-	ioutil.WriteFile(LocalMappingsPath, []byte(new_data), 0600)
 }
 
 func refreshWireguardDevice(MAC string, IP string, PublicKey string, Iface string, Name string, Create bool) {

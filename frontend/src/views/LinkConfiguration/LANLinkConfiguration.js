@@ -51,6 +51,7 @@ import { Address4 } from 'ip-address'
 import { Select } from 'components/Select'
 import { ListHeader, ListItem } from 'components/List'
 import { InterfaceTypeItem } from 'components/TagItem'
+import { MeshLinks } from 'components/Mesh/MeshMACsec'
 
 const LANLinkSetIP = ({ curItem, iface, onSubmit, ...props }) => {
   const type = 'ip'
@@ -654,6 +655,8 @@ const LANLinkInfo = (props) => {
             </ListItem>
           )}
         />
+
+        <MeshLinks />
 
         <Modal
           isOpen={showModal}

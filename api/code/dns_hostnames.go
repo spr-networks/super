@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -12,6 +13,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"syscall"
 
 	"github.com/gorilla/mux"
 )
@@ -66,6 +68,11 @@ func isReservedDNSHostname(hostname string) bool {
 	return hostname == "spr.lan" || strings.HasSuffix(hostname, ".spr.lan")
 }
 
+func isDiscoveryDNSHostname(hostname string) bool {
+	label, _, _ := strings.Cut(hostname, ".")
+	return label == "wpad" || label == "isatap"
+}
+
 func isDNSHostnameCGNAT(ip net.IP) bool {
 	ip4 := ip.To4()
 	return ip4 != nil && ip4[0] == 100 && ip4[1] >= 64 && ip4[1] <= 127
@@ -107,9 +114,9 @@ func upsertDNSHostnameMapping(mappings []DNSHostnameMapping, mapping DNSHostname
 }
 
 func readDNSHostnameMappingsLocked() ([]DNSHostnameMapping, error) {
-	file, err := os.Open(LocalMappingsPath)
+	file, err := os.OpenFile(LocalMappingsPath, os.O_RDONLY|syscall.O_NOFOLLOW, 0)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if os.IsNotExist(err) || errors.Is(err, syscall.ELOOP) {
 			return []DNSHostnameMapping{}, nil
 		}
 		return nil, err
@@ -195,11 +202,16 @@ func localMappingsPinnedPath() string {
 
 func readPinnedDNSHostnamesLocked() (map[string]bool, error) {
 	pinned := map[string]bool{}
-	data, err := os.ReadFile(localMappingsPinnedPath())
+	file, err := os.OpenFile(localMappingsPinnedPath(), os.O_RDONLY|syscall.O_NOFOLLOW, 0)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return pinned, nil
 		}
+		return nil, err
+	}
+	defer file.Close()
+	data, err := io.ReadAll(file)
+	if err != nil {
 		return nil, err
 	}
 	var hostnames []string
@@ -374,6 +386,22 @@ func serveDNSHostname(w http.ResponseWriter, r *http.Request, pin bool) {
 	}
 	current, exists := findDNSHostnameMapping(mappings, hostname)
 
+	if !pin && (r.Method == http.MethodPut || r.Method == http.MethodDelete) {
+		pinned, err := readPinnedDNSHostnamesLocked()
+		if err != nil {
+			http.Error(w, "failed to read pinned hostnames", http.StatusInternalServerError)
+			return
+		}
+		if pinned[hostname] {
+			http.Error(w, "hostname is pinned by an admin", http.StatusConflict)
+			return
+		}
+		if r.Method == http.MethodPut && isDiscoveryDNSHostname(hostname) {
+			http.Error(w, "hostname is reserved", http.StatusForbidden)
+			return
+		}
+	}
+
 	switch r.Method {
 	case http.MethodGet:
 		if !exists {
@@ -416,16 +444,16 @@ func serveDNSHostname(w http.ResponseWriter, r *http.Request, pin bool) {
 			}
 		}
 
+		updated := upsertDNSHostnameMapping(mappings, desired)
+		if err := writeDNSHostnameMappingsLocked(updated); err != nil {
+			http.Error(w, "failed to write local DNS mappings", http.StatusInternalServerError)
+			return
+		}
 		if pin {
 			if err := pinDNSHostnameLocked(hostname); err != nil {
 				http.Error(w, "failed to update pinned hostnames", http.StatusInternalServerError)
 				return
 			}
-		}
-		updated := upsertDNSHostnameMapping(mappings, desired)
-		if err := writeDNSHostnameMappingsLocked(updated); err != nil {
-			http.Error(w, "failed to write local DNS mappings", http.StatusInternalServerError)
-			return
 		}
 		_ = json.NewEncoder(w).Encode(desired)
 	case http.MethodDelete:
@@ -459,15 +487,15 @@ func serveDNSHostname(w http.ResponseWriter, r *http.Request, pin bool) {
 			http.Error(w, "hostname mapping not found", http.StatusNotFound)
 			return
 		}
+		if err := writeDNSHostnameMappingsLocked(updated); err != nil {
+			http.Error(w, "failed to write local DNS mappings", http.StatusInternalServerError)
+			return
+		}
 		if pin && !isReservedDNSHostname(hostname) {
 			if err := pinDNSHostnameLocked(hostname); err != nil {
 				http.Error(w, "failed to update pinned hostnames", http.StatusInternalServerError)
 				return
 			}
-		}
-		if err := writeDNSHostnameMappingsLocked(updated); err != nil {
-			http.Error(w, "failed to write local DNS mappings", http.StatusInternalServerError)
-			return
 		}
 		w.WriteHeader(http.StatusNoContent)
 	default:

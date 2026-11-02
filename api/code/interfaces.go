@@ -1031,6 +1031,10 @@ func refreshDownlinksLocked() {
 		}
 	}
 
+	for _, iface := range meshMACsecSnapshot().linkIfaces() {
+		addWiredLanInterface(iface)
+	}
+
 	for _, ifconfig := range interfaces {
 		if ifconfig.Type != "Downlink" || !ifconfig.DisableAPI {
 			continue

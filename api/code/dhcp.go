@@ -288,19 +288,35 @@ func labelOwnedByOtherDevice(devices map[string]DeviceEntry, key string, label s
 	return false
 }
 
-func isUntrustedDHCPHostnameDevice(device DeviceEntry) bool {
-	return device.DeviceDisabled || slices.ContainsFunc(device.Policies, func(policy string) bool {
+func canPublishDHCPHostname(device DeviceEntry) bool {
+	if device.Type == DeviceTypeContainer || device.DeviceDisabled {
+		return false
+	}
+	if slices.ContainsFunc(device.Policies, func(policy string) bool {
 		return policy == "guestonly" || policy == "quarantine" || policy == "disabled"
-	})
+	}) {
+		return false
+	}
+	return len(device.Policies) > 0 || len(device.Groups) > 0
+}
+
+func ipHeldByOtherDevice(devices map[string]DeviceEntry, key string, IP string) bool {
+	for otherKey, other := range devices {
+		if otherKey != key && other.RecentIP == IP {
+			return true
+		}
+	}
+	return false
 }
 
 type deviceLocalMappingUpdate struct {
-	Key          string
-	PreviousName string
-	Name         string
-	DHCPName     string
-	PreviousIP   string
-	IP           string
+	Key              string
+	PreviousName     string
+	Name             string
+	PreviousDHCPName string
+	DHCPName         string
+	PreviousIP       string
+	IP               string
 }
 
 func applyDeviceLocalMappings(mappings []DNSHostnameMapping, devices map[string]DeviceEntry, pinned map[string]bool, update deviceLocalMappingUpdate) []DNSHostnameMapping {
@@ -308,10 +324,10 @@ func applyDeviceLocalMappings(mappings []DNSHostnameMapping, devices map[string]
 		return IP == update.IP || (update.PreviousIP != "" && IP == update.PreviousIP)
 	}
 
-	label := localMappingLabel(update.Name)
-
-	if previousLabel := localMappingLabel(update.PreviousName); previousLabel != "" && previousLabel != label && !pinned[previousLabel+".lan"] {
-		hostname := previousLabel + ".lan"
+	release := func(hostname string) {
+		if pinned[hostname] {
+			return
+		}
 		kept := make([]DNSHostnameMapping, 0, len(mappings))
 		for _, mapping := range mappings {
 			if mapping.Hostname != hostname || !ownedByDevice(mapping.IPAddress) {
@@ -321,8 +337,36 @@ func applyDeviceLocalMappings(mappings []DNSHostnameMapping, devices map[string]
 		mappings = kept
 	}
 
+	label := localMappingLabel(update.Name)
+	dhcpLabel := localMappingLabel(update.DHCPName)
+
+	if previousLabel := localMappingLabel(update.PreviousName); previousLabel != "" && previousLabel != label {
+		release(previousLabel + ".lan")
+	}
+	if previousDHCPLabel := localMappingLabel(update.PreviousDHCPName); previousDHCPLabel != "" && previousDHCPLabel != dhcpLabel && previousDHCPLabel != label {
+		release(previousDHCPLabel + ".lan")
+	}
+
 	if update.IP == "" {
 		return mappings
+	}
+
+	if update.PreviousIP != "" && update.PreviousIP != update.IP && !ipHeldByOtherDevice(devices, update.Key, update.PreviousIP) {
+		moved := make([]DNSHostnameMapping, 0, len(mappings))
+		seen := map[DNSHostnameMapping]bool{}
+		for _, mapping := range mappings {
+			if mapping.IPAddress == update.PreviousIP {
+				if pinned[mapping.Hostname] {
+					continue
+				}
+				mapping.IPAddress = update.IP
+			}
+			if !seen[mapping] {
+				seen[mapping] = true
+				moved = append(moved, mapping)
+			}
+		}
+		mappings = moved
 	}
 
 	claim := func(hostname string, takeOver func(current DNSHostnameMapping) bool) {
@@ -342,9 +386,9 @@ func applyDeviceLocalMappings(mappings []DNSHostnameMapping, devices map[string]
 		})
 	}
 
-	dhcpLabel := localMappingLabel(update.DHCPName)
 	if dhcpLabel != "" && dhcpLabel != dhcpMissingHostname && dhcpLabel != label &&
-		!isUntrustedDHCPHostnameDevice(devices[update.Key]) &&
+		!isDiscoveryDNSHostname(dhcpLabel+".lan") &&
+		canPublishDHCPHostname(devices[update.Key]) &&
 		!labelOwnedByOtherDevice(devices, update.Key, dhcpLabel, "") {
 		claim(dhcpLabel+".lan", func(DNSHostnameMapping) bool { return false })
 	}
@@ -514,6 +558,10 @@ func handleDHCPResult(MAC string, IP string, Router string, Name string, Iface s
 		devices[MAC] = val
 	}
 
+	previousDHCPName := val.DHCPHostname
+	val.DHCPHostname = Name
+	devices[MAC] = val
+
 	saveDevicesJson(devices)
 
 	notifyFirewallDHCP(val, Iface)
@@ -533,12 +581,13 @@ func handleDHCPResult(MAC string, IP string, Router string, Name string, Iface s
 
 	// update local mappings file for DNS
 	updateDeviceLocalMappings(devices, deviceLocalMappingUpdate{
-		Key:          MAC,
-		PreviousName: val.Name,
-		Name:         val.Name,
-		DHCPName:     Name,
-		PreviousIP:   previousIP,
-		IP:           IP,
+		Key:              MAC,
+		PreviousName:     val.Name,
+		Name:             val.Name,
+		PreviousDHCPName: previousDHCPName,
+		DHCPName:         Name,
+		PreviousIP:       previousIP,
+		IP:               IP,
 	})
 }
 
@@ -571,6 +620,14 @@ func dhcpRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	macsecState := meshMACsecSnapshot()
+	var apIfaces []string
+	if macsecState.Role == "main" {
+		Interfacesmtx.Lock()
+		apIfaces = meshMACsecAPInterfaces(loadInterfacesConfigLocked())
+		Interfacesmtx.Unlock()
+	}
+
 	Groupsmtx.Lock()
 	defer Groupsmtx.Unlock()
 
@@ -585,6 +642,18 @@ func dhcpRequest(w http.ResponseWriter, r *http.Request) {
 
 	devices := getDevicesJson()
 	val, exists := devices[dhcp.MAC]
+
+	if err := meshMACsecCheckDHCP(macsecState, dhcp.MAC, val.RecentIP, dhcp.Iface, exists && meshMACsecWifiDevice(val), apIfaces); err != nil {
+		SprbusPublish("dhcp:spoof", DHCPFail{
+			Iface:      dhcp.Iface,
+			MAC:        dhcp.MAC,
+			Identifier: dhcp.Identifier,
+			Name:       dhcp.Name,
+			Reason:     err.Error(),
+		})
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
 
 	if exists {
 		if strings.Contains(dhcp.Iface, ExtraBSSPrefix) {
@@ -873,6 +942,7 @@ func wireguardUpdate(w http.ResponseWriter, r *http.Request) {
 
 	devices := getDevicesJson()
 	val, exists := lookupWGDevice(&devices, wg.PublicKey, wg.IP)
+	deleted := []DeviceEntry{}
 
 	if r.Method == http.MethodDelete {
 		//delete a device's public key
@@ -880,6 +950,7 @@ func wireguardUpdate(w http.ResponseWriter, r *http.Request) {
 			if val.MAC == "" {
 				//if no MAC is assigned, delete altogether
 				delete(devices, val.WGPubKey)
+				deleted = append(deleted, val)
 			} else {
 				//otherwise update the WGPubKey to be empty
 				val.WGPubKey = ""
@@ -921,6 +992,7 @@ func wireguardUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	saveDevicesJson(devices)
+	removeDeletedDeviceLocalMappings(devices, deleted)
 
 	refreshWireguardDevice(val.MAC, wg.IP, wg.PublicKey, wg.Iface, wg.Name, r.Method == http.MethodPut)
 }

@@ -97,6 +97,7 @@ const Topology = () => {
     deviceFilter,
     setDeviceFilter,
     routes,
+    pfwAvailable,
     fittedRef,
     movedRef,
     edges,
@@ -877,6 +878,7 @@ const Topology = () => {
           sinks={sinks}
           onAddRoute={addRoute}
           routes={routes}
+          pfwAvailable={pfwAvailable}
           onRemoveRoute={onRemoveRoute}
         />
       ) : null}

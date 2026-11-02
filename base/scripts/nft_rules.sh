@@ -294,6 +294,8 @@ table inet filter {
 
     #jump USERDEF_INPUT
     iif lo counter accept
+    iifname != @uplink_interfaces ip daddr 169.254.83.1 udp dport 51821 counter accept
+    iifname "wgmesh" ip daddr 169.254.84.1 udp dport 4789 counter accept
 
     # block lan ranges from uplink interfaces
     iifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGINP
@@ -555,10 +557,10 @@ table inet filter {
   }
 
   chain DROP_MAC_SPOOF {
-    # A PFW-routed TCP reply may use the remote host's IP. Require the
-    # declared MAC and the original flow's live PFW route to this interface.
-    iifname @transparent_sink_interfaces ct direction reply ct state established meta l4proto tcp iifname . ether saddr @dhcp_access ct original ip saddr . ct original ip daddr . ct original proto-dst . iifname vmap @site_forward_tcp_port
-    iifname @transparent_sink_interfaces ct direction reply ct state established meta l4proto tcp iifname . ether saddr @dhcp_access ct original ip saddr . ct original ip daddr . iifname vmap @site_forward
+    # Support forwarding for transparent sinks
+    iifname @transparent_sink_interfaces ip saddr != @supernetworks ct direction reply ct state established meta l4proto tcp iifname . ether saddr @dhcp_access ct original ip saddr . ct original ip daddr . ct original proto-dst . iifname vmap @site_forward_tcp_port
+    iifname @transparent_sink_interfaces ip saddr != @supernetworks ct direction reply ct state established meta l4proto udp iifname . ether saddr @dhcp_access ct original ip saddr . ct original ip daddr . ct original proto-dst . iifname vmap @site_forward_udp_port
+    iifname @transparent_sink_interfaces ip saddr != @supernetworks ct direction reply ct state established meta l4proto { tcp, udp, icmp } iifname . ether saddr @dhcp_access ct original ip saddr . ct original ip daddr . iifname vmap @site_forward
     counter ip saddr . iifname . ether saddr vmap @ethernet_filter
     log prefix "drop:mac " group 1
     counter drop
