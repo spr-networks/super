@@ -306,3 +306,135 @@ func TestMeshMACsecInterfaceSetUpdates(t *testing.T) {
 		t.Fatalf("removal not applied: %v", calls)
 	}
 }
+
+func bridgeMeshState() MeshMACsecState {
+	return MeshMACsecState{
+		Role: "main",
+		Links: []MeshMACsecLink{
+			{LeafIP: "192.168.2.10", Interface: meshLinkBridge, Parent: "eth1", LeafMAC: testLeafMAC, Mode: "wireguard", Secured: true},
+			{LeafIP: "192.168.2.14", Interface: meshLinkBridge, Parent: "eth1", LeafMAC: testDownLeafMAC, Mode: "macsec", Secured: true},
+			{LeafIP: "192.168.2.18", Interface: meshLinkBridge, Parent: "eth1"},
+		},
+	}
+}
+
+func swapRecentDHCPIface(t *testing.T, recent map[string]string) {
+	FWmtx.Lock()
+	old := RecentDHCPIface
+	RecentDHCPIface = recent
+	FWmtx.Unlock()
+	t.Cleanup(func() {
+		FWmtx.Lock()
+		RecentDHCPIface = old
+		FWmtx.Unlock()
+	})
+}
+
+func TestMeshWifiFallbackIface(t *testing.T) {
+	for recent, want := range map[string]string{meshLinkBridge: meshLinkBridge, "macsec0": "eth1", "eth1": "eth1", "": "eth1"} {
+		if got := meshWifiFallbackIface(bridgeMeshState(), recent, "eth1"); got != want {
+			t.Errorf("station last seen on %q routed via %q, want %q", recent, got, want)
+		}
+	}
+	if got := meshWifiFallbackIface(strictMeshState(), "macsec0", "eth1"); got != "macsec0" {
+		t.Errorf("station behind a MACsec node routed via %q", got)
+	}
+}
+
+func TestSecuredLinkKey(t *testing.T) {
+	a, b := bridgeMeshState(), bridgeMeshState()
+	b.Links[0], b.Links[1] = b.Links[1], b.Links[0]
+	if a.securedLinkKey() != "192.168.2.10=mshbr0,192.168.2.14=mshbr0" || a.securedLinkKey() != b.securedLinkKey() {
+		t.Fatalf("keys %q %q", a.securedLinkKey(), b.securedLinkKey())
+	}
+	b.Links[2].Secured = true
+	if a.securedLinkKey() == b.securedLinkKey() || (MeshMACsecState{}).securedLinkKey() != "" {
+		t.Error("key did not follow the secured links")
+	}
+}
+
+func TestRefreshMeshLinkStations(t *testing.T) {
+	oldFetch := meshLeafStationsFetch
+	t.Cleanup(func() { meshLeafStationsFetch = oldFetch })
+	recent := map[string]string{"aa:bb:cc:00:00:01": "eth1", "aa:bb:cc:00:00:09": "wlan0.4096"}
+	swapRecentDHCPIface(t, recent)
+
+	meshLeafStationsFetch = func() (map[string]LeafStations, error) { return nil, errors.New("meshd down") }
+	if refreshMeshLinkStations(bridgeMeshState()) || recent["aa:bb:cc:00:00:01"] != "eth1" {
+		t.Fatal("failed fetch reported success or changed a route")
+	}
+	leaves := map[string]LeafStations{
+		"192.168.2.10": {Stations: map[string]StationInfo{"AA:BB:CC:00:00:01": {"flags": "[AUTH][ASSOC][AUTHORIZED]"}, "aa:bb:cc:00:00:02": {"flags": "[AUTH]"}}},
+		"192.168.2.14": {Error: "unreachable"},
+		"192.168.2.18": {Stations: map[string]StationInfo{"aa:bb:cc:00:00:03": {"flags": "[AUTHORIZED]"}}},
+	}
+	meshLeafStationsFetch = func() (map[string]LeafStations, error) { return leaves, nil }
+	if refreshMeshLinkStations(bridgeMeshState()) {
+		t.Error("an unreachable secured node counted as complete")
+	}
+	if recent["aa:bb:cc:00:00:01"] != meshLinkBridge || recent["aa:bb:cc:00:00:09"] != "wlan0.4096" || len(recent) != 2 {
+		t.Errorf("only the authorized station on a secured node should move: %v", recent)
+	}
+	leaves["192.168.2.14"] = LeafStations{}
+	if !refreshMeshLinkStations(bridgeMeshState()) {
+		t.Error("refresh incomplete with every secured node answering")
+	}
+}
+
+func TestSanitizeKeepsLinksSharingTheBridge(t *testing.T) {
+	stubMeshMACsec(t)
+	meshMACsecIsSecY = func(name string) bool { return name == meshLinkBridge || name == "macsec0" }
+	raw := bridgeMeshState()
+	raw.Links = append(raw.Links[:2],
+		MeshMACsecLink{LeafIP: "192.168.2.22", Interface: "macsec0", Parent: "eth1", Secured: true},
+		MeshMACsecLink{LeafIP: "192.168.2.26", Interface: "macsec0", Parent: "eth1", Secured: true})
+	out := sanitizeMeshMACsecState(raw).Links
+	if out[0].Interface != meshLinkBridge || out[1].Interface != meshLinkBridge || !out[1].Secured {
+		t.Errorf("second node on the bridge lost its link: %+v", out)
+	}
+	if out[2].Interface != "macsec0" || out[3].Interface != "" || out[3].Secured {
+		t.Errorf("a secY claimed by two nodes was accepted twice: %+v", out)
+	}
+}
+
+func TestRemapKeepsBridgeClientsWhileANodeRemains(t *testing.T) {
+	prev := bridgeMeshState()
+	prev.Links = prev.Links[:2]
+	for _, keep := range []int{0, 1} {
+		next := MeshMACsecState{Role: "main", Links: prev.Links[keep : keep+1]}
+		recent := map[string]string{"aa:00:00:00:00:01": meshLinkBridge, "aa:00:00:00:00:02": "eth1"}
+		remapMeshMACsecIfaces(prev, next, recent)
+		if recent["aa:00:00:00:00:01"] != meshLinkBridge || recent["aa:00:00:00:00:02"] != "eth1" {
+			t.Fatalf("bridge clients dropped while %s is still on the bridge: %v", next.Links[0].LeafIP, recent)
+		}
+	}
+	recent := map[string]string{"aa:00:00:00:00:01": meshLinkBridge}
+	remapMeshMACsecIfaces(prev, MeshMACsecState{Role: "main"}, recent)
+	if len(recent) != 0 {
+		t.Fatalf("bridge client kept after the last node left: %v", recent)
+	}
+}
+
+func TestNoteMeshStationConnect(t *testing.T) {
+	stubMeshMACsec(t)
+	MeshMACsecmtx.Lock()
+	gMeshMACsec = bridgeMeshState()
+	MeshMACsecmtx.Unlock()
+	const sta = "aa:bb:cc:00:00:01"
+	for _, c := range []struct {
+		name, before, router, remote, want string
+	}{
+		{"joins an encrypted node", "eth1", "192.168.2.10", "192.168.2.10:5000", meshLinkBridge},
+		{"claim from another source", "eth1", "192.168.2.10", "192.168.2.99:5000", "eth1"},
+		{"joins a node with no secured link", meshLinkBridge, "192.168.2.18", "192.168.2.18:5000", ""},
+		{"joins the main router's AP", meshLinkBridge, "", "@", ""},
+		{"main router AP keeps its VLAN", "wlan0.4096", "", "@", "wlan0.4096"},
+	} {
+		recent := map[string]string{sta: c.before}
+		swapRecentDHCPIface(t, recent)
+		noteMeshStationConnect("AA:BB:CC:00:00:01", c.router, c.remote)
+		if recent[sta] != c.want {
+			t.Errorf("%s: %q, want %q", c.name, recent[sta], c.want)
+		}
+	}
+}

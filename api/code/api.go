@@ -2734,6 +2734,8 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	go noteMeshStationConnect(pska.MAC, pska.Router, r.RemoteAddr)
+
 	pska.Status = "Okay"
 
 	if isSetupMode() && pska.Iface == SetupAP {

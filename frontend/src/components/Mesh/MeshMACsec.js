@@ -199,7 +199,7 @@ export const MeshLinks = () => {
                 </Text>
                 {link?.Interface ? (
                   <Text size="sm" color="$muted500">
-                    {link.Interface}
+                    {link.Member || link.Interface}
                   </Text>
                 ) : null}
               </VStack>

@@ -245,6 +245,8 @@ func isMeshBackhaulInterface(name string) bool {
 		return true
 	case "vxlan":
 		return strings.HasPrefix(name, "mshvx")
+	case "bridge":
+		return name == meshLinkBridge
 	}
 	return false
 }
