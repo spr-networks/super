@@ -1,6 +1,10 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.3.1
+**Fixes**
+- Fix roaming across encrypted backhaul
+
 ## v1.3.0
 **Improvements**
 - Mesh backhaul MACsec support for capable kernels

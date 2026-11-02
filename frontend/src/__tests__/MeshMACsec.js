@@ -46,7 +46,8 @@ beforeEach(() => {
     Links: [
       {
         LeafIP: '192.168.2.10',
-        Interface: 'mshvx2',
+        Interface: 'mshbr0',
+        Member: 'mshvx2',
         Parent: 'eth1',
         Mode: 'wireguard',
         Underlay: 9000,

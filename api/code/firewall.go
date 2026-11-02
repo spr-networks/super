@@ -3454,6 +3454,7 @@ func dynamicRouteLoop() {
 
 	ticker := time.NewTicker(1 * time.Second)
 	meshPollTicks := 0
+	meshLinkKey, meshLinkTicks := "", 0
 
 	for {
 		select {
@@ -3486,6 +3487,12 @@ func dynamicRouteLoop() {
 
 			macsecState := meshMACsecSnapshot()
 			downlinks = append(downlinks, macsecState.linkIfaces()...)
+
+			if key := macsecState.securedLinkKey(); key == meshLinkKey {
+				meshLinkTicks = 0
+			} else if meshLinkTicks++; meshLinkTicks%5 == 1 && (key == "" || refreshMeshLinkStations(macsecState)) {
+				meshLinkKey = key
+			}
 
 			lanif := getFirstDownlink()
 			lanif_vlan_trunk := false
@@ -3613,7 +3620,7 @@ func dynamicRouteLoop() {
 						}
 					} else if meshPluginEnabled && wifiDevice {
 						//mesh plugin was enabled and it was a wifi device
-						new_iface = meshDownlink
+						new_iface = meshWifiFallbackIface(macsecState, recentDHCPIfaces[entry.MAC], meshDownlink)
 					} else {
 						// disconnected wifi devices will have empty new_iface, skip
 						continue
