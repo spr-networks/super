@@ -162,12 +162,10 @@ func meshMACsecWifiDevice(entry DeviceEntry) bool {
 }
 
 func meshMACsecWifiAllowed(s MeshMACsecState, iface string, apIfaces []string) bool {
-	if iface == "" {
-		return false
-	}
-	if s.isLinkIface(iface) || strings.HasPrefix(iface, "wg") {
-		return true
-	}
+	return iface != "" && (s.isLinkIface(iface) || strings.HasPrefix(iface, "wg") || meshIsAPIface(iface, apIfaces))
+}
+
+func meshIsAPIface(iface string, apIfaces []string) bool {
 	for _, ap := range apIfaces {
 		if iface == ap || strings.HasPrefix(iface, ap+".") {
 			return true
@@ -227,18 +225,11 @@ func (s MeshMACsecState) securedLinkKey() string {
 	return strings.Join(keys, ",")
 }
 
-func meshWifiFallbackIface(s MeshMACsecState, recent string, meshDownlink string) string {
-	if s.isLinkIface(recent) {
-		return recent
-	}
-	return meshDownlink
-}
-
 func noteMeshStationConnect(mac string, router string, remoteAddr string) {
 	mac, ok := normalizeMeshMAC(mac)
 	state := meshMACsecSnapshot()
 	host, _, _ := net.SplitHostPort(remoteAddr)
-	if !ok || state.Role != "main" || (router != "" && host != router) {
+	if !ok || state.Role != "main" || host != router {
 		return
 	}
 	link, _ := state.pinnedLink("", router)
@@ -252,25 +243,52 @@ func noteMeshStationConnect(mac string, router string, remoteAddr string) {
 }
 
 var meshLeafStationsFetch = fetchAllLeafStations
+var meshStationsKey, meshStationsTries = "", 0
 
-func refreshMeshLinkStations(state MeshMACsecState) bool {
+func refreshMeshLinkStations(state MeshMACsecState) {
+	if key := state.securedLinkKey(); key != meshStationsKey {
+		meshStationsKey, meshStationsTries = key, 12
+	}
+	if meshStationsKey == "" || meshStationsTries == 0 {
+		return
+	}
+	meshStationsTries--
 	leaves, err := meshLeafStationsFetch()
-	complete := err == nil
-	FWmtx.Lock()
-	defer FWmtx.Unlock()
-	for _, link := range state.Links {
-		if !link.Secured || link.Interface == "" || link.LeafIP == "" {
-			continue
+	if err != nil {
+		return
+	}
+	where, done := map[string]string{}, true
+	for ip, leaf := range leaves {
+		iface := ""
+		if link, _ := state.pinnedLink("", ip); link.Secured {
+			iface = link.Interface
 		}
-		leaf, ok := leaves[link.LeafIP]
-		complete = complete && ok && leaf.Error == ""
 		for mac, info := range leaf.Stations {
-			if strings.Contains(info["flags"], "[AUTHORIZED]") {
-				RecentDHCPIface[strings.ToLower(mac)] = link.Interface
+			if mac = strings.ToLower(mac); strings.Contains(info["flags"], "[AUTHORIZED]") {
+				if old, seen := where[mac]; seen && old != iface {
+					where[mac] = ""
+				} else {
+					where[mac] = iface
+				}
 			}
 		}
 	}
-	return complete
+	for _, link := range state.Links {
+		done = done && (!link.Secured || len(leaves[link.LeafIP].Stations) > 0)
+	}
+	if done {
+		meshStationsTries = 0
+	}
+	Interfacesmtx.Lock()
+	apIfaces := meshMACsecAPInterfaces(loadInterfacesConfigLocked())
+	Interfacesmtx.Unlock()
+	FWmtx.Lock()
+	defer FWmtx.Unlock()
+	for mac, iface := range where {
+		if iface != "" && !meshIsAPIface(RecentDHCPIface[mac], apIfaces) {
+			RecentDHCPIface[mac] = iface
+		}
+	}
 }
 
 func meshKeepDownlinkEntry(isMesh bool, strict bool, disabled bool, vmapName string, entryIface string, meshDownlink string) bool {
@@ -398,11 +416,8 @@ func meshMACsecPoller() {
 func meshMACsecPollOnce() {
 	if isLeafRouter() || !meshMACsecPluginEnabled() {
 		updateMeshMACsecState(MeshMACsecState{})
-		return
+	} else if raw, err := meshMACsecFetch(); err == nil {
+		updateMeshMACsecState(sanitizeMeshMACsecState(raw))
 	}
-	raw, err := meshMACsecFetch()
-	if err != nil {
-		return
-	}
-	updateMeshMACsecState(sanitizeMeshMACsecState(raw))
+	refreshMeshLinkStations(meshMACsecSnapshot())
 }

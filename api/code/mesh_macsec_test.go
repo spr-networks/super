@@ -16,10 +16,11 @@ const (
 func stubMeshMACsec(t *testing.T) {
 	t.Helper()
 	oldIsSecY, oldFetch, oldEnabled, oldApply := meshMACsecIsSecY, meshMACsecFetch, meshMACsecPluginEnabled, meshMACsecApplySets
-	oldFile, oldState := MeshMACsecStateFile, gMeshMACsec
+	oldFile, oldState, oldStations := MeshMACsecStateFile, gMeshMACsec, meshLeafStationsFetch
 	t.Cleanup(func() {
 		meshMACsecIsSecY, meshMACsecFetch, meshMACsecPluginEnabled, meshMACsecApplySets = oldIsSecY, oldFetch, oldEnabled, oldApply
-		MeshMACsecStateFile = oldFile
+		MeshMACsecStateFile, meshLeafStationsFetch = oldFile, oldStations
+		meshStationsKey, meshStationsTries = "", 0
 		MeshMACsecmtx.Lock()
 		gMeshMACsec = oldState
 		MeshMACsecmtx.Unlock()
@@ -27,6 +28,7 @@ func stubMeshMACsec(t *testing.T) {
 	meshMACsecIsSecY = func(name string) bool { return len(name) > 6 && name[:6] == "macsec" }
 	meshMACsecPluginEnabled = func() bool { return true }
 	meshMACsecApplySets = func(prev, next []string) {}
+	meshLeafStationsFetch = func() (map[string]LeafStations, error) { return nil, nil }
 	MeshMACsecStateFile = filepath.Join(t.TempDir(), "mesh_macsec.json")
 	MeshMACsecmtx.Lock()
 	gMeshMACsec = MeshMACsecState{}
@@ -330,17 +332,6 @@ func swapRecentDHCPIface(t *testing.T, recent map[string]string) {
 	})
 }
 
-func TestMeshWifiFallbackIface(t *testing.T) {
-	for recent, want := range map[string]string{meshLinkBridge: meshLinkBridge, "macsec0": "eth1", "eth1": "eth1", "": "eth1"} {
-		if got := meshWifiFallbackIface(bridgeMeshState(), recent, "eth1"); got != want {
-			t.Errorf("station last seen on %q routed via %q, want %q", recent, got, want)
-		}
-	}
-	if got := meshWifiFallbackIface(strictMeshState(), "macsec0", "eth1"); got != "macsec0" {
-		t.Errorf("station behind a MACsec node routed via %q", got)
-	}
-}
-
 func TestSecuredLinkKey(t *testing.T) {
 	a, b := bridgeMeshState(), bridgeMeshState()
 	b.Links[0], b.Links[1] = b.Links[1], b.Links[0]
@@ -354,30 +345,47 @@ func TestSecuredLinkKey(t *testing.T) {
 }
 
 func TestRefreshMeshLinkStations(t *testing.T) {
-	oldFetch := meshLeafStationsFetch
-	t.Cleanup(func() { meshLeafStationsFetch = oldFetch })
-	recent := map[string]string{"aa:bb:cc:00:00:01": "eth1", "aa:bb:cc:00:00:09": "wlan0.4096"}
+	stubMeshMACsec(t)
+	oldPath := gAPIInterfacesPath
+	gAPIInterfacesPath = filepath.Join(t.TempDir(), "interfaces.json")
+	t.Cleanup(func() { gAPIInterfacesPath = oldPath })
+	if err := os.WriteFile(gAPIInterfacesPath, []byte(`[{"Name":"wlan0","Type":"AP","Enabled":true}]`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	const onNode, onMain, onPlain, unauth = "aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03", "aa:bb:cc:00:00:04"
+	recent := map[string]string{onNode: "eth1", onMain: "wlan0.4096", onPlain: "eth1"}
 	swapRecentDHCPIface(t, recent)
-
-	meshLeafStationsFetch = func() (map[string]LeafStations, error) { return nil, errors.New("meshd down") }
-	if refreshMeshLinkStations(bridgeMeshState()) || recent["aa:bb:cc:00:00:01"] != "eth1" {
-		t.Fatal("failed fetch reported success or changed a route")
-	}
+	auth := StationInfo{"flags": "[AUTH][ASSOC][AUTHORIZED]"}
 	leaves := map[string]LeafStations{
-		"192.168.2.10": {Stations: map[string]StationInfo{"AA:BB:CC:00:00:01": {"flags": "[AUTH][ASSOC][AUTHORIZED]"}, "aa:bb:cc:00:00:02": {"flags": "[AUTH]"}}},
-		"192.168.2.14": {Error: "unreachable"},
-		"192.168.2.18": {Stations: map[string]StationInfo{"aa:bb:cc:00:00:03": {"flags": "[AUTHORIZED]"}}},
+		"192.168.2.10": {Stations: map[string]StationInfo{"AA:BB:CC:00:00:01": auth, onMain: auth, onPlain: auth, unauth: {"flags": "[AUTH]"}}},
+		"192.168.2.18": {Stations: map[string]StationInfo{onPlain: auth}},
 	}
-	meshLeafStationsFetch = func() (map[string]LeafStations, error) { return leaves, nil }
-	if refreshMeshLinkStations(bridgeMeshState()) {
-		t.Error("an unreachable secured node counted as complete")
+	fetches := 0
+	meshLeafStationsFetch = func() (map[string]LeafStations, error) {
+		if fetches++; fetches == 1 {
+			return nil, errors.New("meshd down")
+		}
+		return leaves, nil
 	}
-	if recent["aa:bb:cc:00:00:01"] != meshLinkBridge || recent["aa:bb:cc:00:00:09"] != "wlan0.4096" || len(recent) != 2 {
-		t.Errorf("only the authorized station on a secured node should move: %v", recent)
+	state := bridgeMeshState()
+	if refreshMeshLinkStations(state); recent[onNode] != "eth1" {
+		t.Fatalf("failed fetch changed a route: %v", recent)
 	}
-	leaves["192.168.2.14"] = LeafStations{}
-	if !refreshMeshLinkStations(bridgeMeshState()) {
-		t.Error("refresh incomplete with every secured node answering")
+	for i := 0; i < 20; i++ {
+		refreshMeshLinkStations(state)
+	}
+	if recent[onNode] != meshLinkBridge || recent[onMain] != "wlan0.4096" || recent[onPlain] != "eth1" || recent[unauth] != "" {
+		t.Fatalf("only the station seen solely on a secured node may move, and never off a main AP: %v", recent)
+	}
+	if fetches != 12 {
+		t.Fatalf("a secured node with no stations polled %d times, want 12", fetches)
+	}
+	state.Links[2].Secured = true
+	leaves["192.168.2.14"] = LeafStations{Stations: map[string]StationInfo{"aa:bb:cc:00:00:05": auth}}
+	refreshMeshLinkStations(state)
+	refreshMeshLinkStations(state)
+	if fetches != 13 || recent[onPlain] != meshLinkBridge {
+		t.Fatalf("newly secured node not refreshed once: fetches=%d %v", fetches, recent)
 	}
 }
 
@@ -426,6 +434,7 @@ func TestNoteMeshStationConnect(t *testing.T) {
 	}{
 		{"joins an encrypted node", "eth1", "192.168.2.10", "192.168.2.10:5000", meshLinkBridge},
 		{"claim from another source", "eth1", "192.168.2.10", "192.168.2.99:5000", "eth1"},
+		{"node reporting no router", meshLinkBridge, "", "192.168.2.10:5000", meshLinkBridge},
 		{"joins a node with no secured link", meshLinkBridge, "192.168.2.18", "192.168.2.18:5000", ""},
 		{"joins the main router's AP", meshLinkBridge, "", "@", ""},
 		{"main router AP keeps its VLAN", "wlan0.4096", "", "@", "wlan0.4096"},

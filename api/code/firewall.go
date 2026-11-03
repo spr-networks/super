@@ -3434,9 +3434,11 @@ func dynamicRouteLoop() {
 
 	pollMeshPeers := func() bool {
 		peers := getMeshPeerInterfaces()
+		FWmtx.Lock()
 		for mac, iface_dst := range peers {
 			RecentDHCPIface[mac] = iface_dst
 		}
+		FWmtx.Unlock()
 		return len(peers) > 0
 	}
 
@@ -3454,7 +3456,6 @@ func dynamicRouteLoop() {
 
 	ticker := time.NewTicker(1 * time.Second)
 	meshPollTicks := 0
-	meshLinkKey, meshLinkTicks := "", 0
 
 	for {
 		select {
@@ -3487,12 +3488,6 @@ func dynamicRouteLoop() {
 
 			macsecState := meshMACsecSnapshot()
 			downlinks = append(downlinks, macsecState.linkIfaces()...)
-
-			if key := macsecState.securedLinkKey(); key == meshLinkKey {
-				meshLinkTicks = 0
-			} else if meshLinkTicks++; meshLinkTicks%5 == 1 && (key == "" || refreshMeshLinkStations(macsecState)) {
-				meshLinkKey = key
-			}
 
 			lanif := getFirstDownlink()
 			lanif_vlan_trunk := false
@@ -3612,7 +3607,9 @@ func dynamicRouteLoop() {
 
 				if !exists {
 					wifiDevice := isWifiDevice(entry)
-					if lanif != "" && !wifiDevice {
+					if recent := recentDHCPIfaces[entry.MAC]; macsecState.isLinkIface(recent) {
+						new_iface = recent
+					} else if lanif != "" && !wifiDevice {
 						if lanif_vlan_trunk == false || entry.VLANTag == "" {
 							new_iface = lanif
 						} else {
@@ -3620,7 +3617,7 @@ func dynamicRouteLoop() {
 						}
 					} else if meshPluginEnabled && wifiDevice {
 						//mesh plugin was enabled and it was a wifi device
-						new_iface = meshWifiFallbackIface(macsecState, recentDHCPIfaces[entry.MAC], meshDownlink)
+						new_iface = meshDownlink
 					} else {
 						// disconnected wifi devices will have empty new_iface, skip
 						continue
