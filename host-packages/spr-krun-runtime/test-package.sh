@@ -41,6 +41,7 @@ for image in debian:trixie; do
     TEST_IMAGES+=("$test_image")
 
     docker buildx build \
+        --pull \
         --load \
         --platform linux/arm64 \
         --build-arg "BASE_IMAGE=$image" \
@@ -54,15 +55,19 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 COPY spr-krun-runtime.deb /packages/spr-krun-runtime.deb
 
-RUN apt-get -o Acquire::Retries=5 update \
+RUN printf 'Acquire::Retries "0";\n' > /etc/apt/apt.conf.d/99spr-no-retries \
+    && apt-get -o Acquire::Retries=0 update \
+    && apt-get -o Acquire::Retries=0 install -y --only-upgrade apt libapt-pkg7.0 \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' apt)" ge 3.0.4 \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libapt-pkg7.0)" ge 3.0.4 \
     && mkdir -p /etc/docker \
     && printf '%s\n' \
         '{"iptables":false,"runtimes":{"runsc":{"path":"/usr/local/bin/runsc","runtimeArgs":["--host-uds=all","--platform=kvm"]}}}' \
         > /etc/docker/daemon.json \
-    && apt-get -o Acquire::Retries=5 install -y --download-only --no-install-recommends \
+    && apt-get -o Acquire::Retries=0 install -y --download-only --no-install-recommends \
         /packages/spr-krun-runtime.deb \
     && dpkg --unpack /packages/spr-krun-runtime.deb \
-    && apt-get install -y --fix-broken --no-download --no-install-recommends
+    && apt-get -o Acquire::Retries=0 install -y --fix-broken --no-download --no-install-recommends
 EOF
 
     docker run --rm "${KRUN_RUN_OPTIONS[@]}" \
@@ -106,7 +111,7 @@ EOF
             daemon_inode=$(stat -c %i /etc/docker/daemon.json)
             spr-krun-runtime-configure --no-reload
             test "$(stat -c %i /etc/docker/daemon.json)" = "$daemon_inode"
-            apt-get remove -y spr-krun-runtime
+            apt-get -o Acquire::Retries=0 remove -y spr-krun-runtime
             jq -e \
                 ".iptables == false and
                  .runtimes.runsc.path == \"/usr/local/bin/runsc\" and

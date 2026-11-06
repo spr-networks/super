@@ -7,6 +7,6 @@ cp /scripts/run-scripts/run.sh /mnt/fs/tmp/
 cp /scripts/spr-environment-clearfog.sh /mnt/fs/spr-environment.sh
 cp -R /data/containers /mnt/fs/containers/
 mount --bind /dev/ /mnt/fs/dev/
-chroot /mnt/fs /tmp/install.sh
+chroot /mnt/fs /tmp/install.sh || exit 1
 sed -i s/WANIF=eth0/WANIF=eth2/ /mnt/fs/home/spr/super/configs/base/config.sh
 /scripts/unmount-clearfog.sh

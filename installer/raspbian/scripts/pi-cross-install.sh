@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # This script runs apt onto the mounted image,
 # to download everything without needing `qemu`
@@ -7,12 +8,16 @@ shopt -s expand_aliases
 
 export DEBIAN_FRONTEND=noninteractive
 # for host
-apt-get update
-apt-get install -y --no-install-recommends curl ca-certificates gpg git
+# CVE-2026-109518: keep retries disabled, including before APT can upgrade itself.
+install -m 0755 -d /etc/apt/apt.conf.d
+printf '%s\n' 'Acquire::Retries "0";' > /etc/apt/apt.conf.d/99-spr-security-retries
+apt-get -o Acquire::Retries=0 update
+apt-get -o Acquire::Retries=0 install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))'
+apt-get -o Acquire::Retries=0 install -y --no-install-recommends curl ca-certificates gpg git
 
 #for cross
-STATE='-o Dir::Cache="/mnt/fs/var/cache/apt" -o Dir::State="/mnt/fs/var/lib/apt" -o Dir::Etc::Sourceparts="/mnt/fs/etc/apt/sources.list.d" -o Dir::State::Lists="/mnt/fs/var/lib/apt/lists" -o Dir::Etc::TrustedParts="/mnt/fs/etc/apt/trusted.gpg.d" -o APT::Architecture="arm64" -o APT::Architectures="arm64"'
-alias apty="apt-get $STATE"
+STATE='-o Dir::Cache="/mnt/fs/var/cache/apt" -o Dir::State="/mnt/fs/var/lib/apt" -o Dir::State::status="/mnt/fs/var/lib/dpkg/status" -o Dir::Etc::Sourcelist="/mnt/fs/etc/apt/sources.list" -o Dir::Etc::Sourceparts="/mnt/fs/etc/apt/sources.list.d" -o Dir::State::Lists="/mnt/fs/var/lib/apt/lists" -o Dir::Etc::TrustedParts="/mnt/fs/etc/apt/trusted.gpg.d" -o APT::Architecture="arm64" -o APT::Architectures="arm64"'
+alias apty="apt-get -o Acquire::Retries=0 $STATE"
 
 # DEB822 source files use absolute Signed-By paths — copy target keyrings to
 # matching host paths so cross-apt signature verification succeeds.
@@ -26,6 +31,8 @@ cp /mnt/fs/usr/share/keyrings/* /usr/share/keyrings/ 2>/dev/null || true
 # is no longer sufficient to work with a complex docker-compose file.
 # Install the upstream docker packages then.
 apty update
+# Cache the target APT and its library dependencies using the target dpkg state.
+apty -y install --download-only --only-upgrade apt '?and(?installed,?source-package(^apt$))'
 # Only download — never install arm64 packages on the x86 host
 apty -y install --download-only --no-install-recommends ca-certificates curl gpg
 install -m 0755 -d /etc/apt/keyrings
@@ -47,7 +54,8 @@ apty update
 
 # NOTE: also check /scripts/install.sh when making updates
 apty -y upgrade --download-only
-apty -y install --download-only linux-firmware
+# RPiOS firmware is updated with its installed packages; SPR adds ath12k/mt76.
+# Ubuntu's linux-firmware package is not available from Debian/RPiOS sources.
 apty -y install --download-only --no-install-recommends nftables wireless-regdb ethtool git nano iw fdisk tmux conntrack jq inotify-tools dhcpcd cloud-guest-utils tcpdump iperf3 systemd-timesyncd
 mapfile -t KRUN_DEBS < <(find /mnt/fs/var/cache/apt/archives -maxdepth 1 -name 'spr-krun-runtime_*_arm64.deb' -print)
 if [ "${#KRUN_DEBS[@]}" -ne 1 ]; then

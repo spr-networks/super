@@ -11,7 +11,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 DEB_DIR="$(cd -- "$(dirname -- "$DEB")" && pwd)"
 DEB_NAME="$(basename -- "$DEB")"
 
-docker run --rm --privileged --platform linux/arm64 \
+docker run --pull=always --rm --privileged --platform linux/arm64 \
     --security-opt apparmor=unconfined \
     -v "$DEB_DIR:/packages:ro" \
     -v "$SCRIPT_DIR/tests:/tests:ro" \

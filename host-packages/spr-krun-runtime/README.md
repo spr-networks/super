@@ -41,8 +41,14 @@ docker buildx build \
 Install or upgrade an existing system:
 
 ```sh
-sudo apt-get install ./spr-krun-runtime_*_arm64.deb
+sudo apt-get -o Acquire::Retries=0 update
+sudo apt-get -o Acquire::Retries=0 install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))'
+sudo apt-get -o Acquire::Retries=0 install ./spr-krun-runtime_*_arm64.deb
 ```
+
+Keep retries disabled while updating APT and downloading dependencies to mitigate
+CVE-2026-109518. Use the latest APT package from the host distribution's security
+repository; Debian Trixie requires at least 3.0.4.
 
 Run the privileged TAP lifecycle regression test against a built package:
 

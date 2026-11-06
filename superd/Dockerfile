@@ -1,15 +1,15 @@
 # syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 # check=skip=InvalidDefaultArgInFrom
-ARG ALPINE_REF=alpine@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
+ARG ALPINE_REF=alpine@sha256:3f4d6b32e26703c6082839234f43769d5046b3ac7c910033911d1e71d8cd630a
 ARG UBUNTU_REF=ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852
-ARG CONTAINER_TEMPLATE_REF=ghcr.io/spr-networks/container_template@sha256:1a79b53baae1d2bd9470ea9029b9680580147b872fb224880ed5e91312c12167
+ARG CONTAINER_TEMPLATE_REF=ghcr.io/spr-networks/container_template@sha256:855b17f1da1f238dccdb05f13db90407d64d0c3ccc9eacfa4b5916b326a2dbf7
 ARG SOURCE_DATE_EPOCH
 
 FROM ${ALPINE_REF} AS cacerts
 
 FROM ${UBUNTU_REF} AS builder
 ENV DEBIAN_FRONTEND=noninteractive
-ARG UBUNTU_SNAPSHOT=20261101T000000Z
+ARG UBUNTU_SNAPSHOT=20261104T120000Z
 ARG GO_VERSION=1.26.10
 ARG GO_SHA256_AMD64=ccfe7ae822d2c2f41f4fe7c956199967a4dac22d0ee0d2b2bfdb440aab3b20c5
 ARG GO_SHA256_ARM64=3f4227ce7b206a513e794f1393adb473a07b46e94d18bd15d1c684bbb7319797
@@ -41,12 +41,12 @@ RUN --mount=type=tmpfs,target=/tmpfs \
 FROM ${CONTAINER_TEMPLATE_REF}
 ENV DEBIAN_FRONTEND=noninteractive
 
-ARG UBUNTU_SNAPSHOT=20261101T000000Z
-ARG DOCKER_CE_VERSION=5:29.9.2-1~ubuntu.24.04~noble
-ARG DOCKER_CE_CLI_VERSION=5:29.9.2-1~ubuntu.24.04~noble
+ARG UBUNTU_SNAPSHOT=20261104T120000Z
+ARG DOCKER_CE_VERSION=5:29.9.3-1~ubuntu.24.04~noble
+ARG DOCKER_CE_CLI_VERSION=5:29.9.3-1~ubuntu.24.04~noble
 ARG CONTAINERD_VERSION=2.4.2-3~ubuntu.24.04~noble
 ARG DOCKER_BUILDX_PLUGIN_VERSION=0.38.1-1~ubuntu.24.04~noble
-ARG DOCKER_COMPOSE_PLUGIN_VERSION=5.6.1-1~ubuntu.24.04~noble
+ARG DOCKER_COMPOSE_PLUGIN_VERSION=5.7.0-1~ubuntu.24.04~noble
 
 RUN set -eux; \
     printf 'Types: deb\nURIs: https://snapshot.ubuntu.com/ubuntu/%s\nSuites: noble noble-updates noble-security\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n' "${UBUNTU_SNAPSHOT}" > /etc/apt/sources.list.d/ubuntu.sources; \

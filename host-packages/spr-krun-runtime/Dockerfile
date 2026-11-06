@@ -3,8 +3,13 @@ FROM ${DEBIAN_REF}
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get -o Acquire::Retries=5 update \
-    && apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
+# CVE-2026-109518: disable retries before updating APT itself.
+RUN printf 'Acquire::Retries "0";\n' > /etc/apt/apt.conf.d/99spr-apt-security \
+    && apt-get -o Acquire::Retries=0 update \
+    && apt-get -o Acquire::Retries=0 install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))' \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' apt)" ge 3.0.4 \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libapt-pkg7.0)" ge 3.0.4 \
+    && apt-get -o Acquire::Retries=0 install -y --no-install-recommends \
     autoconf \
     automake \
     bc \

@@ -1,10 +1,15 @@
 #!/bin/bash
-apt-get update
-apt-get -y upgrade
-apt-get -y install nftables wireless-regdb conntrack ethtool jq dialog
+# CVE-2026-109518: keep retries disabled while bootstrapping APT and afterward.
+install -d -m 0755 /etc/apt/apt.conf.d || exit 1
+printf 'Acquire::Retries "0";\n' > /etc/apt/apt.conf.d/99spr-no-retries || exit 1
+apt-get -o Acquire::Retries=0 update || exit 1
+# Include installed libraries and tools built from the apt source package.
+apt-get -o Acquire::Retries=0 install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))' || exit 1
+apt-get -o Acquire::Retries=0 -y upgrade || exit 1
+apt-get -o Acquire::Retries=0 -y install nftables wireless-regdb conntrack ethtool jq dialog || exit 1
 
 # install upstream docker
-apt-get -y install ca-certificates curl gnupg
+apt-get -o Acquire::Retries=0 -y install ca-certificates curl gnupg || exit 1
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor --yes -o /etc/apt/keyrings/docker.gpg
 chmod a+r /etc/apt/keyrings/docker.gpg
@@ -14,13 +19,13 @@ echo \
   "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
   tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-apt update
-apt-get -y install --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+apt-get -o Acquire::Retries=0 update || exit 1
+apt-get -o Acquire::Retries=0 -y install --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin || exit 1
 
 
 
 if grep --quiet Raspberry /proc/cpuinfo; then
-  apt-get -y install linux-modules-extra-raspi
+  apt-get -o Acquire::Retries=0 -y install linux-modules-extra-raspi || exit 1
 fi
 
 touch /etc/cloud/cloud-init.disabled

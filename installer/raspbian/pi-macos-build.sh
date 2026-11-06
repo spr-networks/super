@@ -3,7 +3,8 @@ set -e
 
 cd "$(dirname "$0")"
 
-docker build -t spr-pi-builder -f Dockerfile.pi-builder .
+# Refresh the base and package layers so security updates are not cached away.
+docker build --pull --no-cache -t spr-pi-builder -f Dockerfile.pi-builder .
 
 if [ ! -f data/spr.clean.img ]; then
   ./pi-download-image.sh

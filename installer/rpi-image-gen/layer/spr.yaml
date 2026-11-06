@@ -25,7 +25,12 @@
 # METAEND
 ---
 mmdebstrap:
+  # Apply during bootstrap as well as in the finished image (CVE-2026-109518).
+  aptopts:
+    - Acquire::Retries "0"
   packages:
+    - apt
+    - libapt-pkg7.0
     # what SPR's scripts and the API exec (the NixOS module's paths)
     - nftables
     - iptables
