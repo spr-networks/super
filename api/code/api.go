@@ -1302,14 +1302,21 @@ func handleUpdateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dev := DeviceEntry{}
-	err := json.NewDecoder(r.Body).Decode(&dev)
+	var req struct {
+		DeviceEntry
+		DeviceDisabled *bool
+	}
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
+	dev := req.DeviceEntry
+	if req.DeviceDisabled != nil {
+		dev.DeviceDisabled = *req.DeviceDisabled
+	}
 
-	errorMsg, code := updateDevice(w, r, dev, identity)
+	errorMsg, code := updateDevice(w, r, dev, identity, req.DeviceDisabled != nil)
 
 	if code != 200 {
 		http.Error(w, errorMsg, code)
@@ -1748,7 +1755,7 @@ func handleBulkUpdateDevices(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, identity string) (string, int) {
+func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, identity string, disabledSpecified bool) (string, int) {
 
 	Groupsmtx.Lock()
 	defer Groupsmtx.Unlock()
@@ -1848,6 +1855,11 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 		val = DeviceEntry{}
 		exists = false
 	}
+	if dev.Policies != nil {
+		dev.DeviceDisabled = dev.DeviceDisabled || slices.Contains(dev.Policies, "disabled")
+	} else if !disabledSpecified {
+		dev.DeviceDisabled = val.DeviceDisabled
+	}
 
 	pskGenerated := false
 	pskModified := false
@@ -1855,6 +1867,9 @@ func updateDevice(w http.ResponseWriter, r *http.Request, dev DeviceEntry, ident
 	refreshPolicies := false
 	refreshTags := false
 	refreshVlanTrunks := false
+	if exists && dev.DeviceDisabled != val.DeviceDisabled {
+		refreshPolicies = true
+	}
 
 	//validations
 	if dev.VLANTag != "" {

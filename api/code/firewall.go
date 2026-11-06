@@ -1413,7 +1413,7 @@ func refreshDeviceGroupsAndPolicy(devices map[string]DeviceEntry, groups []Group
 	//remove from existing verdict maps
 	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), isAPVlan(ifname), false, nil)
 
-	device_disabled := slices.Contains(dev.Policies, "disabled") || dev.DeviceDisabled == true
+	device_disabled := slices.Contains(dev.Policies, "disabled") || slices.Contains(dev.Policies, "quarantine") || dev.DeviceDisabled
 	if dev.MAC != "" {
 		if _, exists := devices[dev.MAC]; !exists {
 			return
@@ -3105,7 +3105,7 @@ func populateVmapEntries(devices map[string]DeviceEntry, groups []GroupEntry, IP
 
 	//first check for the disabled policy. if so, then do not
 	// apply any verdict maps
-	if slices.Contains(val.Policies, "disabled") {
+	if slices.Contains(val.Policies, "disabled") || slices.Contains(val.Policies, "quarantine") || val.DeviceDisabled {
 		return
 	}
 
@@ -3349,7 +3349,7 @@ func establishDevice(devices map[string]DeviceEntry, groups []GroupEntry,
 	//6. add entry to appropriate verdict maps -- but not for disabled
 	//devices, which must stay out of the maps (flushVmaps above already
 	//removed any stale entries)
-	if slices.Contains(entry.Policies, "disabled") || entry.DeviceDisabled {
+	if slices.Contains(entry.Policies, "disabled") || slices.Contains(entry.Policies, "quarantine") || entry.DeviceDisabled {
 		return
 	}
 
@@ -3633,7 +3633,7 @@ func dynamicRouteLoop() {
 				//update the iface map with the designated interface
 				newIfaceMap[entry.RecentIP] = new_iface
 
-				device_disabled := slices.Contains(entry.Policies, "disabled") || entry.DeviceDisabled
+				device_disabled := slices.Contains(entry.Policies, "disabled") || slices.Contains(entry.Policies, "quarantine") || entry.DeviceDisabled
 
 				//disabled devices stay out of the verdict maps. match by MAC
 				//to catch entries left on a stale interface
