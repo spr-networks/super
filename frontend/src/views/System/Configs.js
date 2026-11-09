@@ -27,6 +27,8 @@ const ConfigsBackup = (props) => {
 
   const [backups, setBackups] = useState([])
 
+  const showDownloadBackups = Platform.OS == 'web'
+
   const doConfigsBackup = () => {
     api
       .put('/backup')
@@ -36,6 +38,9 @@ const ConfigsBackup = (props) => {
           ...backups.filter((b) => b.Name !== filename),
           { Name: filename, Timestamp: new Date() }
         ])
+        if (showDownloadBackups) {
+          downloadBackup(filename)
+        }
       })
       .catch((err) => {
         context.error('backup error', err)
@@ -74,8 +79,6 @@ const ConfigsBackup = (props) => {
   useEffect(() => {
     api.get('/backup').then(setBackups).catch(context.error)
   }, [])
-
-  const showDownloadBackups = Platform.OS == 'web'
 
   return (
     <>
