@@ -7,12 +7,11 @@ FROM debian:trixie
 
 ARG RPI_IMAGE_GEN_COMMIT=d2d5705bcb37284c4b08c0ce43c039b1f1004e25
 
-RUN printf 'Acquire::Retries "0";\n' > /etc/apt/apt.conf.d/99spr-apt-security \
-    && apt-get -o Acquire::Retries=0 update \
-    && apt-get -o Acquire::Retries=0 install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))' \
+RUN apt-get update \
+    && apt-get install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))' \
     && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' apt)" ge 3.0.4 \
     && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libapt-pkg7.0)" ge 3.0.4 \
-    && apt-get -o Acquire::Retries=0 install -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends \
       ca-certificates git sudo curl jq zstd \
       cosign skopeo \
     && rm -rf /var/lib/apt/lists/*
@@ -23,14 +22,14 @@ RUN curl -fsSL -o /usr/share/keyrings/githubcli-archive-keyring.gpg \
       https://cli.github.com/packages/githubcli-archive-keyring.gpg \
     && echo "deb [arch=arm64 signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
       > /etc/apt/sources.list.d/github-cli.list \
-    && apt-get -o Acquire::Retries=0 update \
-    && apt-get -o Acquire::Retries=0 install -y --no-install-recommends gh \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends gh \
     && rm -rf /var/lib/apt/lists/*
 
 RUN git clone https://github.com/raspberrypi/rpi-image-gen /opt/rpi-image-gen \
     && git -C /opt/rpi-image-gen checkout --detach ${RPI_IMAGE_GEN_COMMIT}
 
-RUN apt-get -o Acquire::Retries=0 update && /opt/rpi-image-gen/install_deps.sh \
+RUN apt-get update && /opt/rpi-image-gen/install_deps.sh \
     && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -s /bin/bash build \

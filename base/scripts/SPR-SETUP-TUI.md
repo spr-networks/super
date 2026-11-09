@@ -117,7 +117,7 @@ The tool modifies the following configuration files:
 ### Dialog not found
 
 ```bash
-sudo apt-get -o Acquire::Retries=0 install dialog
+sudo apt-get install dialog
 ```
 
 ### Permission denied

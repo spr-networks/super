@@ -9,7 +9,7 @@ elif command -v whiptail &> /dev/null; then
     DIALOG="whiptail"
 else
     echo "Error: Neither dialog nor whiptail is installed"
-    echo "Install with: apt-get -o Acquire::Retries=0 install dialog"
+    echo "Install with: apt-get install dialog"
     exit 1
 fi
 

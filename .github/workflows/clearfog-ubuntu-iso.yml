@@ -16,7 +16,7 @@ permissions:
 jobs:
   build_iso:
     runs-on: self-hosted
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Check out the repo
         uses: actions/checkout@v5
@@ -25,15 +25,17 @@ jobs:
       - name: Fetch tags
         run:  git fetch --tags
       - name: Get version from git
-        run: echo "RELEASE_VERSION_TAG=$(git tag --contains $(git rev-parse HEAD) | grep -v -e clearfog -e nixos)" >> $GITHUB_ENV
+        run: echo "RELEASE_VERSION_TAG=$(git tag --contains "$(git rev-parse HEAD)" | grep -v -e clearfog -e nixos)" >> "$GITHUB_ENV"
       -
         name: Authenticate to ghcr
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - name: Set up Qemu emulation
         run: ./installer/qemu-setup-linux.sh
+      - name: Set up Docker Compose
+        uses: docker/setup-compose-action@v2
       - name: Download the image
         working-directory: ./installer
-        run: ./clearfog-download*
+        run: ./clearfog-download-image.sh
       - name: Build install image
         working-directory: ./installer
         run: ./clearfog-arm64-image-build.sh

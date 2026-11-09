@@ -28,9 +28,9 @@ jobs:
         run: echo "RELEASE_VERSION == $RELEASE_VERSION  CHANNEL == $RELEASE_CHANNEL"
       - name: Install jq
         run: |
-          sudo apt-get -o Acquire::Retries=0 update
-          sudo apt-get -o Acquire::Retries=0 install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))'
-          sudo apt-get -o Acquire::Retries=0 install -y jq
+          sudo apt-get update
+          sudo apt-get install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))'
+          sudo apt-get install -y jq
       - name: Set Matrix output
         id: set-matrix
         run: |

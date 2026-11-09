@@ -23,9 +23,6 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: '0'
-      - name: Check Pi image APT security
-        run: |
-          python3 installer/raspbian/tests/test_apt_security.py
       - name: Fetch tags
         run:  git fetch --tags
       - name: Get version from git

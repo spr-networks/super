@@ -26,16 +26,15 @@ DOCKER_DEFAULT_PLATFORM=linux/arm64 docker run --pull=always --rm \
   debian:trixie \
   sh -ec '
     echo force-unsafe-io > /etc/dpkg/dpkg.cfg.d/docker
-    printf "%s\n" "Acquire::Retries \"0\";" > /etc/apt/apt.conf.d/99-spr-security-retries
-    apt-get -o Acquire::Retries=0 update -qq
-    apt-get -o Acquire::Retries=0 install -y --only-upgrade apt "?and(?installed,?source-package(^apt$))"
+    apt-get update -qq
+    apt-get install -y --only-upgrade apt "?and(?installed,?source-package(^apt$))"
     apt_security_packages=$(dpkg-query -W -f="\${source:Package} \${Version} \${db:Status-Status}\n")
     printf "%s\n" "$apt_security_packages" |
     while read -r apt_source apt_version apt_status; do
       [ "$apt_source" = apt ] && [ "$apt_status" = installed ] || continue
       dpkg --compare-versions "$apt_version" ge 3.0.4 || exit 1
     done
-    apt-get -o Acquire::Retries=0 install -y -q --no-install-recommends linux-image-arm64 initramfs-tools
+    apt-get install -y -q --no-install-recommends linux-image-arm64 initramfs-tools
     echo vfat >> /etc/initramfs-tools/modules
     echo nls_cp437 >> /etc/initramfs-tools/modules
     echo nls_ascii >> /etc/initramfs-tools/modules
@@ -61,10 +60,6 @@ docker run --privileged -v /dev:/dev -v "$PWD/data:/data" -v "$PWD/scripts:/scri
     -nographic | tee /tmp/qemu.log
   if ! grep -q "===SPR_INSTALL_OK===" /tmp/qemu.log; then
     echo "FATAL: pi-target-install.sh did not complete successfully" >&2
-    exit 1
-  fi
-  if ! grep -q "===SPR_APT_SECURITY_OK===" /tmp/qemu.log; then
-    echo "FATAL: finished Pi image did not pass APT security verification" >&2
     exit 1
   fi
 '

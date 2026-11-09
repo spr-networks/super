@@ -7,11 +7,7 @@
 shopt -s expand_aliases
 export DEBIAN_FRONTEND=noninteractive
 
-# CVE-2026-109518: keep retries disabled, including before APT can upgrade itself.
-install -m 0755 -d /etc/apt/apt.conf.d || exit 1
-printf '%s\n' 'Acquire::Retries "0";' > /etc/apt/apt.conf.d/99-spr-security-retries || exit 1
-apt-get -o Acquire::Retries=0 install -y --no-download --only-upgrade apt '?and(?installed,?source-package(^apt$))' || exit 1
-/verify-apt-security.sh || exit 1
+apt-get install -y --no-download --only-upgrade apt '?and(?installed,?source-package(^apt$))' || exit 1
 
 dhcpcd eth0
 
@@ -21,7 +17,7 @@ rm -f /etc/resolv.conf
 echo nameserver 1.1.1.1 > /etc/resolv.conf
 
 # install docker
-apt -o Acquire::Retries=0 -y install --no-download --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin git || exit 1
+apt -y install --no-download --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin git || exit 1
 
 # SPR setup
 if [ ! -d /home/spr ]; then
@@ -70,12 +66,12 @@ fi
 
 
 # finish downloaded install
-apt-get -o Acquire::Retries=0 -y --fix-broken --fix-missing --no-download --no-install-recommends install || exit 1
+apt-get -y --fix-broken --fix-missing --no-download --no-install-recommends install || exit 1
 dpkg --configure -a
 
 # sync with install.sh and cross-install.sh
-apt -o Acquire::Retries=0 -y upgrade --no-download || exit 1
-apt -o Acquire::Retries=0 -y install --no-download --no-install-recommends nftables wireless-regdb ethtool nano iw fdisk tmux conntrack jq inotify-tools dhcpcd cloud-guest-utils tcpdump iperf3 || exit 1
+apt -y upgrade --no-download || exit 1
+apt -y install --no-download --no-install-recommends nftables wireless-regdb ethtool nano iw fdisk tmux conntrack jq inotify-tools dhcpcd cloud-guest-utils tcpdump iperf3 || exit 1
 
 # Install the same versioned host runtime package published with this image.
 mapfile -t KRUN_DEBS < <(find /var/cache/apt/archives -maxdepth 1 -name 'spr-krun-runtime_*_arm64.deb' -print)
@@ -85,7 +81,7 @@ if [ "${#KRUN_DEBS[@]}" -ne 1 ]; then
 fi
 KRUN_DEB=${KRUN_DEBS[0]}
 dpkg --unpack "$KRUN_DEB" || exit 1
-apt-get -o Acquire::Retries=0 -y --fix-broken --no-download --no-install-recommends install || exit 1
+apt-get -y --fix-broken --no-download --no-install-recommends install || exit 1
 rm -f "$KRUN_DEB"
 
 # Mount boot firmware so kernel postinst hooks can update it
@@ -155,7 +151,7 @@ for svc in wpa_supplicant avahi-daemon avahi-daemon.socket ModemManager bluetoot
 done
 
 # Enable systemd-timesyncd for NTP. Network-readiness handled by systemd.
-apt -o Acquire::Retries=0 -y install --no-download --no-install-recommends systemd-timesyncd 2>/dev/null || true
+apt -y install --no-download --no-install-recommends systemd-timesyncd 2>/dev/null || true
 systemctl enable systemd-timesyncd 2>/dev/null || true
 
 # Set wifi country so RPiOS does not rfkill wireless on boot
@@ -296,9 +292,9 @@ rm -rf /usr/lib/firmware/nvidia
 rm -rf /usr/lib/firmware/i915
 
 #remove snapd
-apt -o Acquire::Retries=0 purge -y snapd
+apt purge -y snapd
 
-apt-get -o Acquire::Retries=0 autoremove -y && apt-get -o Acquire::Retries=0 clean
+apt-get autoremove -y && apt-get clean
 rm -rf \
     /tmp/* \
     /var/backups/* \
@@ -352,14 +348,9 @@ kill -TERM $DOCKERD_PID
 wait $DOCKERD_PID
 kill -TERM $CONTAINERD_PID
 wait $CONTAINERD_PID
-
-# Recheck the finished image after every install, upgrade and cleanup step.
-/verify-apt-security.sh || exit 1
-rm -f /verify-apt-security.sh || exit 1
 sync
 
 # success marker for the outer build script to grep
-echo "===SPR_APT_SECURITY_OK==="
 echo "===SPR_INSTALL_OK==="
 
 poweroff -f

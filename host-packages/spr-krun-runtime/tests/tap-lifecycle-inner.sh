@@ -3,12 +3,11 @@ set -euxo pipefail
 
 DEB="$1"
 export DEBIAN_FRONTEND=noninteractive
-printf 'Acquire::Retries "0";\n' > /etc/apt/apt.conf.d/99spr-no-retries
-apt-get -o Acquire::Retries=0 update
-apt-get -o Acquire::Retries=0 install -y --only-upgrade apt libapt-pkg7.0
+apt-get update
+apt-get install -y --only-upgrade apt libapt-pkg7.0
 dpkg --compare-versions "$(dpkg-query -W -f='${Version}' apt)" ge 3.0.4
 dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libapt-pkg7.0)" ge 3.0.4
-apt-get -o Acquire::Retries=0 install -y --no-install-recommends build-essential jq util-linux "$DEB"
+apt-get install -y --no-install-recommends build-essential jq util-linux "$DEB"
 
 cc -shared -fPIC -Wl,-soname,libkrun.so.1 \
     -o /tmp/libkrun.so.1 /tests/fake-libkrun.c

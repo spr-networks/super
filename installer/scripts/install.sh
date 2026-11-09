@@ -17,13 +17,10 @@ echo nameserver 1.1.1.1 > /etc/resolv.conf
 # Docker's buildkit has evolved to require buildx and as of 23.04 buildkit
 # is no longer sufficient to work with a complex docker-compose file.
 # Install the upstream docker packages then.
-# CVE-2026-109518: keep retries disabled, including before APT can upgrade itself.
-install -m 0755 -d /etc/apt/apt.conf.d || exit 1
-printf '%s\n' 'Acquire::Retries "0";' > /etc/apt/apt.conf.d/99-spr-security-retries || exit 1
-apt-get -o Acquire::Retries=0 update || exit 1
-apt-get -o Acquire::Retries=0 install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))' || exit 1
+apt-get update || exit 1
+apt-get install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))' || exit 1
 # Debian's fixed versions must be present in the resulting image. Ubuntu
-# uses its own security versions; keep the retry workaround enabled there.
+# uses its own security versions.
 . /etc/os-release || exit 1
 case "$ID:${VERSION_CODENAME:-}" in
   debian:trixie|raspbian:trixie) apt_minimum=3.0.4 ;;
@@ -41,7 +38,7 @@ if [ -n "$apt_minimum" ]; then
   done <<< "$apt_security_packages"
 fi
 
-apt-get -o Acquire::Retries=0 -y install ca-certificates curl gnupg dhcpcd5 || exit 1
+apt-get -y install ca-certificates curl gnupg dhcpcd5 || exit 1
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 chmod a+r /etc/apt/keyrings/docker.gpg
@@ -51,15 +48,15 @@ echo \
   "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
   "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
   tee /etc/apt/sources.list.d/docker.list > /dev/null
-apt-get -o Acquire::Retries=0 update || exit 1
+apt-get update || exit 1
 
 #linux-modules-extra-raspi is cleaned up now
 #https://bugs.launchpad.net/ubuntu/+source/linux-raspi/+bug/2048862
 # NOTE: also check pi-cross-install when making updates
-apt-get -o Acquire::Retries=0 -y install --download-only linux-firmware || exit 1
-apt-get -o Acquire::Retries=0 -y install --no-install-recommends nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack jq inotify-tools dialog || exit 1
+apt-get -y install --download-only linux-firmware || exit 1
+apt-get -y install --no-install-recommends nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack jq inotify-tools dialog || exit 1
 # install docker and buildx
-apt-get -o Acquire::Retries=0 -y install --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin || exit 1
+apt-get -y install --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin || exit 1
 
 useradd -m -s /bin/bash ubuntu
 echo "ubuntu:ubuntu" | chpasswd
@@ -91,13 +88,13 @@ cp -R /root/mt76/firmware/mt7996/. /lib/firmware/mediatek/mt7996/
 
 # Enable systemd-timesyncd for ongoing NTP sync (handles network-readiness
 # itself; replaces the broken ntpdate one-shot we used to ship).
-apt-get -o Acquire::Retries=0 -y install --no-install-recommends systemd-timesyncd 2>/dev/null || true
+apt-get -y install --no-install-recommends systemd-timesyncd 2>/dev/null || true
 systemctl enable systemd-timesyncd 2>/dev/null || true
 
 # disable dhclient on the WANIF, since we will run our own dhcp
 # dont use this
 touch /etc/cloud/cloud-init.disabled
-apt-get -o Acquire::Retries=0 -y purge cloud-init
+apt-get -y purge cloud-init
 rm /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
 echo "network: {config: disabled}" > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
 
@@ -177,7 +174,7 @@ MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
 SSHEOF
 
 # cleanup
-apt-get -o Acquire::Retries=0 autoremove -y && apt-get -o Acquire::Retries=0 clean
+apt-get autoremove -y && apt-get clean
 rm -rf \
     /tmp/* \
     /var/backups/* \

@@ -251,7 +251,7 @@ func installKrunRuntimeOnHost(ctx context.Context, path string) ([]byte, error) 
 	composeCommandMtx.Lock()
 	defer composeCommandMtx.Unlock()
 	return krunRuntimeRunHost(ctx, "env", "DEBIAN_FRONTEND=noninteractive",
-		"apt-get", "-o", "Acquire::Retries=0", "install", "-y", "--no-install-recommends", "--no-allow-downgrades", "--", path)
+		"apt-get", "install", "-y", "--no-install-recommends", "--no-allow-downgrades", "--", path)
 }
 
 func krunRuntimePackageField(ctx context.Context, path, field string) (string, error) {

@@ -11,7 +11,6 @@ R=$1
 S=$R/usr/lib/spr
 
 # Reject stale mirrors or caches before emitting an image/update bundle.
-# The overlay retains retries=0 for any APT use on the resulting system.
 apt_packages=$(chroot "$R" dpkg-query -W -f='${source:Package} ${binary:Package} ${Version} ${db:Status-Status}\n')
 while read -r source package version status; do
    [ "$source" = apt ] && [ "$status" = installed ] || continue

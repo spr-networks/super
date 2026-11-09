@@ -17,13 +17,10 @@ fi
 
 install_deps() {
 	# install upstream docker
-	# CVE-2026-109518: disable retries before upgrading APT or fetching packages.
-	install -d -m 0755 /etc/apt/apt.conf.d || return 1
-	printf 'Acquire::Retries "0";\n' > /etc/apt/apt.conf.d/99spr-no-retries || return 1
-	apt-get -o Acquire::Retries=0 update || return 1
+	apt-get update || return 1
 	# Include installed libraries and tools built from the apt source package.
-	apt-get -o Acquire::Retries=0 install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))' || return 1
-	apt-get -o Acquire::Retries=0 -y install ca-certificates curl gnupg || return 1
+	apt-get install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))' || return 1
+	apt-get -y install ca-certificates curl gnupg || return 1
 	install -m 0755 -d /etc/apt/keyrings
 	curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor --yes -o /etc/apt/keyrings/docker.gpg
 	chmod a+r /etc/apt/keyrings/docker.gpg
@@ -33,9 +30,9 @@ install_deps() {
 		"$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
 		tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-	apt-get -o Acquire::Retries=0 update || return 1
-	apt-get -o Acquire::Retries=0 -y install --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin || return 1
-	apt-get -o Acquire::Retries=0 install -y curl git jq qrencode iproute2 wireguard-tools || return 1
+	apt-get update || return 1
+	apt-get -y install --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin || return 1
+	apt-get install -y curl git jq qrencode iproute2 wireguard-tools || return 1
 
 	git clone https://github.com/spr-networks/super.git
 	cd super

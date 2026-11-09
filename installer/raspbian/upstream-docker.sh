@@ -1,13 +1,10 @@
 #!/bin/bash
 set -e
 # install upstream docker
-# CVE-2026-109518: keep retries disabled, including before APT can upgrade itself.
-install -m 0755 -d /etc/apt/apt.conf.d
-printf '%s\n' 'Acquire::Retries "0";' > /etc/apt/apt.conf.d/99-spr-security-retries
-apt-get -o Acquire::Retries=0 update
-apt-get -o Acquire::Retries=0 install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))'
+apt-get update
+apt-get install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))'
 # Debian's fixed versions must be present in the resulting image. Ubuntu
-# uses its own security versions; keep the retry workaround enabled there.
+# uses its own security versions.
 . /etc/os-release
 case "$ID:${VERSION_CODENAME:-}" in
   debian:trixie|raspbian:trixie) apt_minimum=3.0.4 ;;
@@ -25,7 +22,7 @@ if [ -n "$apt_minimum" ]; then
   done <<< "$apt_security_packages"
 fi
 
-apt-get -o Acquire::Retries=0 -y install --no-install-recommends ca-certificates curl gnupg
+apt-get -y install --no-install-recommends ca-certificates curl gnupg
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor --yes -o /etc/apt/keyrings/docker.gpg
 chmod a+r /etc/apt/keyrings/docker.gpg
@@ -35,8 +32,8 @@ echo \
   "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
   tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-apt -o Acquire::Retries=0 update
-apt-get -o Acquire::Retries=0 -y install --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+apt update
+apt-get -y install --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 
 
