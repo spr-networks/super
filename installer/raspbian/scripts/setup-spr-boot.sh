@@ -8,9 +8,9 @@ ROOT=${3:-/}
 ROOT=${ROOT%/}
 BOOT="$ROOT/boot/firmware"
 
-if [[ ! "$KVER_PI4" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-v8\+$ ]] ||
-   [ "$KVER_PI5" != "${BASH_REMATCH[1]}-v8-16k+" ]; then
-  echo "expected matching 4 KB v8+ and 16 KB v8-16k+ kernels" >&2
+if [[ ! "$KVER_PI4" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-spr-rpi-v8$ ]] ||
+   [ "$KVER_PI5" != "${BASH_REMATCH[1]}-spr-rpi-2712" ]; then
+  echo "expected matching 4 KB spr-rpi-v8 and 16 KB spr-rpi-2712 kernels" >&2
   exit 1
 fi
 

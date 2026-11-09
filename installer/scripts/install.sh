@@ -54,7 +54,7 @@ apt-get update || exit 1
 #https://bugs.launchpad.net/ubuntu/+source/linux-raspi/+bug/2048862
 # NOTE: also check pi-cross-install when making updates
 apt-get -y install --download-only linux-firmware || exit 1
-apt-get -y install --no-install-recommends nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack jq inotify-tools dialog || exit 1
+apt-get -y install --no-install-recommends nftables wireless-regdb ethtool git nano iw cloud-utils fdisk tmux conntrack jq inotify-tools dialog zstd || exit 1
 # install docker and buildx
 apt-get -y install --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin || exit 1
 
@@ -129,12 +129,11 @@ set -e
 ARCH=$(uname -m)
 URL=https://storage.googleapis.com/gvisor/releases/release/latest/${ARCH}
 pushd /tmp
-wget ${URL}/runsc ${URL}/runsc.sha512 ${URL}/containerd-shim-runsc-v1 ${URL}/containerd-shim-runsc-v1.sha512
-sha512sum -c runsc.sha512
-sha512sum -c containerd-shim-runsc-v1.sha512
-rm -f *.sha512
-chmod a+rx runsc containerd-shim-runsc-v1
-mv runsc containerd-shim-runsc-v1 /usr/local/bin
+wget -O gvisor.tar.zstd "$URL/gvisor.tar.zstd"
+wget -O gvisor.tar.zstd.sha512 "$URL/gvisor.tar.zstd.sha512"
+sha512sum -c gvisor.tar.zstd.sha512
+tar --zstd -xf gvisor.tar.zstd -C /usr/local/bin
+rm -f gvisor.tar.zstd gvisor.tar.zstd.sha512
 popd
 
 

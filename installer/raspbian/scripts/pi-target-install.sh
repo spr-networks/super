@@ -102,8 +102,8 @@ for flavor in pi4 pi5; do
   KERNEL_PACKAGE=$(dpkg-deb -f "${KERNEL_DEBS[0]}" Package) || exit 1
   SPR_KVERS[$flavor]=${KERNEL_PACKAGE#linux-image-}
 done
-if [[ ! "${SPR_KVERS[pi4]}" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-v8\+$ ]] ||
-   [ "${SPR_KVERS[pi5]}" != "${BASH_REMATCH[1]}-v8-16k+" ]; then
+if [[ ! "${SPR_KVERS[pi4]}" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-spr-rpi-v8$ ]] ||
+   [ "${SPR_KVERS[pi5]}" != "${BASH_REMATCH[1]}-spr-rpi-2712" ]; then
   echo "FATAL: missing or mismatched Pi 4/Pi 5 kernel versions" >&2
   exit 1
 fi

@@ -57,11 +57,11 @@ fetch_release() {
   done
 }
 
-fetch_release "$TAG" "${VERSION}-v8-16k+" "$WORK/release.json" "$WORK/pi5"
+fetch_release "$TAG" "${VERSION}-spr-rpi-2712" "$WORK/release.json" "$WORK/pi5"
 if [ "$MODE" = both ]; then
   # Never fall back to an older Pi 4 build or silently ship only Pi 5.
   curl -fsSL -o "$WORK/pi4.json" "https://api.github.com/repos/${KERNEL_REPO}/releases/tags/pi4-${TAG}"
-  fetch_release "pi4-${TAG}" "${VERSION}-v8+" "$WORK/pi4.json" "$WORK/pi4"
+  fetch_release "pi4-${TAG}" "${VERSION}-spr-rpi-v8" "$WORK/pi4.json" "$WORK/pi4"
   install -m 0755 -d "$DEST/pi4" "$DEST/pi5"
   install -m 0644 "$WORK/pi4"/*.deb "$DEST/pi4/"
   install -m 0644 "$WORK/pi5"/*.deb "$DEST/pi5/"

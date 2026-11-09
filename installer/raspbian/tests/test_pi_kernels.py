@@ -12,9 +12,9 @@ import tempfile
 import unittest
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
-TAG = "v6.18.57-1"
-PI4 = "6.18.57-v8+"
-PI5 = "6.18.57-v8-16k+"
+TAG = "v6.18.60-7"
+PI4 = "6.18.60-spr-rpi-v8"
+PI5 = "6.18.60-spr-rpi-2712"
 
 MOCK = r'''#!/usr/bin/env python3
 import json, os, pathlib, sys
@@ -22,14 +22,14 @@ args = sys.argv[1:]
 fixtures = pathlib.Path(os.environ["FIXTURES"])
 if pathlib.Path(sys.argv[0]).name == "gh":
     assert args[:2] == ["attestation", "verify"]
-    assert args[args.index("--source-ref") + 1] == "refs/tags/v6.18.57-1"
+    assert args[args.index("--source-ref") + 1] == "refs/tags/v6.18.60-7"
     assert args[args.index("--repo") + 1] == "spr-networks/spr-debian-kernel"
     assert args[args.index("--signer-workflow") + 1].endswith("/.github/workflows/build-kernel.yml")
     sys.exit(1 if os.environ.get("FAIL_VERIFY") else 0)
 url = args[-1]
 if url.endswith("/releases/latest"):
     content = (fixtures / "pi5.json").read_bytes()
-elif url.endswith("/releases/tags/pi4-v6.18.57-1"):
+elif url.endswith("/releases/tags/pi4-v6.18.60-7"):
     if os.environ.get("MISSING_PI4"):
         sys.exit(22)
     content = (fixtures / "pi4.json").read_bytes()
@@ -60,9 +60,9 @@ class KernelTests(unittest.TestCase):
         self.env = dict(os.environ, FIXTURES=str(self.root),
                         PATH=str(self.bin) + os.pathsep + os.environ["PATH"])
         for flavor, kver, tag in (("pi4", PI4, "pi4-" + TAG), ("pi5", PI5, TAG)):
-            names = [f"linux-image-{kver}_1.rpi.trixie_arm64.deb",
-                     f"linux-headers-{kver}_1.rpi.trixie_arm64.deb",
-                     "linux-libc-dev_1.rpi.trixie_arm64.deb"]
+            names = [f"linux-image-{kver}_7.rpi.trixie_arm64.deb",
+                     f"linux-headers-{kver}_7.rpi.trixie_arm64.deb",
+                     "linux-libc-dev_7.rpi.trixie_arm64.deb"]
             (self.root / f"{flavor}.json").write_text(json.dumps({
                 "tag_name": tag,
                 "assets": [{"name": n, "browser_download_url":
@@ -96,9 +96,20 @@ class KernelTests(unittest.TestCase):
 
     def test_wrong_pi4_version_is_rejected(self):
         path = self.root / "pi4.json"
-        path.write_text(path.read_text().replace(PI4, "6.18.55-v8+"))
+        path.write_text(path.read_text().replace(PI4, "6.18.59-spr-rpi-v8"))
         self.assertNotEqual(self.fetch("both").returncode, 0)
         self.assertFalse((self.root / "debs").exists())
+
+    def test_wrong_kernel_flavour_is_rejected(self):
+        for flavor, correct, wrong in (("pi4", PI4, PI5), ("pi5", PI5, PI4)):
+            with self.subTest(flavor=flavor):
+                path = self.root / f"{flavor}.json"
+                original = path.read_text()
+                path.write_text(original.replace(correct, wrong))
+                result = self.fetch("both")
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse((self.root / "debs").exists())
+                path.write_text(original)
 
     def test_failed_attestation_is_rejected(self):
         self.assertNotEqual(self.fetch("both", FAIL_VERIFY="1").returncode, 0)
@@ -165,7 +176,12 @@ class KernelTests(unittest.TestCase):
 
     def test_mismatched_versions_are_rejected(self):
         root, boot = self.boot_fixture()
-        self.assertNotEqual(self.setup_boot(root, pi5="6.18.58-v8-16k+").returncode, 0)
+        self.assertNotEqual(self.setup_boot(root, pi5="6.18.59-spr-rpi-2712").returncode, 0)
+        self.assertFalse((boot / "kernel8.img").exists())
+
+    def test_swapped_kernel_flavours_are_rejected(self):
+        root, boot = self.boot_fixture()
+        self.assertNotEqual(self.setup_boot(root, pi4=PI5, pi5=PI4).returncode, 0)
         self.assertFalse((boot / "kernel8.img").exists())
 
 
