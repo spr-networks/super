@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # This script runs apt onto the mounted image,
 # to download everything without needing `qemu`
@@ -7,17 +8,23 @@ shopt -s expand_aliases
 
 export DEBIAN_FRONTEND=noninteractive
 # for host
-apt-get update
-apt-get install -y --no-install-recommends curl ca-certificates gpg git
+# CVE-2026-109518: keep retries disabled, including before APT can upgrade itself.
+install -m 0755 -d /etc/apt/apt.conf.d
+printf '%s\n' 'Acquire::Retries "0";' > /etc/apt/apt.conf.d/99-spr-security-retries
+apt-get -o Acquire::Retries=0 update
+apt-get -o Acquire::Retries=0 install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))'
+apt-get -o Acquire::Retries=0 install -y --no-install-recommends curl ca-certificates gpg git
 
 #for cross
-STATE='-o Dir::Cache="/mnt/fs/var/cache/apt" -o Dir::State="/mnt/fs/var/lib/apt" -o Dir::Etc::Sourcelist="/mnt/fs/etc/apt/sources.list" -o Dir::Etc::Sourceparts="/mnt/fs/etc/apt/sources.list.d" -o Dir::State::Lists="/mnt/fs/var/lib/apt/lists" -o APT::Architecture="arm64" -o APT::Architectures="arm64"'
-alias apty="apt-get $STATE"
+STATE='-o Dir::Cache="/mnt/fs/var/cache/apt" -o Dir::State="/mnt/fs/var/lib/apt" -o Dir::State::status="/mnt/fs/var/lib/dpkg/status" -o Dir::Etc::Sourcelist="/mnt/fs/etc/apt/sources.list" -o Dir::Etc::Sourceparts="/mnt/fs/etc/apt/sources.list.d" -o Dir::State::Lists="/mnt/fs/var/lib/apt/lists" -o APT::Architecture="arm64" -o APT::Architectures="arm64"'
+alias apty="apt-get -o Acquire::Retries=0 $STATE"
 
 # Docker's buildkit has evolved to require buildx and as of 23.04 buildkit
 # is no longer sufficient to work with a complex docker-compose file.
 # Install the upstream docker packages then.
 apty update
+# Cache the target APT and its library dependencies using the target dpkg state.
+apty -y install --download-only --only-upgrade apt '?and(?installed,?source-package(^apt$))'
 apty -y install --download-only --no-install-recommends ca-certificates curl gpg
 install -m 0755 -d /etc/apt/keyrings
 install -m 0755 -d /mnt/fs/etc/apt/keyrings

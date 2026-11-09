@@ -1,8 +1,14 @@
-FROM ubuntu:26.04
+FROM debian:trixie
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Match the image's Debian release and require fixed APT before build downloads.
+RUN printf '%s\n' 'Acquire::Retries "0";' > /etc/apt/apt.conf.d/99-spr-security-retries \
+    && apt-get -o Acquire::Retries=0 update \
+    && apt-get -o Acquire::Retries=0 install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))' \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' apt)" ge 3.0.4 \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' libapt-pkg7.0)" ge 3.0.4 \
+    && apt-get -o Acquire::Retries=0 install -y --no-install-recommends \
     qemu-system-arm \
     qemu-utils \
     qemu-user-binfmt \
@@ -16,6 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     gnupg \
     docker.io \
+    docker-cli \
     zstd \
     jq \
     && rm -rf /var/lib/apt/lists/*

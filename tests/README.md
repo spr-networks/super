@@ -10,18 +10,19 @@
 for hwsim and host deps on ubuntu:
 
 ```sh
-apt install -y linux-image-extra-virtual net-tools iw
+apt-get -o Acquire::Retries=0 update && apt-get -o Acquire::Retries=0 install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))'
+apt-get -o Acquire::Retries=0 install -y linux-image-extra-virtual net-tools iw
 ```
 
 for latest docker compose:
 ```sh
 # remove if already installed (spr image)
-apt purge docker-compose docker
+apt-get -o Acquire::Retries=0 purge docker-compose docker
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 chmod a+r /etc/apt/keyrings/docker.gpg
 echo   "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
         "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" |   tee /etc/apt/sources.list.d/docker.list > /dev/null
-apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+apt-get -o Acquire::Retries=0 update && apt-get -o Acquire::Retries=0 install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))' && apt-get -o Acquire::Retries=0 install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 service docker start
 docker --version && docker compose --version
 alias docker-compose="docker compose"
@@ -32,7 +33,7 @@ alias docker-compose="docker compose"
 if running the tests on the host, nodejs is required for sta4:
 
 ```sh
-apt-get update && apt-get install -y \
+apt-get -o Acquire::Retries=0 update && apt-get -o Acquire::Retries=0 install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))' && apt-get -o Acquire::Retries=0 install -y \
     software-properties-common \
     npm
 npm install n -g && \

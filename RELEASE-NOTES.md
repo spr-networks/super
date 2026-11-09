@@ -1,6 +1,15 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.3.2
+**Improvements**
+- Have configs auto download when creating a backup
+**Fixes**
+- MT7990 performance fix for WiFi 7 link rates (see https://github.com/spr-networks/super/issues/546)
+- Update base ubuntu containers for upstream apt security issue 
+- Fix link queries in API for encrypted backhaul
+- Fix quarantine assignment in UI
+
 ## v1.3.1
 **Fixes**
 - Fix roaming across encrypted backhaul

@@ -53,7 +53,8 @@ if [ "${1:-}" = --inside ]; then
 fi
 
 . ./reproducible.env
-docker build -q -t $BUILDER installer/rpi-image-gen >/dev/null
+# Refresh the builder's APT before it bootstraps an image from live mirrors.
+docker build --pull --no-cache -q -t $BUILDER installer/rpi-image-gen >/dev/null
 docker volume create $VOL >/dev/null
 
 # superd/rpios, as the NixOS image builds superd/nixos: static, stripped

@@ -22,7 +22,7 @@ yarn install
 ## Install recent node version on host
 
 ```
-apt-get update && apt-get install -y \
+apt-get -o Acquire::Retries=0 update && apt-get -o Acquire::Retries=0 install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))' && apt-get -o Acquire::Retries=0 install -y \
     software-properties-common \
     npm
 npm install n -g && \
@@ -36,11 +36,14 @@ npm install n -g && \
 Same as sta1/
 
 ```yaml
-FROM ubuntu:23.10
+FROM ubuntu:24.04
 
-RUN apt-get update && apt-get -y install iproute2 wireless-tools iw nano tcpdump inetutils-ping netcat wpasupplicant curl hostapd isc-dhcp-client
+RUN printf 'Acquire::Retries "0";\n' > /etc/apt/apt.conf.d/99spr-no-retries \
+    && apt-get -o Acquire::Retries=0 update \
+    && apt-get -o Acquire::Retries=0 install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))' \
+    && apt-get -o Acquire::Retries=0 -y install iproute2 wireless-tools iw nano tcpdump inetutils-ping netcat-traditional wpasupplicant curl hostapd isc-dhcp-client
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get -o Acquire::Retries=0 update && apt-get -o Acquire::Retries=0 install -y \
     software-properties-common \
     npm
 RUN npm install n -g && \

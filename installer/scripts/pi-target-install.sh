@@ -7,6 +7,29 @@
 shopt -s expand_aliases
 export DEBIAN_FRONTEND=noninteractive
 
+# CVE-2026-109518: keep retries disabled, including before APT can upgrade itself.
+install -m 0755 -d /etc/apt/apt.conf.d || exit 1
+printf '%s\n' 'Acquire::Retries "0";' > /etc/apt/apt.conf.d/99-spr-security-retries || exit 1
+apt-get -o Acquire::Retries=0 install -y --no-download --only-upgrade apt '?and(?installed,?source-package(^apt$))' || exit 1
+# Debian's fixed versions must be present in the resulting image. Ubuntu
+# uses its own security versions; keep the retry workaround enabled there.
+. /etc/os-release || exit 1
+case "$ID:${VERSION_CODENAME:-}" in
+  debian:trixie|raspbian:trixie) apt_minimum=3.0.4 ;;
+  debian:bookworm|raspbian:bookworm) apt_minimum=2.6.2 ;;
+  *) apt_minimum= ;;
+esac
+if [ -n "$apt_minimum" ]; then
+  apt_security_packages=$(dpkg-query -W -f='${source:Package} ${binary:Package} ${Version} ${db:Status-Status}\n') || exit 1
+  while read -r apt_source apt_package apt_version apt_status; do
+    [ "$apt_source" = apt ] && [ "$apt_status" = installed ] || continue
+    if ! dpkg --compare-versions "$apt_version" ge "$apt_minimum"; then
+      echo "$apt_package $apt_version is older than the required security version $apt_minimum" >&2
+      exit 1
+    fi
+  done <<< "$apt_security_packages"
+fi
+
 dhcpcd eth0
 
 # do not use systemd-resolvd, we will use our own container later
@@ -21,7 +44,7 @@ rm -f /etc/resolv.conf
 echo nameserver 1.1.1.1 > /etc/resolv.conf
 
 # install docker
-apt -y install --no-download --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin git
+apt -o Acquire::Retries=0 -y install --no-download --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin git || exit 1
 
 # SPR setup
 if [ ! -d /home/spr ]; then
@@ -53,12 +76,12 @@ docker compose -f docker-compose.yml  -f dyndns/docker-compose.yml -f ppp/docker
 
 
 # finish downloaded install
-apt-get -y --fix-broken --fix-missing --no-download --no-install-recommends install
+apt-get -o Acquire::Retries=0 -y --fix-broken --fix-missing --no-download --no-install-recommends install || exit 1
 dpkg --configure -a
 
 # sync with install.sh and cross-install.sh
-apt -y upgrade --no-download
-apt -y install --no-download --no-install-recommends nftables wireless-regdb ethtool nano iw fdisk tmux conntrack jq inotify-tools dhcpcd cloud-guest-utils
+apt -o Acquire::Retries=0 -y upgrade --no-download || exit 1
+apt -o Acquire::Retries=0 -y install --no-download --no-install-recommends nftables wireless-regdb ethtool nano iw fdisk tmux conntrack jq inotify-tools dhcpcd cloud-guest-utils || exit 1
 # Install SPR custom kernel + headers from spr-debian-kernel, fetched and
 # provenance-verified on the build host by fetch-spr-kernel.sh
 pushd /var/cache/spr-kernel
@@ -192,9 +215,9 @@ rm -rf /usr/lib/firmware/nvidia
 rm -rf /usr/lib/firmware/i915
 
 #remove snapd
-apt purge -y snapd
+apt -o Acquire::Retries=0 purge -y snapd
 
-apt-get autoremove -y && apt-get clean
+apt-get -o Acquire::Retries=0 autoremove -y && apt-get -o Acquire::Retries=0 clean
 rm -rf \
     /tmp/* \
     /var/backups/* \

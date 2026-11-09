@@ -11,6 +11,7 @@ cp /scripts/run-scripts/setup.sh /mnt/fs/
 cp /scripts/run-scripts/run.sh /mnt/fs/
 cp /scripts/spr-environment.sh /mnt/fs/
 cp /scripts/pi-target-install.sh /mnt/fs/pi-target-install.sh
+install -m 0755 /scripts/verify-apt-security.sh /mnt/fs/verify-apt-security.sh || exit 1
 cp /scripts/setup-spr-boot.sh /mnt/fs/setup-spr-boot.sh || exit 1
 mapfile -t KRUN_DEBS < <(find /packages -maxdepth 1 -name 'spr-krun-runtime_*_arm64.deb' -print)
 if [ "${#KRUN_DEBS[@]}" -ne 1 ]; then
@@ -23,7 +24,7 @@ install -m 0644 "${KRUN_DEBS[0]}" /mnt/fs/var/cache/apt/archives/
 mount --bind /dev/ /mnt/fs/dev/
 # this just downloads packages onto the image. not much else.
 # the rest is done on an aarch64 conatiner with pi-target-install.sh
-bash /scripts/pi-cross-install.sh
+bash /scripts/pi-cross-install.sh || exit 1
 
 # ath12k firmware for QCN9274
 mkdir -p /mnt/fs/lib/firmware/ath12k/QCN9274/hw2.0

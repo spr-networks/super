@@ -225,7 +225,7 @@ func TestInstallLatestKrunRuntime(t *testing.T) {
 				t.Fatal("host install ran before provenance verification")
 			}
 			packagePath := args[len(args)-1]
-			wantArgs := []string{"DEBIAN_FRONTEND=noninteractive", "apt-get", "install", "-y", "--no-install-recommends", "--no-allow-downgrades", "--"}
+			wantArgs := []string{"DEBIAN_FRONTEND=noninteractive", "apt-get", "-o", "Acquire::Retries=0", "install", "-y", "--no-install-recommends", "--no-allow-downgrades", "--"}
 			if len(args) != len(wantArgs)+1 {
 				t.Fatalf("apt-get args = %q", args)
 			}

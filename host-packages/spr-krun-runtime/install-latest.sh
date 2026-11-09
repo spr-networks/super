@@ -45,4 +45,10 @@ curl --fail --location --show-error --output "$sha" "$sha_url"
     sha256sum --check "${sha##*/}"
 )
 
-apt-get install -y "$deb"
+# CVE-2026-109518: protect APT's own upgrade and later dependency downloads.
+install -d -m 0755 /etc/apt/apt.conf.d
+printf 'Acquire::Retries "0";\n' > /etc/apt/apt.conf.d/99spr-no-retries
+apt-get -o Acquire::Retries=0 update
+# Include installed libraries and tools built from the apt source package.
+apt-get -o Acquire::Retries=0 install -y --only-upgrade apt '?and(?installed,?source-package(^apt$))'
+apt-get -o Acquire::Retries=0 install -y "$deb"

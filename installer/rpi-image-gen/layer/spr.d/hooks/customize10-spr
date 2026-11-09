@@ -10,6 +10,17 @@ SRC=$IGconf_spr_src
 R=$1
 S=$R/usr/lib/spr
 
+# Reject stale mirrors or caches before emitting an image/update bundle.
+# The overlay retains retries=0 for any APT use on the resulting system.
+apt_packages=$(chroot "$R" dpkg-query -W -f='${source:Package} ${binary:Package} ${Version} ${db:Status-Status}\n')
+while read -r source package version status; do
+   [ "$source" = apt ] && [ "$status" = installed ] || continue
+   if ! dpkg --compare-versions "$version" ge 3.0.4; then
+      echo "CVE-2026-109518: $package $version is older than 3.0.4" >&2
+      exit 1
+   fi
+done <<< "$apt_packages"
+
 install -d "$S/bin" "$S/lib" "$S/scripts"
 
 # the super_* images' service binaries (fetch-images.sh)

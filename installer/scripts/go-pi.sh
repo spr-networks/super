@@ -15,7 +15,7 @@ cp /scripts/pi-target-install.sh /mnt/fs/pi-target-install.sh
 mount --bind /dev/ /mnt/fs/dev/
 # this just downloads packages onto the image. not much else.
 # the rest is done on an aarch64 conatiner with pi-target-install.sh
-bash /scripts/pi-cross-install.sh
+bash /scripts/pi-cross-install.sh || exit 1
 
 # ath12k firmware for QCN9274
 mkdir -p /mnt/fs/lib/firmware/ath12k/QCN9274/hw2.0
