@@ -239,13 +239,22 @@ func validateMldLinks(associationLinkID int, links []MldLinkConfig) error {
 	return nil
 }
 
-func RunHostapdAllStations(iface string) (map[string]map[string]string, error) {
-	m := map[string]map[string]string{}
-	out, err := RunHostapdCommand(iface, "all_sta")
+func hostapdLinkSockets(iface string) []string {
+	entries, err := os.ReadDir(TEST_PREFIX + "/state/wifi/control_" + iface)
 	if err != nil {
-		return nil, err
+		return nil
 	}
+	links := []string{}
+	for _, entry := range entries {
+		suffix, ok := strings.CutPrefix(entry.Name(), iface+"_link")
+		if ok && suffix != "" && strings.Trim(suffix, "0123456789") == "" {
+			links = append(links, entry.Name())
+		}
+	}
+	return links
+}
 
+func parseHostapdStations(out string, m map[string]map[string]string) {
 	mac := ""
 	for _, line := range strings.Split(out, "\n") {
 		if strings.Contains(line, "=") {
@@ -257,9 +266,35 @@ func RunHostapdAllStations(iface string) (map[string]map[string]string, error) {
 			mac = line
 			m[mac] = map[string]string{}
 		}
+	}
+}
 
+func RunHostapdAllStations(iface string) (map[string]map[string]string, error) {
+	m := map[string]map[string]string{}
+	links := hostapdLinkSockets(iface)
+	if len(links) == 0 {
+		out, err := RunHostapdCommand(iface, "all_sta")
+		if err != nil {
+			return nil, err
+		}
+		parseHostapdStations(out, m)
+		return m, nil
 	}
 
+	var lastErr error
+	queried := false
+	for _, link := range links {
+		out, err := RunHostapdCommandArray(iface, []string{"-i", link, "all_sta"})
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		queried = true
+		parseHostapdStations(out, m)
+	}
+	if !queried {
+		return nil, lastErr
+	}
 	return m, nil
 }
 
