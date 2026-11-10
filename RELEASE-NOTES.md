@@ -1,6 +1,11 @@
 
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.3.3
+**Fixes**
+- When disabling MLO stale control sockets would still be queried
+- Make sure all links are refreshed when credentials update
+
 ## v1.3.2
 **Improvements**
 - Have configs auto download when creating a backup

@@ -116,9 +116,7 @@ func doReloadPSKFiles() {
 
 	for _, iface := range getAP_Ifaces() {
 		//reload the hostapd passwords
-		cmd := exec.Command("hostapd_cli", "-p", "/state/wifi/control_"+iface, "-s", "/state/wifi/", "reload_wpa_psk")
-		err = cmd.Run()
-		if err != nil {
+		if err := reloadHostapdPSK(iface); err != nil {
 			fmt.Println(err)
 		}
 	}
@@ -252,6 +250,21 @@ func hostapdLinkSockets(iface string) []string {
 		}
 	}
 	return links
+}
+
+func reloadHostapdPSK(iface string) error {
+	links := hostapdLinkSockets(iface)
+	if len(links) == 0 {
+		_, err := RunHostapdCommand(iface, "reload_wpa_psk")
+		return err
+	}
+	var lastErr error
+	for _, link := range links {
+		if _, err := RunHostapdCommandArray(iface, []string{"-i", link, "reload_wpa_psk"}); err != nil {
+			lastErr = err
+		}
+	}
+	return lastErr
 }
 
 func parseHostapdStations(out string, m map[string]map[string]string) {
