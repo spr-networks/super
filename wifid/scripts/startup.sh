@@ -15,6 +15,10 @@ is_valid_ifname() {
     return 0
 }
 
+clear_link_sockets() {
+  rm -f "/state/wifi/control_$1/$1_link"[0-9]*
+}
+
 start_hostapd_cli() {
   local dir="/state/wifi/control_$1" links link
   links=$(ls "$dir" 2>/dev/null | grep -E "^$1_link[0-9]+$")
@@ -86,6 +90,7 @@ do
   fi
   CONF="/configs/wifi/hostapd_${IFACE}.conf"
   MLO_CONF="/configs/wifi/hostapd_${IFACE}_mlo.conf"
+  clear_link_sockets "$IFACE"
   if [ -f "$MLO_CONF" ] && grep -q "^mld_ap=1" "$CONF" 2>/dev/null; then
     echo "Starting MLO hostapd for ${IFACE}: $CONF $MLO_CONF"
     # Clear any wedged ath12k MLD state before starting MLO hostapd
@@ -153,6 +158,7 @@ check_status() {
                     echo "MLO interface $IFACE down, restart attempt ${attempt}/3"
                     pkill -f "hostapd_${IFACE}.conf"
                     sleep 2
+                    clear_link_sockets "$IFACE"
                     ip link set "$IFACE" down 2>/dev/null
                     ip link set "$IFACE" up 2>/dev/null
                     hostapd -B "$CONF" "$MLO_CONF"
@@ -214,6 +220,7 @@ check_status() {
             sed -i '/^ssid=/d' "$FAILSAFE_CONF"
             printf 'ssid=%s\n' "$SSID" >> "$FAILSAFE_CONF"
 
+            clear_link_sockets "$IFACE"
             hostapd -B "$FAILSAFE_CONF"
             hostapd_cli -B -p "/state/wifi/control_${IFACE}" -a /scripts/action.sh
         fi
