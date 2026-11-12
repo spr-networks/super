@@ -1,0 +1,82 @@
+name: Android Build
+
+on:
+  push:
+    tags:
+      - 'android*'
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  android-build:
+    name: Android Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        continue-on-error: true
+        with:
+          access_token: ${{ github.token }}
+
+      - name: Check out Git repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: '0'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24.22.3
+
+      - name: Enable Corepack (yarn 4.17.0)
+        working-directory: ./frontend
+        run: corepack enable && corepack prepare yarn@4.17.0 --activate
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'corretto'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-33 build-tools;33.0.0 ndk;25.2.9519653'
+
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-node24.22.3-modules-${{ hashFiles('**/yarn.lock') }}
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            frontend/android/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('frontend/android/**/*.gradle*', 'frontend/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: yarn install --immutable
+
+      - name: Build Debug APK
+        working-directory: ./frontend/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Verify build
+        run: ls -la frontend/android/app/build/outputs/apk/debug/
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: spr-android-debug-apk
+          path: frontend/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
