@@ -8,7 +8,7 @@
 - Fix source IP filtering for port forwarding
 - Filter mesh report MAC addresses for assigning new devices
 - Wireguard would ignore parental blocks when the device could be on both wifi and wireguard
-- 
+- Harden GuestOnly enforcement for mesh
 
 ## v1.3.3
 **Fixes**
