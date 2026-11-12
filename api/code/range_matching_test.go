@@ -23,14 +23,14 @@ func TestForwardingPointVsRange(t *testing.T) {
 		t.Cleanup(func() { _ = DeleteForwardingRule("tcp", "0.0.0.0", "8554", dst, dport) })
 
 		if !matches(t, "inet", "nat", "tcpfwd", "0.0.0.0", ".", "8554") {
-			t.Error("0.0.0.0 rule should match destination 0.0.0.0")
+			t.Error("0.0.0.0 rule should match source 0.0.0.0")
 		}
 		if matches(t, "inet", "nat", "tcpfwd", "10.168.0.42", ".", "8554") {
-			t.Error("0.0.0.0 rule must NOT match a real destination - it is a single host")
+			t.Error("0.0.0.0 rule must NOT match a real source - it is a single host")
 		}
 	})
 
-	t.Run("0.0.0.0/0 matches any destination", func(t *testing.T) {
+	t.Run("0.0.0.0/0 matches any source", func(t *testing.T) {
 		if err := AddForwardingRule("tcp", "0.0.0.0/0", "8554", dst, dport); err != nil {
 			t.Fatalf("add: %v", err)
 		}
@@ -38,7 +38,7 @@ func TestForwardingPointVsRange(t *testing.T) {
 
 		for _, ip := range []string{"10.168.0.42", "1.2.3.4", "8.8.8.8", "255.255.255.254"} {
 			if !matches(t, "inet", "nat", "tcpfwd", ip, ".", "8554") {
-				t.Errorf("0.0.0.0/0 rule should match destination %s", ip)
+				t.Errorf("0.0.0.0/0 rule should match source %s", ip)
 			}
 		}
 		if matches(t, "inet", "nat", "tcpfwd", "10.168.0.42", ".", "9999") {
