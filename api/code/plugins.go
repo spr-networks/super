@@ -486,6 +486,25 @@ func validatePlus(plugin PluginConfig) bool {
 	return true
 }
 
+func isBuiltInPlusPlugin(plugin PluginConfig) bool {
+	if !plugin.Plus {
+		return false
+	}
+	for _, def := range gPlusExtensionDefaults {
+		if plugin.Name == def.Name && plugin.URI == def.URI &&
+			plugin.UnixPath == def.UnixPath &&
+			plugin.ComposeFilePath == def.ComposeFilePath &&
+			slices.Contains(plusExtensionGitURLs(def), plugin.GitURL) {
+			canonical := plugin
+			canonical.GitURL = def.GitURL
+			return def.MatchesData(canonical) &&
+				plugin.TokenRequired == def.TokenRequired &&
+				slices.Equal(plugin.AvailableRuntimes, def.AvailableRuntimes)
+		}
+	}
+	return false
+}
+
 var pluginURIRegexp = regexp.MustCompile(`^[A-Za-z0-9\-]+(?:/[A-Za-z0-9\-]+)*$`)
 
 func pluginURIsOverlap(first string, second string) bool {
@@ -646,30 +665,16 @@ func updatePlugins(router *mux.Router, router_public *mux.Router) func(http.Resp
 				return
 			}
 
-			//if a GitURL is set, ensure OTP authentication for 'admin'
-			if !plugin.Plus && plugin.GitURL != "" {
+			if !isBuiltInPlusPlugin(plugin) &&
+				(!found || !currentPlugin.MatchesData(plugin)) &&
+				!hasValidJwtOtpHeader("admin", r) {
+				http.Redirect(w, r, "/auth/validate", http.StatusFound)
+				return
+			}
 
-				check_otp := true
-				if found {
-					if currentPlugin.MatchesData(plugin) {
-						//for on/off with Enabled state don't need to validate the otp
-						check_otp = false
-					}
-				}
-
-				if check_otp && !hasValidJwtOtpHeader("admin", r) {
-					http.Redirect(w, r, "/auth/validate", 302)
-					return
-				}
-
-				//download new plugins
-				if !found {
-					//clone but don't auto-config.
-					ret := downloadUserExtension(plugin.GitURL, false)
-					if ret == false {
-						fmt.Println("Failed to download extension " + plugin.GitURL)
-						// fall thru, dont fail
-					}
+			if !plugin.Plus && plugin.GitURL != "" && !found {
+				if !downloadUserExtension(plugin.GitURL, false) {
+					fmt.Println("Failed to download extension " + plugin.GitURL)
 				}
 			}
 
