@@ -52,6 +52,7 @@ type InterfaceConfig struct {
 	AdditionalIPs            []AdditionalIP `json:",omitempty"`
 	CaptivePortalPassthrough bool           `json:",omitempty"`
 	CaptivePortalDomains     []string       `json:",omitempty"`
+	PMFRequired              bool           `json:",omitempty"`
 }
 
 // this will be exported to all containers in public/interfaces.json
@@ -253,7 +254,7 @@ func configureInterface(interfaceType string, subType string, name string, MACRa
 
 	}
 
-	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, false, "", "", "", "", MACRandomize, MACCloak, []AdditionalIP{}, false, []string{}}
+	newEntry := InterfaceConfig{name, interfaceType, subType, true, []ExtraBSS{}, false, false, "", "", "", "", MACRandomize, MACCloak, []AdditionalIP{}, false, []string{}, false}
 
 	config := loadInterfacesConfigLocked()
 
