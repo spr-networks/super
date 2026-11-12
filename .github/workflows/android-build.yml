@@ -1,12 +1,7 @@
 name: Android Build
 
 on:
-  push:
-    tags:
-      - 'android*'
-    branches: [ main, dev ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   android-build:
