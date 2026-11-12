@@ -9,6 +9,7 @@
 - Filter mesh report MAC addresses for assigning new devices
 - Wireguard would ignore parental blocks when the device could be on both wifi and wireguard
 - Harden GuestOnly enforcement for mesh
+- If passkey is enrolled, require it for OTP registration
 
 ## v1.3.3
 **Fixes**
