@@ -189,15 +189,23 @@ func enforceDeviceInternet(dev DeviceEntry, blocked bool) {
 		return
 	}
 	iface := deviceIfaceForVerdict(dev)
-	if iface == "" {
-		return
-	}
 	if blocked {
-		DeleteElementFromMapComplex("inet", "filter", "internet_access", []string{dev.RecentIP, iface})
+		if iface != "" {
+			DeleteElementFromMapComplex("inet", "filter", "internet_access", []string{dev.RecentIP, iface})
+		}
+		if dev.WGPubKey != "" && iface != "wg0" {
+			DeleteElementFromMapComplex("inet", "filter", "internet_access", []string{dev.RecentIP, "wg0"})
+		}
 		return
 	}
-	if slices.Contains(dev.Policies, "wan") {
-		addInternetVerdict(dev.RecentIP, iface)
+	if slices.Contains(dev.Policies, "wan") && !dev.DeviceDisabled &&
+		!slices.Contains(dev.Policies, "disabled") && !slices.Contains(dev.Policies, "quarantine") {
+		if iface != "" {
+			addInternetVerdict(dev.RecentIP, iface)
+		}
+		if dev.WGPubKey != "" && iface != "wg0" {
+			addInternetVerdict(dev.RecentIP, "wg0")
+		}
 	}
 }
 
