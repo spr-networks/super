@@ -81,3 +81,28 @@ describe('API Device', () => {
   })
 })
 */
+
+describe('API binary responses', () => {
+  const respond = (contentType) =>
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      redirected: false,
+      headers: { get: () => contentType },
+      blob: () => Promise.resolve('backup-blob')
+    })
+
+  afterEach(() => jest.restoreAllMocks())
+
+  test.each([
+    'application/x-gtar-compressed',
+    'application/x-gzip',
+    'application/gzip'
+  ])('a config backup served as %s downloads as a blob', async (type) => {
+    await saveLogin('admin', 'admin')
+    respond(type)
+
+    await expect(api.get('/backup/spr-configs-v1.0.10.tgz')).resolves.toBe(
+      'backup-blob'
+    )
+  })
+})

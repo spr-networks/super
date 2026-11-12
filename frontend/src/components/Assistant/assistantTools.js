@@ -1,4 +1,6 @@
-import { deviceAPI, firewallAPI } from 'api'
+import { firewallAPI } from 'api'
+import { deviceAPI } from './assistantDeviceApi'
+import { applyUIOperation, prepareUIOperation } from './assistantOperations'
 
 const RULE_TYPES = {
   endpoint: {
@@ -281,6 +283,7 @@ export const validateProposal = (proposal) => {
 }
 
 export const proposalDiff = (proposal) => {
+  if (proposal?.proposalType === 'ui_operation') return proposal
   if (proposal?.proposalType === 'device') {
     const normalized = validateDeviceProposal(proposal)
     if (!proposal.previousDevice) {
@@ -330,7 +333,7 @@ const findExistingRule = async (proposal, spec) => {
   }
   if (candidates.length > 1) {
     throw new Error(
-      `More than one ${spec.label} matches. Ask the assistant for a more specific change.`
+      `More than one ${spec.label} matches. Ask for a more specific change.`
     )
   }
   return candidates[0]
@@ -350,7 +353,11 @@ const findDevice = async (identity) => {
   return matches[0]
 }
 
-export const prepareProposal = async (proposal) => {
+export const prepareProposal = async (proposal, context = {}) => {
+  if (proposal?.proposalType === 'ui_operation') {
+    const { operationId, input, reason } = proposal
+    return prepareUIOperation({ operationId, input, ...(reason ? { reason } : {}) }, context)
+  }
   if (proposal?.proposalType === 'device') {
     const normalized = validateDeviceProposal(proposal)
     const previousDevice = normalizedDeviceSnapshot(
@@ -382,7 +389,8 @@ export const prepareProposal = async (proposal) => {
   }
 }
 
-export const applyProposal = async (proposal) => {
+export const applyProposal = async (proposal, context = {}) => {
+  if (proposal?.proposalType === 'ui_operation') return applyUIOperation(proposal, context)
   if (proposal?.proposalType === 'device') {
     const normalized = validateDeviceProposal(proposal)
     const currentDevice = normalizedDeviceSnapshot(

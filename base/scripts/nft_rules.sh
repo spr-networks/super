@@ -402,6 +402,7 @@ table inet filter {
 
     # ASN / country deny list
     counter ip daddr @geo_block goto DROPGEOLOG
+    counter iifname @uplink_interfaces ip saddr @geo_block goto DROPGEOLOG
 
     #jump USERDEF_FORWARD
 
@@ -412,18 +413,19 @@ table inet filter {
     $(if [ "$VIRTUAL_SPR_API_INTERNET" ]; then echo "" ;  elif [[ "$WANIF" && "$WAN_NET" ]]; then echo "counter iifname @uplink_interfaces tcp dport {80, 443} ip saddr != $WAN_NET goto DROPLOGFWD"; fi)
     $(if [ "$VIRTUAL_SPR_API_INTERNET" ]; then echo "" ;  elif [[ "$WANIF" && "$WAN_NET" ]]; then echo "counter iifname @uplink_interfaces udp dport {53, 67} ip saddr != $WAN_NET goto DROPLOGFWD"; fi)
 
-    # Allow DNAT for port forwarding
-    counter ct status dnat accept
-
     # block lan ranges from uplink interfaces
     # uplinks can not NAT FROM @supernetworks source addresses
     iifname @uplink_interfaces ip saddr @supernetworks goto DROPLOGFWD
-    # uplinks can not receive @supernetworks destination addresses
-    oifname @uplink_interfaces ip daddr @supernetworks goto DROPLOGFWD
 
     # Verify MAC addresses for LANIF/WIPHYs
     iifname @lan_interfaces jump DROP_MAC_SPOOF
     iifname @container_interfaces jump DROP_MAC_SPOOF
+
+    # Allow DNAT for port forwarding
+    counter ct status dnat accept
+
+    # uplinks can not receive @supernetworks destination addresses
+    oifname @uplink_interfaces ip daddr @supernetworks goto DROPLOGFWD
 
     counter jump F_EST_RELATED
 
@@ -457,9 +459,6 @@ table inet filter {
 
     counter oifname @uplink_interfaces iifname . ip saddr vmap @fwd_iface_wan
     counter oifname @lan_interfaces    iifname . ip saddr vmap @fwd_iface_lan
-
-    # Now accept LAN to the container/custom interface in reverse
-    counter iifname @lan_interfaces    oifname . ip daddr vmap @fwd_iface_lan
 
 
     # Forward to Site VPN if client has site access
@@ -653,10 +652,10 @@ table inet nat {
     #jump USERDEF_PREROUTING
 
     # DNAT Port Forwarding from Upstream to clients
-    counter iifname @uplink_interfaces dnat ip addr . port to ip daddr . udp dport map @udpfwd
-    counter iifname @uplink_interfaces dnat ip addr . port to ip daddr . tcp dport map @tcpfwd
-    counter iifname @uplink_interfaces ip protocol udp dnat to ip daddr map @udpanyfwd
-    counter iifname @uplink_interfaces ip protocol tcp dnat to ip daddr map @tcpanyfwd
+    counter iifname @uplink_interfaces dnat ip addr . port to ip saddr . udp dport map @udpfwd
+    counter iifname @uplink_interfaces dnat ip addr . port to ip saddr . tcp dport map @tcpfwd
+    counter iifname @uplink_interfaces ip protocol udp dnat to ip saddr map @udpanyfwd
+    counter iifname @uplink_interfaces ip protocol tcp dnat to ip saddr map @tcpanyfwd
 
     # Used for DNAT forwarding
     counter ip protocol tcp dnat ip saddr . ip daddr map @dnat_tcp_anymap

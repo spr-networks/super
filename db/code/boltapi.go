@@ -673,6 +673,104 @@ func GetBucketItems(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(items)
 }
 
+func GetPrefixItems(w http.ResponseWriter, r *http.Request) {
+	DBPtr.RLock()
+	defer DBPtr.RUnlock()
+
+	prefix := []byte(mux.Vars(r)["prefix"])
+	if len(prefix) == 0 {
+		http.Error(w, ErrBucketInvalidName.Error(), http.StatusBadRequest)
+		return
+	}
+
+	minKey := keyOrDefault(r.URL.Query().Get("min"), time.Now().UTC().Add(-time.Hour*24*365).Format(time.RFC3339Nano))
+
+	var maxKey []byte
+	if max_q := r.URL.Query().Get("max"); max_q != "" {
+		maxKey = keyOrDefault(max_q, time.Now().UTC().Format(time.RFC3339Nano))
+	}
+
+	num, err := strconv.Atoi(r.URL.Query().Get("num"))
+	if err != nil || num < 1 {
+		num = 100
+	}
+
+	if num > 1000 {
+		num = 1000
+	}
+
+	type head struct {
+		c *bolt.Cursor
+		k []byte
+		v []byte
+	}
+
+	items := []interface{}{}
+	if err := (*db).View(func(tx *bolt.Tx) error {
+		heads := []*head{}
+
+		root := tx.Cursor()
+		for name, _ := root.Seek(prefix); name != nil && bytes.HasPrefix(name, prefix); name, _ = root.Next() {
+			bucket := tx.Bucket(name)
+			if bucket == nil {
+				continue
+			}
+
+			c := bucket.Cursor()
+			var k, v []byte
+			if maxKey == nil {
+				k, v = c.Last()
+			} else if k, v = c.Seek(maxKey); k == nil {
+				k, v = c.Last()
+			} else {
+				k, v = c.Prev()
+			}
+
+			if k != nil && bytes.Compare(k, minKey) >= 0 {
+				heads = append(heads, &head{c, k, v})
+			}
+		}
+
+		for len(items) < num && len(heads) > 0 {
+			newest := 0
+			for i := 1; i < len(heads); i++ {
+				if bytes.Compare(heads[i].k, heads[newest].k) > 0 {
+					newest = i
+				}
+			}
+
+			h := heads[newest]
+
+			bucketItem := &BucketItem{Key: string(h.k)}
+			if err := bucketItem.DecodeValue(h.v); err == nil {
+				if jsonMap, ok := bucketItem.Value.(map[string]interface{}); ok {
+					if _, exists := jsonMap["time"]; !exists {
+						if timeStr, err := keyToTimeString(h.k); err == nil {
+							jsonMap["time"] = timeStr
+						}
+					}
+					items = append(items, jsonMap)
+				}
+			}
+
+			h.k, h.v = h.c.Prev()
+			if h.k == nil || bytes.Compare(h.k, minKey) < 0 {
+				heads[newest] = heads[len(heads)-1]
+				heads = heads[:len(heads)-1]
+			}
+		}
+
+		return nil
+	}); err != nil {
+		log.Println(ApiError{ErrBucketGet, err})
+		http.Error(w, ErrBucketGet.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(items)
+}
+
 func PutItem(bucketName string, jsonData map[string]interface{}) (*BucketItem, error) {
 	var payload *BucketItem
 	// .key, .value
@@ -858,6 +956,7 @@ func Serve(boltdb **bolt.DB, socketpath string) error {
 	router.HandleFunc("/bucket/{name}", DeleteBucket).Methods("DELETE")
 
 	router.HandleFunc("/items/{name}", GetBucketItems).Methods("GET")
+	router.HandleFunc("/items_prefix/{prefix}", GetPrefixItems).Methods("GET")
 
 	router.HandleFunc("/bucket/{name}/{key}", GetBucketItem).Methods("GET")
 	router.HandleFunc("/bucket/{name}/{key}", UpdateBucketItem).Methods("PUT")

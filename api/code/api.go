@@ -399,6 +399,10 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 			//rename the host
 			newName := ""
 			err := json.NewDecoder(r.Body).Decode(&newName)
+			if err != nil {
+				http.Error(w, "Invalid hostname", http.StatusBadRequest)
+				return
+			}
 
 			var validHostname = regexp.MustCompile(`^[a-zA-Z0-9-]+$`).MatchString
 			if !validHostname(newName) {
@@ -433,8 +437,11 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 	} else if name == "hostname" {
 		data, err = ioutil.ReadFile(HostnameConfigPath)
 		if err == nil && len(data) > 0 {
-			//accept from hostname config path instead
-			data = []byte(fmt.Sprintf("%q", data))
+			var hostname string
+			if json.Unmarshal(data, &hostname) != nil {
+				hostname = strings.TrimSpace(string(data))
+			}
+			data, err = json.Marshal(hostname)
 		} else {
 			hostname, err2 := os.Hostname()
 			if err2 != nil {
@@ -1110,6 +1117,7 @@ func getConfigsBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/x-gtar-compressed")
 	http.ServeFile(w, r, backupFilePath)
 }
 
@@ -2742,14 +2750,15 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	SprbusPublish("wifi:auth:success", pska)
-
-	if pska.Iface == "" || pska.Event != "AP-STA-CONNECTED" || pska.MAC == "" {
+	mac, macErr := net.ParseMAC(pska.MAC)
+	validMAC := macErr == nil && len(mac) == 6 && mac[0]&1 == 0 && mac.String() != "00:00:00:00:00:00"
+	if pska.Iface == "" || pska.Event != "AP-STA-CONNECTED" || !validMAC {
 		http.Error(w, "malformed data", 400)
 		return
 	}
+	pska.MAC = mac.String()
 
-	go noteMeshStationConnect(pska.MAC, pska.Router, r.RemoteAddr)
+	SprbusPublish("wifi:auth:success", pska)
 
 	pska.Status = "Okay"
 
@@ -2765,8 +2774,12 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 
 	devices := getDevicesJson()
 	pendingPsk, exists := devices["pending"]
-
 	guest_wifi := strings.Contains(pska.Iface, ExtraBSSPrefix)
+	if device, known := devices[pska.MAC]; guest_wifi && known && !slices.Contains(device.Policies, "guestonly") {
+		http.Error(w, "guest access denied", http.StatusForbidden)
+		return
+	}
+	go noteMeshStationConnect(pska.MAC, pska.Router, r.RemoteAddr)
 
 	if exists && !guest_wifi {
 		var foundPSK = false
@@ -3624,8 +3637,8 @@ func main() {
 	external_router_authenticated.HandleFunc("/tokens", applyJwtOtpCheck(getAuthTokens)).Methods("GET")
 	external_router_authenticated.HandleFunc("/tokens", applyJwtOtpCheck(updateAuthTokens)).Methods("PUT", "DELETE")
 
-	external_router_authenticated.HandleFunc("/otp_register", applyPasswordAuthCheck(otpRegister)).Methods("PUT", "DELETE")
-	external_router_authenticated.HandleFunc("/otp_validate", applyPasswordAuthCheck(generateOTPToken)).Methods("PUT")
+	external_router_authenticated.HandleFunc("/otp_register", applyFactorManagementCheck(otpRegister)).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/otp_validate", applyUserSessionCheck(generateOTPToken)).Methods("PUT")
 	external_router_authenticated.HandleFunc("/otp_status", otpStatus).Methods("GET")
 	external_router_authenticated.HandleFunc("/otp_jwt_test", applyJwtOtpCheck(testJWTOTP)).Methods("PUT")
 
@@ -3633,8 +3646,8 @@ func main() {
 	external_router_authenticated.HandleFunc("/webauthn/register", applyFactorManagementCheck(webauthnRegisterBegin)).Methods("PUT")
 	external_router_authenticated.HandleFunc("/webauthn/register", applyFactorManagementCheck(webauthnRegisterFinish)).Methods("POST")
 	external_router_authenticated.HandleFunc("/webauthn/credential", applyFactorManagementCheck(webauthnDeleteCredential)).Methods("DELETE")
-	external_router_authenticated.HandleFunc("/webauthn/validate", webauthnValidateBegin).Methods("PUT")
-	external_router_authenticated.HandleFunc("/webauthn/validate", webauthnValidateFinish).Methods("POST")
+	external_router_authenticated.HandleFunc("/webauthn/validate", applyUserSessionCheck(webauthnValidateBegin)).Methods("PUT")
+	external_router_authenticated.HandleFunc("/webauthn/validate", applyUserSessionCheck(webauthnValidateFinish)).Methods("POST")
 	external_router_authenticated.HandleFunc("/logout", webauthnLogout).Methods("PUT")
 	external_router_public.HandleFunc("/webauthn/login", webauthnLoginBegin).Methods("PUT")
 	external_router_public.HandleFunc("/webauthn/login", webauthnLoginFinish).Methods("POST")

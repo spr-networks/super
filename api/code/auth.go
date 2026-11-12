@@ -384,15 +384,21 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 		failType := "token"
 		token := ExtractRequestToken(r)
 		tokenName := ""
+		redirect_validate := false
 		if token != "" {
 			goodToken, tokenName, _ := authenticateToken(token)
 			if goodToken {
-				//NOTE: tokens dont check JWT OTP
+				//NOTE: api tokens dont check JWT OTP, passkey logins do
 
 				if authorizedToken(r, token) {
-					SprbusPublish("auth:success", map[string]string{"type": "token", "name": tokenName, "reason": remoteIP(r) + ":" + "api", "ip": remoteIP(r)})
-					authenticatedNext.ServeHTTP(w, r)
-					return
+					if username, isUser := strings.CutPrefix(tokenName, webauthnLoginTokenPrefix); isUser && shouldCheckOTPJWT(r, username) && !hasValidJwtOtpHeader(username, r) {
+						reason = "invalid or missing JWT OTP"
+						redirect_validate = true
+					} else {
+						SprbusPublish("auth:success", map[string]string{"type": "token", "name": tokenName, "reason": remoteIP(r) + ":" + "api", "ip": remoteIP(r)})
+						authenticatedNext.ServeHTTP(w, r)
+						return
+					}
 				} else {
 					reason = "unauthorized token"
 				}
@@ -400,8 +406,6 @@ func Authenticate(authenticatedNext *mux.Router, publicNext *mux.Router, setupMo
 				reason = "unknown token"
 			}
 		}
-
-		redirect_validate := false
 
 		//basic auth
 		username, password, ok := r.BasicAuth()
@@ -1078,9 +1082,21 @@ func testJWTOTP(w http.ResponseWriter, r *http.Request) {
 	//200fallthru
 }
 
+func sessionUsername(r *http.Request) (string, bool) {
+	if token := ExtractRequestToken(r); token != "" {
+		exists, name, _ := authenticateToken(token)
+		if username, isUser := strings.CutPrefix(name, webauthnLoginTokenPrefix); exists && isUser {
+			return username, true
+		}
+		return "", false
+	}
+	username, _, ok := r.BasicAuth()
+	return username, ok
+}
+
 func applyJwtOtpCheck(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		username, _, ok := r.BasicAuth()
+		username, ok := sessionUsername(r)
 		if !ok {
 			http.Error(w, "Missing username", 401)
 			return
@@ -1094,11 +1110,11 @@ func applyJwtOtpCheck(handler http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func applyPasswordAuthCheck(handler http.HandlerFunc) http.HandlerFunc {
+func applyUserSessionCheck(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		username, _, ok := r.BasicAuth()
+		username, ok := sessionUsername(r)
 		if !ok || username != "admin" {
-			http.Error(w, "Password authentication required", http.StatusUnauthorized)
+			http.Error(w, "User login required", http.StatusUnauthorized)
 			return
 		}
 		handler(w, r)
@@ -1106,8 +1122,8 @@ func applyPasswordAuthCheck(handler http.HandlerFunc) http.HandlerFunc {
 }
 
 func applyFactorManagementCheck(handler http.HandlerFunc) http.HandlerFunc {
-	return applyPasswordAuthCheck(func(w http.ResponseWriter, r *http.Request) {
-		username, _, _ := r.BasicAuth()
+	return applyUserSessionCheck(func(w http.ResponseWriter, r *http.Request) {
+		username, _ := sessionUsername(r)
 		if secondFactorConfigured(username) && !hasValidJwtOtpHeader(username, r) {
 			http.Error(w, "Second-factor authentication required", http.StatusUnauthorized)
 			return
@@ -1127,12 +1143,12 @@ func secondFactorConfigured(username string) bool {
 		}
 	}
 	entry := webauthnLoadLocked().Users[username]
-	return entry != nil && len(entry.Credentials) != 0
+	return entry != nil && entry.hasAttestedCredential()
 }
 
 func shouldCheckOTPJWT(r *http.Request, username string) bool {
 
-	if r.URL.Path == "/otp_validate" || r.URL.Path == "/webauthn/validate" {
+	if r.URL.Path == "/otp_validate" || r.URL.Path == "/webauthn/validate" || r.URL.Path == "/logout" {
 		return false
 	}
 

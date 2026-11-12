@@ -4550,6 +4550,31 @@ export default function MockAPI(props = null) {
         return value
       })
 
+      this.get('/plugins/db/items_prefix/:prefix', (schema, request) => {
+        if (!authOK(request)) {
+          return new Response(401, {}, { error: 'invalid auth' })
+        }
+
+        if (!request.params.prefix.startsWith('dns:serve:')) {
+          return []
+        }
+
+        return [
+          ['192.168.2.101', 'NOERROR', 'apple.com.', '17.253.144.10', '36.102'],
+          ['192.168.2.102', 'BLOCKED', 'ads.example.com.', '0.0.0.0', '35.511'],
+          ['192.168.2.101', 'NXDOMAIN', 'printer.lan.', '', '34.983']
+        ].map(([ip, Type, FirstName, FirstAnswer, secs]) => ({
+          Q: [{ Name: FirstName, Qtype: 1, Qclass: 1 }],
+          A: [],
+          Type,
+          FirstName,
+          FirstAnswer,
+          Local: '[::]:53',
+          Remote: `${ip}:50862`,
+          Timestamp: `2022-03-28T08:05:${secs}000000Z`
+        }))
+      })
+
       this.get('/plugins/db/items/:bucket', (schema, request) => {
         if (!authOK(request)) {
           return new Response(401, {}, { error: 'invalid auth' })

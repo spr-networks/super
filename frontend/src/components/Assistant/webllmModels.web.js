@@ -1,13 +1,11 @@
-import { getLfm3Runtime, getWebLLMRuntime } from './webllmRuntime.web'
+import { getLfm3Runtime } from './webllmRuntime.web'
+import { ASK_SPR_Q4_K_M } from './modelHashes'
+import { fetchFromVerifiedFile, isVerifiedFileStored, openVerifiedFile } from './modelIntegrity'
 
-const LFM_3_REPO = 'https://huggingface.co/LiquidAI/LFM3-1.7B-GGUF'
-const LFM_3_REVISION = '4b423c332fd97961416f2e8b69467758fd27370d'
-const LFM_3_FILE = 'LFM3-1.7B-Q4_K_M.gguf'
-
-const QWEN_3_REPO = 'https://huggingface.co/mlc-ai/Qwen3-1.7B-q4f16_1-MLC'
-const QWEN_3_REVISION = '80b3abcec6c3b3f5355dc0cc99cc4fb578f192bc'
-const WEBLLM_MODEL_LIB_BASE =
-  'https://raw.githubusercontent.com/mlc-ai/binary-mlc-llm-libs/00fe7a40e57e5e8eb9fef87526a4bf28ad5846c0/web-llm-models/v0_2_86/base'
+const LFM_3_REPO_ID = 'supernetworks/LFM3-1.7B-Ask-SPR-GGUF'
+const LFM_3_REPO = `https://huggingface.co/${LFM_3_REPO_ID}`
+const LFM_3_REVISION = 'a3817b86e87db35df8075346258b41e34330acda'
+const LFM_3_FILE = 'LFM3-1.7B-Ask-SPR-Q4_K_M.gguf'
 
 const revisionURL = (repo, revision, path = '') =>
   `${repo}/resolve/${revision}/${path}`
@@ -16,45 +14,41 @@ export const MODEL_CATALOG = [
   {
     key: 'lfm3-1.7b',
     runtime: 'lfm3',
-    name: 'LFM3 1.7B',
+    name: LFM_3_REPO_ID,
     detail: 'Browser-local SPR chat and action model',
     size: 'about 1.1 GB',
-    contextTokens: 16384,
+    contextTokens: 32768,
     contextSizes: [4096, 8192, 16384, 32768, 65536, 131072],
-    source: 'Official Liquid AI GGUF on Hugging Face',
+    source: 'Supernetworks fine-tune of Liquid AI LFM3-1.7B on Hugging Face',
     sourceURL: LFM_3_REPO,
     caution:
       'The weights are licensed under the LFM Open License v1.0. The runtime may reduce the context to fit GPU memory.',
-    promptFormat: 'LFM3 chat template · non-thinking mode',
+    promptFormat: 'LFM3 chat template · thinking mode',
     record: {
-      // The runtime keys its weight cache by this URL.
       url: revisionURL(LFM_3_REPO, LFM_3_REVISION, LFM_3_FILE)
-    }
-  },
-  {
-    key: 'qwen3-1.7b',
-    runtime: 'webllm',
-    name: 'Qwen3 1.7B',
-    detail: 'Browser-local SPR chat and action model',
-    size: 'about 968 MB',
-    contextTokens: 8192,
-    contextSizes: [4096, 8192, 16384, 32768],
-    source: 'Official mlc-ai MLC artifact on Hugging Face',
-    sourceURL: QWEN_3_REPO,
-    caution:
-      'The MLC artifact is official. Contexts above the compiled default are experimental and need more GPU memory.',
-    promptFormat:
-      'Qwen3 chat template via WebLLM system/user roles · non-thinking mode',
-    promptSuffix: '/no_think',
-    record: {
-      model: revisionURL(QWEN_3_REPO, QWEN_3_REVISION),
-      model_id: 'Qwen3-1.7B-q4f16_1-MLC',
-      model_lib: `${WEBLLM_MODEL_LIB_BASE}/Qwen3-1.7B-q4f16_1_cs1k-webgpu.wasm`,
-      vram_required_MB: 2036.66,
-      low_resource_required: true
-    }
+    },
+    weights: ASK_SPR_Q4_K_M
   }
 ]
+
+const localGGUFURL = process.env.NODE_ENV === 'development'
+  ? process.env.REACT_APP_LFM3_GGUF_URL
+  : undefined
+if (localGGUFURL) {
+  MODEL_CATALOG.splice(1, 0, {
+    ...MODEL_CATALOG[0],
+    key: 'lfm3-spr-task-v2-local',
+    name: process.env.REACT_APP_LFM3_GGUF_NAME || 'SPR task-v2 · full fine-tune',
+    detail:
+      process.env.REACT_APP_LFM3_GGUF_DETAIL ||
+      'Experimental task assistant · local development model',
+    source: 'Your local SPR full fine-tune',
+    sourceURL: new URL(localGGUFURL, window.location.href).href,
+    caution: 'Experimental Q4 model. Review proposed changes before applying them.',
+    record: { url: new URL(localGGUFURL, window.location.href).href },
+    weights: { sha256: (/[0-9a-f]{64}/.exec(localGGUFURL) || [])[0] }
+  })
+}
 
 export const DEFAULT_MODEL_KEY = MODEL_CATALOG[0].key
 
@@ -69,138 +63,15 @@ export const getContextTokens = (model, tokens) =>
     ? Number(tokens)
     : model.contextTokens
 
-// The vendored runtime stores downloaded GGUF byte ranges in IndexedDB:
-// `meta` is keyed by weight URL and `chunks` by [url, begin, end].
-const GGUF_CACHE_DB = 'gguf-cache-v1'
-// Alignment padding between tensors is never stored, so a complete
-// download covers slightly less than the file's tensor data.
-const CACHED_TENSOR_FRACTION = 0.99
+const isLfm3ModelCached = async (model) =>
+  Boolean(model.weights?.sha256) && isVerifiedFileStored(model.weights)
 
-const requestResult = (request) =>
-  new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
-  })
-
-const openGGUFCache = () =>
-  new Promise((resolve) => {
-    if (typeof indexedDB === 'undefined') {
-      resolve(null)
-      return
-    }
-    const request = indexedDB.open(GGUF_CACHE_DB)
-    // Probing must not create the runtime's database.
-    request.onupgradeneeded = () => request.transaction.abort()
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => resolve(null)
-    request.onblocked = () => resolve(null)
-  })
-
-const coveredBytes = (chunkKeys) => {
-  let covered = 0
-  let coveredEnd = -Infinity
-  chunkKeys
-    .map(([, begin, end]) => [begin, end])
-    .sort((a, b) => a[0] - b[0])
-    .forEach(([begin, end]) => {
-      if (end <= coveredEnd) return
-      covered += end - Math.max(begin, coveredEnd)
-      coveredEnd = end
-    })
-  return covered
+const dropUnverifiedGGUFCaches = () => {
+  try { globalThis.indexedDB?.deleteDatabase?.('gguf-cache-v1') } catch (error) { }
+  try { globalThis.caches?.delete?.('gguf-v1-headers')?.catch?.(() => {}) } catch (error) { }
 }
 
-const isLfm3ModelCached = async (model) => {
-  const db = await openGGUFCache()
-  if (!db) return false
-
-  try {
-    if (
-      !db.objectStoreNames.contains('meta') ||
-      !db.objectStoreNames.contains('chunks')
-    ) {
-      return false
-    }
-    const { url } = model.record
-    const transaction = db.transaction(['meta', 'chunks'], 'readonly')
-    const [meta, chunkKeys] = await Promise.all([
-      requestResult(transaction.objectStore('meta').get(url)),
-      requestResult(
-        transaction
-          .objectStore('chunks')
-          .getAllKeys(IDBKeyRange.bound([url], [url, [], []]))
-      )
-    ])
-    if (!meta?.size || !meta.headerBytes) return false
-
-    const tensorBytes = meta.size - meta.headerBytes.byteLength
-    return coveredBytes(chunkKeys) >= tensorBytes * CACHED_TENSOR_FRACTION
-  } finally {
-    db.close()
-  }
-}
-
-export const WEBLLM_CACHE_BACKENDS = ['cache', 'indexeddb']
-const CACHE_PROBE_TIMEOUT_MS = 5000
-
-export const getWebLLMAppConfig = (
-  model,
-  cacheBackend = 'cache',
-  contextTokens = model.contextTokens
-) => ({
-  cacheBackend,
-  model_list: [
-    {
-      ...model.record,
-      overrides: { context_window_size: contextTokens }
-    }
-  ]
-})
-
-export const getCachedWebLLMBackend = async (model, runtime) => {
-  const { hasModelInCache } = runtime || (await getWebLLMRuntime())
-  const pendingProbes = WEBLLM_CACHE_BACKENDS.map((cacheBackend) => {
-    let settle
-    const promise = new Promise((resolve) => {
-      let timeout
-      let settled = false
-      settle = (cached) => {
-        if (settled) return
-        settled = true
-        clearTimeout(timeout)
-        resolve(Boolean(cached))
-      }
-      timeout = setTimeout(() => settle(false), CACHE_PROBE_TIMEOUT_MS)
-      Promise.resolve(
-        hasModelInCache(
-          model.record.model_id,
-          getWebLLMAppConfig(model, cacheBackend)
-        )
-      ).then(settle, () => settle(false))
-    })
-
-    return {
-      cancel: () => settle(false),
-      promise: promise.then((cached) => {
-        if (cached) return cacheBackend
-        throw new Error(`${cacheBackend} cache miss`)
-      })
-    }
-  })
-
-  try {
-    return await Promise.any(pendingProbes.map(({ promise }) => promise))
-  } catch (error) {
-    return null
-  } finally {
-    pendingProbes.forEach(({ cancel }) => cancel())
-  }
-}
-
-export const isWebLLMModelCached = async (model) =>
-  model.runtime === 'webllm'
-    ? Boolean(await getCachedWebLLMBackend(model))
-    : isLfm3ModelCached(model)
+export const isWebLLMModelCached = async (model) => isLfm3ModelCached(model)
 
 export const checkWebGPUSupport = async (model) => {
   if (!window.isSecureContext) {
@@ -240,22 +111,14 @@ const progressReporter = (onProgress) => {
 // cannot sample on many GPUs, so every request decodes greedily, as the
 // upstream Space does. The runtime also has no repetition penalty, so
 // sampling options and `repetition_penalty` are not forwarded.
-// `thinkingTokens` adds a reasoning budget on top of the requested reply.
-export const getGenerationOptions = (
-  { max_tokens, extra_body = {} },
-  thinkingTokens = 0
-) => ({
-  max_new_tokens:
-    max_tokens === undefined ? undefined : max_tokens + thinkingTokens,
-  enable_thinking: thinkingTokens > 0 || (extra_body.enable_thinking ?? false),
-  do_sample: false
+export const LFM_MAX_NEW_TOKENS = 8192
+export const getGenerationOptions = ({ tools, chat_template_kwargs }) => ({
+  max_new_tokens: LFM_MAX_NEW_TOKENS,
+  enable_thinking: true,
+  do_sample: false,
+  ...(tools !== undefined ? { tools } : {}),
+  chat_template_kwargs: { ...chat_template_kwargs, enable_thinking: true }
 })
-
-// On the Assistant eval, letting LFM3 reason before structured decisions
-// fixed firewall and device proposals it otherwise got wrong, while reasoning
-// before chat replies only used up their token budget. Decisions that
-// exhaust this budget before answering are retried without reasoning.
-const DECISION_THINKING_TOKENS = 1536
 
 // Finds the first top-level JSON object in text. `end` is the index just
 // past it, or -1 while `open` still holds unclosed brackets.
@@ -329,28 +192,42 @@ const freshReply = (text) => {
 const createEngine = (model) => {
   const session = model.create_session()
 
-  return {
+  const engine = {
+    onStream: null,
+    capabilities: { nativeTools: true, nativeToolRawText: true },
     chat: {
       completions: {
         create: async (request) => {
-          const jsonMode = request.response_format?.type === 'json_object'
+          const nativeMode = request.tools !== undefined
+          if (nativeMode && !Array.isArray(request.tools)) throw new Error('Native tools must be an array')
+          const jsonMode = !nativeMode && request.response_format?.type === 'json_object'
           // Stop as soon as a JSON reply is complete or a chat reply turns
           // repetitive, instead of generating text that is thrown away.
-          const isFinished = jsonMode
+          const isFinished = nativeMode ? () => false : jsonMode
             ? (text) => scanJSONObject(text).end >= 0
             : (text) => freshReplyLength(text) >= 0
-          const generate = async (thinkingTokens) => {
+          const generate = async () => {
             const run = session.generate(
-              request.messages,
-              getGenerationOptions(request, thinkingTokens)
+              nativeMode ? request.messages.map((message) => ({ ...message, content: message.content ?? '' })) : request.messages,
+              getGenerationOptions(request)
             )
             let streamed = ''
+            let reasoning = ''
+            const publish = () => {
+              if (!engine.onStream) return
+              try { engine.onStream({ reasoning, text: streamed }) } catch (error) { }
+            }
             for await (const event of run) {
+              if (event.type === 'reasoning') { reasoning += event.text; publish(); continue }
               if (event.type !== 'text') continue
               streamed += event.text
+              publish()
               if (isFinished(streamed)) break
             }
-            const { message, finish_reason, usage } = await run.result
+            const { message, finish_reason, usage, raw_text } = await run.result
+            if (nativeMode) {
+              return { choices: [{ index: 0, message, finish_reason }], usage, raw_text }
+            }
             const content = jsonMode
               ? firstJSONObject(message.content)
               : freshReply(message.content)
@@ -362,11 +239,7 @@ const createEngine = (model) => {
             }
           }
 
-          if (!jsonMode) return generate(0)
-          const reasoned = await generate(DECISION_THINKING_TOKENS)
-          return reasoned.choices[0].message.content.trim()
-            ? reasoned
-            : generate(0)
+          return generate()
         }
       }
     },
@@ -376,45 +249,18 @@ const createEngine = (model) => {
       await model.dispose()
     }
   }
+  return engine
 }
 
-const loadMLCEngine = async (model, onProgress, contextTokens) => {
-  const runtime = await getWebLLMRuntime()
-  const cachedBackend = await getCachedWebLLMBackend(model, runtime)
-  const appConfig = getWebLLMAppConfig(
-    model,
-    cachedBackend || 'cache',
-    contextTokens
-  )
+const requireHashes = (model, hashes) => {
+  if (!hashes) throw new Error(`${model.name} has no recorded file hashes, so it cannot be verified and was not loaded`)
+}
 
-  if (!cachedBackend) {
-    const modelBase = model.record.model.endsWith('/')
-      ? model.record.model
-      : `${model.record.model}/`
-    const configURL = new URL('mlc-chat-config.json', modelBase).href
-    const configResponse = await fetch(configURL, { cache: 'no-store' })
-    if (!configResponse.ok) {
-      throw new Error(
-        `Model configuration request failed (${configResponse.status}) at ${configURL}`
-      )
-    }
-    const configText = await configResponse.text()
-    try {
-      JSON.parse(configText)
-    } catch (error) {
-      throw new Error(`Model configuration is not valid JSON at ${configURL}`)
-    }
-    if ('caches' in window) {
-      const configCache = await window.caches.open('webllm/config')
-      await configCache.delete(configURL)
-    }
-  }
-
-  return runtime.CreateMLCEngine(model.record.model_id, {
-    appConfig,
-    initProgressCallback: onProgress
+const verifyProgress = (onProgress) => ({ loaded, total, phase }) =>
+  onProgress({
+    progress: total > 0 ? Math.min(1, loaded / total) : 0,
+    text: phase === 'verify' ? 'Verifying model files' : 'Downloading and verifying model files'
   })
-}
 
 export const loadWebLLM = async (
   model,
@@ -422,16 +268,17 @@ export const loadWebLLM = async (
   contextTokens = model.contextTokens
 ) => {
   await checkWebGPUSupport(model)
-  if (model.runtime === 'webllm') {
-    return loadMLCEngine(model, onProgress, contextTokens)
-  }
-
+  requireHashes(model, model.weights?.sha256)
+  const { url } = model.record
+  const { sha256 } = model.weights
+  dropUnverifiedGGUFCaches()
+  const file = await openVerifiedFile({ url, sha256, bytes: model.weights.bytes, onProgress: verifyProgress(onProgress) })
   const { Lfm3ForCausalLM } = await getLfm3Runtime()
-  // from_pretrained rejects an unsupported GPU after reading the GGUF
-  // header and before streaming any weights.
-  const lfm3 = await Lfm3ForCausalLM.from_pretrained(model.record.url, {
+  const lfm3 = await Lfm3ForCausalLM.from_pretrained(url, {
     maxLength: contextTokens,
-    onProgress: progressReporter(onProgress)
+    onProgress: progressReporter(onProgress),
+    cache: false,
+    fetch: fetchFromVerifiedFile(url, file, sha256)
   })
   return createEngine(lfm3)
 }

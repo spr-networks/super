@@ -5,6 +5,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 let gApiURL = null
 
+const activeRouteGuards = new Set()
+export const withApiRouteGuard = async (expectedURL, callback) => {
+  const guard = { expectedURL }
+  activeRouteGuards.add(guard)
+  try { return await callback() } finally { activeRouteGuards.delete(guard) }
+}
+const assertReviewedRouter = () => {
+  for (const { expectedURL } of activeRouteGuards) {
+    if (getApiURL() !== expectedURL) throw new Error('The selected router changed during the reviewed operation. Refresh state before continuing.')
+  }
+}
+
 //TODO add unregister handlers. support only one for now
 const gErrorHandlers = {}
 export const registerErrorHandler = (status, fn) => {
@@ -81,6 +93,15 @@ export const getApiHostname = () => {
 }
 
 let gAuthHeaders = null
+
+let gReadCache = null
+export const setApiReadCache = (enabled) => {
+  gReadCache = enabled ? new Map() : null
+}
+let gRequestObserver = null
+export const setApiRequestObserver = (fn) => {
+  gRequestObserver = typeof fn === 'function' ? fn : null
+}
 //tbd need to sync to mesh
 let gJWTOTPHeader = null
 
@@ -178,6 +199,7 @@ class API {
   }
 
   async fetch(method = 'GET', url, body) {
+    assertReviewedRouter()
     if (url == undefined) {
       url = method
       method = 'GET'
@@ -215,6 +237,7 @@ class API {
       opts.body = JSON.stringify(body)
     }
 
+    assertReviewedRouter()
     let baseURL = this.getApiURL() + this.baseURL
     // get rid of //
     if (url[0] == '/' && baseURL.length && baseURL[baseURL.length - 1] == '/') {
@@ -222,7 +245,40 @@ class API {
     }
 
     let _url = `${baseURL}${url}`
-    return fetch(_url, opts)
+    const cache = gReadCache
+    if (cache && method !== 'GET') cache.clear()
+    if (cache && method === 'GET') {
+      const key = `${headers.Authorization || ''}\n${_url}`
+      if (!cache.has(key)) {
+        const pending = this.fetchObserved(method, _url, url, opts)
+        cache.set(key, pending)
+        pending.then((r) => { if (!r.ok) cache.delete(key) }, () => cache.delete(key))
+      }
+      return cache.get(key).then((response) => response.clone())
+    }
+    return this.fetchObserved(method, _url, url, opts)
+  }
+
+  fetchObserved(method, _url, url, opts) {
+    const observer = gRequestObserver
+    if (!observer) return fetch(_url, opts)
+    const started = Date.now()
+    const path = `${this.baseURL}${url}`.replace(/\/\/+/g, '/').split('?')[0]
+    const report = (extra) => {
+      try {
+        observer({ method, path, ms: Date.now() - started, ...extra })
+      } catch (e) {}
+    }
+    return fetch(_url, opts).then(
+      (response) => {
+        report({ status: response.status })
+        return response
+      },
+      (error) => {
+        report({ error: error?.message || String(error) })
+        throw error
+      }
+    )
   }
 
   async request(method = 'GET', url, body) {
@@ -273,7 +329,10 @@ class API {
           return response.text()
         } else if (contentType.includes('application/x-x509-ca-cert')) {
           return response.text()
-        } else if (contentType.startsWith('application/x-gtar-compressed')) {
+        } else if (
+          contentType.startsWith('application/x-gtar-compressed') ||
+          contentType.includes('gzip')
+        ) {
           return response.blob()
         }
 

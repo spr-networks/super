@@ -3,91 +3,37 @@ import {
   DEFAULT_MODEL_KEY,
   firstJSONObject,
   freshReplyLength,
-  getCachedWebLLMBackend,
   getContextTokens,
   getGenerationOptions,
   getModel,
-  getWebLLMAppConfig,
   isWebLLMModelCached,
   loadWebLLM,
   MODEL_CATALOG
 } from 'components/Assistant/webllmModels.web'
 
 const mockFromPretrained = jest.fn()
-const mockCreateMLCEngine = jest.fn()
-const mockHasModelInCache = jest.fn()
+const mockOpenVerifiedFile = jest.fn()
+const mockIsVerifiedFileStored = jest.fn()
+const mockVerifiedFetch = jest.fn()
+
+jest.mock('components/Assistant/modelIntegrity', () => ({
+  openVerifiedFile: (...arguments_) => mockOpenVerifiedFile(...arguments_),
+  isVerifiedFileStored: (...arguments_) => mockIsVerifiedFileStored(...arguments_),
+  fetchFromVerifiedFile: (...arguments_) => mockVerifiedFetch(...arguments_)
+}))
 
 jest.mock('components/Assistant/webllmRuntime.web', () => ({
   getLfm3Runtime: jest.fn().mockResolvedValue({
     Lfm3ForCausalLM: {
       from_pretrained: (...arguments_) => mockFromPretrained(...arguments_)
     }
-  }),
-  getWebLLMRuntime: jest.fn().mockResolvedValue({
-    CreateMLCEngine: (...arguments_) => mockCreateMLCEngine(...arguments_),
-    hasModelInCache: (...arguments_) => mockHasModelInCache(...arguments_)
   })
 }))
 
-const MiB = 1024 * 1024
 const model = getModel(DEFAULT_MODEL_KEY)
+const verifiedFile = { size: 1 }
+const verifiedFetch = () => {}
 
-const asyncRequest = (result) => {
-  const request = {}
-  setTimeout(() => {
-    request.result = result
-    request.onsuccess?.()
-  }, 0)
-  return request
-}
-
-// Mirrors the IndexedDB layout the vendored runtime writes:
-// `meta` keyed by weight URL and `chunks` keyed by [url, begin, end].
-const installGGUFCache = (stores) => {
-  const close = jest.fn()
-  const abort = jest.fn()
-  global.IDBKeyRange = { bound: (lower, upper) => ({ lower, upper }) }
-  global.indexedDB = {
-    open: jest.fn(() => {
-      const request = {}
-      setTimeout(() => {
-        if (!stores) {
-          request.transaction = { abort }
-          request.onupgradeneeded?.()
-          request.onerror?.()
-          return
-        }
-        request.result = {
-          close,
-          objectStoreNames: { contains: (name) => name in stores },
-          transaction: () => ({
-            objectStore: (name) => ({
-              get: (key) => asyncRequest(stores[name].get(key)),
-              getAllKeys: ({ lower: [url] }) =>
-                asyncRequest(stores[name].filter(([key]) => key === url))
-            })
-          })
-        }
-        request.onsuccess()
-      }, 0)
-      return request
-    })
-  }
-  return { abort, close }
-}
-
-const storedWeights = (chunks) => ({
-  meta: new Map([
-    [
-      model.record.url,
-      { size: 100 * MiB, headerBytes: new Uint8Array(8 * MiB) }
-    ]
-  ]),
-  chunks: chunks.map(([begin, end]) => [model.record.url, begin, end])
-})
-
-// Mirrors the runtime's turn object: streamed events plus a final result.
-// Leaving the event loop early cancels the turn.
 const createRun = (result, events = []) => {
   const run = {
     result: Promise.resolve(result),
@@ -133,6 +79,9 @@ const createModel = (
 
 beforeEach(() => {
   jest.clearAllMocks()
+  mockOpenVerifiedFile.mockResolvedValue(verifiedFile)
+  mockIsVerifiedFileStored.mockResolvedValue(false)
+  mockVerifiedFetch.mockReturnValue(verifiedFetch)
   Object.defineProperty(window, 'isSecureContext', {
     configurable: true,
     value: true
@@ -147,41 +96,66 @@ beforeEach(() => {
   })
 })
 
-afterEach(() => {
-  delete global.indexedDB
-  delete global.IDBKeyRange
-})
-
-test('pins the LFM3 Q4_K_M GGUF weights to a Hugging Face revision', () => {
+test('pins the Ask SPR Q4_K_M GGUF weights to a Hugging Face revision', () => {
   expect(model.key).toBe('lfm3-1.7b')
   expect(model.record.url).toMatch(
-    /^https:\/\/huggingface\.co\/LiquidAI\/LFM3-1\.7B-GGUF\/resolve\/[0-9a-f]{40}\/LFM3-1\.7B-Q4_K_M\.gguf$/
+    /^https:\/\/huggingface\.co\/supernetworks\/LFM3-1\.7B-Ask-SPR-GGUF\/resolve\/[0-9a-f]{40}\/LFM3-1\.7B-Ask-SPR-Q4_K_M\.gguf$/
   )
+  expect(model.weights).toEqual({ bytes: 1099627072, sha256: 'f47d227f1b9e9fc5c27b388fe40cdf1b1a56384d7dc1fd72fa563107307b7a5f' })
 })
 
-test('reports stored weights as cached despite tensor alignment gaps', async () => {
-  const { close } = installGGUFCache(
-    storedWeights([
-      [8 * MiB, 50 * MiB],
-      [50 * MiB + 32, 100 * MiB]
-    ])
-  )
-
+test('reports LFM3 as cached only when its verified file is stored', async () => {
+  await expect(isWebLLMModelCached(model)).resolves.toBe(false)
+  mockIsVerifiedFileStored.mockResolvedValue(true)
   await expect(isWebLLMModelCached(model)).resolves.toBe(true)
-  expect(close).toHaveBeenCalled()
+  expect(mockIsVerifiedFileStored).toHaveBeenCalledWith(model.weights)
 })
 
-test('does not report a partial download as cached', async () => {
-  installGGUFCache(storedWeights([[8 * MiB, 60 * MiB]]))
-
-  await expect(isWebLLMModelCached(model)).resolves.toBe(false)
+test('every model in the catalog records a SHA-256 for each file it downloads', () => {
+  const sha256 = /^[0-9a-f]{64}$/
+  MODEL_CATALOG.forEach((entry) => {
+    expect(entry.runtime).toBe('lfm3')
+    expect(entry.weights.sha256).toMatch(sha256)
+  })
 })
 
-test('does not create the runtime cache database while probing', async () => {
-  const { abort } = installGGUFCache(null)
+test('verifies the LFM3 file before the runtime sees it and serves the runtime from that file', async () => {
+  const { lfm3 } = createModel()
+  const order = []
+  mockOpenVerifiedFile.mockImplementation(async ({ onProgress }) => {
+    order.push('verify')
+    onProgress({ loaded: 1, total: 4, phase: 'download' })
+    onProgress({ loaded: 4, total: 4, phase: 'verify' })
+    return verifiedFile
+  })
+  mockFromPretrained.mockImplementation(async () => { order.push('runtime'); return lfm3 })
+  const onProgress = jest.fn()
 
-  await expect(isWebLLMModelCached(model)).resolves.toBe(false)
-  expect(abort).toHaveBeenCalled()
+  await loadWebLLM(model, onProgress)
+
+  expect(order).toEqual(['verify', 'runtime'])
+  expect(mockOpenVerifiedFile).toHaveBeenCalledWith(expect.objectContaining({
+    url: model.record.url, sha256: model.weights.sha256, bytes: model.weights.bytes
+  }))
+  expect(mockVerifiedFetch).toHaveBeenCalledWith(model.record.url, verifiedFile, model.weights.sha256)
+  expect(mockFromPretrained.mock.calls[0][1]).toEqual(expect.objectContaining({ cache: false, fetch: verifiedFetch }))
+  expect(onProgress.mock.calls.map(([report]) => report)).toEqual([
+    { progress: 0.25, text: 'Downloading and verifying model files' },
+    { progress: 1, text: 'Verifying model files' }
+  ])
+})
+
+test('does not start the runtime when the LFM3 file fails its check', async () => {
+  mockOpenVerifiedFile.mockRejectedValue(new Error('Model file failed its integrity check'))
+
+  await expect(loadWebLLM(model, jest.fn())).rejects.toThrow('integrity check')
+  expect(mockFromPretrained).not.toHaveBeenCalled()
+})
+
+test('refuses a model with no recorded hash', async () => {
+  await expect(loadWebLLM({ ...model, weights: undefined }, jest.fn())).rejects.toThrow('no recorded file hashes')
+  expect(mockOpenVerifiedFile).not.toHaveBeenCalled()
+  expect(mockFromPretrained).not.toHaveBeenCalled()
 })
 
 test('loads the pinned weights with the catalog context and progress', async () => {
@@ -209,8 +183,10 @@ test('loads the pinned weights with the catalog context and progress', async () 
   const engine = await loadWebLLM(model, onProgress)
 
   expect(mockFromPretrained).toHaveBeenCalledWith(model.record.url, {
-    maxLength: 16384,
-    onProgress: expect.any(Function)
+    maxLength: 32768,
+    onProgress: expect.any(Function),
+    cache: false,
+    fetch: verifiedFetch
   })
   expect(onProgress.mock.calls.map(([report]) => report)).toEqual([
     { progress: 0, text: 'Requesting WebGPU device' },
@@ -242,15 +218,16 @@ test('maps Assistant chat completions onto a runtime session', async () => {
 
   expect(session.generate).toHaveBeenCalledTimes(1)
   expect(session.generate).toHaveBeenCalledWith(messages, {
-    max_new_tokens: 384 + 1536,
+    max_new_tokens: 8192,
     enable_thinking: true,
+    chat_template_kwargs: { enable_thinking: true },
     do_sample: false
   })
   expect(response.choices[0].message.content).toBe('{"kind":"message"}')
   expect(response.choices[0].finish_reason).toBe('stop')
 })
 
-test('retries a decision without reasoning when reasoning exhausts its budget', async () => {
+test('does not retry without thinking when the shared budget is exhausted', async () => {
   const { lfm3, session } = createModel()
   session.generate
     .mockReturnValueOnce(
@@ -279,13 +256,13 @@ test('retries a decision without reasoning when reasoning exhausts its budget', 
   const response = await engine.chat.completions.create(request)
 
   expect(session.generate.mock.calls.map(([, options]) => options)).toEqual([
-    { max_new_tokens: 384 + 1536, enable_thinking: true, do_sample: false },
-    { max_new_tokens: 384, enable_thinking: false, do_sample: false }
+    { max_new_tokens: 8192, enable_thinking: true, chat_template_kwargs: { enable_thinking: true }, do_sample: false }
   ])
-  expect(response.choices[0].message.content).toBe('{"kind":"message"}')
+  expect(response.choices[0].message.content).toBe('')
+  expect(response.choices[0].finish_reason).toBe('length')
 })
 
-test('answers chat requests without reasoning', async () => {
+test('answers chat requests with thinking in the same total budget', async () => {
   const { lfm3, session } = createModel()
   mockFromPretrained.mockResolvedValue(lfm3)
   const engine = await loadWebLLM(model, jest.fn())
@@ -297,8 +274,9 @@ test('answers chat requests without reasoning', async () => {
   })
 
   expect(session.generate.mock.calls[0][1]).toEqual({
-    max_new_tokens: 256,
-    enable_thinking: false,
+    max_new_tokens: 8192,
+    enable_thinking: true,
+    chat_template_kwargs: { enable_thinking: true },
     do_sample: false
   })
 })
@@ -387,12 +365,13 @@ test('keeps only the first JSON object and closes unfinished ones', () => {
   expect(firstJSONObject('no object')).toBe('no object')
 })
 
-test('always decodes greedily and disables thinking by default', () => {
+test('always decodes greedily with thinking and one total runaway cap', () => {
   expect(
     getGenerationOptions({ temperature: 0.7, top_p: 0.8, max_tokens: 64 })
   ).toEqual({
-    max_new_tokens: 64,
-    enable_thinking: false,
+    max_new_tokens: 8192,
+    enable_thinking: true,
+    chat_template_kwargs: { enable_thinking: true },
     do_sample: false
   })
 })
@@ -410,25 +389,19 @@ test('resets the session and releases the model on unload', async () => {
   expect(lfm3.dispose).toHaveBeenCalled()
 })
 
-test('offers LFM3 and Qwen3, with LFM3 as the default', () => {
+test('offers one model, LFM3, as the default', () => {
   expect(MODEL_CATALOG.map(({ key, runtime }) => [key, runtime])).toEqual([
-    ['lfm3-1.7b', 'lfm3'],
-    ['qwen3-1.7b', 'webllm']
+    ['lfm3-1.7b', 'lfm3']
   ])
   expect(DEFAULT_MODEL_KEY).toBe('lfm3-1.7b')
 })
 
 test('only accepts context sizes the model offers', () => {
   const lfm3 = getModel('lfm3-1.7b')
-  const qwen3 = getModel('qwen3-1.7b')
-
-  expect(getContextTokens(lfm3, undefined)).toBe(16384)
+  expect(getContextTokens(lfm3, undefined)).toBe(32768)
   expect(getContextTokens(lfm3, 131072)).toBe(131072)
   expect(getContextTokens(lfm3, '32768')).toBe(32768)
-  expect(getContextTokens(lfm3, 5000)).toBe(16384)
-  expect(getContextTokens(qwen3, undefined)).toBe(8192)
-  expect(getContextTokens(qwen3, 131072)).toBe(8192)
-  expect(getContextTokens(qwen3, 32768)).toBe(32768)
+  expect(getContextTokens(lfm3, 5000)).toBe(32768)
   expect(contextLabel(16384)).toBe('16K context')
 })
 
@@ -440,98 +413,8 @@ test('loads LFM3 with the requested context size', async () => {
 
   expect(mockFromPretrained).toHaveBeenCalledWith(model.record.url, {
     maxLength: 131072,
-    onProgress: expect.any(Function)
-  })
-  expect(mockCreateMLCEngine).not.toHaveBeenCalled()
-})
-
-describe('Qwen3 on WebLLM', () => {
-  const qwen3 = getModel('qwen3-1.7b')
-
-  test('checks both persistent cache backends', async () => {
-    mockHasModelInCache.mockImplementation((modelId, appConfig) =>
-      Promise.resolve(appConfig.cacheBackend === 'indexeddb')
-    )
-
-    await expect(isWebLLMModelCached(qwen3)).resolves.toBe(true)
-    expect(mockHasModelInCache).toHaveBeenCalledWith(
-      qwen3.record.model_id,
-      getWebLLMAppConfig(qwen3, 'cache')
-    )
-    expect(mockHasModelInCache).toHaveBeenCalledWith(
-      qwen3.record.model_id,
-      getWebLLMAppConfig(qwen3, 'indexeddb')
-    )
-    await expect(getCachedWebLLMBackend(qwen3)).resolves.toBe('indexeddb')
-  })
-
-  test('does not let a stalled Cache API probe block IndexedDB autoload', async () => {
-    mockHasModelInCache.mockImplementation((modelId, appConfig) =>
-      appConfig.cacheBackend === 'cache'
-        ? new Promise(() => {})
-        : Promise.resolve(true)
-    )
-
-    await expect(getCachedWebLLMBackend(qwen3)).resolves.toBe('indexeddb')
-  })
-
-  test('loads cached weights with the requested context and no preflight', async () => {
-    const engine = { chat: {} }
-    const fetchBefore = global.fetch
-    global.fetch = jest.fn()
-    mockHasModelInCache.mockResolvedValue(true)
-    mockCreateMLCEngine.mockResolvedValue(engine)
-
-    await expect(loadWebLLM(qwen3, jest.fn(), 16384)).resolves.toBe(engine)
-
-    expect(global.fetch).not.toHaveBeenCalled()
-    expect(mockFromPretrained).not.toHaveBeenCalled()
-    expect(mockCreateMLCEngine).toHaveBeenCalledWith(qwen3.record.model_id, {
-      appConfig: getWebLLMAppConfig(qwen3, 'cache', 16384),
-      initProgressCallback: expect.any(Function)
-    })
-    expect(
-      mockCreateMLCEngine.mock.calls[0][1].appConfig.model_list[0]
-    ).toEqual(
-      expect.objectContaining({
-        model_id: 'Qwen3-1.7B-q4f16_1-MLC',
-        overrides: { context_window_size: 16384 }
-      })
-    )
-    global.fetch = fetchBefore
-  })
-
-  test('reuses an existing IndexedDB download at the default context', async () => {
-    const engine = { chat: {} }
-    mockHasModelInCache.mockImplementation((modelId, appConfig) =>
-      Promise.resolve(appConfig.cacheBackend === 'indexeddb')
-    )
-    mockCreateMLCEngine.mockResolvedValue(engine)
-
-    await expect(loadWebLLM(qwen3, jest.fn())).resolves.toBe(engine)
-
-    expect(mockCreateMLCEngine).toHaveBeenCalledWith(qwen3.record.model_id, {
-      appConfig: getWebLLMAppConfig(qwen3, 'indexeddb', 8192),
-      initProgressCallback: expect.any(Function)
-    })
-  })
-
-  test('checks the model configuration before a first download', async () => {
-    const engine = { chat: {} }
-    const fetchBefore = global.fetch
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve('{}')
-    })
-    mockHasModelInCache.mockResolvedValue(false)
-    mockCreateMLCEngine.mockResolvedValue(engine)
-
-    await expect(loadWebLLM(qwen3, jest.fn())).resolves.toBe(engine)
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      `${qwen3.record.model}mlc-chat-config.json`,
-      { cache: 'no-store' }
-    )
-    global.fetch = fetchBefore
+    onProgress: expect.any(Function),
+    cache: false,
+    fetch: verifiedFetch
   })
 })

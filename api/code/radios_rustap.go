@@ -1019,6 +1019,7 @@ func syncHostapdRadioFromRustap(conf map[string]interface{}) error {
 		}
 	}
 
+	pmfRequired := interfacePMFRequired(iface)
 	mld := rustapBool(conf, "mld", false)
 	sidecarPath := getHostapdMloConfigPath(iface)
 	var sidecarData []byte
@@ -1040,7 +1041,6 @@ func syncHostapdRadioFromRustap(conf map[string]interface{}) error {
 		associationLink, _ := mldLinkByID(links, associationLinkID)
 		applyHostapdRadioSettings(hostapd, associationLink.Channel, associationLink.Width, associationLink.Band, "be")
 		hostapd["mld_ap"] = 1
-		hostapd["ieee80211w"] = 2
 		var secondaryLink MldLinkConfig
 		for _, link := range links {
 			if link.LinkID != associationLinkID {
@@ -1049,10 +1049,11 @@ func syncHostapdRadioFromRustap(conf map[string]interface{}) error {
 			}
 		}
 		existingSidecar, _ := readHostapdConfigFile(sidecarPath)
-		sidecarData = []byte(generateHostapdMldLinkConfig(hostapd, iface, secondaryLink, existingSidecar))
+		sidecarData = []byte(generateHostapdMldLinkConfig(hostapd, iface, secondaryLink, existingSidecar, pmfRequired))
 	} else {
 		delete(hostapd, "mld_ap")
 	}
+	applyHostapdPMF(hostapd, pmfRequired)
 
 	mainData := updateExtraBSS(iface, string(hostapdConfigData(hostapd)), "")
 	caps, err := radioSecurityForInterface(iface)

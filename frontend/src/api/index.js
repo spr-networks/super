@@ -17,6 +17,7 @@ export {
   setAuthReturn,
   getAuthReturn
 } from './API'
+export { withApiRouteGuard } from './API'
 export { dbAPI } from './Db'
 export { deviceAPI } from './Device'
 export { groupAPI } from './Group'

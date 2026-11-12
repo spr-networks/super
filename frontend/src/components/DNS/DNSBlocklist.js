@@ -3,6 +3,7 @@ import { Platform } from 'react-native'
 import PropTypes from 'prop-types'
 
 import { blockAPI } from 'api/DNS'
+import { DEFAULT_AD_BLOCKLIST_URI } from './blocklistPresets'
 import { AlertContext, AppContext } from 'AppContext'
 import ModalConfirm from 'components/ModalConfirm'
 
@@ -162,7 +163,7 @@ const DNSBlocklist = ({ config, ...props }) => {
   let recommendedListDefault = [
     {
       Info: "Steven Black's Adware & Malware block list",
-      URI: 'https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts',
+      URI: DEFAULT_AD_BLOCKLIST_URI,
       Category: 'ads'
     },
     {
