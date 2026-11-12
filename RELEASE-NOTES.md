@@ -3,6 +3,8 @@
 ## v1.3.4
 **Improvements**
 - Relax PMF for MLO APs. This enables older devices without it to still connect
+- Present dns log previews for all client buckets
+- Ask SPR: a self-hosted webLLM chat assistant
 **Fixes**
 - Harden plugin creation
 - Fix source IP filtering for port forwarding
