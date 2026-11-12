@@ -98,6 +98,7 @@ import { RotateCwIcon, WifiIcon } from 'lucide-react-native'
 import { Select } from 'components/Select'
 
 import WifiChannelParameters from 'components/Wifi/WifiChannelParameters'
+import WifiPMF from 'components/Wifi/WifiPMF'
 import { ListHeader } from 'components/List'
 
 const RustapMldLinks = ({ links, associationLinkID }) => (
@@ -726,6 +727,14 @@ const WifiHostapd = (props) => {
         />
       ) : null}
 
+      {interfaceConfigured && interfaceEnabled === true && !isRustap ? (
+        <WifiPMF
+          iface={iface}
+          config={config}
+          onUpdate={(conf) => setConfig(sortConf(conf))}
+        />
+      ) : null}
+
       <VStack
         justifyContent="space-between"
         p="$4"
@@ -796,7 +805,9 @@ const WifiHostapd = (props) => {
                 </HStack>
               ) : null}
               {Object.keys(config)
-                .filter((label) => label !== 'mld_links')
+                .filter(
+                  (label) => label !== 'mld_links' && label !== 'pmf_required'
+                )
                 .map((label) => (
                 <HStack
                   key={label}

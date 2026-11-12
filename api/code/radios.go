@@ -164,6 +164,7 @@ type HostapdConfigEntry struct {
 	Rssi_reject_assoc_rssi       int
 	Rssi_reject_assoc_timeout    int
 	Rssi_ignore_probe_request    int
+	Pmf_required                 bool
 
 	//update below Validate when adding strings
 }
@@ -845,6 +846,7 @@ func hostapdConfig(w http.ResponseWriter, r *http.Request) {
 			conf["link_id"] = linkID
 			conf["mld_links"] = links
 		}
+		conf["pmf_required"] = interfacePMFRequired(iface)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -861,6 +863,7 @@ func renderExtraBSS(iface, data, MACOverride string, config []InterfaceConfig) s
 	if idx != -1 {
 		data = data[:idx]
 	}
+	guestPMF := hostapdPMFLevel(false, hostapdRustapBand(parseHostapdConfig(data), 0) == 6)
 	// the mac80211_mt76 manual claims 0x00 for the first AP
 	//however on the mt7915e cards it was observed that 0x00 blocks
 	// multi bss from working and we should start with 0x02.
@@ -921,7 +924,6 @@ func renderExtraBSS(iface, data, MACOverride string, config []InterfaceConfig) s
 						data += "wpa_passphrase=" + entry.ExtraBSS[i].GuestPassword + "\n"
 						if strings.Contains(entry.ExtraBSS[i].WpaKeyMgmt, "SAE") {
 							data += "beacon_prot=1\n"
-							data += "ieee80211w=1\n"
 							data += "sae_pwe=2\n"
 							data += "sae_psk_file=/dev/null\n"
 							data += "sae_password=" + entry.ExtraBSS[i].GuestPassword + "\n"
@@ -932,6 +934,10 @@ func renderExtraBSS(iface, data, MACOverride string, config []InterfaceConfig) s
 						if strings.Contains(entry.ExtraBSS[i].WpaKeyMgmt, "SAE") {
 							data += "sae_psk_file=/configs/wifi/sae_passwords\n"
 						}
+					}
+					data += "ieee80211w=" + strconv.Itoa(guestPMF) + "\n"
+					if strings.Contains(entry.ExtraBSS[i].WpaKeyMgmt, "SAE") {
+						data += "sae_require_mfp=1\n"
 					}
 				}
 
@@ -968,13 +974,50 @@ func relax6e(conf map[string]interface{}) {
 	if hostapdStr(conf, "wpa_key_mgmt") == "" {
 		conf["wpa_key_mgmt"] = "WPA-PSK WPA-PSK-SHA256 SAE"
 	}
-	conf["ieee80211w"] = 1
-	for _, akm := range strings.Fields(hostapdStr(conf, "wpa_key_mgmt")) {
-		if !isSAEKeyMgmt(akm) {
-			return
+}
+
+func hostapdPMFLevel(required, is6GHz bool) int {
+	if required || is6GHz {
+		return 2
+	}
+	return 1
+}
+
+func applyHostapdPMF(conf map[string]interface{}, required bool) {
+	conf["ieee80211w"] = hostapdPMFLevel(required, hostapdRustapBand(conf, 0) == 6)
+	if strings.Contains(hostapdStr(conf, "wpa_key_mgmt"), "SAE") {
+		conf["sae_require_mfp"] = 1
+	}
+}
+
+func interfacePMFRequired(iface string) bool {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+	for _, entry := range loadInterfacesConfigLocked() {
+		if entry.Name == iface {
+			return entry.PMFRequired
 		}
 	}
-	conf["ieee80211w"] = 2
+	return false
+}
+
+func setInterfacePMFRequired(iface string, required bool) error {
+	Interfacesmtx.Lock()
+	defer Interfacesmtx.Unlock()
+	config := loadInterfacesConfigLocked()
+	for i := range config {
+		if config[i].Name == iface {
+			if config[i].PMFRequired == required {
+				return nil
+			}
+			config[i].PMFRequired = required
+			return writeInterfacesConfigLocked(config)
+		}
+	}
+	if required {
+		return fmt.Errorf("interface %s is not configured", iface)
+	}
+	return nil
 }
 
 func getHostapdMloConfigPath(iface string) string {
@@ -1039,7 +1082,7 @@ func readHostapdMldLinks(primaryConf map[string]interface{}, iface string) (bool
 	return true, 0, links, nil
 }
 
-func generateHostapdMldLinkConfig(primaryConf map[string]interface{}, iface string, link MldLinkConfig, existingLinkConf map[string]interface{}) string {
+func generateHostapdMldLinkConfig(primaryConf map[string]interface{}, iface string, link MldLinkConfig, existingLinkConf map[string]interface{}, pmfRequired bool) string {
 	hwMode := hostapdModeForBand(link.Band)
 	is24GHz := link.Band == 2.4
 	is6GHz := link.Band == 6
@@ -1126,6 +1169,7 @@ func generateHostapdMldLinkConfig(primaryConf map[string]interface{}, iface stri
 			mloConf["vht_capab"] = val
 		}
 	}
+	applyHostapdPMF(mloConf, pmfRequired)
 
 	data := ""
 	for key, value := range mloConf {
@@ -1360,14 +1404,11 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 			delete(conf, "mld_ap")
 		} else {
 			conf["mld_ap"] = newConf.Mld_ap
-			// 802.11be spec requires PMF on MLD links
-			conf["ieee80211w"] = 2
 		}
 	}
 	if _, ok := newInput["mld"]; ok {
 		if newConf.Mld {
 			conf["mld_ap"] = 1
-			conf["ieee80211w"] = 2
 		} else {
 			delete(conf, "mld_ap")
 		}
@@ -1470,8 +1511,13 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		associationLink, _ := mldLinkByID(mldLinks, associationLinkID)
 		applyHostapdRadioSettings(conf, associationLink.Channel, associationLink.Width, associationLink.Band, "be")
 		conf["mld_ap"] = 1
-		conf["ieee80211w"] = 2
 	}
+
+	pmfRequired := interfacePMFRequired(iface)
+	if _, ok := newInput["Pmf_required"]; ok {
+		pmfRequired = newConf.Pmf_required
+	}
+	applyHostapdPMF(conf, pmfRequired)
 
 	// write new conf
 	data := ""
@@ -1505,7 +1551,7 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		existingLinkConf, _ := readHostapdConfigFile(mloPath)
-		mloData, err = constrainHostapdSecurity(generateHostapdMldLinkConfig(conf, iface, secondaryLink, existingLinkConf), caps)
+		mloData, err = constrainHostapdSecurity(generateHostapdMldLinkConfig(conf, iface, secondaryLink, existingLinkConf, pmfRequired), caps)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -1536,6 +1582,14 @@ func hostapdUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		delete(conf, "link_id")
 		delete(conf, "mld_links")
 	}
+
+	if _, ok := newInput["Pmf_required"]; ok {
+		if err := setInterfacePMFRequired(iface, pmfRequired); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	conf["pmf_required"] = pmfRequired
 
 	if !needRestart {
 		_, err = RunHostapdCommand(iface, "reload")
