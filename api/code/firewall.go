@@ -1386,6 +1386,11 @@ func refreshDeviceGroupsAndPolicy(devices map[string]DeviceEntry, groups []Group
 			return
 		}
 	}
+	device_disabled := slices.Contains(dev.Policies, "disabled") || slices.Contains(dev.Policies, "quarantine") || dev.DeviceDisabled
+	if device_disabled {
+		flushVmaps(ipv4, dev.MAC, "wg0", getVerdictMapNames(), false, true, nil)
+		clearConntrackSrcIP(ipv4)
+	}
 
 	//the most recent DHCP interface is authoritative; the dhcp_access lookup
 	//below is ambiguous when stale entries exist for a moved device
@@ -1413,7 +1418,6 @@ func refreshDeviceGroupsAndPolicy(devices map[string]DeviceEntry, groups []Group
 	//remove from existing verdict maps
 	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), isAPVlan(ifname), false, nil)
 
-	device_disabled := slices.Contains(dev.Policies, "disabled") || slices.Contains(dev.Policies, "quarantine") || dev.DeviceDisabled
 	if dev.MAC != "" {
 		if _, exists := devices[dev.MAC]; !exists {
 			return
@@ -2644,6 +2648,20 @@ func flushVmaps(IP string, MAC string, Ifname string, vmap_names []string, match
 	}
 }
 
+func snapshotHasIPOnInterface(snap *MapSnapshot, vmapNames []string, ip, iface string) bool {
+	if snap == nil || ip == "" {
+		return false
+	}
+	for _, name := range vmapNames {
+		for _, entry := range snap.Entries(name) {
+			if entry.ipv4 == ip && entry.ifname == iface {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func enforceMeshMACsecRoute(state MeshMACsecState, entry DeviceEntry, candidate string, established string, apIfaces []string, snap *MapSnapshot) (string, bool) {
 	iface, ok := meshMACsecRouteIface(state, entry.MAC, entry.RecentIP, candidate, meshMACsecWifiDevice(entry), apIfaces)
 	if ok {
@@ -3559,7 +3577,8 @@ func dynamicRouteLoop() {
 			}
 
 			//snapshot the verdict maps once instead of re-dumping per device
-			vmapSnap := GetNFTClient().SnapshotMaps(TableFamilyInet, "filter", getVerdictMapNames())
+			vmapNames := getVerdictMapNames()
+			vmapSnap := GetNFTClient().SnapshotMaps(TableFamilyInet, "filter", vmapNames)
 			routeSnap := SnapshotRoutes()
 
 			//now get the existing route and make an update if needed
@@ -3567,6 +3586,11 @@ func dynamicRouteLoop() {
 				//no IP yet for this device -> no route, skip this entry
 				if entry.RecentIP == "" {
 					continue
+				}
+				device_disabled := slices.Contains(entry.Policies, "disabled") || slices.Contains(entry.Policies, "quarantine") || entry.DeviceDisabled
+				if device_disabled && snapshotHasIPOnInterface(vmapSnap, vmapNames, entry.RecentIP, "wg0") {
+					flushVmaps(entry.RecentIP, entry.MAC, "wg0", vmapNames, false, true, vmapSnap)
+					clearConntrackSrcIP(entry.RecentIP)
 				}
 
 				// this gets the current device destination for this entry (LANIF, wifi vlan, )
@@ -3623,7 +3647,6 @@ func dynamicRouteLoop() {
 						continue
 					}
 				}
-
 				macsecIface, macsecOK := enforceMeshMACsecRoute(macsecState, entry, new_iface, established_route_device, apIfaces, vmapSnap)
 				if !macsecOK {
 					continue
@@ -3633,13 +3656,11 @@ func dynamicRouteLoop() {
 				//update the iface map with the designated interface
 				newIfaceMap[entry.RecentIP] = new_iface
 
-				device_disabled := slices.Contains(entry.Policies, "disabled") || slices.Contains(entry.Policies, "quarantine") || entry.DeviceDisabled
-
 				//disabled devices stay out of the verdict maps. match by MAC
 				//to catch entries left on a stale interface
 				if device_disabled {
 					if entry.MAC != "" && vmapSnap.HasMAC("ethernet_filter", entry.MAC) {
-						flushVmaps(entry.RecentIP, entry.MAC, new_iface, getVerdictMapNames(), isAPVlan(new_iface), true, vmapSnap)
+						flushVmaps(entry.RecentIP, entry.MAC, new_iface, vmapNames, isAPVlan(new_iface), true, vmapSnap)
 					}
 					continue
 				}
