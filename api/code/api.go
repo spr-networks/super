@@ -2742,12 +2742,15 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	SprbusPublish("wifi:auth:success", pska)
-
-	if pska.Iface == "" || pska.Event != "AP-STA-CONNECTED" || pska.MAC == "" {
+	mac, macErr := net.ParseMAC(pska.MAC)
+	validMAC := macErr == nil && len(mac) == 6 && mac[0]&1 == 0 && mac.String() != "00:00:00:00:00:00"
+	if pska.Iface == "" || pska.Event != "AP-STA-CONNECTED" || !validMAC {
 		http.Error(w, "malformed data", 400)
 		return
 	}
+	pska.MAC = mac.String()
+
+	SprbusPublish("wifi:auth:success", pska)
 
 	go noteMeshStationConnect(pska.MAC, pska.Router, r.RemoteAddr)
 
