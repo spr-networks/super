@@ -1117,6 +1117,7 @@ func getConfigsBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/x-gtar-compressed")
 	http.ServeFile(w, r, backupFilePath)
 }
 

@@ -329,7 +329,10 @@ class API {
           return response.text()
         } else if (contentType.includes('application/x-x509-ca-cert')) {
           return response.text()
-        } else if (contentType.startsWith('application/x-gtar-compressed')) {
+        } else if (
+          contentType.startsWith('application/x-gtar-compressed') ||
+          contentType.includes('gzip')
+        ) {
           return response.blob()
         }
 
