@@ -1417,6 +1417,9 @@ func refreshDeviceGroupsAndPolicy(devices map[string]DeviceEntry, groups []Group
 
 	//remove from existing verdict maps
 	flushVmaps(ipv4, dev.MAC, ifname, getVerdictMapNames(), isAPVlan(ifname), false, nil)
+	if strings.Contains(ifname, ExtraBSSPrefix) && !slices.Contains(dev.Policies, "guestonly") {
+		return
+	}
 
 	if dev.MAC != "" {
 		if _, exists := devices[dev.MAC]; !exists {
@@ -3050,8 +3053,8 @@ func getWifiPeers() map[string]string {
 		if err == nil {
 			for k, peer := range wifi_peers {
 				val, exists := peer["vlan_id"]
-				if exists && (val != "") {
-					peers[k] = iface + "." + peer["vlan_id"]
+				if exists && val != "" && strings.Contains(peer["flags"], "[AUTHORIZED]") {
+					peers[k] = iface + "." + val
 				}
 			}
 		}
@@ -3646,6 +3649,9 @@ func dynamicRouteLoop() {
 						// disconnected wifi devices will have empty new_iface, skip
 						continue
 					}
+				}
+				if strings.Contains(new_iface, ExtraBSSPrefix) && !slices.Contains(entry.Policies, "guestonly") {
+					continue
 				}
 				macsecIface, macsecOK := enforceMeshMACsecRoute(macsecState, entry, new_iface, established_route_device, apIfaces, vmapSnap)
 				if !macsecOK {

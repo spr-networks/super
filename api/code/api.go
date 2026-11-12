@@ -2752,8 +2752,6 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 
 	SprbusPublish("wifi:auth:success", pska)
 
-	go noteMeshStationConnect(pska.MAC, pska.Router, r.RemoteAddr)
-
 	pska.Status = "Okay"
 
 	if isSetupMode() && pska.Iface == SetupAP {
@@ -2768,8 +2766,12 @@ func reportPSKAuthSuccess(w http.ResponseWriter, r *http.Request) {
 
 	devices := getDevicesJson()
 	pendingPsk, exists := devices["pending"]
-
 	guest_wifi := strings.Contains(pska.Iface, ExtraBSSPrefix)
+	if device, known := devices[pska.MAC]; guest_wifi && known && !slices.Contains(device.Policies, "guestonly") {
+		http.Error(w, "guest access denied", http.StatusForbidden)
+		return
+	}
+	go noteMeshStationConnect(pska.MAC, pska.Router, r.RemoteAddr)
 
 	if exists && !guest_wifi {
 		var foundPSK = false

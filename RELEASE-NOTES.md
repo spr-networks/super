@@ -1,5 +1,14 @@
-
 # Secure Programmable Router (SPR) Release Notes
+
+## v1.3.4
+**Improvements**
+- Relax PMF for MLO APs. This enables older devices without it to still connect
+**Fixes**
+- Harden plugin creation
+- Fix source IP filtering for port forwarding
+- Filter mesh report MAC addresses for assigning new devices
+- Wireguard would ignore parental blocks when the device could be on both wifi and wireguard
+- 
 
 ## v1.3.3
 **Fixes**
