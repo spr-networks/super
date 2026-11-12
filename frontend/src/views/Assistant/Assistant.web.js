@@ -653,7 +653,7 @@ const Assistant = () => {
   const [asked, setAsked] = useState('')
   const [input, setInput] = useState('')
   const [isThinking, setIsThinking] = useState(engineMemory.busy)
-  const [terminalMode, setTerminalMode] = useState(() => storedValue(TERMINAL_STORAGE_KEY, '') === 'on')
+  const [terminalMode, setTerminalMode] = useState(() => storedValue(TERMINAL_STORAGE_KEY, '') !== 'off')
   const [commandBusy, setCommandBusy] = useState('')
   const navigateRef = useRef(null)
   const [cliNames, setCliNames] = useState({ devices: [], groups: [], tags: [] })
@@ -1351,13 +1351,17 @@ const Assistant = () => {
                 state: isReady ? 'ready' : isModelTransitioning || cacheState === 'checking' ? 'loading' : 'none',
                 text: isReady ? `${loadedModel.name} ready` : isModelTransitioning ? loadingStatus : cacheState === 'checking' ? 'checking for a stored model' : 'no model: commands only'
               }}
+              headerAction={!isReady && !isModelTransitioning && cacheState !== 'checking' ? {
+                label: selectedModelIsCached ? 'load stored model' : 'download a model',
+                onPress: () => setShowConsent(true)
+              } : null}
               busyText={isThinking ? activityText || 'Thinking locally…' : commandBusy}
               stream={isThinking ? streamPreview(streamText) : null}
               hint={pendingProposal ? 'Review the change above. Type y to apply, n to discard, or a correction to replace it.' : ''}
               disabled={isThinking || isApplying || Boolean(commandBusy)}
               onSubmit={submitLine}
               complete={(text) => completeCli(text, cliNames)}
-              banner={'Type a command, or just ask in plain words. help shows where to start.'}
+              banner={'Type a command, or just ask in plain words. Type help for a command list'}
               renderExtras={(message) => (
                 <>
                   {message.view === 'alerts' ? <AlertsEmbed /> : null}
@@ -1677,32 +1681,6 @@ const Assistant = () => {
                     />
                   ))}
 
-                  <VStack space="xs">
-                    <Text size="sm" bold>
-                      Context size
-                    </Text>
-                    <HStack space="sm" flexWrap="wrap">
-                      {selectedModel.contextSizes.map((tokens) => {
-                        const isSelected = tokens === selectedContextTokens
-                        return (
-                          <Button
-                            key={tokens}
-                            size="xs"
-                            variant={isSelected ? 'solid' : 'outline'}
-                            action={isSelected ? 'primary' : 'secondary'}
-                            onPress={() => selectContextSize(tokens)}
-                            isDisabled={isModelTransitioning}
-                            role="radio"
-                            accessibilityState={{ selected: isSelected }}
-                            accessibilityLabel={contextLabel(tokens)}
-                          >
-                            <ButtonText>{`${tokens / 1024}K`}</ButtonText>
-                          </Button>
-                        )
-                      })}
-                    </HStack>
-                  </VStack>
-
                   <Pressable
                     onPress={() =>
                       window.open(
@@ -1729,6 +1707,32 @@ const Assistant = () => {
                       />
                     </HStack>
                   </Pressable>
+
+                  <VStack space="xs">
+                    <Text size="sm" bold>
+                      Context size
+                    </Text>
+                    <HStack space="sm" flexWrap="wrap">
+                      {selectedModel.contextSizes.map((tokens) => {
+                        const isSelected = tokens === selectedContextTokens
+                        return (
+                          <Button
+                            key={tokens}
+                            size="xs"
+                            variant={isSelected ? 'solid' : 'outline'}
+                            action={isSelected ? 'primary' : 'secondary'}
+                            onPress={() => selectContextSize(tokens)}
+                            isDisabled={isModelTransitioning}
+                            role="radio"
+                            accessibilityState={{ selected: isSelected }}
+                            accessibilityLabel={contextLabel(tokens)}
+                          >
+                            <ButtonText>{`${tokens / 1024}K`}</ButtonText>
+                          </Button>
+                        )
+                      })}
+                    </HStack>
+                  </VStack>
 
                   {isModelTransitioning ? (
                     <VStack space="xs">

@@ -2,7 +2,8 @@ import { getLfm3Runtime } from './webllmRuntime.web'
 import { ASK_SPR_Q4_K_M } from './modelHashes'
 import { fetchFromVerifiedFile, isVerifiedFileStored, openVerifiedFile } from './modelIntegrity'
 
-const LFM_3_REPO = 'https://huggingface.co/supernetworks/LFM3-1.7B-Ask-SPR-GGUF'
+const LFM_3_REPO_ID = 'supernetworks/LFM3-1.7B-Ask-SPR-GGUF'
+const LFM_3_REPO = `https://huggingface.co/${LFM_3_REPO_ID}`
 const LFM_3_REVISION = 'a3817b86e87db35df8075346258b41e34330acda'
 const LFM_3_FILE = 'LFM3-1.7B-Ask-SPR-Q4_K_M.gguf'
 
@@ -13,7 +14,7 @@ export const MODEL_CATALOG = [
   {
     key: 'lfm3-1.7b',
     runtime: 'lfm3',
-    name: 'LFM3 1.7B',
+    name: LFM_3_REPO_ID,
     detail: 'Browser-local SPR chat and action model',
     size: 'about 1.1 GB',
     contextTokens: 32768,

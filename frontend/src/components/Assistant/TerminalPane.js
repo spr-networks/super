@@ -34,7 +34,7 @@ const Entry = ({ message, renderExtras }) => {
 
 const TerminalPane = ({
   messages, status = { state: 'none', text: '' }, busyText = '', stream = null, hint = '', disabled = false,
-  onSubmit, complete = () => [], renderExtras, children, minHeight = 360, banner = ''
+  onSubmit, complete = () => [], renderExtras, children, minHeight = 360, banner = '', headerAction = null
 }) => {
   const [line, setLine] = useState('')
   const [candidates, setCandidates] = useState([])
@@ -102,7 +102,15 @@ const TerminalPane = ({
     <Box testID="assistant-terminal" dataSet={{ sprTerminal: 'on' }} style={FRAME} minHeight={minHeight} borderWidth={1} rounded="$xl" overflow="hidden" {...card}>
       <HStack alignItems="center" justifyContent="space-between" h={38} px="$3" borderBottomWidth={1}
         bg="$backgroundContentLight" borderColor="$borderColorCardLight" sx={{ _dark: { bg: '$backgroundContentDark', borderColor: '$borderColorCardDark' } }}>
-        <HStack><Line bold>Ask </Line><Line tone="accent" bold>SPR</Line></HStack>
+        <HStack alignItems="center" space="md">
+          <HStack><Line bold>Ask </Line><Line tone="accent" bold>SPR</Line></HStack>
+          {headerAction ? (
+            <Pressable onPress={headerAction.onPress} accessibilityRole="link" accessibilityLabel={headerAction.label}
+              testID="assistant-terminal-header-action">
+              <Line tone="accent" underline>{headerAction.label}</Line>
+            </Pressable>
+          ) : null}
+        </HStack>
         <HStack alignItems="center" space="xs">
           <Box w={7} h={7} rounded="$full" bg={dot} />
           <Line tone="muted" testID="assistant-terminal-status">{busyText || status.text}</Line>

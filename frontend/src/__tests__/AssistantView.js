@@ -19,6 +19,53 @@ beforeEach(() => {
   mockLoadWebLLM.mockReset()
   mockIsModelCached.mockReset().mockResolvedValue(false)
   window.localStorage.data = {}
+  window.localStorage.setItem('spr-assistant/terminal-v1', 'off')
+})
+
+describe('terminal view', () => {
+  beforeEach(() => {
+    window.localStorage.data = {}
+  })
+
+  test('is the default view', async () => {
+    render(<Assistant />)
+
+    expect(await screen.findByTestId('assistant-terminal')).toBeTruthy()
+  })
+
+  test('chat stays selected once chosen', () => {
+    window.localStorage.setItem('spr-assistant/terminal-v1', 'off')
+    render(<Assistant />)
+
+    expect(screen.queryByTestId('assistant-terminal')).toBeNull()
+  })
+
+  test('loads a stored model automatically', async () => {
+    mockIsModelCached.mockResolvedValue(true)
+    mockLoadWebLLM.mockResolvedValue({
+      unload: jest.fn().mockResolvedValue(),
+      resetChat: jest.fn().mockResolvedValue()
+    })
+    render(<Assistant />)
+
+    expect(
+      await screen.findByText('supernetworks/LFM3-1.7B-Ask-SPR-GGUF ready')
+    ).toBeTruthy()
+    expect(mockLoadWebLLM).toHaveBeenCalledTimes(1)
+    expect(screen.queryByTestId('assistant-terminal-header-action')).toBeNull()
+  })
+
+  test('offers a model download next to the title until a model loads', async () => {
+    render(<Assistant />)
+
+    fireEvent.press(
+      await screen.findByRole('link', { name: 'download a model' })
+    )
+
+    expect(
+      await screen.findByText('Load supernetworks/LFM3-1.7B-Ask-SPR-GGUF?')
+    ).toBeTruthy()
+  })
 })
 
 test('lets the user inspect, edit, and persist both system prompts', () => {
@@ -87,9 +134,9 @@ test('automatically initializes a cached LFM3 1.7B model', async () => {
 
   render(<Assistant />)
 
-  expect(await screen.findByText('LFM3 1.7B ready')).toBeTruthy()
+  expect(await screen.findByText('supernetworks/LFM3-1.7B-Ask-SPR-GGUF ready')).toBeTruthy()
   expect(
-    screen.queryByText('LFM3 1.7B is ready. Inference stays in this browser.')
+    screen.queryByText('supernetworks/LFM3-1.7B-Ask-SPR-GGUF is ready. Inference stays in this browser.')
   ).toBeNull()
   expect(mockLoadWebLLM).toHaveBeenCalledWith(
     expect.objectContaining({ key: 'lfm3-1.7b' }),
@@ -116,10 +163,10 @@ test('shows progress while a cached model initializes', async () => {
 
   render(<Assistant />)
 
-  expect(await screen.findByText('Loading LFM3 1.7B')).toBeTruthy()
+  expect(await screen.findByText('Loading supernetworks/LFM3-1.7B-Ask-SPR-GGUF')).toBeTruthy()
 
   await act(async () => finishLoading())
-  expect(await screen.findByText('LFM3 1.7B ready')).toBeTruthy()
+  expect(await screen.findByText('supernetworks/LFM3-1.7B-Ask-SPR-GGUF ready')).toBeTruthy()
 })
 
 const mockEngine = () => ({
@@ -132,7 +179,7 @@ test('settings list the model without the removed explanations', () => {
 
   fireEvent.press(screen.getByRole('button', { name: 'Settings' }))
 
-  expect(screen.getByText('LFM3 1.7B')).toBeTruthy()
+  expect(screen.getByText('supernetworks/LFM3-1.7B-Ask-SPR-GGUF')).toBeTruthy()
   expect(screen.getByText('about 1.1 GB · 32K context')).toBeTruthy()
   expect(
     screen.queryByText(/Browser-local and editable/, {
@@ -163,7 +210,7 @@ test('loads the model with the chosen context size', async () => {
   )
   fireEvent.press(screen.getByRole('button', { name: 'Download and load' }))
 
-  expect(await screen.findByText('LFM3 1.7B ready')).toBeTruthy()
+  expect(await screen.findByText('supernetworks/LFM3-1.7B-Ask-SPR-GGUF ready')).toBeTruthy()
   expect(mockLoadWebLLM).toHaveBeenCalledWith(
     expect.objectContaining({ key: 'lfm3-1.7b' }),
     expect.any(Function),
@@ -181,10 +228,10 @@ test('reloads the loaded model when its context size changes', async () => {
   mockLoadWebLLM.mockResolvedValue(mockEngine())
   render(<Assistant />)
 
-  expect(await screen.findByText('LFM3 1.7B ready')).toBeTruthy()
+  expect(await screen.findByText('supernetworks/LFM3-1.7B-Ask-SPR-GGUF ready')).toBeTruthy()
   fireEvent.press(screen.getByRole('button', { name: 'Settings' }))
   expect(
-    screen.getByText('Chat is using LFM3 1.7B with 32K context')
+    screen.getByText('Chat is using supernetworks/LFM3-1.7B-Ask-SPR-GGUF with 32K context')
   ).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Model loaded' })).toBeTruthy()
 
@@ -205,7 +252,7 @@ test('reloads the loaded model when its context size changes', async () => {
   )
   fireEvent.press(screen.getByRole('button', { name: 'Settings' }))
   expect(
-    await screen.findByText('Chat is using LFM3 1.7B with 128K context')
+    await screen.findByText('Chat is using supernetworks/LFM3-1.7B-Ask-SPR-GGUF with 128K context')
   ).toBeTruthy()
 })
 
@@ -220,7 +267,7 @@ test('automatically loads the last used model and context', async () => {
 
   render(<Assistant />)
 
-  expect(await screen.findByText('LFM3 1.7B ready')).toBeTruthy()
+  expect(await screen.findByText('supernetworks/LFM3-1.7B-Ask-SPR-GGUF ready')).toBeTruthy()
   expect(mockLoadWebLLM).toHaveBeenCalledTimes(1)
   expect(mockLoadWebLLM).toHaveBeenCalledWith(
     expect.objectContaining({ key: 'lfm3-1.7b' }),
@@ -251,7 +298,7 @@ test('shows a failed answer in the chat, not only as an alert', async () => {
       <Assistant />
     </AlertContext.Provider>
   )
-  expect(await screen.findByText('LFM3 1.7B ready')).toBeTruthy()
+  expect(await screen.findByText('supernetworks/LFM3-1.7B-Ask-SPR-GGUF ready')).toBeTruthy()
 
   fireEvent.changeText(screen.getByLabelText('Message Ask SPR'), 'hello')
   fireEvent.press(screen.getByText('Send', { includeHiddenElements: true }))
@@ -299,7 +346,7 @@ test('routes a semantic task through review, acceptance, readback and code-autho
   mockLoadWebLLM.mockResolvedValue(engine)
   try {
     render(<AlertContext.Provider value={alerts}><Assistant /></AlertContext.Provider>)
-    await screen.findByText('LFM3 1.7B ready')
+    await screen.findByText('supernetworks/LFM3-1.7B-Ask-SPR-GGUF ready')
     fireEvent.changeText(screen.getByLabelText('Message Ask SPR'), 'Rename Tablet to School tablet.')
     fireEvent.press(screen.getByText('Send', { includeHiddenElements: true }))
     await screen.findByText('Review change')
@@ -334,7 +381,7 @@ test('a chat correction replaces an unapplied review and only the replacement ca
   mockLoadWebLLM.mockResolvedValue({ ...mockEngine(), chat: { completions: { create } } })
   try {
     render(<AlertContext.Provider value={alerts}><Assistant /></AlertContext.Provider>)
-    await screen.findByText('LFM3 1.7B ready')
+    await screen.findByText('supernetworks/LFM3-1.7B-Ask-SPR-GGUF ready')
     fireEvent.changeText(screen.getByLabelText('Message Ask SPR'), 'Rename Tablet to School tablet.')
     fireEvent.press(screen.getByText('Send', { includeHiddenElements: true }))
     await screen.findByText('Review change')
@@ -407,7 +454,7 @@ test('the conversation survives leaving the page and coming back, until reset', 
   mockLoadWebLLM.mockResolvedValue(engine)
   const page = <AlertContext.Provider value={alerts}><Assistant /></AlertContext.Provider>
   const first = render(page)
-  expect(await screen.findByText('LFM3 1.7B ready')).toBeTruthy()
+  expect(await screen.findByText('supernetworks/LFM3-1.7B-Ask-SPR-GGUF ready')).toBeTruthy()
   fireEvent.changeText(screen.getByLabelText('Message Ask SPR'), 'remember this question')
   fireEvent.press(screen.getByText('Send', { includeHiddenElements: true }))
   expect(await screen.findByText(/The local model could not answer/)).toBeTruthy()
@@ -422,10 +469,10 @@ test('the loaded model is reused when the page is reopened, not loaded a second 
   mockIsModelCached.mockImplementation((model) => Promise.resolve(model.key === 'lfm3-1.7b'))
   mockLoadWebLLM.mockResolvedValue(mockEngine())
   const first = render(<Assistant />)
-  expect(await screen.findByText('LFM3 1.7B ready')).toBeTruthy()
+  expect(await screen.findByText('supernetworks/LFM3-1.7B-Ask-SPR-GGUF ready')).toBeTruthy()
   first.unmount()
   render(<Assistant />)
-  expect(screen.getByText('LFM3 1.7B ready')).toBeTruthy()
+  expect(screen.getByText('supernetworks/LFM3-1.7B-Ask-SPR-GGUF ready')).toBeTruthy()
   await act(async () => { await Promise.resolve() })
   expect(mockLoadWebLLM).toHaveBeenCalledTimes(1)
   clearAssistantMemory()
