@@ -263,8 +263,15 @@ func (a *AlertDevice) Validate() error {
 		return fmt.Errorf("Invalid DeviceToken")
 	}
 
-	//TODO
-	if a.PublicKey == "" {
+	block, _ := pem.Decode([]byte(a.PublicKey))
+	if block == nil {
+		return fmt.Errorf("Invalid PublicKey")
+	}
+	key, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("Invalid PublicKey")
+	}
+	if _, ok := key.(*rsa.PublicKey); !ok {
 		return fmt.Errorf("Invalid PublicKey")
 	}
 
@@ -560,7 +567,13 @@ func sendDeviceAlertLocked(device AlertDevice, title string, message string) err
 		jsonValue := message
 
 		pubPem, _ := pem.Decode([]byte(device.PublicKey))
+		if pubPem == nil {
+			return fmt.Errorf("invalid pubkey for device")
+		}
 		parsedKey, err := x509.ParsePKIXPublicKey(pubPem.Bytes)
+		if err != nil {
+			return fmt.Errorf("invalid pubkey for device")
+		}
 
 		var pubKey *rsa.PublicKey
 		pubKey, ok := parsedKey.(*rsa.PublicKey)
