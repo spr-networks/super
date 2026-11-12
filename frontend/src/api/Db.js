@@ -29,6 +29,10 @@ export class APIDb extends API {
     return this.get(`items/${bucket}?${new URLSearchParams(params)}`)
   }
 
+  itemsPrefix(prefix, params = {}) {
+    return this.get(`items_prefix/${prefix}?${new URLSearchParams(params)}`)
+  }
+
   getItem(bucket, key) {
     return this.get(`/bucket/${bucket}/${key}`)
   }

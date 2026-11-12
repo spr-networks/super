@@ -31,6 +31,30 @@ const renderAt = (path) =>
 // the search input renders inside a tab scene the testing library treats as hidden
 const hidden = { includeHiddenElements: true }
 
+describe('DNS log all clients', () => {
+  test('no client in the URL shows recent queries from every client', async () => {
+    renderAt('/admin/dnsLog/:ips/:text')
+
+    expect(await screen.findByText('ads.example.com.', hidden)).toBeTruthy()
+    expect(screen.getByText('apple.com.', hidden)).toBeTruthy()
+    expect(
+      screen.getByText('Most recent queries from all clients', hidden)
+    ).toBeTruthy()
+    expect(location.pathname).toBe('/admin/dnsLog/:ips/:text')
+  })
+
+  test('pressing a client narrows the log to that client', async () => {
+    renderAt('/admin/dnsLog/:ips/:text')
+
+    const client = await screen.findAllByText(/192\.168\.2\.102/, hidden)
+    fireEvent.press(client[0])
+
+    await waitFor(() =>
+      expect(location.pathname).toBe('/admin/dnsLog/192.168.2.102/:text')
+    )
+  })
+})
+
 describe('DNS log search URL', () => {
   test('a slash in the search text survives the route', async () => {
     renderAt('/admin/dnsLog/192.168.1.42,192.168.1.26/a%2Fb')

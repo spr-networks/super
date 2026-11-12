@@ -9,7 +9,6 @@ import React, { useContext, useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import PropTypes from 'prop-types'
 import { useNavigate } from 'react-router-dom'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import { format as timeAgo } from 'timeago.js'
 
 import { AlertContext, AppContext, ModalContext } from 'AppContext'
@@ -89,9 +88,13 @@ const ListItem = ({
   item,
   handleClickDomain,
   hideClient,
+  clientLabel,
+  onPressClient,
   triggerAlert,
   setFilterText
 }) => {
+  const clientIp = hideClient ? null : item.Remote?.split(':')[0]
+
   const colorByType = (type) => {
     let keys = {
       BLOCKED: 'error',
@@ -206,6 +209,15 @@ const ListItem = ({
                 {prettyDate(new Date(item.Timestamp))}
               </Text>
             </Tooltip>
+            {clientIp ? (
+              <Text
+                color="$muted500"
+                size="xs"
+                onPress={() => onPressClient(clientIp)}
+              >
+                {clientLabel(clientIp)}
+              </Text>
+            ) : null}
           </VStack>
         </VStack>
 
@@ -237,8 +249,8 @@ const DNSLogHistoryList = (props) => {
 
   const [list, setList] = useState([])
   const [listFiltered, setListFiltered] = useState([])
-  const [filterIps, setFilterIps] = useState([])
-  const [filterText, setFilterText] = useState('')
+  const [filterIps, setFilterIps] = useState(props.ips || [])
+  const [filterText, setFilterText] = useState(props.filterText || '')
   const [filterType, setFilterType] = useState('')
   const [selectedDomain, setSelectedDomain] = useState('')
   const [selectedType, setSelectedType] = useState('')
@@ -249,13 +261,29 @@ const DNSLogHistoryList = (props) => {
   const [dateTo, setDateTo] = useState(null) //new Date().toISOString().split('T')[0])
 
   const modalRef = React.useRef(null)
+  const requestRef = React.useRef(0)
 
   const refreshList = async (_params) => {
     return new Promise((resolve, reject) => {
       let apiParams = _params || params
+      const request = ++requestRef.current
+      const isCurrent = () => request == requestRef.current
 
       if (!filterIps.length) {
-        return setList([])
+        return dbAPI
+          .itemsPrefix('dns:serve:', apiParams)
+          .then((list) => {
+            list = list || []
+            if (isCurrent()) {
+              setTotal(0)
+              setList(list)
+            }
+            resolve(list)
+          })
+          .catch((err) => {
+            context.error('No DNS query history')
+            resolve([])
+          })
       }
 
       // NOTE native dont support Promise.allSettled
@@ -304,7 +332,9 @@ const DNSLogHistoryList = (props) => {
               new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime()
           )
 
-          setList(list)
+          if (isCurrent()) {
+            setList(list)
+          }
 
           resolve(list)
         })
@@ -385,36 +415,15 @@ const DNSLogHistoryList = (props) => {
     return listFiltered
   }
 
-  const persistFilterIps = (ips) => {
-    AsyncStorage.getItem('select')
-      .then((oldSelect) => {
-        let select = JSON.parse(oldSelect) || {}
-
-        select.filterIps = ips
-        AsyncStorage.setItem('select', JSON.stringify(select))
-          .then((res) => {})
-          .catch((err) => {})
-      })
-      .catch((err) => {})
-  }
-
   const handleChangeIp = (ip) => {
     if (!ip) return
     userTouched.current = true
-    setFilterIps((prev) => {
-      let next = prev.includes(ip) ? prev : [...prev, ip]
-      persistFilterIps(next)
-      return next
-    })
+    setFilterIps((prev) => (prev.includes(ip) ? prev : [...prev, ip]))
   }
 
   const removeFilterIp = (ip) => {
     userTouched.current = true
-    setFilterIps((prev) => {
-      let next = prev.filter((entry) => entry != ip)
-      persistFilterIps(next)
-      return next
-    })
+    setFilterIps((prev) => prev.filter((entry) => entry != ip))
   }
 
   const handleChange = (value) => {
@@ -503,7 +512,10 @@ const DNSLogHistoryList = (props) => {
     modalRef.current()
   }
 
-  let hideClient = filterIps.length <= 1
+  let hideClient = filterIps.length == 1
+  let hasMore = filterIps.length
+    ? total > perPage
+    : page > 1 || list.length >= perPage
 
   const handleClickDomain = (selectedType, selectedDomain) => {
     setSelectedType(selectedType)
@@ -628,7 +640,13 @@ const DNSLogHistoryList = (props) => {
           (filterIps.length ? filterIps.map(ipLabel).join(', ') + ' ' : '') +
           'DNS Log'
         }
-        description={total ? `${total} records` : ''}
+        description={
+          !filterIps.length
+            ? 'Most recent queries from all clients'
+            : total
+              ? `${total} records`
+              : ''
+        }
       >
         <HStack
           space="xl"
@@ -724,7 +742,6 @@ const DNSLogHistoryList = (props) => {
                   onPress={() => {
                     userTouched.current = true
                     setFilterIps([])
-                    persistFilterIps([])
                   }}
                 >
                   <ButtonText size="xs">Clear</ButtonText>
@@ -745,7 +762,7 @@ const DNSLogHistoryList = (props) => {
           space="sm"
           sx={{
             '@base': {
-              display: filterIps.length && showForm ? 'flex' : 'none'
+              display: showForm ? 'flex' : 'none'
             },
             '@md': { flexDirection: 'row', flex: 1 }
           }}
@@ -828,6 +845,8 @@ const DNSLogHistoryList = (props) => {
           <ListItem
             item={item}
             hideClient={hideClient}
+            clientLabel={ipLabel}
+            onPressClient={handleChangeIp}
             handleClickDomain={handleClickDomain}
             triggerAlert={triggerAlert}
             setFilterText={setFilterText}
@@ -836,7 +855,7 @@ const DNSLogHistoryList = (props) => {
         keyExtractor={(item) => item.Timestamp + item.Remote}
       />
 
-      {total > perPage && !filterText.length ? (
+      {hasMore && !filterText.length ? (
         <Pagination
           page={page}
           pages={total}
