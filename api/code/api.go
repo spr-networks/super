@@ -3629,7 +3629,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/tokens", applyJwtOtpCheck(getAuthTokens)).Methods("GET")
 	external_router_authenticated.HandleFunc("/tokens", applyJwtOtpCheck(updateAuthTokens)).Methods("PUT", "DELETE")
 
-	external_router_authenticated.HandleFunc("/otp_register", applyPasswordAuthCheck(otpRegister)).Methods("PUT", "DELETE")
+	external_router_authenticated.HandleFunc("/otp_register", applyFactorManagementCheck(otpRegister)).Methods("PUT", "DELETE")
 	external_router_authenticated.HandleFunc("/otp_validate", applyPasswordAuthCheck(generateOTPToken)).Methods("PUT")
 	external_router_authenticated.HandleFunc("/otp_status", otpStatus).Methods("GET")
 	external_router_authenticated.HandleFunc("/otp_jwt_test", applyJwtOtpCheck(testJWTOTP)).Methods("PUT")
