@@ -52,7 +52,10 @@ class AddForwardImpl extends React.Component {
         SrcIP: props.item.SrcIP || '0.0.0.0/0',
         SrcPort: props.item.SrcPort || 'any',
         DstIP: props.item.DstIP || '',
-        DstPort: props.item.DstPort || '',
+        DstPort:
+          props.item.DstPort && props.item.DstPort != 'any'
+            ? props.item.DstPort
+            : '',
         Description: props.item.Description || ''
       }
     }
@@ -64,12 +67,25 @@ class AddForwardImpl extends React.Component {
   }
 
   handleSubmit() {
+    let SrcPort = this.state.SrcPort || 'any'
+    let DstPort = this.state.DstPort
+    if (!DstPort) {
+      if (SrcPort.includes('-')) {
+        this.props.alertContext.error(
+          'Device port required',
+          'Enter a device port to forward a port range'
+        )
+        return
+      }
+      DstPort = SrcPort
+    }
+
     let rule = {
       Protocol: this.state.Protocol,
       SrcIP: this.state.SrcIP,
-      SrcPort: this.state.SrcPort || 'any',
+      SrcPort,
       DstIP: this.state.DstIP,
-      DstPort: this.state.DstPort || 'any',
+      DstPort,
       Description: this.state.Description
     }
 
