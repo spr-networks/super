@@ -216,7 +216,9 @@ class AddForwardImpl extends React.Component {
         {this.state.showAdvanced ? (
           <FormControl>
             <FormControlLabel>
-              <FormControlLabelText>Allowed Source (CIDR)</FormControlLabelText>
+              <FormControlLabelText>
+                Allowed Source (IP or CIDR)
+              </FormControlLabelText>
             </FormControlLabel>
             <Input size="md" variant="underlined">
               <InputField
@@ -227,7 +229,8 @@ class AddForwardImpl extends React.Component {
             </Input>
             <FormControlHelper>
               <FormControlHelperText>
-                Restrict who can connect. Default 0.0.0.0/0 (anywhere).
+                Only these remote addresses can connect. Default 0.0.0.0/0
+                (anyone).
               </FormControlHelperText>
             </FormControlHelper>
           </FormControl>
