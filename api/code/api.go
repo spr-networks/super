@@ -399,6 +399,10 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 			//rename the host
 			newName := ""
 			err := json.NewDecoder(r.Body).Decode(&newName)
+			if err != nil {
+				http.Error(w, "Invalid hostname", http.StatusBadRequest)
+				return
+			}
 
 			var validHostname = regexp.MustCompile(`^[a-zA-Z0-9-]+$`).MatchString
 			if !validHostname(newName) {
@@ -433,8 +437,11 @@ func getInfo(w http.ResponseWriter, r *http.Request) {
 	} else if name == "hostname" {
 		data, err = ioutil.ReadFile(HostnameConfigPath)
 		if err == nil && len(data) > 0 {
-			//accept from hostname config path instead
-			data = []byte(fmt.Sprintf("%q", data))
+			var hostname string
+			if json.Unmarshal(data, &hostname) != nil {
+				hostname = strings.TrimSpace(string(data))
+			}
+			data, err = json.Marshal(hostname)
 		} else {
 			hostname, err2 := os.Hostname()
 			if err2 != nil {
