@@ -64,13 +64,15 @@ if [ "$MISSING" -gt 0 ]; then
   exit 1
 fi
 
+mkdir -p /boot/firmware
+mount /dev/vda1 /boot/firmware || exit 1
 
 # finish downloaded install
 apt-get -y --fix-broken --fix-missing --no-download --no-install-recommends install || exit 1
 dpkg --configure -a
 
 # sync with install.sh and cross-install.sh
-apt -y upgrade --no-download || exit 1
+apt-get -y --with-new-pkgs upgrade --no-download || exit 1
 apt -y install --no-download --no-install-recommends nftables wireless-regdb ethtool nano iw fdisk tmux conntrack jq inotify-tools dhcpcd cloud-guest-utils tcpdump iperf3 || exit 1
 
 # Install the same versioned host runtime package published with this image.
@@ -83,10 +85,6 @@ KRUN_DEB=${KRUN_DEBS[0]}
 dpkg --unpack "$KRUN_DEB" || exit 1
 apt-get -y --fix-broken --no-download --no-install-recommends install || exit 1
 rm -f "$KRUN_DEB"
-
-# Mount boot firmware so kernel postinst hooks can update it
-mkdir -p /boot/firmware
-mount /dev/vda1 /boot/firmware || exit 1
 
 # Install SPR custom kernel + headers from spr-debian-kernel, fetched and
 # provenance-verified on the build host by fetch-spr-kernel.sh
@@ -293,6 +291,9 @@ rm -rf /usr/lib/firmware/i915
 
 #remove snapd
 apt purge -y snapd
+
+apt-get -y --no-download purge \
+  '?and(?installed,?or(?name(^libcamera),?name(^librpicam),?name(^rpicam-apps)))' || exit 1
 
 apt-get autoremove -y && apt-get clean
 rm -rf \

@@ -50,7 +50,7 @@ echo \
 apty update
 
 # NOTE: also check /scripts/install.sh when making updates
-apty -y upgrade --download-only
+apty -y --with-new-pkgs upgrade --download-only
 # RPiOS firmware is updated with its installed packages; SPR adds ath12k/mt76.
 # Ubuntu's linux-firmware package is not available from Debian/RPiOS sources.
 apty -y install --download-only --no-install-recommends nftables wireless-regdb ethtool git nano iw fdisk tmux conntrack jq inotify-tools dhcpcd cloud-guest-utils tcpdump iperf3 systemd-timesyncd
