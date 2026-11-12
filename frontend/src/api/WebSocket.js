@@ -194,13 +194,14 @@ const WebSocketComponent = ({ confirm, notify, ...props }) => {
 
     wsCurrent.addEventListener('open', async () => {
       let auth = await api.getAuthHeaders().catch(() => null)
+      let string = await AsyncStorage.getItem('jwt-otp').catch(() => null)
+      let jwt = JSON.parse(string)
       if (auth?.startsWith('Basic ')) {
         auth = Base64.atob(auth.slice(6))
-        let string = await AsyncStorage.getItem('jwt-otp')
-        let jwt = JSON.parse(string)
         if (jwt?.jwt) auth += ':' + jwt.jwt
       } else if (auth?.startsWith('Bearer ')) {
         auth = auth.slice(7)
+        if (jwt?.jwt) auth += ' ' + jwt.jwt
       } else {
         wsCurrent.close()
         return

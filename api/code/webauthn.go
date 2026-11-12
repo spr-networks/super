@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-webauthn/webauthn/metadata"
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 )
@@ -30,11 +31,39 @@ type WebAuthnCredentialEntry struct {
 	Name       string
 	CreatedAt  int64
 	Credential webauthn.Credential
+	Attested   bool
 }
 
 type WebAuthnUserEntry struct {
 	Handle      []byte
 	Credentials []WebAuthnCredentialEntry
+}
+
+func webauthnCredentialAttested(credential *webauthn.Credential) bool {
+	switch metadata.AuthenticatorAttestationType(credential.AttestationType) {
+	case metadata.BasicFull, metadata.AttCA, metadata.AnonCA:
+		return true
+	}
+	return false
+}
+
+func (entry *WebAuthnUserEntry) hasAttestedCredential() bool {
+	for _, c := range entry.Credentials {
+		if c.Attested {
+			return true
+		}
+	}
+	return false
+}
+
+func webauthnAttestedUser(user webAuthnUser, entry *WebAuthnUserEntry) webAuthnUser {
+	attested := webAuthnUser{name: user.name, handle: user.handle}
+	for _, c := range entry.Credentials {
+		if c.Attested {
+			attested.creds = append(attested.creds, c.Credential)
+		}
+	}
+	return attested
 }
 
 type WebAuthnSettings struct {
@@ -93,13 +122,15 @@ func webauthnStoreCredentialLocked(settings WebAuthnSettings, name string, crede
 		log.Println("webauthn: possible cloned authenticator for user", name)
 	}
 	_, entry := webauthnUserLocked(settings, name)
+	attested := webauthnCredentialAttested(credential)
 	for idx := range entry.Credentials {
 		if bytes.Equal(entry.Credentials[idx].Credential.ID, credential.ID) {
 			entry.Credentials[idx].Credential = *credential
+			entry.Credentials[idx].Attested = attested
 			return webauthnSaveLocked(settings)
 		}
 	}
-	entry.Credentials = append(entry.Credentials, WebAuthnCredentialEntry{credName, time.Now().Unix(), *credential})
+	entry.Credentials = append(entry.Credentials, WebAuthnCredentialEntry{credName, time.Now().Unix(), *credential, attested})
 	return webauthnSaveLocked(settings)
 }
 
@@ -134,6 +165,7 @@ func webauthnStatusJSON(w http.ResponseWriter, settings WebAuthnSettings, name s
 				"ID":        base64.RawURLEncoding.EncodeToString(c.Credential.ID),
 				"Name":      c.Name,
 				"CreatedAt": c.CreatedAt,
+				"Attested":  c.Attested,
 			})
 		}
 	}
@@ -288,7 +320,7 @@ func webauthnRegisterBegin(w http.ResponseWriter, r *http.Request) {
 			ResidentKey:      protocol.ResidentKeyRequirementRequired,
 			UserVerification: protocol.VerificationRequired,
 		}),
-		webauthn.WithConveyancePreference(protocol.PreferNoAttestation),
+		webauthn.WithConveyancePreference(protocol.PreferDirectAttestation),
 		webauthn.WithExclusions(exclusions))
 	if err != nil {
 		http.Error(w, err.Error(), 400)
@@ -377,7 +409,7 @@ func webauthnDeleteCredential(w http.ResponseWriter, r *http.Request) {
 }
 
 func webauthnValidateBegin(w http.ResponseWriter, r *http.Request) {
-	username, _, ok := r.BasicAuth()
+	username, ok := sessionUsername(r)
 	if !ok || username != "admin" {
 		http.Error(w, "Unsupported username for WebAuthn", 400)
 		return
@@ -388,10 +420,11 @@ func webauthnValidateBegin(w http.ResponseWriter, r *http.Request) {
 	}
 	Tokensmtx.Lock()
 	settings := webauthnLoadLocked()
-	user, _ := webauthnUserLocked(settings, username)
+	user, entry := webauthnUserLocked(settings, username)
 	Tokensmtx.Unlock()
+	user = webauthnAttestedUser(user, entry)
 	if len(user.creds) == 0 {
-		http.Error(w, "no passkeys registered", 400)
+		http.Error(w, "no hardware-backed passkeys registered", 400)
 		return
 	}
 	options, session, err := wa.BeginLogin(user, webauthn.WithUserVerification(protocol.VerificationRequired))
@@ -403,7 +436,7 @@ func webauthnValidateBegin(w http.ResponseWriter, r *http.Request) {
 }
 
 func webauthnValidateFinish(w http.ResponseWriter, r *http.Request) {
-	username, _, ok := r.BasicAuth()
+	username, ok := sessionUsername(r)
 	sessionID, credentialJSON, payloadErr := webauthnFinishPayload(r)
 	if payloadErr != nil {
 		http.Error(w, "invalid webauthn finish request", 400)
@@ -425,8 +458,9 @@ func webauthnValidateFinish(w http.ResponseWriter, r *http.Request) {
 	}
 	Tokensmtx.Lock()
 	settings := webauthnLoadLocked()
-	user, _ := webauthnUserLocked(settings, sess.user)
+	user, entry := webauthnUserLocked(settings, sess.user)
 	Tokensmtx.Unlock()
+	user = webauthnAttestedUser(user, entry)
 
 	credential, err := wa.ValidateLogin(user, *sess.data, parsed)
 	if err == nil {

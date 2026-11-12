@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
-import { authAPI, setJWTOTPHeader } from 'api'
+import { api, authAPI, setJWTOTPHeader } from 'api'
 import { isPasskeySupported, validatePasskey } from 'api/Passkey'
 import { normalizeTextInput } from 'utils/normalizeTextInput'
 
@@ -23,6 +23,17 @@ const OTPValidate = ({ onSuccess, onSetup, isLogin, ...props }) => {
   const [code, setCode] = useState('')
   const [status, setStatus] = useState('')
   const [errors, setErrors] = useState({})
+  const [canUsePasskey, setCanUsePasskey] = useState(!!isLogin)
+
+  useEffect(() => {
+    if (isLogin || !isPasskeySupported()) return
+    api
+      .get('/webauthn/status')
+      .then((res) =>
+        setCanUsePasskey((res?.Credentials || []).some((c) => c.Attested))
+      )
+      .catch(() => {})
+  }, [])
 
   const otp = (e) => {
     authAPI
@@ -66,8 +77,16 @@ const OTPValidate = ({ onSuccess, onSetup, isLogin, ...props }) => {
 
         onSuccess()
       })
-      .catch(() => {
-        setErrors({ validate: 'Passkey validation failed' })
+      .catch(async (err) => {
+        let errorMessage = 'Passkey validation failed'
+        try {
+          const errorText = await err?.response?.text()
+          if (errorText?.includes('no hardware-backed passkeys')) {
+            errorMessage =
+              'No hardware-backed passkey registered. Synced passkeys can only be used to log in.'
+          }
+        } catch (e) {}
+        setErrors({ validate: errorMessage })
       })
   }
 
@@ -123,7 +142,7 @@ const OTPValidate = ({ onSuccess, onSetup, isLogin, ...props }) => {
           <ButtonText>Verify OTP Code</ButtonText>
         </Button>
       </FormControl>
-      {isPasskeySupported() ? (
+      {isPasskeySupported() && canUsePasskey ? (
         <FormControl>
           <Button
             action="secondary"

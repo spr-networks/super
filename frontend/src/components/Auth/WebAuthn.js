@@ -67,7 +67,14 @@ const WebAuthn = (props) => {
         <VStack space="md">
           {credentials.map((credential) => (
             <HStack key={credential.ID} space="md" alignItems="center">
-              <Text flex={1}>{credential.Name}</Text>
+              <VStack flex={1}>
+                <Text>{credential.Name}</Text>
+                <Text size="xs" color="$muted500">
+                  {credential.Attested
+                    ? 'Hardware-backed: can be used for OTP'
+                    : 'Login only'}
+                </Text>
+              </VStack>
               <Button
                 action="negative"
                 variant="link"
@@ -94,7 +101,9 @@ const WebAuthn = (props) => {
           </HStack>
 
           <Text size="sm" color="$muted500">
-            Passkeys can be used instead of OTP codes and for logging in
+            Hardware passkeys can be used instead of OTP codes, Synced passkeys
+            without device attestation will still require OTP codes for
+            privileged actions.
           </Text>
         </VStack>
       </Box>

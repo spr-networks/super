@@ -11,7 +11,7 @@
 - Filter mesh report MAC addresses for assigning new devices
 - Wireguard would ignore parental blocks when the device could be on both wifi and wireguard
 - Harden GuestOnly enforcement for mesh
-- If passkey is enrolled, require it for OTP registration
+- Web Passkeys no longer single-factor auth, and OTP codes are still needed for plugin install
 
 ## v1.3.3
 **Fixes**

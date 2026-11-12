@@ -3638,7 +3638,7 @@ func main() {
 	external_router_authenticated.HandleFunc("/tokens", applyJwtOtpCheck(updateAuthTokens)).Methods("PUT", "DELETE")
 
 	external_router_authenticated.HandleFunc("/otp_register", applyFactorManagementCheck(otpRegister)).Methods("PUT", "DELETE")
-	external_router_authenticated.HandleFunc("/otp_validate", applyPasswordAuthCheck(generateOTPToken)).Methods("PUT")
+	external_router_authenticated.HandleFunc("/otp_validate", applyUserSessionCheck(generateOTPToken)).Methods("PUT")
 	external_router_authenticated.HandleFunc("/otp_status", otpStatus).Methods("GET")
 	external_router_authenticated.HandleFunc("/otp_jwt_test", applyJwtOtpCheck(testJWTOTP)).Methods("PUT")
 
@@ -3646,8 +3646,8 @@ func main() {
 	external_router_authenticated.HandleFunc("/webauthn/register", applyFactorManagementCheck(webauthnRegisterBegin)).Methods("PUT")
 	external_router_authenticated.HandleFunc("/webauthn/register", applyFactorManagementCheck(webauthnRegisterFinish)).Methods("POST")
 	external_router_authenticated.HandleFunc("/webauthn/credential", applyFactorManagementCheck(webauthnDeleteCredential)).Methods("DELETE")
-	external_router_authenticated.HandleFunc("/webauthn/validate", webauthnValidateBegin).Methods("PUT")
-	external_router_authenticated.HandleFunc("/webauthn/validate", webauthnValidateFinish).Methods("POST")
+	external_router_authenticated.HandleFunc("/webauthn/validate", applyUserSessionCheck(webauthnValidateBegin)).Methods("PUT")
+	external_router_authenticated.HandleFunc("/webauthn/validate", applyUserSessionCheck(webauthnValidateFinish)).Methods("POST")
 	external_router_authenticated.HandleFunc("/logout", webauthnLogout).Methods("PUT")
 	external_router_public.HandleFunc("/webauthn/login", webauthnLoginBegin).Methods("PUT")
 	external_router_public.HandleFunc("/webauthn/login", webauthnLoginFinish).Methods("POST")

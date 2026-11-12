@@ -237,12 +237,17 @@ func authWebsocket(r *http.Request, c *websocket.Conn, OtpOff bool) bool {
 			SprbusPublish("auth:failure", map[string]string{"type": "user", "name": pieces[0], "reason": remoteIP(r) + ":" + "bad credentails on websocket", "ip": remoteIP(r)})
 		}
 	} else {
-		token := msgs
+		token, jwtOtp, _ := strings.Cut(msgs, " ")
 		goodToken, tokenName, paths := authenticateToken(token)
 		if goodToken {
+			username, isUser := strings.CutPrefix(tokenName, webauthnLoginTokenPrefix)
 			if len(paths) > 0 {
 				//scoped tokens get rejected for WS
 				SprbusPublish("auth:failure", map[string]string{"type": "token", "name": tokenName, "reason": remoteIP(r) + ":" + "unsupported scopes on websocket", "ip": remoteIP(r)})
+			} else if isUser && !OtpOff && shouldCheckOTPJWT(r, username) && !validateJwt(username, jwtOtp) {
+				_ = c.WriteMessage(websocket.TextMessage, []byte("Invalid JWT OTP"))
+				_ = c.Close()
+				return false
 			} else {
 				_ = c.SetWriteDeadline(time.Time{})
 				_ = c.WriteMessage(websocket.TextMessage, []byte("success"))
