@@ -892,7 +892,7 @@ export const runAssistantTurn = async ({
     }
 
     for (let step = 0; step < maxSteps; step += 1) {
-      onActivity('Planning the requested action locally…')
+      onActivity('Tokens-crunching...')
       const { decision, raw } = await requestDecision(engine, messages)
       rawGenerations.push({ phase: 'action', content: raw })
 

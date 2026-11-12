@@ -15,12 +15,16 @@ workspace interface and agent are not used.
 | SHA-256 (upstream file) | `c6bb4050173e157b172161306c73515472551512a76025cf123d29d45e515c55` |
 | License | Apache-2.0 (`LICENSE`) |
 
-The only local change is a leading `/* eslint-disable */` line. Verify the
-remaining bytes against the upstream blob with:
+Local changes are the leading `/* eslint-disable */` line and one response-only
+observability addition: the completed session result includes `raw_text`, decoded
+from the same generated token IDs with special tokens preserved. The frontend
+uses this to reject malformed native calls before dispatch. Token generation,
+model weights and numerical kernels are unchanged.
 
-```bash
-tail -n +2 Lfm3ForCausalLM.js | git hash-object --stdin
-```
+`local-patch.json` records the exact one-occurrence source replacement and full
+before/after SHA-256 hashes. The patched full-file SHA-256 is
+`fa875473a26d559ec5c61664d1c9a8d24d99b309b60f8266236914908cbfc3c5`. Reverse that replacement and remove the
+leading local header to reproduce the upstream file hash above.
 
 The library bundles Hugging Face tokenization (Apache-2.0,
 `licenses/tokenizers-LICENSE`) and Jinja templating (MIT,

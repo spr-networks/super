@@ -3884,15 +3884,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mlc-ai/web-llm@npm:0.2.86":
-  version: 0.2.86
-  resolution: "@mlc-ai/web-llm@npm:0.2.86"
-  dependencies:
-    loglevel: "npm:^1.9.1"
-  checksum: 10c0/6946b41414850b56f946cf38850c8c34b0a6e0964d6ff4893d7386e566a20a53e30ef4d88f8effc1f8d9d38f024864da9d9829972c9c3d42d409261955769863
-  languageName: node
-  linkType: hard
-
 "@nicolo-ribaudo/eslint-scope-5-internals@npm:5.1.1-v1":
   version: 5.1.1-v1
   resolution: "@nicolo-ribaudo/eslint-scope-5-internals@npm:5.1.1-v1"
@@ -14278,13 +14269,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"loglevel@npm:^1.9.1":
-  version: 1.9.2
-  resolution: "loglevel@npm:1.9.2"
-  checksum: 10c0/1e317fa4648fe0b4a4cffef6de037340592cee8547b07d4ce97a487abe9153e704b98451100c799b032c72bb89c9366d71c9fb8192ada8703269263ae77acdc7
-  languageName: node
-  linkType: hard
-
 "loose-envify@npm:^1.0.0, loose-envify@npm:^1.1.0, loose-envify@npm:^1.4.0":
   version: 1.4.0
   resolution: "loose-envify@npm:1.4.0"
@@ -19475,7 +19459,6 @@ __metadata:
     "@gluestack-style/react": "npm:1.0.45"
     "@gluestack-ui/config": "npm:1.1.2"
     "@gluestack-ui/themed": "npm:1.1.3"
-    "@mlc-ai/web-llm": "npm:0.2.86"
     "@react-aria/ssr": "npm:^3.10.1"
     "@react-native-async-storage/async-storage": "npm:^1.24.0"
     "@react-native-clipboard/clipboard": "npm:^1.16.3"

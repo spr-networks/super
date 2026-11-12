@@ -69,7 +69,7 @@ const PFWTasks = (props) => {
         }
 
         setWifiScanEnabled(!config?.WiFiScan?.Disabled)
-        setUplinkCheckEnabled(!config?.WiFiScan?.Disabled)
+        setUplinkCheckEnabled(!config?.UplinkCheck?.Disabled)
 
         //back-set the time expressions
         let cron = config?.WiFiScan?.Time?.CronExpr

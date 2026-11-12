@@ -12,6 +12,8 @@ import {
   Heading,
   HStack,
   Icon,
+  Input,
+  InputField,
   Pressable,
   ScrollView,
   Text,
@@ -47,7 +49,50 @@ const AlertPrefix = 'alert:'
 const countMax = 100
 const searchMax = 500
 
-const Alerts = () => {
+const ASSISTANT_SUGGESTIONS = ['Show me the alert events', 'List my alert rules', 'Which alert rules send notifications?']
+const AskAssistant = ({ onAsk }) => {
+  const [question, setQuestion] = useState('')
+  const ask = (text) => { const value = (text ?? question).trim(); if (value) onAsk(value) }
+  return (
+    <VStack
+      space="sm"
+      p="$4"
+      borderWidth={1}
+      borderColor="$borderColorCardLight"
+      borderRadius="$lg"
+      bg="$backgroundCardLight"
+      sx={{ _dark: { bg: '$backgroundCardDark', borderColor: '$borderColorCardDark' } }}
+      testID="alerts-ask-assistant"
+    >
+      <Text size="sm" bold>Ask SPR about alerts</Text>
+      <HStack space="sm" alignItems="center">
+        <Input flex={1} size="md">
+          <InputField
+            value={question}
+            onChangeText={setQuestion}
+            onSubmitEditing={() => ask()}
+            placeholder="Ask a question about your alerts or alert rules…"
+            accessibilityLabel="Ask SPR about alerts"
+          />
+        </Input>
+        <Button size="md" onPress={() => ask()} isDisabled={!question.trim()}>
+          <ButtonText>Ask</ButtonText>
+        </Button>
+      </HStack>
+      <HStack space="sm" flexWrap="wrap">
+        {ASSISTANT_SUGGESTIONS.map((text) => (
+          <Pressable key={text} onPress={() => ask(text)} accessibilityRole="button">
+            <Badge variant="outline" action="muted" borderRadius="$full">
+              <BadgeText textTransform="none">{text}</BadgeText>
+            </Badge>
+          </Pressable>
+        ))}
+      </HStack>
+    </VStack>
+  )
+}
+
+const Alerts = ({ embedded = false }) => {
   const [topics, setTopics] = useState([])
   const [bucketCounts, setBucketCounts] = useState({})
   const [topicLabels, setTopicLabels] = useState({})
@@ -413,6 +458,10 @@ const Alerts = () => {
             <SummaryCard label="Warnings" value={totals.warning} />
             <SummaryCard label="Sources" value={topics.length} />
           </HStack>
+
+          {!embedded && (appContext.featureFlags || []).includes('webllm') ? (
+            <AskAssistant onAsk={(ask) => navigate('/admin/assistant', { state: { ask } })} />
+          ) : null}
 
           <VStack
             borderWidth={1}

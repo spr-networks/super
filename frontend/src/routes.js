@@ -110,7 +110,7 @@ const routes = [
   },
   {
     path: 'assistant',
-    name: 'AI Assistant',
+    name: 'Ask SPR',
     icon: MessageCircleIcon,
     component: Assistant,
     featureFlag: 'webllm',

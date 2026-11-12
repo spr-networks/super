@@ -1,0 +1,11 @@
+{
+  "purpose": "Expose exact generated native markup for strict interface validation. No logits, kernels, token selection, weights, or generation control changed.",
+  "original_full_sha256": "2765b0aee65814074e0d4888c76f8bc73b24ba3a45a74dc5346a34f9e9843c46",
+  "patched_full_sha256": "fa875473a26d559ec5c61664d1c9a8d24d99b309b60f8266236914908cbfc3c5",
+  "upstream_sha256_excluding_local_header": "c6bb4050173e157b172161306c73515472551512a76025cf123d29d45e515c55",
+  "replacement": {
+    "before": "message:E,usage:{prompt_tokens:b.length",
+    "after": "message:E,raw_text:Gr(a.tokenizer,w,{skip_special_tokens:!1}),usage:{prompt_tokens:b.length",
+    "occurrences": 1
+  }
+}
