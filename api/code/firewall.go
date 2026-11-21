@@ -2870,7 +2870,6 @@ func getWireguardActivePeers() ([]string, []string) {
 	defer c.CloseIdleConnections()
 	resp, err := c.Do(req)
 	if err != nil {
-		log.Println("wireguard request failed", err)
 		return handshakes, remote_endpoints
 	}
 
@@ -2892,7 +2891,6 @@ func getWireguardActivePeers() ([]string, []string) {
 
 	_, exists := data["wg0"]
 	if !exists {
-		log.Println("Failed to retrieve wg0 from wireguard status")
 		return handshakes, remote_endpoints
 	}
 
