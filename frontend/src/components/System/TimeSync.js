@@ -62,14 +62,16 @@ const TimeSync = ({ hideWhenSynced = false }) => {
 
   return (
     <Box
-      mx="$4"
-      mb="$4"
-      p="$3"
-      borderWidth={1}
-      borderColor={off ? '$amber400' : '$muted300'}
+      p="$4"
+      borderBottomWidth={1}
+      borderBottomColor={off ? '$amber400' : '$borderColorCardLight'}
       bg={off ? '$amber50' : '$backgroundCardLight'}
-      sx={{ _dark: { bg: off ? '$amber900' : '$backgroundCardDark' } }}
-      rounded="$md"
+      sx={{
+        _dark: {
+          bg: off ? '$amber900' : '$backgroundCardDark',
+          borderBottomColor: off ? '$amber400' : '$borderColorCardDark'
+        }
+      }}
     >
       <HStack space="sm" alignItems="center">
         {off ? <Icon as={AlertCircleIcon} color="$amber600" /> : null}

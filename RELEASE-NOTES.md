@@ -1,5 +1,9 @@
 # Secure Programmable Router (SPR) Release Notes
 
+## v1.3.5
+**Fixes**
+- Fix wireguard log spam
+
 ## v1.3.4
 **Improvements**
 - Relax PMF for MLO APs. This enables older devices without it to still connect
