@@ -37,7 +37,7 @@ import { api } from 'api'
 import { AlertContext } from 'AppContext'
 import ModalForm from 'components/ModalForm'
 import InputSelect from 'components/InputSelect'
-import { RefreshCcwIcon } from 'lucide-react-native'
+import { FileTextIcon, RefreshCcwIcon } from 'lucide-react-native'
 import { ListHeader } from 'components/List'
 
 const prettyChannel = (channelStr) => {
@@ -45,6 +45,67 @@ const prettyChannel = (channelStr) => {
     return 'main'
   }
   return channelStr.replace(/-/g, '')
+}
+
+const ver = (v) => (v || '').replace(/^v/, '').split('-')[0]
+
+const ReleaseNotes = () => {
+  const [notes, setNotes] = useState([])
+  const [current, setCurrent] = useState('')
+  const [showAll, setShowAll] = useState(false)
+
+  useEffect(() => {
+    api
+      .version()
+      .then(setCurrent)
+      .catch(() => {})
+    const url =
+      'https://raw.githubusercontent.com/spr-networks/super/main/RELEASE-NOTES.md'
+    fetch(url, { redirect: 'error' })
+      .then((r) => (r.ok && r.url == url ? r.text() : ''))
+      .then((md) =>
+        setNotes(
+          md
+            .split(/^## /m)
+            .slice(1)
+            .map((s) => s.trim().split('\n'))
+        )
+      )
+      .catch(() => {})
+  }, [])
+
+  if (!notes.length) return null
+
+  const newer = current
+    ? notes.filter(
+        ([v]) =>
+          ver(v).localeCompare(ver(current), undefined, { numeric: true }) > 0
+      )
+    : []
+  const shown = showAll ? notes : newer.length ? newer : notes.slice(0, 1)
+
+  return (
+    <VStack space="md" p="$4">
+      <HStack justifyContent="space-between" alignItems="center">
+        <Heading size="sm">
+          {newer.length ? "What's New" : 'Release Notes'}
+        </Heading>
+        <Button size="xs" variant="link" onPress={() => setShowAll(!showAll)}>
+          <ButtonText>{showAll ? 'Show less' : 'Show all'}</ButtonText>
+        </Button>
+      </HStack>
+      {shown.map(([v, ...lines]) => (
+        <VStack key={v} space="xs">
+          <Text bold>{v}</Text>
+          {lines.map((l, i) => (
+            <Text key={i} size="sm" bold={l.startsWith('**')}>
+              {l.replace(/\*\*/g, '').replace(/^- /, '• ')}
+            </Text>
+          ))}
+        </VStack>
+      ))}
+    </VStack>
+  )
 }
 
 const UpdateReleaseInfo = ({
@@ -234,6 +295,8 @@ const ReleaseInfo = ({ showModal, ...props }) => {
   const [releaseInfo, setReleaseInfo] = useState(null)
   const [waitFor, setWaitFor] = useState(null)
   const [checkUpdates, setCheckUpdates] = useState(false)
+  const [showNotes, setShowNotes] = useState(false)
+  const [newVersion, setNewVersion] = useState(null)
 
   const updateRelease = () => {
     api
@@ -282,10 +345,13 @@ const ReleaseInfo = ({ showModal, ...props }) => {
         }
 
         if (current.includes('-dev') && current != latestDev) {
+          setNewVersion(latestDev)
           context.info(`Latest dev version is ${latestDev}, current ${current}`)
         } else if (current != latest) {
+          setNewVersion(latest)
           context.info(`Latest version is ${latest}, current ${current}`)
         } else {
+          setNewVersion(null)
           context.success(`${current} is the latest version of spr`)
         }
       })
@@ -541,6 +607,17 @@ const ReleaseInfo = ({ showModal, ...props }) => {
           <Button
             action="secondary"
             size="sm"
+            onPress={() => setShowNotes(!showNotes)}
+          >
+            <ButtonText>
+              {newVersion ? `What's New in ${newVersion}` : 'Release Notes'}
+            </ButtonText>
+            <ButtonIcon as={FileTextIcon} ml="$1" />
+          </Button>
+
+          <Button
+            action="secondary"
+            size="sm"
             onPress={() => refModal.current()}
           >
             <ButtonText>Set Version</ButtonText>
@@ -569,6 +646,8 @@ const ReleaseInfo = ({ showModal, ...props }) => {
           )}
         </>
       ) : null}
+
+      {showNotes ? <ReleaseNotes /> : null}
 
       <Modal
         isOpen={updateStatus != null}
